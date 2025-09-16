@@ -11,7 +11,7 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   if (!reason)
     return;
   assert (reason->size == 2);
-  mini_chain.push_back (reason->id);
+  mini_chain.push_back (reason->lrat_id ());
   int other = reason->literals[0];
   other = other == from ? -reason->literals[1] : -other;
   Flags &f = flags (other);
@@ -89,9 +89,9 @@ void Internal::build_lrat_for_clause (
       mark_decomposed (other);
       int implied = p->literals[0];
       implied = implied == other ? -p->literals[1] : -implied;
-      LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->id);
+      LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->lrat_id ());
       other = implied;
-      mini_chain.push_back (p->id);
+      mini_chain.push_back (p->lrat_id ());
       if (val (implied) <= 0)
         continue;
       if (marked_decomposed (implied))
@@ -577,7 +577,7 @@ bool Internal::decompose_round () {
       }
     }
     if (lrat)
-      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (c->lrat_id ());
     clear_analyzed_literals ();
     LOG (lrat_chain, "lrat_chain:");
     if (satisfied) {
@@ -619,7 +619,7 @@ bool Internal::decompose_round () {
         proof->add_derived_clause (++clause_id, c->redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
-        c->id = clause_id;
+        c->set_lrat_id (clause_id);
       }
       size_t l;
       int *literals = c->literals;

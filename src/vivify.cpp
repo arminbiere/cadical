@@ -98,7 +98,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (proof)
-    proof->strengthen (subsuming->id);
+    proof->strengthen (subsuming->lrat_id ());
   mark_garbage (subsumed);
   mark_added (subsuming);
   stats.current.irredundant++;
@@ -731,7 +731,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
     Var &w = var (uip);
     reason = w.reason;
     if (lrat && reason)
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->lrat_id ());
   }
   (void) candidate;
 }
@@ -763,7 +763,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     redundant = reason->redundant;
     LOG (reason, "resolving with");
     if (lrat)
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->lrat_id ());
     for (auto lit : *reason) {
       const Var &v = var (lit);
       Flags &f = flags (lit);
@@ -1269,7 +1269,7 @@ void Internal::vivify_build_lrat (
       continue;
     }
     if (finished) {
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->lrat_id ());
       if (lit && reason) {
         Flags &f = flags (lit);
         f.seen = true;
@@ -1320,7 +1320,7 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->lrat_id ());
 }
 
 vivify_ref create_ref (Internal *internal, Clause *c) {

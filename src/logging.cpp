@@ -54,7 +54,7 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
       printf (" glue %d redundant", c->glue);
     else
       printf (" irredundant");
-    printf (" size %d clause[%" PRId64 "]", c->size, c->id);
+    printf (" size %d clause[%" PRId64 "]", c->size, c->lrat_id ());
     if (c->moved)
       printf (" ... (moved)");
     else {

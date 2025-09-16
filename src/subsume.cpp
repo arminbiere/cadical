@@ -137,7 +137,7 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (proof)
-    proof->strengthen (subsuming->id);
+    proof->strengthen (subsuming->lrat_id ());
   mark_garbage (subsumed);
   stats.current.irredundant++;
   stats.added.irredundant++;
@@ -154,8 +154,8 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
 // Candidate clause 'c' is strengthened by removing 'lit'.
 
 void Internal::strengthen_clause (Clause *c, int lit) {
-  if (opts.check && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && is_external_forgettable (c->lrat_id ()))
+    mark_garbage_external_forgettable (c->lrat_id ());
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
@@ -245,7 +245,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
         // well as the code around 'strengthen_clause' uniform for both real
         // clauses and this special case for binary clauses
 
-        dummy_binary->id = bin.id;
+        dummy_binary->set_lrat_id (bin.id);
         d = dummy_binary;
 
         break;
@@ -289,8 +289,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
     LOG (d, "strengthening");
     if (lrat) {
       assert (lrat_chain.empty ());
-      lrat_chain.push_back (c->id);
-      lrat_chain.push_back (d->id);
+      lrat_chain.push_back (c->lrat_id ());
+      lrat_chain.push_back (d->lrat_id ());
     }
     if (d->used > c->used)
       c->used = d->used;
@@ -556,7 +556,7 @@ bool Internal::subsume_round () {
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
-      bins (minlit).push_back (Bin{other, c->id});
+      bins (minlit).push_back (Bin{other, c->lrat_id ()});
     }
   }
 

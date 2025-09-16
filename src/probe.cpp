@@ -137,7 +137,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
     int64_t id = unit_id (other);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->lrat_id ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -367,7 +367,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (probe_reason->id);
+  lrat_chain.push_back (probe_reason->lrat_id ());
 }
 
 /*------------------------------------------------------------------------*/

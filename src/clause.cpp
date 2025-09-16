@@ -89,8 +89,6 @@ Clause *Internal::new_clause (bool red, unsigned glue) {
   Clause *c = (Clause *) new char[bytes];
   DeferDeleteArray<char> clause_delete ((char *) c);
 
-  c->id = ++clause_id;
-
   c->conditioned = false;
   c->covered = false;
   c->garbage = false;
@@ -107,6 +105,7 @@ Clause *Internal::new_clause (bool red, unsigned glue) {
   c->vivify = false;
   c->used = 0;
   c->temporary_mark = false;
+  c->set_lrat_id (++clause_id);
 
   c->glue = min (MAX_GLUE, glue);
   c->size = size;
@@ -209,8 +208,8 @@ void Internal::promote_clause_glue_only (Clause *c, unsigned new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-  if (opts.check && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && is_external_forgettable (c->lrat_id ()))
+    mark_garbage_external_forgettable (c->lrat_id ());
   assert (new_size >= 2);
   int old_size = c->size;
   assert (new_size < old_size);
@@ -311,8 +310,8 @@ void Internal::mark_garbage (Clause *c) {
   // Because of the internal model checking, external forgettable clauses
   // must be marked as removed already upon mark_garbage, can not wait until
   // actual deletion.
-  if (opts.check && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && is_external_forgettable (c->lrat_id ()))
+    mark_garbage_external_forgettable (c->lrat_id ());
 
   assert (stats.current.total > 0);
   stats.current.total--;
@@ -520,7 +519,7 @@ void Internal::add_new_original_clause (int64_t id) {
       assert ((int)glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
-      c->id = new_id;
+      c->set_lrat_id (new_id);
       clause_id--;
       watch_clause (c);
       clause.clear ();
@@ -660,7 +659,7 @@ void Internal::decay_clauses_upon_incremental_clauses () {
       continue;
     if (!c->redundant)
       continue;
-    if (c->id >= last.incremental_decay.last_id)
+    if (c->lrat_id () >= last.incremental_decay.last_id)
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition

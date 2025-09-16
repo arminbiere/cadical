@@ -283,7 +283,7 @@ void Proof::add_derived_clause (Clause *c, const vector<int64_t> &chain) {
   add_literals (c);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
-  clause_id = c->id;
+  clause_id = c->lrat_id ();
   redundant = c->redundant;
   add_derived_clause ();
 }
@@ -347,7 +347,7 @@ void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
   clause.clear (); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
-  clause_id = c->id;
+  clause_id = c->lrat_id ();
   redundant = c->redundant;
   delete_clause (); // Increments 'statistics.deleted'.
 }
@@ -365,7 +365,7 @@ void Proof::weaken_minus (Clause *c) {
   LOG (c, "PROOF weaken minus of");
   assert (clause.empty ());
   add_literals (c);
-  clause_id = c->id;
+  clause_id = c->lrat_id ();
   weaken_minus ();
 }
 
@@ -400,7 +400,7 @@ void Proof::finalize_clause (Clause *c) {
   LOG (c, "PROOF finalizing clause");
   assert (clause.empty ());
   add_literals (c);
-  clause_id = c->id;
+  clause_id = c->lrat_id ();
   finalize_clause ();
 }
 
@@ -450,13 +450,13 @@ void Proof::flush_clause (Clause *c) {
     }
     add_literal (internal_lit);
   }
-  proof_chain.push_back (c->id);
+  proof_chain.push_back (c->lrat_id ());
   redundant = c->redundant;
   int64_t id = ++internal->clause_id;
   clause_id = id;
   add_derived_clause ();
   delete_clause (c);
-  c->id = id;
+  c->set_lrat_id (id);
 }
 
 // While strengthening clauses, e.g., through self-subsuming resolutions,
@@ -482,7 +482,7 @@ void Proof::strengthen_clause (Clause *c, int remove,
     proof_chain.push_back (cid);
   add_derived_clause ();
   delete_clause (c);
-  c->id = id;
+  c->set_lrat_id (id);
 }
 
 void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
@@ -499,8 +499,8 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   add_derived_clause ();
-  delete_clause (c->id, c->redundant, old);
-  c->id = id;
+  delete_clause (c->lrat_id (), c->redundant, old);
+  c->set_lrat_id (id);
 }
 
 void Proof::strengthen (int64_t id) {

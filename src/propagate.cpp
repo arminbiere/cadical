@@ -76,7 +76,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->lrat_id ());
 }
 
 // same code as above but reason is assumed to be conflict and lit is not
@@ -94,7 +94,7 @@ void Internal::build_chain_for_empty () {
     int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (conflict->id);
+  lrat_chain.push_back (conflict->lrat_id ());
 }
 
 /*------------------------------------------------------------------------*/

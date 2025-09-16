@@ -178,8 +178,8 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
               lrat_chain.push_back (id);
             }
             clear_analyzed_literals ();
-            lrat_chain.push_back (d->id);
-            lrat_chain.push_back (c->id);
+            lrat_chain.push_back (d->lrat_id ());
+            lrat_chain.push_back (c->lrat_id ());
           } else if (lrat)
             clear_analyzed_literals ();
           if (satisfied) {

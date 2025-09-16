@@ -400,7 +400,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           }
           if (proof && already_pushed) {
             if (lrat)
-              lrat_chain.push_back (c->id);
+              lrat_chain.push_back (c->lrat_id ());
             LOG ("LEARNING clause with id %" PRId64, last_id);
             proof->add_derived_clause (last_id, false, clause, lrat_chain);
             proof->weaken_plus (last_id, clause);
@@ -437,7 +437,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           }
         }
         if (lrat)
-          lrat_chain.push_back (c->id);
+          lrat_chain.push_back (c->lrat_id ());
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
         lrat_chain.clear ();

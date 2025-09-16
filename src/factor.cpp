@@ -528,11 +528,11 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
           }
         }
         if (match) {
-          lrat_chain.push_back (d->id);
+          lrat_chain.push_back (d->lrat_id ());
           break;
         }
       }
-      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (c->lrat_id ());
       assert (lrat_chain.size () == 2);
     }
     if (clause.size () > 1) {
@@ -643,7 +643,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
       assert (q->bid);
       unsigned idxtoo = idx;
       for (Quotient *p = q; p; p = p->prev) {
-        lrat_chain.push_back (p->qlauses[idxtoo]->id);
+        lrat_chain.push_back (p->qlauses[idxtoo]->lrat_id ());
         if (p->prev)
           idxtoo = p->matches[idx];
       }

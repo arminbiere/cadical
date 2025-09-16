@@ -364,8 +364,8 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   const int64_t size = clause.size ();
 
   if (lrat) {
-    lrat_chain.push_back (d->id);
-    lrat_chain.push_back (c->id);
+    lrat_chain.push_back (d->lrat_id ());
+    lrat_chain.push_back (c->lrat_id ());
   }
 
   if (satisfied) {

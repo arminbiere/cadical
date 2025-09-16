@@ -404,7 +404,7 @@ static void save_core_clause (void *state, unsigned id, bool learned,
   } else {
     pc.sweep_id = id; // necessary
     assert (id < sweeper->clauses.size ());
-    pc.cad_id = sweeper->clauses[id]->id;
+    pc.cad_id = sweeper->clauses[id]->lrat_id ();
   }
   pc.kit_id = 0;
   pc.learned = learned;
@@ -441,7 +441,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
     assert (id < clauses.size ());
     pc.sweep_id = id;
     assert (id < clauses.size ());
-    pc.cad_id = clauses[id]->id;
+    pc.cad_id = clauses[id]->lrat_id ();
     for (const auto &lit : *clauses[id]) {
       pc.literals.push_back (lit);
     }
@@ -522,7 +522,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
               id = cpc.cad_id;
             else {
               id = cpc.cad_id;
-              assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id);
+              assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->lrat_id ());
               assert (!sweeper.clauses[cpc.sweep_id]->garbage);
               // avoid duplicate ids of units with seen flags
               for (const auto &lit : cpc.literals) {
@@ -1045,7 +1045,7 @@ void Internal::sweep_substitute_lrat (Clause *c, int64_t id) {
     }
   }
   lrat_chain.push_back (id);
-  lrat_chain.push_back (c->id);
+  lrat_chain.push_back (c->lrat_id ());
 }
 
 #define all_scheduled(IDX) \
@@ -1156,7 +1156,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
                                    lrat_chain);
         proof->delete_clause (c);
       }
-      c->id = new_id;
+      c->set_lrat_id (new_id);
       lrat_chain.clear ();
       size_t l;
       int *literals = c->literals;

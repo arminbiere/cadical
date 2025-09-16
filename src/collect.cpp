@@ -49,8 +49,8 @@ void Internal::remove_falsified_literals (Clause *c) {
   if (proof) {
     // Flush changes the clause id, external forgettables need to be
     // marked here (or the new id could be used instead of old one)
-    if (opts.check && is_external_forgettable (c->id))
-      mark_garbage_external_forgettable (c->id);
+    if (opts.check && is_external_forgettable (c->lrat_id ()))
+      mark_garbage_external_forgettable (c->lrat_id ());
     proof->flush_clause (c);
   }
   literal_iterator j = c->begin ();
@@ -180,7 +180,7 @@ size_t Internal::flush_occs (int lit) {
     c = *i;
     if (c->collect ())
       continue;
-    *j++ = c->moved ? c->copy : c;
+    *j++ = c->moved ? c->copy () : c;
     // assert (!c->redundant); // -> not true in sweeping
     res++;
   }
@@ -207,7 +207,7 @@ inline void Internal::flush_watches (int lit, Watches &saved) {
     if (c->collect ())
       continue;
     if (c->moved)
-      c = w.clause = c->copy;
+      c = w.clause = c->copy ();
     w.size = c->size;
     const int new_blit_pos = (c->literals[0] == lit);
     LOG (c, "clause in flush_watch starting from %d", lit);
@@ -256,7 +256,7 @@ void Internal::update_reason_references () {
     LOG (c, "updating assigned %d reason", lit);
     assert (c->reason);
     assert (c->moved);
-    Clause *d = c->copy;
+    Clause *d = c->copy ();
     v.reason = d;
 #ifdef LOGGING
     count++;
@@ -313,10 +313,16 @@ void Internal::copy_clause (Clause *c) {
   assert (!c->moved);
   char *p = (char *) c;
   char *q = arena.copy (p, c->bytes ());
-  c->copy = (Clause *) q;
+#ifdef LOGGING
+  int64_t id = c->lrat_id ();
+#endif
   c->moved = true;
-  LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, (void *) c,
-       (void *) c->copy);
+  c->set_copy ((Clause *) q);
+  LOG ("copied clause[%" PRId64 "] from %p to %p", id, (void *) c,
+       (void *) c->copy ());
+  assert ((void*)c->copy () == (void*) q);
+
+  assert (c->copy () == (Clause*) q);
 }
 
 // This is the moving garbage collector.
@@ -418,7 +424,7 @@ void Internal::copy_non_garbage_clauses () {
     if (c->collect ())
       delete_clause (c);
     else
-      assert (c->moved), *j++ = c->copy, deallocate_clause (c);
+      assert (c->moved), *j++ = c->copy (), deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity () / 2)

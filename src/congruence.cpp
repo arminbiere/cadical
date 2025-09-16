@@ -213,7 +213,7 @@ void Closure::extract_binaries () {
     const int other = c->literals[1];
     const bool already_sorted =
         internal->vlit (lit) < internal->vlit (other);
-    binaries.push_back (CompactBinary (c, c->id,
+    binaries.push_back (CompactBinary (c, c->lrat_id (),
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));
   }
@@ -272,7 +272,7 @@ void Closure::extract_binaries () {
     LOG (d, "strengthening");
     if (!find_binary (l, k)) {
       if (internal->lrat)
-        lrat_chain.push_back (d->id);
+        lrat_chain.push_back (d->lrat_id ());
       add_binary_clause (l, k);
       ++extracted;
     } else {
@@ -331,7 +331,7 @@ void Closure::unmark_all () {
 
 void Closure::set_mu1_reason (int lit, Clause *c) {
   assert (marked (lit) & 1);
-  LOG (c, "mu1 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu1 %d -> %" PRId64, lit, c->lrat_id ());
   mu1_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -339,7 +339,7 @@ void Closure::set_mu2_reason (int lit, Clause *c) {
   assert (marked (lit) & 2);
   if (!internal->lrat)
     return;
-  LOG (c, "mu2 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu2 %d -> %" PRId64, lit, c->lrat_id ());
   mu2_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -347,7 +347,7 @@ void Closure::set_mu4_reason (int lit, Clause *c) {
   assert (marked (lit) & 4);
   if (!internal->lrat)
     return;
-  LOG (c, "mu4 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu4 %d -> %" PRId64, lit, c->lrat_id ());
   mu4_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -502,9 +502,9 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
       Clause *equiv = add_tmp_binary_clause (-lit, res);
 
       if (equiv) {
-        representative_id (lit) = equiv->id;
+        representative_id (lit) = equiv->lrat_id ();
         if (update_eager)
-          eager_representative_id (lit) = equiv->id;
+          eager_representative_id (lit) = equiv->lrat_id ();
       }
     }
     if (internal->lrat)
@@ -573,7 +573,7 @@ int Closure::find_eager_representative_and_compress (int lit) {
     equiv->hyper = true;
 
     if (internal->lrat && equiv) {
-      eager_representative_id (lit) = equiv->id;
+      eager_representative_id (lit) = equiv->lrat_id ();
     }
     if (internal->lrat) {
       lrat_chain = std::move (tmp_lrat_chain);
@@ -849,7 +849,7 @@ void Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
     internal->unmark (lit);
   }
 
-  lrat_chain.push_back (c->id);
+  lrat_chain.push_back (c->lrat_id ());
   if (tautology) {
     LOG ("generated clause is a tautology");
     lrat_chain.clear ();
@@ -884,8 +884,6 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   Clause *c = (Clause *) new char[bytes];
   DeferDeleteArray<char> clause_delete ((char *) c);
 
-  c->id = ++internal->clause_id;
-
   c->conditioned = false;
   c->covered = false;
   c->garbage = false;
@@ -905,6 +903,7 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   c->glue = size;
   c->size = size;
   c->pos = 2;
+  c->set_lrat_id (++internal->clause_id);
 
   for (int i = 0; i < size; i++)
     c->literals[i] = clause[i];
@@ -1031,7 +1030,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
     internal->unmark (lit);
   }
 
-  lrat_chain.push_back (c->id);
+  lrat_chain.push_back (c->lrat_id ());
   Clause *d;
   assert (internal->clause.empty ());
   if (tautology) {
@@ -1118,12 +1117,12 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     chain.push_back (id);
 
   if (!insert_id_after)
-    chain.push_back (c->id);
+    chain.push_back (c->lrat_id ());
   for (auto id : rewriting)
     chain.push_back (id);
 
   if (insert_id_after)
-    chain.push_back (c->id);
+    chain.push_back (c->lrat_id ());
 }
 
 // Note: it is important that the Rewrite takes over the normal rewriting,
@@ -1143,7 +1142,7 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
        rewrite2.id2, except_lhs, except_lhs2);
   assert (c);
   if (!insert_id_after)
-    chain.push_back (c->id);
+    chain.push_back (c->lrat_id ());
   for (auto other : *c) {
     // unclear how to achieve this in the simplify context where other ==
     // g->lhs might be set assert (internal->val (other) <= 0 || other ==
@@ -1171,7 +1170,7 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
     }
   }
   if (insert_id_after)
-    chain.push_back (c->id);
+    chain.push_back (c->lrat_id ());
 }
 
 // Note: it is important that the Rewrite takes over the normal rewriting,
@@ -1179,14 +1178,14 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 // yet.
 void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, Clause *c) {
   assert (c);
-  chain.push_back (c->id);
+  chain.push_back (c->lrat_id ());
   LOG (lrat_chain, "chain");
 }
 
 void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, const std::optional<LitClausePair> &c) {
   assert (c);
   if (auto litId = c; litId)
-    chain.push_back (litId->clause->id);
+    chain.push_back (litId->clause->lrat_id ());
   LOG (lrat_chain, "chain");
 }
 
@@ -1194,7 +1193,7 @@ void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
     LOG (litId.clause, "found lrat in gate %d from %" PRId64, litId.current_lit,
-         litId.clause->id);
+         litId.clause->lrat_id ());
     push_id_on_chain (chain, litId.clause);
   }
   LOG (lrat_chain, "chain from %zd reasons", reasons.size ());
@@ -1253,7 +1252,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
         for (auto litId : g->pos_lhs_ids) {
           LOG (litId.clause,
                "found lrat in gate %d from %" PRId64 " (looking for %d)",
-               litId.current_lit, litId.clause->id, falsified);
+               litId.current_lit, litId.clause->lrat_id (), falsified);
           if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (
                 litId.clause, Rewrite (), proof_chain, true, Rewrite (),
@@ -1316,7 +1315,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
       for (auto litId : g->pos_lhs_ids) {
         LOG (litId.clause,
              "found lrat in gate %d from %" PRId64 " (looking for %d)",
-             litId.current_lit, litId.clause->id, falsified);
+             litId.current_lit, litId.clause->lrat_id (), falsified);
         if (litId.current_lit == falsified ||
             (litId.current_lit == src && dst == falsified)) {
           push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
@@ -1749,10 +1748,10 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
   lrat_chain.clear ();
 
   if (internal->lrat) {
-    representative_id (larger_repr) = eq1_repr->id;
+    representative_id (larger_repr) = eq1_repr->lrat_id ();
     assert (std::find (begin (*eq1_repr), end (*eq1_repr), -larger_repr) !=
             end (*eq1_repr));
-    representative_id (-larger_repr) = eq2_repr->id;
+    representative_id (-larger_repr) = eq2_repr->lrat_id ();
     assert (std::find (begin (*eq2_repr), end (*eq2_repr), larger_repr) !=
             end (*eq2_repr));
   }
@@ -1801,7 +1800,7 @@ inline void Closure::promote_clause (Clause *c) {
   LOG (c, "turning redundant subsuming clause into irredundant clause");
   c->redundant = false;
   if (internal->proof)
-    internal->proof->strengthen (c->id);
+    internal->proof->strengthen (c->lrat_id ());
   internal->stats.current.irredundant++;
   internal->stats.added.irredundant++;
   internal->stats.irrlits += c->size;
@@ -1819,8 +1818,8 @@ inline void Closure::promote_clause (Clause *c) {
 bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
                                           Clause *c2) {
   assert (!internal->unsat);
-  LRAT_ID id1 = c1 ? c1->id : 0;
-  LRAT_ID id2 = c2 ? c2->id : 0;
+  LRAT_ID id1 = c1 ? c1->lrat_id () : 0;
+  LRAT_ID id2 = c2 ? c2->lrat_id () : 0;
   if (internal->lrat) {
     assert (c1);
     assert (c2);
@@ -1868,9 +1867,9 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     if (internal->lrat)
       lrat_chain.push_back (internal->unit_id (unit));
     if (val_lit < 0)
-      lrat_chain.push_back (c2->id);
+      lrat_chain.push_back (c2->lrat_id ());
     else
-      lrat_chain.push_back (c1->id);
+      lrat_chain.push_back (c1->lrat_id ());
     learn_congruence_unit (unit);
     return false;
   }
@@ -1882,9 +1881,9 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
       lrat_chain.push_back (
           internal->unit_id (val_other < 0 ? -other : other));
     if (val_lit < 0)
-      lrat_chain.push_back (c1->id);
+      lrat_chain.push_back (c1->lrat_id ());
     else
-      lrat_chain.push_back (c2->id);
+      lrat_chain.push_back (c2->lrat_id ());
     learn_congruence_unit (unit);
     return false;
   }
@@ -1970,18 +1969,18 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
       lrat_chain.clear ();
       if (smaller_repr == repr_lit) {
         assert (larger_repr == repr_other);
-        representative_id (-larger_repr) = eq2->id;
+        representative_id (-larger_repr) = eq2->lrat_id ();
         assert (std::find (eq2->begin (), eq2->end (), larger_repr) !=
                 eq2->end ());
-        representative_id (larger_repr) = eq1->id;
+        representative_id (larger_repr) = eq1->lrat_id ();
         assert (std::find (eq1->begin (), eq1->end (), -larger_repr) !=
                 eq1->end ());
       } else {
         assert (larger_repr == repr_lit);
-        representative_id (-larger_repr) = eq1->id;
+        representative_id (-larger_repr) = eq1->lrat_id ();
         assert (std::find (eq1->begin (), eq1->end (), larger_repr) !=
                 eq1->end ());
-        representative_id (larger_repr) = eq2->id;
+        representative_id (larger_repr) = eq2->lrat_id ();
         assert (std::find (eq2->begin (), eq2->end (), -larger_repr) !=
                 eq2->end ());
       }
@@ -2271,7 +2270,7 @@ void Closure::update_and_gate_build_lrat_chain (
         litId.clause = produce_rewritten_clause_lrat (litId.clause, g->lhs,
                                                       remove_units);
         assert (litId.clause);
-        extra_reasons_lit.push_back (litId.clause->id);
+        extra_reasons_lit.push_back (litId.clause->lrat_id ());
       }
     }
     assert (!extra_reasons_lit.empty ());
@@ -2285,7 +2284,7 @@ void Closure::update_and_gate_build_lrat_chain (
         litId.clause = produce_rewritten_clause_lrat (litId.clause, h->lhs,
                                                       remove_units);
         assert (litId.clause);
-        extra_reasons_ulit.push_back (litId.clause->id);
+        extra_reasons_ulit.push_back (litId.clause->lrat_id ());
       }
     }
     assert (!extra_reasons_ulit.empty ());
@@ -2316,7 +2315,7 @@ void Closure::update_and_gate_build_lrat_chain (
         litId.clause = produce_rewritten_clause_lrat (
             litId.clause, other->lhs, remove_units);
         assert (litId.clause);
-        extra_reasons_tauto.push_back (litId.clause->id);
+        extra_reasons_tauto.push_back (litId.clause->lrat_id ());
       }
     }
     assert (!extra_reasons_tauto.empty ());
@@ -2336,7 +2335,7 @@ void Closure::update_and_gate_build_lrat_chain (
         if (!litId.clause) // degenerated but does not know yet
 	  continue;
 	assert (litId.clause);
-        extra_reasons_other.push_back (litId.clause->id);
+        extra_reasons_other.push_back (litId.clause->lrat_id ());
       }
       tauto->pos_lhs_ids.erase (std::remove_if (begin (tauto->pos_lhs_ids),
                                             end (tauto->pos_lhs_ids),
@@ -2549,20 +2548,20 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, g->lhs);
       g->pos_lhs_ids = first;
       assert (g->pos_lhs_ids.size () == 2);
-      reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
-      reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
+      reasons_implication.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+      reasons_back.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
     }
     const signed char v = internal->val (g->lhs);
     if (v > 0) {
       if (internal->lrat) {
         push_lrat_unit (g->lhs);
-        lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
       }
       learn_congruence_unit (g->rhs[0]);
     } else if (v < 0) {
       if (internal->lrat) {
         push_lrat_unit (-g->lhs);
-        lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
       }
       learn_congruence_unit (-g->rhs[0]);
     } else if (merge_literals (g->lhs, g->rhs[0], reasons_implication,
@@ -2789,11 +2788,11 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     std::vector<LRAT_ID> result;
     transform (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
                back_inserter (result),
-               [] (const LitClausePair &x) { return x.clause->id; });
+               [] (const LitClausePair &x) { return x.clause->lrat_id (); });
     LOG (result, "lrat chain positive (%d):", lhs);
     result.clear ();
     if (auto c = g->neg_lhs_ids; c) {
-      result.push_back (c->clause->id);
+      result.push_back (c->clause->lrat_id ());
     }
     LOG (result, "lrat chain negative (%d):", lhs);
 #endif
@@ -2936,7 +2935,7 @@ Clause *Closure::add_binary_clause (int a, int b) {
   Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (
       false, full_watching);
   const bool already_sorted = internal->vlit (a) < internal->vlit (b);
-  binaries.push_back (CompactBinary (res, res->id, already_sorted ? a : b,
+  binaries.push_back (CompactBinary (res, res->lrat_id (), already_sorted ? a : b,
                                      already_sorted ? b : a));
   if (!full_watching)
     new_unwatched_binary_clauses.push_back (res);
@@ -2975,7 +2974,7 @@ Clause *Closure::maybe_promote_tmp_binary_clause (Clause *c) {
 #endif
   if (internal->val (c->literals[0]) || internal->val (c->literals[1]))
     return c;
-  lrat_chain.push_back (c->id);
+  lrat_chain.push_back (c->lrat_id ());
   Clause *res = add_binary_clause (c->literals[0], c->literals[1]);
   LOG (res, "promoted to");
   return res;
@@ -3040,7 +3039,7 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     ++matched;
     if (!(mark & 2)) {
       lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
-      LOG ("pushing %d -> %" PRId64, other, w.clause->id);
+      LOG ("pushing %d -> %" PRId64, other, w.clause->lrat_id ());
       continue;
     }
     LOG ("marking %d mu4", other);
@@ -3385,8 +3384,8 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     }
     if (internal->lrat) {
       assert (lrat_chain.empty ());
-      lrat_chain.push_back (first[2 * i].clause->id);
-      lrat_chain.push_back (first[2 * i + 1].clause->id);
+      lrat_chain.push_back (first[2 * i].clause->lrat_id ());
+      lrat_chain.push_back (first[2 * i + 1].clause->lrat_id ());
     }
     if (clause.size () > 1) {
       if (internal->lrat) {
@@ -3676,9 +3675,9 @@ void Closure::add_xor_matching_proof_chain (
     int rest = pair.current_lit >> 1;
     rest &= ~(1 << (g->rhs.size () - 1));
     if (first == (lhs1 > 0)) {
-      first_ids.push_back (LitIdPair (rest, pair.clause->id));
+      first_ids.push_back (LitIdPair (rest, pair.clause->lrat_id ()));
     } else {
-      second_ids.push_back (LitIdPair (rest, pair.clause->id));
+      second_ids.push_back (LitIdPair (rest, pair.clause->lrat_id ()));
     }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
@@ -3687,9 +3686,9 @@ void Closure::add_xor_matching_proof_chain (
     int rest = pair.current_lit >> 1;
     rest &= ~(1 << (g->rhs.size () - 1));
     if (first == (lhs2 < 0)) {
-      first_ids.push_back (LitIdPair (rest, pair.clause->id));
+      first_ids.push_back (LitIdPair (rest, pair.clause->lrat_id ()));
     } else {
-      second_ids.push_back (LitIdPair (rest, pair.clause->id));
+      second_ids.push_back (LitIdPair (rest, pair.clause->lrat_id ()));
     }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
@@ -4198,8 +4197,8 @@ void Closure::find_units () {
                other, lit, -other, lit);
           ++units;
           if (internal->lrat) {
-            lrat_chain.push_back (w.clause->id);
-            lrat_chain.push_back (marked_mu1 (-other).clause->id);
+            lrat_chain.push_back (w.clause->lrat_id ());
+            lrat_chain.push_back (marked_mu1 (-other).clause->lrat_id ());
           }
           bool failed = !learn_congruence_unit (lit);
           unmark_all ();
@@ -4267,8 +4266,8 @@ void Closure::find_equivalences () {
           //   representatives directly
           //   // therefore you actually need to learn the clauses 2->3->4
           //   and -2->1 and vice-versa eager_representative_id (other) =
-          //   marked_mu1 (-other).clause->id; eager_representative_id
-          //   (-other) = w.clause->id; assert (eager_representative_id
+          //   marked_mu1 (-other).clause->lrat_id (); eager_representative_id
+          //   (-other) = w.clause->lrat_id (); assert (eager_representative_id
           //   (other) != -1); LOG ("lrat: %d (%zd) %d (%zd)", other,
           //   eager_representative_id (other), -other,
           //   eager_representative_id (-other));
@@ -4897,7 +4896,7 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (internal->proof)
-    internal->proof->strengthen (subsuming->id);
+    internal->proof->strengthen (subsuming->lrat_id ());
   internal->mark_garbage (subsumed);
   stats.current.irredundant++;
   stats.added.irredundant++;
@@ -5014,22 +5013,22 @@ void Closure::produce_ite_merge_then_else_reasons (
     LOG ("degenerated case with lhs = -cond");
     LOG (g->pos_lhs_ids[1].clause, "1:");
     LOG (g->pos_lhs_ids[2].clause, "2:");
-    reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
+    reasons_implication.push_back (g->pos_lhs_ids[2].clause->lrat_id ());
     return;
   }
   if (ite_flags_cond_lhs (flag)) {
     LOG ("degenerated case with lhs = cond");
     assert (g->pos_lhs_ids[0].clause);
     assert (g->pos_lhs_ids[3].clause);
-    reasons_back.push_back (g->pos_lhs_ids[3].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[3].clause->lrat_id ());
+    reasons_implication.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
     return;
   }
-  reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
-  reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
-  reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
-  reasons_back.push_back (g->pos_lhs_ids[3].clause->id);
+  reasons_implication.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+  reasons_implication.push_back (g->pos_lhs_ids[2].clause->lrat_id ());
+  reasons_back.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
+  reasons_back.push_back (g->pos_lhs_ids[3].clause->lrat_id ());
 }
 
 void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
@@ -5133,8 +5132,8 @@ bool Closure::rewrite_ite_gate_to_and (
         p2.clause = produce_rewritten_clause_lrat (p2.clause);
 	assert (p1.clause);
 	assert (p2.clause);
-        lrat_chain.push_back (p1.clause->id);
-        lrat_chain.push_back (p2.clause->id);
+        lrat_chain.push_back (p1.clause->lrat_id ());
+        lrat_chain.push_back (p2.clause->lrat_id ());
         // push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
         //                                  Rewrite (), lrat_chain);
       } else {
@@ -5195,8 +5194,8 @@ bool Closure::rewrite_ite_gate_to_and (
   assert (lit != dst);
   assert (other != dst);
   assert (lit != other);
-  lrat_chain.push_back (c->id);
-  lrat_chain.push_back (d->id);
+  lrat_chain.push_back (c->lrat_id ());
+  lrat_chain.push_back (d->lrat_id ());
   Clause *e = learn_binary_tmp_or_full_clause (lit, -other);
   assert (e);
 
@@ -5277,7 +5276,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         g->pos_lhs_ids[3].clause = produce_rewritten_clause_lrat (
             g->pos_lhs_ids[3].clause, g->lhs, false);
         assert (g->pos_lhs_ids[3].clause);
-        reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[3].clause->lrat_id ());
         unsimplified.clear ();
         return;
       }
@@ -5295,7 +5294,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         g->pos_lhs_ids[0].clause = produce_rewritten_clause_lrat (
             g->pos_lhs_ids[0].clause, g->lhs, false);
         assert (g->pos_lhs_ids[0].clause);
-        reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
         unsimplified.clear ();
         return;
       }
@@ -5321,7 +5320,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 
         // don't bother finding out which one is used
         reasons_implication.push_back (id_unit);
-        reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
         unsimplified.clear ();
         return;
       }
@@ -5338,7 +5337,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         assert (g->pos_lhs_ids[2].clause);
 
         reasons_implication.push_back (id_unit);
-        reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[2].clause->lrat_id ());
         unsimplified.clear ();
         return;
       }
@@ -5351,8 +5350,8 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
             g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
-        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
-        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
         unsimplified.push_back (-cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
         reasons_unit = {id_unit};
@@ -5369,8 +5368,8 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
             g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
-        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
-        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
         unsimplified.push_back (cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
         reasons_unit = {id_unit};
@@ -5387,8 +5386,8 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
             g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
-        reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
-        reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
+        reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+        reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
         return;
       }
       // if (other_lit == -g->lhs) {
@@ -5403,21 +5402,21 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
     produce_rewritten_clause_lrat (g->pos_lhs_ids, g->lhs, false);
     assert (g->pos_lhs_ids.size () == 4);
 
-    reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
-    reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
+    reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+    reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
 
     // already merged: only unit is important
     if (!rewritting_then && repr_lhs == repr_lit_to_merge) {
       return;
     }
 
-    reasons_implication.push_back (g->pos_lhs_ids[other_idx1].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[idx1].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[idx2].clause->id);
+    reasons_implication.push_back (g->pos_lhs_ids[other_idx1].clause->lrat_id ());
+    reasons_implication.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+    reasons_implication.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
 
-    reasons_back.push_back (g->pos_lhs_ids[other_idx2].clause->id);
-    reasons_back.push_back (g->pos_lhs_ids[idx1].clause->id);
-    reasons_back.push_back (g->pos_lhs_ids[idx2].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[other_idx2].clause->lrat_id ());
+    reasons_back.push_back (g->pos_lhs_ids[idx1].clause->lrat_id ());
+    reasons_back.push_back (g->pos_lhs_ids[idx2].clause->lrat_id ());
   } else {
     LOG ("learn extra clauses XXXXXXXXXXXXXXXXXXXXXXXXX");
     const int lhs = g->lhs;
@@ -5603,8 +5602,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                  false);
         if (internal->lrat) {
           assert (g->pos_lhs_ids.size () == 2);
-          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+          lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
         }
         learn_congruence_unit (-else_lit);
         garbage = true;
@@ -5708,8 +5707,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                  false);
         if (internal->lrat) {
           assert (g->pos_lhs_ids.size () == 2);
-          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+          lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
         }
         learn_congruence_unit (then_lit);
         garbage = true;
@@ -5718,8 +5717,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                  false);
         if (internal->lrat) {
           assert (g->pos_lhs_ids.size () == 2);
-          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+          lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
         }
         learn_congruence_unit (-then_lit);
         garbage = true;
@@ -5728,8 +5727,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                  false);
         if (internal->lrat) {
           assert (g->pos_lhs_ids.size () == 2);
-          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+          lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
         }
         learn_congruence_unit (cond);
         garbage = true;
@@ -5786,8 +5785,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                    false);
           if (internal->lrat) {
             assert (g->pos_lhs_ids.size () == 2);
-            lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-            lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+            lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+            lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
           }
           learn_congruence_unit (unit);
           garbage = true;
@@ -5798,8 +5797,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                                    false);
           if (internal->lrat) {
             assert (g->pos_lhs_ids.size () == 2);
-            lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-            lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+            lrat_chain.push_back (g->pos_lhs_ids[0].clause->lrat_id ());
+            lrat_chain.push_back (g->pos_lhs_ids[1].clause->lrat_id ());
           }
           learn_congruence_unit (-unit);
           garbage = true;
@@ -6053,15 +6052,15 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
 
   c = produce_rewritten_clause_lrat (c, g->lhs, true);
   if (c) {
-    lrat_chain.push_back (c->id);
+    lrat_chain.push_back (c->lrat_id ());
     d = produce_rewritten_clause_lrat (d, g->lhs, true);
     if (d)
-      lrat_chain.push_back (d->id);
+      lrat_chain.push_back (d->lrat_id ());
   } else if (!c) {
     push_id_and_rewriting_lrat_unit (d, Rewrite (), lrat_chain, true,
                                      Rewrite (), g->lhs);
     assert (d);
-    lrat_chain.push_back (d->id);
+    lrat_chain.push_back (d->lrat_id ());
   }
 }
 
@@ -6187,8 +6186,8 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   assert (lit);
   assert (other);
   assert (lit != other);
-  if (c) lrat_chain.push_back (c->id);
-  lrat_chain.push_back (d->id);
+  if (c) lrat_chain.push_back (c->lrat_id ());
+  lrat_chain.push_back (d->lrat_id ());
   Clause *e = add_tmp_binary_clause (lit, -other);
 
   auto long_clause =
@@ -6246,10 +6245,10 @@ void Closure::merge_ite_gate_same_then_else_lrat (
   auto neg_then_imp = clauses[1];
   auto else_imp = clauses[2];
   auto neg_else_imp = clauses[3];
-  reasons_implication.push_back (then_imp.clause->id);
-  reasons_implication.push_back (else_imp.clause->id);
-  reasons_back.push_back (neg_then_imp.clause->id);
-  reasons_back.push_back (neg_else_imp.clause->id);
+  reasons_implication.push_back (then_imp.clause->lrat_id ());
+  reasons_implication.push_back (else_imp.clause->lrat_id ());
+  reasons_back.push_back (neg_then_imp.clause->lrat_id ());
+  reasons_back.push_back (neg_else_imp.clause->lrat_id ());
 }
 
 void Closure::simplify_ite_gate_then_else_set (
@@ -6272,9 +6271,9 @@ void Closure::simplify_ite_gate_then_else_set (
   // const int cond = g->rhs[0];
   // assert (internal->val (cond));
   // reasons_implication.push_back(internal->unit_id (internal->val (cond) >
-  // 0 ? cond : -cond)); reasons_implication.push_back(c->id);
+  // 0 ? cond : -cond)); reasons_implication.push_back(c->lrat_id ());
   // reasons_back.push_back(internal->unit_id (internal->val (cond) > 0 ?
-  // cond : -cond)); reasons_back.push_back(d->id);
+  // cond : -cond)); reasons_back.push_back(d->lrat_id ());
 }
 
 void Closure::simplify_ite_gate_condition_set (
@@ -6504,25 +6503,25 @@ void Closure::add_ite_matching_proof_chain (
     g_then_clause =
       g_then_clause ? produce_rewritten_clause_lrat (g_then_clause, g->lhs, false) : nullptr;
     if (g_then_clause)
-      g_then_id = g_then_clause->id;
+      g_then_id = g_then_clause->lrat_id ();
 
     auto &g_neg_then_clause = g->pos_lhs_ids[1].clause;
     g_neg_then_clause =
       g_neg_then_clause ? produce_rewritten_clause_lrat (g_neg_then_clause, g->lhs, false) : nullptr;
     if (g_neg_then_clause)
-      g_neg_then_id = g_neg_then_clause->id;
+      g_neg_then_id = g_neg_then_clause->lrat_id ();
 
     auto &g_else_clause = g->pos_lhs_ids[2].clause;
     g_else_clause =
       g_else_clause ? produce_rewritten_clause_lrat (g_else_clause, g->lhs, false) : g_else_clause;
     if (g_else_clause)
-      g_else_id = g_else_clause->id;
+      g_else_id = g_else_clause->lrat_id ();
 
     auto &g_neg_else_clause = g->pos_lhs_ids[3].clause;
     g_neg_else_clause =
       g_neg_else_clause ? produce_rewritten_clause_lrat (g_neg_else_clause, g->lhs, false) : nullptr;
     if (g_neg_else_clause)
-      g_neg_else_id = g_neg_else_clause->id;
+      g_neg_else_id = g_neg_else_clause->lrat_id ();
 
     LOG (h, "now clauses from");
     assert (h->pos_lhs_ids.size () == 4);
@@ -6530,25 +6529,25 @@ void Closure::add_ite_matching_proof_chain (
     h_then_clause =
       h_then_clause ? produce_rewritten_clause_lrat (h_then_clause, h->lhs, false) : nullptr;
     if (h_then_clause)
-      h_then_id = h_then_clause->id;
+      h_then_id = h_then_clause->lrat_id ();
 
     auto &h_neg_then_clause = h->pos_lhs_ids[1].clause;
     h_neg_then_clause =
       h_neg_then_clause ? produce_rewritten_clause_lrat (h_neg_then_clause, h->lhs, false) : nullptr;
     if (h_neg_then_clause)
-      h_neg_then_id = h_neg_then_clause->id;
+      h_neg_then_id = h_neg_then_clause->lrat_id ();
 
     auto &h_else_clause = h->pos_lhs_ids[2].clause;
     h_else_clause =
       h_else_clause ? produce_rewritten_clause_lrat (h_else_clause, h->lhs, false) : nullptr;
     if (h_else_clause)
-      h_else_id = h_else_clause->id;
+      h_else_id = h_else_clause->lrat_id ();
 
     auto &h_neg_else_clause = h->pos_lhs_ids[3].clause;
     h_neg_else_clause =
       h_neg_else_clause ? produce_rewritten_clause_lrat (h_neg_else_clause, h->lhs, false) : nullptr;
     if (h_neg_else_clause)
-      h_neg_else_id = h_neg_else_clause->id;
+      h_neg_else_id = h_neg_else_clause->lrat_id ();
 
   }
 

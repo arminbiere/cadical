@@ -319,7 +319,7 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
   assert (reason != external_reason);
   bump_clause (reason);
   if (lrat)
-    lrat_chain.push_back (reason->id);
+    lrat_chain.push_back (reason->lrat_id ());
   for (const auto &other : *reason)
     if (other != lit)
       analyze_literal (other, open, resolvent_size, antecedent_size);
@@ -803,7 +803,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     remove_watch (watches (other_init), new_conflict);
   remove_watch (watches (uip), new_conflict);
 
-  assert (!lrat || lrat_chain.back () == new_conflict->id);
+  assert (!lrat || lrat_chain.back () == new_conflict->lrat_id ());
   if (lrat) {
     assert (!lrat_chain.empty ());
     for (const auto &id : unit_chain) {
@@ -880,7 +880,7 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (proof)
-    proof->strengthen (subsuming->id);
+    proof->strengthen (subsuming->lrat_id ());
   mark_garbage (subsumed);
   stats.current.irredundant++;
   stats.added.irredundant++;

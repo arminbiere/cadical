@@ -199,8 +199,8 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
         bool red = (size == 3 || (c->redundant && d->redundant));
         if (lrat) {
           assert (lrat_chain.empty ());
-          lrat_chain.push_back (c->id);
-          lrat_chain.push_back (d->id);
+          lrat_chain.push_back (c->lrat_id ());
+          lrat_chain.push_back (d->lrat_id ());
         }
         Clause *r = new_hyper_ternary_resolved_clause (red);
         if (red)

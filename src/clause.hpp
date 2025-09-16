@@ -5,6 +5,9 @@
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
+#include <sys/types.h>
+#include <inttypes.h>
 
 namespace CaDiCaL {
 
@@ -35,15 +38,19 @@ typedef const int *const_literal_iterator;
 #define FROZEN(c) (c)->temporary_mark
 
 struct Clause {
+#ifndef NDEBUG
   union {
-    int64_t id;   // Used to create LRAT-style proofs
-    Clause *copy; // Only valid if 'moved', then that's where to.
+    int64_t raw_id;   // Used to create LRAT-style proofs
+    Clause *copy_ptr; // Only valid if 'moved', then that's where to.
     //
     // The 'copy' field is only valid for 'moved' clauses in the moving
     // garbage collector 'copy_non_garbage_clauses' for keeping clauses
     // compactly in a contiguous memory arena.  Otherwise, so almost all of
     // the time, 'id' is valid.  See 'collect.cpp' for details.
   };
+#endif
+  uint32_t id_lower_bits;
+  uint32_t id_higher_bits;
   unsigned used : USED_SIZE; // resolved in conflict analysis since last
                              // 'reduce'
   bool conditioned : 1; // Tried for globally blocked clause elimination.
@@ -153,7 +160,7 @@ struct Clause {
     const size_t faked_literals_bytes = sizeof ((Clause *) 0)->literals;
     combined_bytes -= faked_literals_bytes;
 #endif
-    size_t aligned_bytes = align (combined_bytes, 8);
+    size_t aligned_bytes = align (combined_bytes, 4);
     return aligned_bytes;
   }
 
@@ -167,6 +174,44 @@ struct Clause {
   // code though for both situations and thus hide here this variance.
   //
   bool collect () const { return !reason && garbage; }
+  Clause *copy () const {
+    assert (moved);
+    const uint32_t lower_bits = (uint32_t) literals[0];
+    const uint32_t higher_bits = (uint32_t) literals[1];
+    Clause *p =
+      (Clause *) ((((uint64_t)higher_bits) << 32) + (uint64_t)lower_bits);
+    assert (p == copy_ptr);
+    return p;
+  };
+  void set_copy (Clause *c) {
+#ifndef NDEBUG
+    copy_ptr = c;
+#endif
+    size_t addr = (size_t) c;
+    const uint32_t lower_bits = static_cast <uint32_t> (addr);
+    const uint32_t higher_bits = static_cast <uint32_t> (addr >> 32);
+    literals[0] = (int) lower_bits;
+    literals[1] = (int) higher_bits;
+    assert (copy () == c);
+  }
+  int64_t lrat_id () const {
+    // assert (!moved); // used in collect () even if meaningless (!)
+    const uint32_t lower_bits = (uint32_t) id_lower_bits;
+    const uint32_t higher_bits = (uint32_t) id_higher_bits;
+    int64_t p = ((((uint64_t)higher_bits) << 32) + (uint64_t)lower_bits);
+    return p;
+  }
+  void set_lrat_id (int64_t id) {
+    assert (!moved);
+#ifndef NDEBUG
+    raw_id = id;
+#endif
+    const unsigned lower_bits = static_cast <uint32_t> (id);
+    const unsigned higher_bits = id >> 32;
+    id_lower_bits = lower_bits;
+    id_higher_bits = higher_bits;
+    assert (moved || lrat_id () == raw_id);
+  }
 };
 
 struct clause_smaller_size {

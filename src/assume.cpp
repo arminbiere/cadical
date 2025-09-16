@@ -51,7 +51,7 @@ void Internal::assume_analyze_literal (int lit) {
     for (const auto &other : *v.reason) {
       assume_analyze_literal (other);
     }
-    lrat_chain.push_back (v.reason->id);
+    lrat_chain.push_back (v.reason->lrat_id ());
     return;
   }
   assert (assumed (-lit));
@@ -67,7 +67,7 @@ void Internal::assume_analyze_reason (int lit, Clause *reason) {
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->lrat_id ());
 }
 
 // Find all failing assumptions starting from the one on the assumption

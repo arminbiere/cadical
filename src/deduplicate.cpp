@@ -110,7 +110,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           if (lrat) {
             // taken from fradical
             assert (lrat_chain.empty ());
-            lrat_chain.push_back (c->id);
+            lrat_chain.push_back (c->lrat_id ());
             // We've forgotten where the other binary clause is, so go find
             // it again
             for (watch_iterator k = ws.begin ();; k++) {
@@ -119,7 +119,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
                 continue;
               if (k->blit != -other)
                 continue;
-              lrat_chain.push_back (k->clause->id);
+              lrat_chain.push_back (k->clause->lrat_id ());
               break;
             }
           }

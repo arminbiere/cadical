@@ -57,7 +57,7 @@ void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
-  push_id_on_extension_stack (c->id);
+  push_id_on_extension_stack (c->lrat_id ());
   push_zero_on_extension_stack ();
   for (const auto &lit : *c)
     push_clause_literal_on_extension_stack (lit);
