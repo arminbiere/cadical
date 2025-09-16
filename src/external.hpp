@@ -3,7 +3,11 @@
 
 /*------------------------------------------------------------------------*/
 
+#include "cadical.hpp"
 #include "range.hpp"
+#include <climits>
+#include <cmath>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
@@ -65,7 +69,7 @@ struct External {
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
 
-  vector<uint64_t>
+  std::vector<uint64_t>
       ext_units; // External units. Needed to compute LRAT for eclause
   vector<bool> ext_flags; // to avoid duplicate units
   vector<int> eclause;    // External version of original input clause.
@@ -112,7 +116,7 @@ struct External {
   // propagator. The value of the map starts with a Boolean flag indicating
   // if the clause is still present or got already deleted, and then
   // followed by the literals of the clause.
-  unordered_map<uint64_t, vector<int>> forgettable_original;
+  std::unordered_map<uint64_t, vector<int>> forgettable_original;
 
   void add_observed_var (int elit);
   void remove_observed_var (int elit);

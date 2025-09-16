@@ -1514,6 +1514,10 @@ inline int External::fixed (int elit) const {
   int eidx = abs (elit);
   if (eidx > max_var)
     return 0;
+  /*  not needed, since fixed knowledge remains internally (though ids do
+  not). if (ext_units[2 * eidx + (elit < 0)]) return elit; else if
+  (ext_units[2 * eidx + (elit > 0)]) return -elit;
+    */
   int ilit = e2i[eidx];
   if (!ilit)
     return 0;

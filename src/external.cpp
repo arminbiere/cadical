@@ -380,7 +380,16 @@ void External::add_observed_var (int elit) {
   assert (!internal->level);
 
   std::vector<int> assigned = {unit};
-  propagator->notify_assignment (assigned);
+  std::vector<int64_t> reason;
+  int64_t r = 0;
+  if (!r)
+    r = ext_units[2 * abs (elit) + (elit < 0)];
+  if (!r)
+    r = ext_units[2 * abs (elit) + (elit > 0)];
+  if (!r)
+    r = internal->unit_clauses (ilit);
+  reason.push_back (r);
+  propagator->notify_assignment (assigned, reason);
 }
 
 void External::remove_observed_var (int elit) {

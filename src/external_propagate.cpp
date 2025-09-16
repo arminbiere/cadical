@@ -131,6 +131,7 @@ void Internal::renotify_full_trail () {
     notify_backtrack (0);
   }
   std::vector<int> assigned;
+  std::vector<int64_t> reasons;
 
   int prev_max_level = 0;
   int current_level = 0;
@@ -145,8 +146,10 @@ void Internal::renotify_full_trail () {
       current_level = var (ilit).level;
 
     if (current_level > propagator_level) {
-      if (assigned.size ())
-        external->propagator->notify_assignment (assigned);
+      if (assigned.size ()) {
+        assert (assigned.size () == reasons.size ());
+        external->propagator->notify_assignment (assigned, reasons);
+      }
       while (current_level > propagator_level) {
         external->propagator->notify_new_decision_level ();
         propagator_level++;
@@ -168,9 +171,11 @@ void Internal::renotify_full_trail () {
     // already done.
     assert (external->observed (elit) || fixed (ilit));
     assigned.push_back (elit);
+    int64_t reason = var (ilit).reason->id;
+    reasons.push_back (reason);
   }
   if (assigned.size ())
-    external->propagator->notify_assignment (assigned);
+    external->propagator->notify_assignment (assigned, reasons);
   assigned.clear ();
 
   // In case there are some left over empty levels on the top of the trail,
@@ -936,6 +941,7 @@ void Internal::notify_assignments () {
 
   LOG ("notify external propagator about new assignments");
   std::vector<int> assigned;
+  std::vector<int64_t> reasons;
 
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
@@ -950,9 +956,10 @@ void Internal::notify_assignments () {
     // already done.
     assert (external->observed (elit) || fixed (ilit));
     assigned.push_back (elit);
+    reasons.push_back (var (ilit).reason->id);
   }
 
-  external->propagator->notify_assignment (assigned);
+  external->propagator->notify_assignment (assigned, reasons);
   return;
 }
 

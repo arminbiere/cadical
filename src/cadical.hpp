@@ -1175,7 +1175,8 @@ public:
   // to an assignment.
   //
   // virtual void notify_assignment (int lit, bool is_fixed) = 0;
-  virtual void notify_assignment (const std::vector<int> &lits) = 0;
+  virtual void notify_assignment (const std::vector<int> &lits,
+                                  const std::vector<int64_t> &reasons) = 0;
   virtual void notify_new_decision_level () = 0;
   virtual void notify_backtrack (size_t new_level) = 0;
 

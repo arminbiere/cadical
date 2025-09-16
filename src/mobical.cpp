@@ -895,7 +895,8 @@ public:
     return lit;
   }
 
-  void notify_assignment (const std::vector<int> &lits) override {
+  void notify_assignment (const std::vector<int> &lits,
+                          const std::vector<int64_t> &) override {
     MLOG ("notified " << lits.size () << " new assignments on level "
                       << observed_trail.size () - 1);
 #ifndef NDEBUG
