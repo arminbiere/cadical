@@ -203,8 +203,8 @@ void Internal::bump_variables () {
 
 // We use the glue time stamp table 'gtab' for fast glue computation.
 
-int Internal::recompute_glue (Clause *c) {
-  int res = 0;
+unsigned Internal::recompute_glue (Clause *c) {
+  unsigned res = 0;
   const int64_t stamp = ++stats.recomputed;
   for (const auto &lit : *c) {
     int level = var (lit).level;
@@ -228,7 +228,7 @@ inline void Internal::bump_clause (Clause *c) {
     return;
   if (!c->redundant)
     return;
-  int new_glue = recompute_glue (c);
+  unsigned new_glue = recompute_glue (c);
   if (new_glue < c->glue)
     promote_clause (c, new_glue);
 
@@ -499,7 +499,7 @@ struct analyze_trail_larger {
 
 // Generate new driving clause and compute jump level.
 
-Clause *Internal::new_driving_clause (const int glue, int &jump) {
+Clause *Internal::new_driving_clause (const unsigned glue, int &jump) {
 
   const size_t size = clause.size ();
   Clause *res;
@@ -1188,13 +1188,13 @@ void Internal::analyze () {
   // Update glue and learned (1st UIP literals) statistics.
   //
   int size = (int) clause.size ();
-  const int glue = (int) levels.size () - 1;
+  const unsigned glue = (unsigned) levels.size () - 1;
   LOG (clause, "1st UIP size %d and glue %d clause", size, glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
   stats.learned.literals += size;
   stats.learned.clauses++;
-  assert (glue < size);
+  assert ((int)glue < size);
 
   // up to this point lrat_chain contains the proof for current clause in
   // reversed order. in minimize and shrink the clause is changed and
@@ -1324,7 +1324,7 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
   }
   else {
     int jump;
-    const int glue = clause.size () - 1;
+    const unsigned glue = clause.size () - 1;
     conflict = new_driving_clause (glue, jump);
     UPDATE_AVERAGE (averages.current.level, jump);
     backtrack (jump);

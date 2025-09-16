@@ -525,6 +525,7 @@ bool Internal::arenaing () { return opts.arena && (stats.collections > 1); }
 void Internal::garbage_collection () {
   if (unsat)
     return;
+  start_marking_clauses();
   START (collect);
   report ('G', 1);
   stats.collections++;
@@ -538,6 +539,7 @@ void Internal::garbage_collection () {
   check_clause_stats ();
   check_var_stats ();
   unprotect_reasons ();
+  end_marking_clauses();
   report ('C', 1);
   STOP (collect);
 }

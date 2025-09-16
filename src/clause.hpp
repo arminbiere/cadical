@@ -28,6 +28,12 @@ typedef const int *const_literal_iterator;
 // is very costly.
 
 #define USED_SIZE 5
+#define GLUE_SIZE 12
+#define MAX_GLUE (unsigned)((1<<GLUE_SIZE) - 1)
+#define SWEPT(c) (c)->temporary_mark
+#define ENQUEUED(c) (c)->temporary_mark
+#define FROZEN(c) (c)->temporary_mark
+
 struct Clause {
   union {
     int64_t id;   // Used to create LRAT-style proofs
@@ -38,24 +44,24 @@ struct Clause {
     // compactly in a contiguous memory arena.  Otherwise, so almost all of
     // the time, 'id' is valid.  See 'collect.cpp' for details.
   };
-  unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
+  unsigned used : USED_SIZE; // resolved in conflict analysis since last
+                             // 'reduce'
   bool conditioned : 1; // Tried for globally blocked clause elimination.
-  bool covered : 1;  // Already considered for covered clause elimination.
-  bool enqueued : 1; // Enqueued on backward queue.
-  bool frozen : 1;   // Temporarily frozen (in covered clause elimination).
+  bool covered : 1;  // leftovers from the last covered clause elimination.
   bool garbage : 1;  // can be garbage collected unless it is a 'reason'
-  bool gate : 1;     // Clause part of a gate (function definition).
+  bool gate : 1;     // Clause part of a gate (function definition), used in elimination
   bool hyper : 1;    // redundant hyper binary or ternary resolved
   bool instantiated : 1; // tried to instantiate
   bool moved : 1;        // moved during garbage collector ('copy' valid)
   bool reason : 1;       // reason / antecedent clause can not be collected
   bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
-  bool transred : 1;     // already checked for transitive reduction
-  bool subsume : 1;      // not checked in last subsumption round
-  bool swept : 1;        // clause used to sweep equivalences
+  bool transred : 1;     // leftovers from the last transitive reduction
+  bool subsume : 1;      // leftovers from the last subsumption round
   bool flushed : 1;      // garbage in proof deleted binaries
   bool vivified : 1; // clause already vivified
-  bool vivify : 1;   // clause scheduled to be vivified
+  bool vivify : 1;   // leftovers from the last vivification
+  bool temporary_mark : 1; // used for markings for once inprocessing
+  // technique if also removed at the end
 
   // The glucose level ('LBD' or short 'glue') is a heuristic value for the
   // expected usefulness of a learned clause, where smaller glue is consider
@@ -91,7 +97,7 @@ struct Clause {
   // See 'mark_useless_redundant_clauses_as_garbage' in 'reduce.cpp' and
   // 'bump_clause' in 'analyze.cpp'.
   //
-  int glue;
+  unsigned glue : GLUE_SIZE;
 
   int size; // Actual size of 'literals' (at least 2).
   int pos;  // Position of last watch replacement [Gent'13].

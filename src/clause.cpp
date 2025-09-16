@@ -1,3 +1,4 @@
+#include "clause.hpp"
 #include "internal.hpp"
 
 namespace CaDiCaL {
@@ -75,13 +76,13 @@ void Internal::mark_added (Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue) {
+Clause *Internal::new_clause (bool red, unsigned glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
   assert (size >= 2);
 
-  if (glue > size)
+  if ((int)glue > size)
     glue = size;
 
   size_t bytes = Clause::bytes (size);
@@ -92,8 +93,6 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   c->conditioned = false;
   c->covered = false;
-  c->enqueued = false;
-  c->frozen = false;
   c->garbage = false;
   c->gate = false;
   c->hyper = false;
@@ -103,13 +102,13 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->redundant = red;
   c->transred = false;
   c->subsume = false;
-  c->swept = false;
   c->flushed = false;
   c->vivified = false;
   c->vivify = false;
   c->used = 0;
+  c->temporary_mark = false;
 
-  c->glue = glue;
+  c->glue = min (MAX_GLUE, glue);
   c->size = size;
   c->pos = 2;
 
@@ -145,16 +144,16 @@ Clause *Internal::new_clause (bool red, int glue) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::promote_clause (Clause *c, int new_glue) {
+void Internal::promote_clause (Clause *c, unsigned new_glue) {
   assert (c->redundant);
   assert (new_glue);
-  const int tier1limit = tier1[false];
-  const int tier2limit = max (tier1limit, tier2[false]);
+  const unsigned tier1limit = tier1[false];
+  const unsigned tier2limit = max (tier1limit, tier2[false]);
   if (!c->redundant)
     return;
   if (c->hyper)
     return;
-  int old_glue = c->glue;
+  unsigned old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
   c->used = max_used;
@@ -169,18 +168,19 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
   stats.improvedglue++;
+  assert (new_glue <= MAX_GLUE);
   c->glue = new_glue;
 }
 /*------------------------------------------------------------------------*/
 
-void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
+void Internal::promote_clause_glue_only (Clause *c, unsigned new_glue) {
   assert (c->redundant);
   assert (new_glue);
   if (c->hyper)
     return;
-  int old_glue = c->glue;
-  const int tier1limit = tier1[false];
-  const int tier2limit = max (tier1limit, tier2[false]);
+  unsigned old_glue = c->glue;
+  const unsigned tier1limit = tier1[false];
+  const unsigned tier2limit = max (tier1limit, tier2[false]);
   if (new_glue >= old_glue)
     return;
   if (new_glue <= tier1limit) {
@@ -194,6 +194,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
   stats.improvedglue++;
+  assert (new_glue <= MAX_GLUE);
   c->glue = new_glue;
 }
 
@@ -227,7 +228,7 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   size_t res = old_bytes - new_bytes;
 
   if (c->redundant)
-    promote_clause_glue_only (c, min (c->size - 1, c->glue));
+    promote_clause_glue_only (c, min ((unsigned)(c->size - 1), c->glue));
   else {
     int delta_size = old_size - new_size;
     assert (stats.irrlits >= delta_size);
@@ -515,8 +516,8 @@ void Internal::add_new_original_clause (int64_t id) {
 #ifndef NDEBUG
       check_watched_literal_invariants ();
 #endif
-      int glue = (int) (learned_levels.size () + unassigned);
-      assert (glue <= (int) clause.size ());
+      unsigned glue = (int) (learned_levels.size () + unassigned);
+      assert ((int)glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
@@ -536,7 +537,7 @@ void Internal::add_new_original_clause (int64_t id) {
 // that the clause is at least of size 2, and the first two literals
 // are assigned at the highest decision level.
 //
-Clause *Internal::new_learned_redundant_clause (int glue) {
+Clause *Internal::new_learned_redundant_clause (unsigned glue) {
   assert (clause.size () > 1);
 #ifndef NDEBUG
   for (size_t i = 2; i < clause.size (); i++)
@@ -555,7 +556,7 @@ Clause *Internal::new_learned_redundant_clause (int glue) {
 
 // Add hyper binary resolved clause during 'probing'.
 //
-Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
+Clause *Internal::new_hyper_binary_resolved_clause (bool red, unsigned glue) {
   external->check_learned_clause ();
   Clause *res = new_clause (red, glue);
   if (proof) {
@@ -618,7 +619,7 @@ Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
 //
 Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
-  const int new_glue = orig->glue;
+  const unsigned new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
@@ -663,7 +664,8 @@ void Internal::decay_clauses_upon_incremental_clauses () {
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition
-      ++c->glue;
+      if (c->glue < MAX_GLUE)
+	++c->glue;
       break;
     case 2: // Armin's idea
       if (c->glue < tier1[false])
@@ -672,7 +674,8 @@ void Internal::decay_clauses_upon_incremental_clauses () {
     case 3:
       if (c->glue < tier1[false])
         c->used = 1;
-      ++c->glue;
+      if (c->glue < MAX_GLUE)
+	++c->glue;
       break;
     default:
       break;

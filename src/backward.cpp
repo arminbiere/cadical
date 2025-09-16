@@ -12,11 +12,11 @@ namespace CaDiCaL {
 void Eliminator::enqueue (Clause *c) {
   if (!internal->opts.elimbackward)
     return;
-  if (c->enqueued)
+  if (ENQUEUED(c))
     return;
   LOG (c, "backward enqueue");
   backward.push (c);
-  c->enqueued = true;
+  ENQUEUED(c) = true;
 }
 
 Clause *Eliminator::dequeue () {
@@ -24,8 +24,8 @@ Clause *Eliminator::dequeue () {
     return 0;
   Clause *res = backward.front ();
   backward.pop ();
-  assert (res->enqueued);
-  res->enqueued = false;
+  assert (ENQUEUED(res));
+  ENQUEUED(res) = false;
   LOG (res, "backward dequeue");
   return res;
 }

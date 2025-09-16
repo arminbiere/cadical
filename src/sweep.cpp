@@ -302,8 +302,8 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
   }
   sweeper.vars.clear ();
   for (auto c : sweeper.clauses) {
-    assert (c->swept);
-    c->swept = false;
+    assert (SWEPT(c));
+    SWEPT(c) = false;
   }
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
@@ -364,7 +364,7 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
 }
 
 void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
-  if (c->swept)
+  if (SWEPT(c))
     return;
   assert (can_sweep_clause (c));
   LOG (c, "sweeping[%u]", depth);
@@ -384,7 +384,7 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
     }
     sweeper.clause.push_back (lit);
   }
-  c->swept = true;
+  SWEPT(c) = true;
   sweep_add_clause (sweeper, depth);
   sweeper.clauses.push_back (c);
 }
@@ -1890,6 +1890,7 @@ bool Internal::sweep () {
     last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
     return false;
   }
+  start_marking_clauses();
   delaying_sweep.bumpreasons.bypass_delay ();
   SET_EFFORT_LIMIT (tickslimit, sweep, !opts.sweepcomplete);
   delaying_sweep.bumpreasons.unbypass_delay ();
@@ -1957,6 +1958,7 @@ bool Internal::sweep () {
   } else {
     delaying_sweep.bumpreasons.reduce_delay ();
   }
+  end_marking_clauses();
   STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }

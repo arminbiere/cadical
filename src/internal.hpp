@@ -169,9 +169,9 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode; // current internal state
-  int tier1[2] = {
+  unsigned tier1[2] = {
       2, 2}; // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
-  int tier2[2] = {
+  unsigned tier2[2] = {
       6, 6};      // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
   bool unsat;     // empty clause found or learned
   bool iterating; // report learned unit ('i' line)
@@ -665,9 +665,9 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
-  void promote_clause (Clause *, int new_glue);
-  void promote_clause_glue_only (Clause *, int new_glue);
+  Clause *new_clause (bool red, unsigned glue = 0);
+  void promote_clause (Clause *, unsigned new_glue);
+  void promote_clause_glue_only (Clause *, unsigned new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
   void shrink_and_minimize_clause ();
@@ -698,8 +698,8 @@ struct Internal {
   void mark_garbage (Clause *);
   void assign_original_unit (int64_t, int);
   void add_new_original_clause (int64_t);
-  Clause *new_learned_redundant_clause (int glue);
-  Clause *new_hyper_binary_resolved_clause (bool red, int glue);
+  Clause *new_learned_redundant_clause (unsigned glue);
+  Clause *new_hyper_binary_resolved_clause (bool red, unsigned glue);
   Clause *new_clause_as (const Clause *orig);
   Clause *new_resolved_irredundant_clause ();
 
@@ -757,7 +757,7 @@ struct Internal {
 
   void bump_variable (int lit);
   void bump_variables ();
-  int recompute_glue (Clause *);
+  unsigned recompute_glue (Clause *);
   void bump_clause (Clause *);
   void bump_clause2 (Clause *);
   void clear_unit_analyzed_literals ();
@@ -772,7 +772,7 @@ struct Internal {
                         int &antecedent_size);
   void analyze_reason (int lit, Clause *, int &open, int &resolvent_size,
                        int &antecedent_size);
-  Clause *new_driving_clause (const int glue, int &jump);
+  Clause *new_driving_clause (const unsigned glue, int &jump);
   int find_conflict_level (int &forced);
   int determine_actual_backtrack_level (int jump);
   void otfs_strengthen_clause (Clause *, int, int,
@@ -784,6 +784,11 @@ struct Internal {
   void lazy_external_propagator_out_of_order_clause (int &);
   void analyze ();
   void iterate (); // report learned unit clause
+
+
+  // check that we correctly mark clauses
+  void start_marking_clauses ();
+  void end_marking_clauses ();
 
   // Learning from external propagator in 'external_propagate.cpp'
   //

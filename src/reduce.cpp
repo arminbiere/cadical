@@ -32,8 +32,8 @@ bool Internal::flushing () {
 /*------------------------------------------------------------------------*/
 
 void Internal::mark_clauses_to_be_flushed () {
-  const int tier1limit = tier1[false];
-  const int tier2limit = max (tier1limit, tier2[false]);
+  const unsigned tier1limit = tier1[false];
+  const unsigned tier2limit = max (tier1limit, tier2[false]);
   for (const auto &c : clauses) {
     if (!c->redundant)
       continue; // keep irredundant
@@ -94,8 +94,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   // they otherwise have the same glue and size).
 
   vector<Clause *> stack;
-  const int tier1limit = tier1[false];
-  const int tier2limit = max (tier1limit, tier2[false]);
+  const unsigned tier1limit = tier1[false];
+  const unsigned tier2limit = max (tier1limit, tier2[false]);
 
   stack.reserve (stats.current.redundant);
 

@@ -510,7 +510,7 @@ int64_t Internal::cover_round () {
 #endif
   //
   for (auto c : clauses) {
-    assert (!c->frozen);
+    assert (!FROZEN(c));
     if (c->garbage)
       continue;
     if (c->redundant)
@@ -527,7 +527,7 @@ int64_t Internal::cover_round () {
       continue;
     }
     if (allfrozen) {
-      c->frozen = true;
+      FROZEN(c) = true;
       continue;
     }
     for (const auto &lit : *c)
@@ -553,8 +553,8 @@ int64_t Internal::cover_round () {
         continue;
       if (c->redundant)
         continue;
-      if (c->frozen) {
-        c->frozen = false;
+      if (FROZEN(c)) {
+        FROZEN(c) = false;
         continue;
       }
       if (c->size < opts.coverminclslim)
@@ -572,8 +572,8 @@ int64_t Internal::cover_round () {
         continue;
       if (c->redundant)
         continue;
-      if (c->frozen) {
-        c->frozen = false;
+      if (FROZEN(c)) {
+        FROZEN(c) = false;
         continue;
       }
       if (c->size < opts.coverminclslim)
@@ -653,6 +653,8 @@ bool Internal::cover () {
   if (!stats.current.irredundant)
     return false;
 
+  start_marking_clauses ();
+
   // TODO: Our current algorithm for producing the necessary clauses on the
   // reconstruction stack for extending the witness requires a covered
   // literal addition step which (empirically) conflicts with flushing
@@ -697,6 +699,8 @@ bool Internal::cover () {
 
   STOP_SIMPLIFIER (cover, COVER);
   report ('c', !opts.reportall && !covered);
+
+  end_marking_clauses();
 
   return covered;
 }

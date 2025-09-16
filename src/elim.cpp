@@ -1028,6 +1028,7 @@ void Internal::elim (bool update_limits) {
     learn_empty_clause ();
     return;
   }
+  start_marking_clauses();
 
   stats.elimphases++;
   PHASE ("elim-phase", stats.elimphases,
@@ -1161,6 +1162,7 @@ void Internal::elim (bool update_limits) {
     private_steps = false;
   }
 
+  end_marking_clauses();
   if (!update_limits)
     return;
 

@@ -127,7 +127,7 @@ inline void Internal::demote_clause (Clause *c) {
   stats.irrlits -= c->size;
   stats.current.redundant++;
   stats.added.redundant++;
-  c->glue = c->size - 1;
+  c->glue = min ((unsigned)c->size - 1, MAX_GLUE);
   // ... and keep 'stats.added.total'.
 }
 
@@ -700,7 +700,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
         f.seen = true;
       }
       if (start->redundant) {
-        const int new_glue = recompute_glue (start);
+        const unsigned new_glue = recompute_glue (start);
         promote_clause (start, new_glue);
       }
       if (subsumes) {
@@ -794,7 +794,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       f.seen = true;
     }
     if (reason != candidate && reason->redundant) {
-      const int new_glue = recompute_glue (reason);
+      const unsigned new_glue = recompute_glue (reason);
       promote_clause (reason, new_glue);
     }
     if (subsumes) {
@@ -1193,7 +1193,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG ("demote clause from irredundant to redundant");
     if (opts.vivifydemote) {
       demote_clause (c);
-      const int new_glue = recompute_glue (c);
+      const unsigned new_glue = recompute_glue (c);
       promote_clause (c, new_glue);
       res = false;
     } else {

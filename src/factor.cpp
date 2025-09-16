@@ -204,8 +204,8 @@ void Internal::clear_nounted (vector<int> &nounted) {
 
 void Internal::clear_flauses (vector<Clause *> &flauses) {
   for (auto c : flauses) {
-    assert (c->swept);
-    c->swept = false;
+    assert (SWEPT(c));
+    SWEPT(c) = false;
   }
   flauses.clear ();
 }
@@ -258,7 +258,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
   const int initial = factoring.initial;
   int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
   for (auto c : last_clauses) {
-    assert (!c->swept);
+    assert (!SWEPT(c));
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -288,7 +288,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
         if (c == d)
           continue;
         ticks++;
-        if (d->swept)
+        if (SWEPT(d))
           continue;
         if (d->size != c_size)
           continue;
@@ -313,7 +313,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
         assert (!getfact (next, NOUNTED));
         markfact (next, NOUNTED);
         nounted.push_back (next);
-        d->swept = true;
+        SWEPT(d) = true;
         flauses.push_back (d);
         if (!count[vlit (next)])
           counted.push_back (next);
@@ -401,7 +401,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
   size_t i = 0;
 
   for (auto c : last_clauses) {
-    assert (!c->swept);
+    assert (!SWEPT(c));
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -429,7 +429,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         if (c == d)
           continue;
         ticks++;
-        if (d->swept)
+        if (SWEPT(d))
           continue;
         if (d->size != c_size)
           continue;
@@ -445,7 +445,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         next_clauses.push_back (d);
         matches.push_back (i);
         flauses.push_back (d);
-        d->swept = true;
+        SWEPT(d) = true;
         break;
 
       CONTINUE_WITH_NEXT_MIN_WATCH:;
@@ -929,6 +929,7 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
+  start_marking_clauses();
   // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
   // assert (stats.mark.factor || clauses.empty ());
@@ -985,6 +986,7 @@ bool Internal::factor () {
   if (completed)
     last.factor.marked = stats.mark.factor;
   STOP_SIMPLIFIER (factor, FACTOR);
+  end_marking_clauses();
   return true;
 }
 

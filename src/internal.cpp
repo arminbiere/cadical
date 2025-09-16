@@ -49,7 +49,6 @@ Internal::Internal ()
   dummy_binary->size = 2;
 
   static_assert (max_used == (1 << USED_SIZE) - 1);
-
 }
 
 Internal::~Internal () {
@@ -647,8 +646,8 @@ void Internal::init_search_limits () {
         u = 0;
     stats.bump_used = {0, 0};
     for (auto u : {true, false}) {
-      tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
-      tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
+      tier1[u] = max (tier1[u], opts.tier1minglue ? (unsigned)opts.tier1minglue : (unsigned)2);
+      tier2[u] = max (tier2[u], opts.tier2minglue ? (unsigned)opts.tier2minglue : (unsigned)6);
     }
     stats.tierecomputed = 0;
   }
@@ -1225,6 +1224,20 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
     eclause.clear ();
   }
   return true;
+}
+
+void Internal::start_marking_clauses () {
+#ifndef NDEBUG
+  for (auto c : clauses)
+  assert (!c->temporary_mark);
+#endif
+}
+
+void Internal::end_marking_clauses () {
+#ifndef NDEBUG
+  for (auto c : clauses)
+    assert (!c->temporary_mark);
+#endif
 }
 
 } // namespace CaDiCaL

@@ -888,8 +888,6 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
 
   c->conditioned = false;
   c->covered = false;
-  c->enqueued = false;
-  c->frozen = false;
   c->garbage = false;
   c->gate = false;
   c->hyper = false;
@@ -899,7 +897,6 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   c->redundant = false;
   c->transred = false;
   c->subsume = false;
-  c->swept = false;
   c->flushed = false;
   c->vivified = false;
   c->vivify = false;

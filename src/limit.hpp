@@ -30,7 +30,7 @@ struct Limit {
   int64_t incremental_decay; // conflict/ticks limit for next clause 'decay' for incremental clauses
 
   int keptsize;           // maximum kept size in 'reduce'
-  int keptglue;           // maximum kept glue in 'reduce'
+  unsigned keptglue;           // maximum kept glue in 'reduce'
   int64_t recompute_tier; // conflict limit for next tier recomputation
 
   // How often rephased during (1) or out (0) of stabilization.

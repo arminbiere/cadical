@@ -59,11 +59,11 @@ void Internal::recompute_tier () {
   assert (tier1[stable]);
   assert (tier2[stable]);
 
-  if (tier1[stable] < opts.tier1minglue) {
+  if (tier1[stable] < (unsigned) opts.tier1minglue) {
     LOG ("tier1 limit of %d is too low, setting %d instead", tier1[stable], opts.tier1minglue);
     tier1[stable] = opts.tier1minglue;
   }
-  if (tier2[stable] < opts.tier2minglue) {
+  if (tier2[stable] < (unsigned)opts.tier2minglue) {
     LOG ("tier2 limit of %d is too low, setting %d instead", tier2[stable], opts.tier2minglue);
     tier2[stable] = opts.tier2minglue;
   }
@@ -102,12 +102,13 @@ void Internal::print_tier_usage_statistics () {
       prefix = UINT_MAX, suffix = 0;
 
     uint64_t accumulated_middle = 0;
-    int glue_digits = 1, clauses_digits = 1;
+    unsigned glue_digits = 1; int clauses_digits = 1;
     for (unsigned glue = 0; glue <= stats.used[stable].size (); glue++) {
       if (glue < tier1)
         continue;
       uint64_t used = stats.used[stable][glue];
-      int tmp_glue = 0, tmp_clauses = 0;
+      unsigned tmp_glue = 0;
+      int tmp_clauses = 0;
       if (glue <= prefix || suffix <= glue) {
         tmp_glue = glue;
         tmp_clauses = used;
