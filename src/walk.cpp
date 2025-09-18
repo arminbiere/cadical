@@ -20,7 +20,8 @@ struct Walker {
 
   double score (unsigned); // compute score from break count
 
-  Walker (Internal *, double size, int64_t limit);
+  Walker (Internal *, int64_t limit);
+  void populate_table (double size);
 };
 
 // These are in essence the CB values from Adrian Balint's thesis.  They
@@ -60,11 +61,13 @@ inline static double fitcbval (double size) {
 
 // Initialize the data structures for one local search round.
 
-Walker::Walker (Internal *i, double size, int64_t l)
+Walker::Walker (Internal *i, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
       propagations (0), limit (l) {
   random += internal->stats.walk.count; // different seed every time
+}
 
+void Walker::populate_table (double size) {
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
   // just the default '2.0', which turns into the base '0.5'.
@@ -434,31 +437,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
   PHASE ("walk", stats.walk.count,
          "random walk limit of %" PRId64 " propagations", limit);
 
-  // First compute the average clause size for picking the CB constant.
-  //
-  double size = 0;
-  int64_t n = 0;
-  for (const auto c : clauses) {
-    if (c->garbage)
-      continue;
-    if (c->redundant) {
-      if (!opts.walkredundant)
-        continue;
-      if (!likely_to_be_kept_clause (c))
-        continue;
-    }
-    size += c->size;
-    n++;
-  }
-  double average_size = relative (size, n);
-
-  PHASE ("walk", stats.walk.count,
-         "%" PRId64 " clauses average size %.2f over %d variables", n,
-         average_size, active ());
-
   // Instantiate data structures for this local search round.
   //
-  Walker walker (internal, average_size, limit);
+  Walker walker (internal, limit);
 
   bool failed = false; // Inconsistent assumptions?
 
@@ -521,6 +502,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #ifdef LOGGING
     int64_t watched = 0;
 #endif
+
+    double size = 0;
+    int64_t n = 0;
     for (const auto c : clauses) {
 
       if (c->garbage)
@@ -536,6 +520,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
       int satisfied = 0;        // clause satisfied?
 
       int *lits = c->literals;
+      size += c->size;
+      n++;
       const int size = c->size;
 
       // Move to front satisfied literals and determine whether there
@@ -572,6 +558,13 @@ int Internal::walk_round (int64_t limit, bool prev) {
         walker.broken.push_back (c);
       }
     }
+
+    double average_size = relative (size, n);
+    walker.populate_table (average_size);
+    PHASE ("walk", stats.walk.count,
+           "%" PRId64 " clauses average size %.2f over %d variables", n,
+           average_size, active ());
+
 #ifdef LOGGING
     if (!failed) {
       int64_t broken = walker.broken.size ();
@@ -582,6 +575,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
     }
 #endif
   }
+
+  assert (walker.table.size ());
 
   int64_t old_global_minimum = stats.walk.minimum;
 
