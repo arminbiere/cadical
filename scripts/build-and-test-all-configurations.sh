@@ -112,4 +112,10 @@ run --no-tracing -a -p
 run -m32 -q
 run -m32 -a -p
 
+# Shared library builds
+
+run -shared
+run -shared -p
+run -shared -p -m32
+
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"

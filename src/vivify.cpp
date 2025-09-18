@@ -1672,9 +1672,10 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     for (auto c : schedule)
       c->vivify = true;
 #elif 1
-    // if we have gone through all the leftovers, the current clauses are
-    // leftovers for the next round
-    if (!schedule.empty () && !schedule.front ()->vivify)
+    // if we have gone through all the leftovers (the next candidate
+    // is not one), all the current clauses are leftovers for the next
+    // round
+    if (!schedule.empty () && !schedule.back()->vivify)
       for (auto c : schedule)
         c->vivify = true;
 #else

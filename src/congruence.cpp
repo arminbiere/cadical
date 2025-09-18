@@ -4194,7 +4194,7 @@ void Closure::find_units () {
       int lit = v * sgn;
       for (auto w : internal->watches (lit)) {
         if (!w.binary ())
-          continue; // todo check that binaries first
+          break;
         const int other = w.blit;
         if (marked (-other)) {
           LOG (w.clause, "binary clause %d %d and %d %d give unit %d", lit,
@@ -4755,7 +4755,7 @@ void Closure::reset_closure () {
     for (auto c : extra_clauses) {
       assert (!c->garbage);
       internal->proof->delete_clause (c);
-      delete c;
+      delete[] c;
     }
     extra_clauses.clear ();
   } else {
@@ -7539,8 +7539,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     for (auto sgn = -1; sgn <= 1; sgn += 2) {
       const int lit = v * sgn;
       for (auto w : watches (lit)) {
-        if (w.binary ())
-          assert (!w.clause->garbage);
+        assert (!w.binary() || !w.clause->garbage);
         if (w.clause->garbage)
           continue;
         ++watched;

@@ -34,6 +34,8 @@ quiet=no
 m32=no
 contrib=yes
 ipasir=yes
+shared=no
+pic=no
 
 #--------------------------------------------------------------------------#
 
@@ -114,6 +116,7 @@ where '<option>' is one of the following
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
 -static...         pass '-static...' option to makefile
+-shared            add '-fpic' compilation flag and produce shared library
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
@@ -176,9 +179,11 @@ do
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
+    -fpic|-fPIC) options="$options $1"; pic=yes;;
     -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
     -s|--symbols) options="$options -ggdb3";;
     -static*) options="$options $1";;
+    -shared|--shared) shared=yes;;
 
     CXX=*)
       CXX="`expr \"$1\" : 'CXX=\(.*\)'`"
@@ -327,7 +332,7 @@ fi
 
 if [ $pedantic = yes ]
 then
-  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
+  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++17"
   CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
@@ -339,6 +344,7 @@ fi
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 [ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"
+[ $shared = yes -a $pic = no ] && CXXFLAGS="$CXXFLAGS -fpic"
 
 [ $contracts = no ] && CFLAGS="$CFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CFLAGS="$CFLAGS -DNTRACING"
@@ -373,19 +379,17 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Since C99/C++11 is becoming the standard newer versions of 'g++' (7.3 for
+# Since C++17 is becoming the standard newer versions of 'g++' (7.3 for
 # instance) discourage certain GCC extensions, particularly the GCC version
 # of variadic macros, if the same concept exists in the standard.  This
 # forced us to replace all GCC style 'ARGS...' macros with '...' and
 # '__VA_ARGS__'.  Otherwise compiling the library with '--pedantic -Werror'
 # would fail (configuration flag '-p').  However, older versions of 'gcc'
 # (such as 4.8) would disallow these new forms of macros unless we
-# explicitly enforce the new standard with '-std=c++11'.  Here we try to
-# figure out whether we need that flag.  In earlier versions we used
-# '-std=c++0x' but due to issues with older MacOS builds we switched to
-# '-std=c++11' instead.
+# explicitly enforce the new standard with '-std=c++17'.  Here we try to
+# figure out whether we need that flag. 
 
-feature=./configure-requires-c++11
+feature=./configure-requires-c++17
 cat <<EOF > $feature.cpp
 #include <cstdio>
 #include <vector>
@@ -410,28 +414,28 @@ if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
   then
-    msg "compiler supports all required C99/C++11 extensions"
+    msg "compiler supports all required C99/C++17 extensions"
   else
-    die "checking compilation without '-std=c++11' failed"
+    die "checking compilation without '-std=c++17' failed"
   fi
 else
-  CXXFLAGS="$CXXFLAGS -std=c++11"
+  CXXFLAGS="$CXXFLAGS -std=c++17"
   if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
     if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
     then
-      msg "using '-std=c++11' for all required C99/C++11 extensions"
+      msg "using '-std=c++17' for all required C99/C++17 extensions"
     else
-      die "checking compilation with '-std=c++11' failed"
+      die "checking compilation with '-std=c++17' failed"
     fi
   else
-    die "compiler does not support C99/C++11 even with '-std=c++11'"
+    die "compiler does not support C99/C++17 even with '-std=c++17'"
   fi
 fi
 
 #--------------------------------------------------------------------------#
 
-# Flexible array members are in C99 but not in C++11 but essential.  Thus
+# Flexible array members are in C99 but not in C++17 but essential.  Thus
 # with pedantic compilation we have to fake them which in turn might produce
 # warnings.  To control those build variances with respect to warnings
 # we check the support of flexible array members explicitly.
@@ -555,6 +559,24 @@ fi
 [ $closefrom = no ] && CXXFLAGS="$CXXFLAGS -DNCLOSEFROM"
 
 #--------------------------------------------------------------------------#
+# Preparing make goals (@GOALS@)
+goals="libcadical.a cadical mobical"
+sharedlibrary="libcadical.so"
+if [ $shared = yes ]
+then
+  msg "adding '$sharedlibrary' shared library to default makefile goal, too"
+  goals="$goals $sharedlibrary"
+else
+  if [ -f $sharedlibrary ]
+  then
+    msg "removing stale dynamic library '$sharedlibrary' (without '-shared')"
+    rm -f $sharedlibrary || exit 1
+  fi
+  msg "no '$sharedlibrary' shared library generated (without '-shared')"
+fi
+
+
+#--------------------------------------------------------------------------#
 
 # Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
@@ -571,6 +593,7 @@ sed \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \
 -e "s#@ROOT@#$root#" \
+-e "s#@GOALS@#$goals#" \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

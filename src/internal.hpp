@@ -309,7 +309,7 @@ struct Internal {
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
 
-  const unsigned max_used = 255; // must fix into the header of the clause!
+  static constexpr unsigned max_used = 31; // must fit into the header of the clause!
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by

@@ -47,6 +47,8 @@ Internal::Internal ()
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
+
+  static_assert (max_used == (1 << USED_SIZE) - 1);
 }
 
 Internal::~Internal () {
@@ -747,8 +749,8 @@ void Internal::preprocess_quickly (bool always) {
 
   if (opts.fastelim)
     elimfast ();
-    // if (opts.condition)
-    // condition (false);
+  // if (opts.condition)
+  // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.current.irredundant;

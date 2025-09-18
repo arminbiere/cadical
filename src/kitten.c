@@ -493,7 +493,8 @@ static void clear_kitten (kitten *kitten) {
     void *OLD_PTR = (P); \
     CALLOC ((P), new_size / 2); \
     const size_t BYTES = old_vars * sizeof *(P); \
-    memcpy ((P), OLD_PTR, BYTES); \
+    if ((P) && OLD_PTR) /* nullptr not allowed */\
+      memcpy ((P), OLD_PTR, BYTES); \
     void *NEW_PTR = (P); \
     (P) = OLD_PTR; \
     DEALLOC ((P), old_size / 2); \
@@ -505,7 +506,8 @@ static void clear_kitten (kitten *kitten) {
     void *OLD_PTR = (P); \
     CALLOC ((P), new_size); \
     const size_t BYTES = old_lits * sizeof *(P); \
-    memcpy ((P), OLD_PTR, BYTES); \
+    if ((P) && OLD_PTR) /* nullptr not allowed */\
+      memcpy ((P), OLD_PTR, BYTES); \
     void *NEW_PTR = (P); \
     (P) = OLD_PTR; \
     DEALLOC ((P), old_size); \
@@ -835,7 +837,8 @@ static void enlarge_external (kitten *kitten, size_t eidx) {
     unsigned *old_import = kitten->import;
     CALLOC (kitten->import, new_size);
     const size_t bytes = old_evars * sizeof *kitten->import;
-    memcpy (kitten->import, old_import, bytes);
+    if (kitten->import && old_import)
+      memcpy (kitten->import, old_import, bytes);
     DEALLOC (old_import, old_size);
     kitten->esize = new_size;
   }
@@ -923,10 +926,14 @@ void kitten_clear (kitten *kitten) {
     assert (!kitten->marks[i]);
 #endif
 
-  memset (kitten->phases, 0, vars);
-  memset (kitten->values, 0, lits);
-  memset (kitten->failed, 0, lits);
-  memset (kitten->vars, 0, vars);
+  if (kitten->phases)
+    memset (kitten->phases, 0, vars);
+  if (kitten->values)
+    memset (kitten->values, 0, lits);
+  if (kitten->failed)
+    memset (kitten->failed, 0, lits);
+  if (kitten->vars)
+    memset (kitten->vars, 0, vars);
 
   clear_kitten (kitten);
 }

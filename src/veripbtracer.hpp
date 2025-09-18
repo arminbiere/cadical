@@ -1,7 +1,8 @@
 #ifndef _veripbtracer_h_INCLUDED
 #define _veripbtracer_h_INCLUDED
 
-class FileTracer;
+#include "tracer.hpp"
+#include "file.hpp"
 
 namespace CaDiCaL {
 
@@ -50,7 +51,7 @@ class VeripbTracer : public FileTracer {
 #ifndef QUIET
   int64_t added, deleted;
 #endif
-  vector<int64_t> delete_ids;
+  std::vector<int64_t> delete_ids;
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
@@ -58,10 +59,10 @@ class VeripbTracer : public FileTracer {
 
   // support veriPB
   void veripb_add_derived_clause (int64_t, bool redundant,
-                                  const vector<int> &clause,
-                                  const vector<int64_t> &chain);
+                                  const std::vector<int> &clause,
+                                  const std::vector<int64_t> &chain);
   void veripb_add_derived_clause (int64_t, bool redundant,
-                                  const vector<int> &clause);
+                                  const std::vector<int> &clause);
   void veripb_begin_proof (int64_t reserved_ids);
   void veripb_delete_clause (int64_t id, bool redundant);
   void veripb_report_status (bool unsat, int64_t conflict_id);
@@ -75,18 +76,18 @@ public:
   void connect_internal (Internal *i) override;
   void begin_proof (int64_t) override;
 
-  void add_original_clause (int64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override {} // skip
 
-  void add_derived_clause (int64_t, bool, const vector<int> &,
-                           const vector<int64_t> &) override;
+  void add_derived_clause (int64_t, bool, const std::vector<int> &,
+                           const std::vector<int64_t> &) override;
 
-  void delete_clause (int64_t, bool, const vector<int> &) override;
-  void finalize_clause (int64_t, const vector<int> &) override {} // skip
+  void delete_clause (int64_t, bool, const std::vector<int> &) override;
+  void finalize_clause (int64_t, const std::vector<int> &) override {} // skip
 
   void report_status (int, int64_t) override;
 
-  void weaken_minus (int64_t, const vector<int> &) override;
+  void weaken_minus (int64_t, const std::vector<int> &) override;
   void strengthen (int64_t) override;
 
 #ifndef QUIET

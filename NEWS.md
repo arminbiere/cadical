@@ -41,6 +41,10 @@ Version 2.2.0
 
 - The trace now allows to get equivalent literals during solving
 
+- Support for compilation of shared library via `./configure -shared`.
+
+- Fixed VeriPB compatibility issues.
+
 Version 2.1.3
 -------------
 
