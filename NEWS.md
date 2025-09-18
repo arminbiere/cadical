@@ -43,6 +43,8 @@ Version 2.2.0
 
 - Support for compilation of shared library via `./configure -shared`.
 
+- Fixed VeriPB compatibility issues.
+
 Version 2.1.3
 -------------
 
