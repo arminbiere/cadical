@@ -960,8 +960,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   assert (walker.table.size ());
 
-  int64_t old_global_minimum = stats.walk.minimum;
-
   int res; // Tells caller to continue with local search.
 
   if (!failed) {
