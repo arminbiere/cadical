@@ -281,7 +281,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
 #ifndef QUIET
   double end = internal->time ();
-  MSG ("parsed %" PRIu64 "clauses in %.2f seconds %s time", parsed, end - start,
+  MSG ("parsed %" PRIu64 " clauses in %.2f seconds %s time", parsed, end - start,
        internal->opts.realtime ? "real" : "process");
 #endif
 
