@@ -164,7 +164,7 @@ void Walker::save_walker_trail (bool keep) {
   const size_t size_trail = flips.size ();
 #endif
   const int kept = flips.size() - best_trail_pos;
-  MSG ("saving %d values of flipped literals on trail of size %zd",
+  LOG ("saving %d values of flipped literals on trail of size %zd",
        best_trail_pos, flips.size());
 
   const auto begin = flips.begin ();
@@ -813,6 +813,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
   // Instantiate data structures for this local search round.
   //
   Walker walker (internal, limit);
+  int old_global_minimum = stats.walk.minimum;
 
   bool failed = false; // Inconsistent assumptions?
 
@@ -1004,6 +1005,17 @@ int Internal::walk_round (int64_t limit, bool prev) {
     }
 
     walker.save_final_minimum (flips, initial_minimum);
+    if (minimum < old_global_minimum)
+      PHASE ("walk", stats.walk.count,
+             "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
+             "%" PRId64 " ticks",
+             tout.bright_yellow_code (), minimum, tout.normal_code (),
+             flips, walker.ticks);
+    else
+      PHASE ("walk", stats.walk.count,
+             "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+             "%" PRId64 " ticks",
+             minimum, flips, walker.ticks);
 
     if (opts.profile >= 2) {
       PHASE ("walk", stats.walk.count,
