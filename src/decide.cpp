@@ -68,9 +68,10 @@ int Internal::decide_phase (int idx, bool target) {
   }
   if (!phase && target) {
     phase = phases.target[idx];
-    if (opts.stubbornIOfocused &&
-        opts.rephase ==
-            2) // ported from kissat where it does not seem very useful
+  }
+  if (!phase) {
+    // ported from kissat where it does not seem very useful
+    if (opts.stubbornIOfocused && opts.rephase == 2)
       switch ((stats.rephased.total >> 1) & 7) {
       case 1:
         phase = initial_phase;
