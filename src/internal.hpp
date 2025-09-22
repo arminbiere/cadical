@@ -976,7 +976,7 @@ struct Internal {
   void vivify_build_lrat (int, Clause *,
                           std::vector<std::tuple<int, Clause *, bool>> &);
   void vivify_chain_for_units (int lit, Clause *reason);
-  void vivify_strengthen (Clause *candidate);
+  void vivify_strengthen (Clause *candidate, int64_t &);
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
   bool vivify_propagate (int64_t &);

@@ -548,7 +548,7 @@ struct vivify_better_watch {
 // Common code to actually strengthen a candidate clause.  The resulting
 // strengthened clause is communicated through the global 'clause'.
 
-void Internal::vivify_strengthen (Clause *c) {
+void Internal::vivify_strengthen (Clause *c, int64_t &ticks) {
 
   assert (!clause.empty ());
 
@@ -562,7 +562,7 @@ void Internal::vivify_strengthen (Clause *c) {
     // lrat_chain.clear ();   done in search_assign
     stats.vivifyunits++;
 
-    bool ok = propagate ();
+    bool ok = vivify_propagate (ticks);
     if (!ok)
       learn_empty_clause ();
 
@@ -1182,7 +1182,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (lrat_chain, "lrat");
     LOG (clause, "learning clause");
     conflict = nullptr; // TODO dup from below
-    vivify_strengthen (c);
+    vivify_strengthen (c, ticks);
     res = true;
   } else if (subsume && c->redundant) {
     LOG (c, "vivification implied");
