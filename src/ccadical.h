@@ -53,6 +53,8 @@ void ccadical_melt (CCaDiCaL *, int lit);
 int ccadical_simplify (CCaDiCaL *);
 int ccadical_vars (CCaDiCaL *);
 int ccadical_reserve_difference (CCaDiCaL *, int number_of_vars);
+void ccadical_phase (CCaDiCaL *wrapper, int lit);
+void ccadical_unphase (CCaDiCaL *wrapper, int lit);
 
 /*------------------------------------------------------------------------*/
 

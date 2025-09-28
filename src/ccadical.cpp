@@ -193,4 +193,13 @@ int ccadical_vars (CCaDiCaL *ptr) {
 int ccadical_reserve_difference (CCaDiCaL *ptr, int number_of_vars) {
   return ((Wrapper *) ptr)->solver->reserve_difference (number_of_vars);
 }
+
+void ccadical_phase (CCaDiCaL *wrapper, int lit) {
+  ((Wrapper *) wrapper)->solver->phase (lit);
+}
+
+void ccadical_unphase (CCaDiCaL *wrapper, int lit) {
+  ((Wrapper *) wrapper)->solver->unphase (lit);
+}
+
 }
