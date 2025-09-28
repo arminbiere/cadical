@@ -923,11 +923,7 @@ int64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit,
     if (externalize (lit) < 0)
       break;
     const int elit = externalize (lit);
-    if (external->ervars[abs (elit)])
-      continue;
     const int eother = externalize (other);
-    if (external->ervars[abs (eother)])
-      continue;
     tracer->notify_equivalence (elit, -eother);
   }
   clause.clear ();

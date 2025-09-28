@@ -143,7 +143,8 @@ public:
   // Notify the observer that two literals are equivalent
   //
   // You receive literals, not variables. You can also get notified
-  // multiple times. You can also get notified of BVA variables.
+  // multiple times. You can also get notified of BVA variables, aka
+  // variables you did not declare.
   virtual void notify_equivalence (int, int) {}
 };
 

@@ -471,11 +471,7 @@ bool Internal::decompose_round () {
     decompose_ids[vlit (idx)] = id2;
     for (auto &tracer : tracers) {
       const int eidx = externalize (idx);
-      if (external->ervars[abs (eidx)])
-	continue;
       const int eother = externalize (other);
-      if (external->ervars[abs (eother)])
-	continue;
       tracer->notify_equivalence (eidx, externalize (other));
     }
 
