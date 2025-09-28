@@ -472,7 +472,7 @@ bool Internal::decompose_round () {
     for (auto &tracer : tracers) {
       const int eidx = externalize (idx);
       const int eother = externalize (other);
-      tracer->notify_equivalence (eidx, externalize (other));
+      tracer->notify_equivalence (eidx, eother);
     }
 
     clause.clear ();
