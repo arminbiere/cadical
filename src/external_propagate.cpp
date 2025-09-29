@@ -956,7 +956,10 @@ void Internal::notify_assignments () {
     // already done.
     assert (external->observed (elit) || fixed (ilit));
     assigned.push_back (elit);
-    reasons.push_back (var (ilit).reason->id);
+    if (var (ilit).reason)
+      reasons.push_back (var (ilit).reason->id);
+    else // decision
+      reasons.push_back (0);
   }
 
   external->propagator->notify_assignment (assigned, reasons);
