@@ -7022,6 +7022,11 @@ void Closure::copy_conditional_equivalences (int lit,
       else {
         assert (!second);
         second = other;
+#ifdef NDEBUG
+        // all other literals are true, so we can stop here
+	// otherwise, one clause does not have length 3 (ignoring unit)
+        break;
+#endif
       }
     }
     assert (first), assert (second);
