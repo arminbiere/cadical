@@ -7311,18 +7311,22 @@ void Closure::merge_condeq (int cond, lit_equivalences &condeq,
   auto q = begin (not_condeq);
   const auto end_not_condeq = end (not_condeq);
   for (auto p : condeq) {
-    q = begin (not_condeq);
     const int lhs = p.first;
     const int then_lit = p.second;
+#ifndef NDEBUG
+    for (auto q2 = begin (not_condeq); q2 != q; ++q2)
+      assert(q2->first < lhs);
     if (internal->lrat)
       p.check_invariant ();
+#endif
     assert (lhs > 0);
     while (q != end_not_condeq && q->first < lhs)
       ++q;
-    while (q != end_not_condeq && q->first == lhs) {
+    auto q2 = q;
+    while (q2 != end_not_condeq && q2->first == lhs) {
       LOG ("looking when %d at p= %d %d", cond, p.first, p.second);
       LOG ("looking when %d at %d %d", -cond, q->first, q->second);
-      lit_equivalence not_cond_pair = *q++;
+      const lit_equivalence not_cond_pair = *q2++;
       const int else_lit = not_cond_pair.second;
       std::vector<LitClausePair> clauses;
       if (internal->lrat) {
@@ -7340,8 +7344,7 @@ void Closure::merge_condeq (int cond, lit_equivalences &condeq,
             LitClausePair (else_lit, not_cond_pair.second_clause));
         clauses.push_back (
             LitClausePair (-else_lit, not_cond_pair.first_clause));
-        if (internal->lrat)
-          not_cond_pair.check_invariant ();
+        not_cond_pair.check_invariant ();
       }
       new_ite_gate (lhs, cond, then_lit, else_lit, std::move (clauses));
       if (internal->unsat)
