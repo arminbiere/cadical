@@ -2098,6 +2098,8 @@ void Closure::init_and_gate_extraction () {
 void Closure::check_and_gate_implied (Gate *g) {
   assert (internal->clause.empty ());
   assert (g->tag == Gate_Type::And_Gate);
+  if (!internal->opts.check)
+    return;
   if (internal->lrat) {
     assert (g->degenerated_gate != Special_Gate::NORMAL || g->neg_lhs_ids);
 #ifndef NDEBUG
@@ -3308,6 +3310,8 @@ void inc_lits (vector<int> &lits) {
 
 void Closure::check_ternary (int a, int b, int c) {
   assert (internal->clause.empty ());
+  if (!internal->opts.check)
+    return;
   if (internal->lrat)
     return;
   auto &clause = internal->clause;
@@ -3327,6 +3331,8 @@ void Closure::check_ternary (int a, int b, int c) {
 
 void Closure::check_binary_implied (int a, int b) {
   assert (internal->clause.empty ());
+  if (!internal->opts.check)
+    return;
   if (internal->lrat)
     return;
   auto &clause = internal->clause;
@@ -3338,6 +3344,8 @@ void Closure::check_binary_implied (int a, int b) {
 }
 
 void Closure::check_implied () {
+  if (!internal->opts.check)
+    return;
   if (internal->lrat)
     return;
   internal->external->check_learned_clause ();
