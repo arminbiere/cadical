@@ -91,7 +91,7 @@ struct lit_equivalence {
   int second;
   Clause *first_clause;
   Clause *second_clause;
-  void check_invariant () {
+  void check_invariant () const {
     assert (second_clause);
     assert (first_clause);
     assert (std::find (begin (*first_clause), end (*first_clause), first) !=
