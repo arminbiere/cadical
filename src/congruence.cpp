@@ -309,9 +309,12 @@ void Closure::extract_binaries () {
   }
   binaries.clear ();
   STOP (extractbinaries);
-  LOG ("extracted %zu binaries (plus %zu already present and %zu "
-       "duplicates)",
-       extracted, already_present, duplicated);
+  VERBOSE (2,
+           "[congruence-%zd] extracted %zu binaries (plus %zu already "
+           "present and %zu "
+           "duplicates)",
+           internal->stats.congruence.rounds,
+	   extracted, already_present, duplicated);
 }
 
 /*------------------------------------------------------------------------*/
@@ -2837,6 +2840,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       connect_goccs (g, lit);
     }
   }
+  ++internal->stats.congruence.and_gates;
   return g;
 }
 
@@ -3255,9 +3259,12 @@ void Closure::extract_and_gates () {
   if (!internal->opts.congruenceand)
     return;
   START (extractands);
+
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
-
+#ifndef QUIET
+  const int64_t gates_before = internal->stats.congruence.and_gates;
+#endif
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously (); ++i) {
     // we can learn new binary clauses, but so no for loop
@@ -3275,6 +3282,11 @@ void Closure::extract_and_gates () {
     assert (lrat_chain.empty ());
   }
 
+  VERBOSE (2,
+           "[congruence-%zd] "
+           "found %" PRIu64 " AND gates",
+           internal->stats.congruence.rounds,
+           internal->stats.congruence.and_gates - gates_before);
   reset_and_gate_extraction ();
   STOP (extractands);
 }
@@ -3814,8 +3826,10 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
       connect_goccs (g, lit);
     }
   }
+  ++internal->stats.congruence.xor_gates;
   return g;
 }
+
 uint32_t
 Closure::number_from_xor_reason_reversed (const std::vector<int> &rhs) {
   uint32_t n = 0;
@@ -3978,6 +3992,10 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
   }
+
+  VERBOSE (2, "connected %zu large clauses %.0f%%",
+                       candidates.size(),
+           percent (candidates.size(), internal->stats.current.irredundant));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -4177,6 +4195,9 @@ void Closure::extract_xor_gates () {
   if (!internal->opts.congruencexor)
     return;
   START (extractxors);
+#ifndef QUIET
+  const int64_t gates_before = internal->stats.congruence.xor_gates;
+#endif
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
   init_xor_gate_extraction (candidates);
@@ -4187,6 +4208,9 @@ void Closure::extract_xor_gates () {
       continue;
     extract_xor_gates_with_base_clause (c);
   }
+  VERBOSE (2, "[congruence-%zd] found %zd XOR clauses",
+           internal->stats.congruence.rounds,
+	   internal->stats.congruence.xor_gates - gates_before);
   reset_xor_gate_extraction ();
   STOP (extractxors);
 }
@@ -4307,7 +4331,7 @@ void Closure::find_equivalences () {
   // force removal of memory
   mu1_ids.clear();
   shrink_vector(mu1_ids);
-  LOG ("found %zd equivalences", schedule.size ());
+  VERBOSE (2, "[congruence-%zd] found %zd equivalences", internal->stats.congruence.rounds, schedule.size ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -6847,6 +6871,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     }
   }
   check_ite_lrat_reasons (g);
+  ++internal->stats.congruence.ite_gates;
   return g;
 }
 
@@ -6961,10 +6986,12 @@ void Closure::init_ite_gate_extraction (
   CONTINUE_COUNTING_NEXT_CLAUSE:;
   }
 
-  LOG ("counted %zu ternary ITE clauses "
+  VERBOSE (4, "counted %zu ternary ITE clauses "
        "(%.0f%% of %" PRIu64 " irredundant clauses)",
-       ternary.size(), percent (ternary.size(), internal->stats.current.irredundant),
+       ternary.size (),
+       percent (ternary.size (), internal->stats.current.irredundant),
        internal->stats.current.irredundant);
+  size_t connected = 0;
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
@@ -6987,6 +7014,9 @@ void Closure::init_ite_gate_extraction (
     if (twice < 2)
       goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
     assert (c->size != 2);
+#ifndef QUIET
+    connected++;
+#endif
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
     if (positive && negative)
@@ -6995,6 +7025,19 @@ void Closure::init_ite_gate_extraction (
   }
 
   ternary.clear ();
+
+  VERBOSE (4, "connected %zu large clauses %.0f%%",
+                       candidates.size(),
+           percent (candidates.size(), internal->stats.current.irredundant));
+
+#ifndef QUIET
+  size_t size_candidates = candidates.size();
+  VERBOSE (4,
+           "%zu candidates ITE base clauses "
+           "(%.0f%% of %zu connected)",
+           size_candidates, percent (size_candidates, connected),
+           connected);
+#endif
 }
 
 void Closure::reset_ite_gate_extraction () {
@@ -7400,7 +7443,9 @@ void Closure::extract_ite_gates () {
     return;
   START (extractites);
   std::vector<ClauseSize> candidates;
-
+#ifndef QUIET
+  const int64_t gates_before = internal->stats.congruence.ite_gates;
+#endif
   init_ite_gate_extraction (candidates);
 
   for (auto idx : internal->vars) {
@@ -7411,6 +7456,9 @@ void Closure::extract_ite_gates () {
     }
   }
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
+  VERBOSE (2, "[congruence-%zd] found %zd XOR clauses",
+           internal->stats.congruence.rounds,
+	   internal->stats.congruence.ite_gates - gates_before);
   reset_ite_gate_extraction ();
   STOP (extractites);
 }

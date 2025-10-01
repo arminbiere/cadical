@@ -344,8 +344,11 @@ struct Stats {
 
   struct {
     int64_t gates = 0;
+    int64_t and_gates = 0;
     int64_t ands = 0;
+    int64_t ite_gates = 0;
     int64_t ites = 0;
+    int64_t xor_gates = 0;
     int64_t xors = 0;
     int64_t units = 0;
     int64_t congruent = 0;
