@@ -958,6 +958,8 @@ void Internal::notify_assignments () {
     assigned.push_back (elit);
     if (var (ilit).reason)
       reasons.push_back (var (ilit).reason->id);
+    else if (!var (ilit).level) // unit
+      reasons.push_back (unit_clauses (ilit));
     else // decision
       reasons.push_back (0);
   }
