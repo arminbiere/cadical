@@ -959,9 +959,10 @@ void Internal::notify_assignments () {
     if (var (ilit).reason)
       reasons.push_back (var (ilit).reason->id);
     else if (!var (ilit).level) // unit
-      reasons.push_back (unit_clauses (ilit));
-    else // decision
+      reasons.push_back (unit_clauses (vlit (ilit)));
+    else { // decision
       reasons.push_back (0);
+    }
   }
 
   external->propagator->notify_assignment (assigned, reasons);

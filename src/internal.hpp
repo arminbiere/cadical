@@ -385,9 +385,10 @@ struct Internal {
     return res;
   }
 
-  inline uint64_t &unit_clauses (int lit) {
-    assert (lrat || frat);
-    return unit_clauses_idx[lit];
+  // already mapped...
+  inline uint64_t &unit_clauses (int vlit) {
+    assert (lrat || frat || external_prop);
+    return unit_clauses_idx[vlit];
   }
 
   // Helper functions to access variable and literal data.
