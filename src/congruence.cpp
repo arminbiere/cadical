@@ -7456,7 +7456,7 @@ void Closure::extract_ite_gates () {
     }
   }
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
-  VERBOSE (2, "[congruence-%zd] found %zd XOR clauses",
+  VERBOSE (2, "[congruence-%zd] found %zd ITE clauses",
            internal->stats.congruence.rounds,
 	   internal->stats.congruence.ite_gates - gates_before);
   reset_ite_gate_extraction ();
