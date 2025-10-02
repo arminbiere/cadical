@@ -714,9 +714,9 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         broken++;
 #endif
       }
-      LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
-      ws.clear ();
     }
+    LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
+    ws.clear ();
   }
   STOP (walkflip);
   stats.ticks.walkflipWL += walker.ticks - old_after_broken;
