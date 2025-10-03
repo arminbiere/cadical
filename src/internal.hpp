@@ -267,6 +267,7 @@ struct Internal {
 
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
   bool sweep_incomplete;      // sweep
+  uint64_t randomized_deciding;
 
   kitten *citten;
 
@@ -1427,6 +1428,8 @@ struct Internal {
   // Part on picking the next decision in 'decide.cpp'.
   //
   bool satisfied ();
+  void start_random_sequence ();
+  int next_random_decision ();
   int next_decision_variable_on_queue ();
   int next_decision_variable_with_best_score ();
   int next_decision_variable ();

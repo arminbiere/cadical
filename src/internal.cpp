@@ -23,7 +23,7 @@ Internal::Internal ()
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), sweep_incomplete (false), citten (0),
+      marked_failed (true), sweep_incomplete (false), randomized_deciding (false), citten (0),
       num_assigned (0), proof (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
@@ -659,6 +659,18 @@ void Internal::init_search_limits () {
   else {
     lim.incremental_decay = opts.incdecayint;
   }
+
+  /*----------------------------------------------------------------------*/
+
+  if (incremental)
+    mode = "keeping";
+  else {
+    lim.random_decision = stats.conflicts + opts.randecinit;
+    mode = "initial";
+  }
+  (void) mode;
+  LOG ("%s randomize decision limit %" PRId64 " after %" PRId64 " conflicts", mode,
+       lim.random_decision, lim.random_decision - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 

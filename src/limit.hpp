@@ -28,6 +28,7 @@ struct Limit {
   int64_t restart;   // conflict limit for next 'restart'
   int64_t stabilize; // conflict/ticks limit for next 'stabilize'
   int64_t incremental_decay; // conflict/ticks limit for next clause 'decay' for incremental clauses
+  int64_t random_decision; // randomized decision limit for conflicts
 
   int keptsize;           // maximum kept size in 'reduce'
   int keptglue;           // maximum kept glue in 'reduce'

@@ -159,6 +159,12 @@ OPTION( probethresh,       0,  0,100,1,0,1, "delay if ticks smaller thresh*claus
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
+OPTION( randec,            0,  0,  1,0,0,1, "random decisions") \
+OPTION( randecfocused,     1,  0,  1,0,0,1, "random decisions in focused mode") \
+OPTION( randecinit,       1e3, 2,2e9,0,0,1, "inital random decision interval") \
+OPTION( randecint,       500,  0,2e9,0,0,1, "random conflict length") \
+OPTION( randeclength,     10,  1,1e9,0,0,1, "length random decisions phases") \
+OPTION( randecstable,      0,  0,  1,0,0,1, "random decisions in stable mode") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \

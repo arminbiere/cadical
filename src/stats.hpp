@@ -338,6 +338,10 @@ struct Stats {
   int64_t inactive = 0; // number of inactive variables
 
   int64_t incremental_decay = 0;
+  struct {
+    int64_t random_decisions = 0; // number of random decisions
+    int64_t random_decision_phases = 0; // number of phases of random decision
+  } randec;
 
   std::vector<uint64_t> bump_used = {0, 0};
   std::vector<std::vector<uint64_t>> used; // used clauses in focused mode

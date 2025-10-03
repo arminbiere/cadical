@@ -486,6 +486,10 @@ bool Internal::propagate () {
     }
   }
 
+  if (conflict && randomized_deciding) {
+    if (!--randomized_deciding)
+      VERBOSE (3, "last random decision conflict");
+  }
   STOP (propagate);
 
   return !conflict;
@@ -573,6 +577,8 @@ void Internal::propergate () {
       ws.resize (j - ws.begin ());
     }
   }
+
+
 }
 
 } // namespace CaDiCaL

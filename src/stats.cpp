@@ -147,6 +147,12 @@ void Stats::print (Internal *internal) {
     PRT ("  searched:      %15" PRId64 "   %10.2f    per decision",
          stats.searched, relative (stats.searched, stats.decisions));
   }
+  if (all || stats.randec.random_decisions) {
+    PRT ("rand. dec phase: %15" PRId64 "   %10.2f    per interval",
+         stats.randec.random_decision_phases, relative (stats.randec.random_decision_phases, stats.decisions));
+    PRT ("random decs:     %15" PRId64 "   %10.2f    per phase",
+         stats.randec.random_decisions, relative (stats.randec.random_decisions, stats.randec.random_decision_phases));
+  }
   if (all || stats.all.eliminated) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
          stats.all.eliminated, percent (stats.all.eliminated, stats.vars));
