@@ -348,7 +348,7 @@ int Internal::warmup () {
   // actually do need the notifications. Otherwise, we there should be
   // no notification at all (not even the `backtrack ()` at the end).
   const size_t assms_contraint_level = assumptions.size () + !constraint.empty ();
-  while (!res && (size_t) level < assms_contraint_level) {
+  while (!res && (size_t) level < assms_contraint_level && num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);
     res = warmup_decide ();
     warmup_propagate_beyond_conflict();
