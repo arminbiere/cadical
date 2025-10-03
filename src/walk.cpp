@@ -959,7 +959,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #endif
   }
 
-  assert (walker.table.size ());
+  assert (failed || walker.table.size ());
 
   int res; // Tells caller to continue with local search.
 
