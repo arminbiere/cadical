@@ -47,6 +47,7 @@ struct Internal;
   PROFILE (analyze, 3) \
   MROFILE (analyzestable, 4) \
   MROFILE (analyzeunstable, 4) \
+  PROFILE (backbone, 2) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \

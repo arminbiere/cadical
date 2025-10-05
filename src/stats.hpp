@@ -30,6 +30,7 @@ struct Stats {
 
   struct {
     int64_t search[2] = {0};
+    int64_t backbone = 0;
     int64_t factor = 0;
     int64_t probe = 0;
     int64_t sweep = 0;
@@ -375,6 +376,13 @@ struct Stats {
     int64_t trivial_ite = 0;
     int64_t unary_ites = 0;
   } congruence;
+
+  struct {
+    int64_t rounds = 0;
+    int64_t units = 0;
+    int64_t phases = 0;
+    int64_t probes = 0;
+  } backbone;
 
   Stats ();
 

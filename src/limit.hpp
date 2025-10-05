@@ -88,7 +88,7 @@ struct Last {
   } transred;
   struct {
     int64_t ticks;
-  } sweep, vivify, probe, walk;
+  } backbone, probe, sweep, vivify, walk;
   struct {
     int64_t fixed, subsumephases, marked;
   } elim;

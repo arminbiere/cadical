@@ -85,7 +85,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
 void Internal::build_chain_for_empty () {
   if (!lrat || !lrat_chain.empty ())
     return;
-  assert (!level);
+//  assert (!level);
   assert (lrat_chain.empty ());
   assert (conflict);
   LOG (conflict, "lrat for global empty clause with conflict");

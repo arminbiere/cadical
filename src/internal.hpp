@@ -157,6 +157,7 @@ struct Internal {
     TRANSRED = (1 << 15),
     VIVIFY = (1 << 16),
     WALK = (1 << 17),
+    BACKBONE = (1 << 18),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -1014,6 +1015,26 @@ struct Internal {
   // Transitive reduction of binary implication graph in 'transred.cpp'
   //
   void transred ();
+
+  // backbone computation
+  //
+  void backbone_decision (int lit);
+  bool backbone_propagate ();
+  void backbone_propagate2 ();
+  unsigned compute_backbone ();
+  void backbone_unit_reassign (int lit); // only for reassigning already derived clauses!
+  void backbone_unit_assign (int lit); // only for reassigning already derived clauses!
+  void backbone_assign_any (int lit, Clause *reason);
+  void backbone_assign (int lit, Clause *reason);
+  void backbone_lrat_for_units (int lit, Clause *c);
+  unsigned compute_backbone_round (std::vector<int> &candidates,
+                                   std::vector<int> &units,
+                                   const int64_t ticks_limit,
+                                   int64_t &ticks, unsigned inconsistent);
+  void schedule_backbone_cands (std::vector<int> &candidates);
+  void keep_backbone_candidates (const std::vector<int> &candidates);
+  int backbone_analyze (Clause *);
+  void binary_clauses_backbone ();
 
   // We monitor the maximum size and glue of clauses during 'reduce' and
   // thus can predict if a redundant extended clause is likely to be kept in

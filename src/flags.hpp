@@ -32,7 +32,7 @@ struct Flags { // Variable flags.
   //
   unsigned char block : 2; // removed since last 'block' round (*)
   unsigned char skip : 2;  // skip this literal as blocking literal
-
+  bool backbone1, backbone0;
   // Bits for handling assumptions.
   //
   unsigned char assumed : 2;
@@ -55,7 +55,7 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = sweep = factored_but_on_reconstruction_stack = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = factored_but_on_reconstruction_stack = backbone1 = backbone0 = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = factor = 0;

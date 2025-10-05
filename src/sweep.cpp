@@ -1646,7 +1646,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     units = stats.sweep_units - units;
     solved = stats.sweep_solved - solved;
 #endif
-    VERBOSE (3,
+    VERBOSE (4,
              "complete swept variable %d backbone with %" PRIu64
              " units in %" PRIu64 " solver calls",
              externalize (idx), units, solved);

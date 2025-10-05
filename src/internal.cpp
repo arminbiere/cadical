@@ -740,6 +740,7 @@ void Internal::preprocess_quickly (bool always) {
 
   if (extract_gates (true))
     decompose ();
+  binary_clauses_backbone ();
 
   if (sweep ())
     decompose ();

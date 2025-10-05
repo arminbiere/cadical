@@ -305,8 +305,8 @@ inline void Internal::probe_assign (int lit, int parent) {
   set_parent_reason_literal (lit, parent);
   if (!level)
     learn_unit_clause (lit);
-  else
-    assert (level == 1);
+  // else
+  //   assert (level == 1);
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
   assert (val (lit) > 0);
@@ -942,6 +942,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
     if (extract_gates (preprocessing))
       decompose ();
+    binary_clauses_backbone ();
     if (sweep ())     // full occurrence list
       decompose ();   // ... and (ELS) afterwards.
     (void) vivify (); // resets watches

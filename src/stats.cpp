@@ -95,6 +95,16 @@ void Stats::print (Internal *internal) {
     PRT ("inc-decay:       %15" PRId64 "   %10.2f %%   per search",
          stats.incremental_decay, percent (stats.incremental_decay, stats.searches));
   }
+  if (all || stats.backbone.rounds) {
+    PRT ("backbone:        %15" PRId64 "   %10.2f %%  of vars",
+         stats.backbone.probes, percent (stats.backbone.probes, stats.vars));
+    PRT ("   rounds:       %15" PRId64 "   %10.2f    per phase",
+         stats.backbone.rounds, relative (stats.backbone.rounds, stats.backbone.phases));
+    PRT ("   phases:       %15" PRId64 "   %10.2f    interval",
+         stats.backbone.phases, relative (stats.conflicts, stats.backbone.phases));
+    PRT ("   units:        %15" PRId64 "   %10.2f    per phase",
+         stats.backbone.units, relative (stats.backbone.units, stats.backbone.phases));
+  }
   if (all || stats.conditioned) {
     PRT ("conditioned:     %15" PRId64
          "   %10.2f %%  of irredundant clauses",

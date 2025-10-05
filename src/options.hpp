@@ -25,6 +25,11 @@ OPTION( arena,             1,  0,  1,0,0,1, "allocate clauses in arena") \
 OPTION( arenacompact,      1,  0,  1,0,0,1, "keep clauses compact") \
 OPTION( arenasort,         1,  0,  1,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3,0,0,1, "1=clause, 2=var, 3=queue") \
+OPTION( backbone,          1,  0,  2,0,0,1, "binary clause backbone (2=eager)") \
+OPTION( backboneeffort,   10,  0,1e5,0,0,1, "binary effort in per mile") \
+OPTION( backbonemaxrounds,1e3, 0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonerounds,  100,  0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonethresh,    0,  0,1e9,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( binary,            1,  0,  1,0,0,1, "use binary proof format") \
 OPTION( block,             0,  0,  1,0,1,1, "blocked clause elimination") \
 OPTION( blockmaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
