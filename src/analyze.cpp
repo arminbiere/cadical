@@ -1337,8 +1337,8 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
   clear_analyzed_levels ();
   clause.clear ();
 
-  lrat_chain.clear ();
   if (unsat) {
+    lrat_chain.clear ();
     STOP (analyze);
   }
 }
