@@ -1446,14 +1446,31 @@ bool Closure::merge_literals (
   // 2 = (3 & 4)
   // false = (3 & 4)
   if (g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE || h->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) {
-    LOG ("merging special ITE case");
+    LOG ("merging special AND case with both side < 0");
     assert (internal->val (g->lhs) < 0 || internal->val (h->lhs) < 0);
     assert (internal->val (g->lhs) != internal->val (h->lhs));
     lrat_chain = extra_reasons_lit.empty() ? extra_reasons_ulit : extra_reasons_lit;
     const int unass = internal->val (g->lhs) < 0 ? h->lhs : g->lhs;
     learn_congruence_unit (-unass);
     return false;
+  }
 
+  LOG ("special case %d %d %d %d",
+       g->degenerated_gate == Special_Gate::DEGENERATED_AND,
+       internal->val (h->lhs) < 0,
+       h->degenerated_gate == Special_Gate::DEGENERATED_AND,
+       internal->val (g->lhs) < 0);
+  if ((g->degenerated_gate == Special_Gate::DEGENERATED_AND &&
+       internal->val (h->lhs) < 0) ||
+      (h->degenerated_gate == Special_Gate::DEGENERATED_AND &&
+       internal->val (g->lhs) < 0)) {
+    LOG ("merging special AND case");
+    assert (internal->val (g->lhs) < 0 || internal->val (h->lhs) < 0);
+    assert (internal->val (g->lhs) != internal->val (h->lhs));
+    lrat_chain = extra_reasons_lit.empty() ? extra_reasons_ulit : extra_reasons_lit;
+    const int unass = internal->val (g->lhs) < 0 ? h->lhs : g->lhs;
+    learn_congruence_unit (-unass);
+    return false;
   }
 
   return really_merge_literals(lit, other, repr_lit, repr_other, extra_reasons_lit, extra_reasons_ulit);
@@ -2300,6 +2317,52 @@ void Closure::update_and_gate_build_lrat_chain (
     assert (extra_reasons_ulit.size () == 1);
     return;
   }
+
+  const bool produce_unit_due_to_both_degenerated =
+      (g_tautology && internal->val (h->lhs) < 0) ||
+      (h_tautology && internal->val (g->lhs) < 0);
+
+  if (produce_unit_due_to_both_degenerated) {
+    LOG ("one gate is a tautology and the other is a unit: producing reason for unit");
+    Gate *tauto = (g_tautology ? g : h);
+    Gate *other = (g_tautology ? h : g);
+    assert (tauto->degenerated_gate & Special_Gate::DEGENERATED_AND);
+    LOG (tauto, "starting lrat from tauto gate");
+    for (auto &litId : tauto->pos_lhs_ids) {
+      litId.clause = produce_rewritten_clause_lrat (litId.clause, tauto->lhs,
+                                                     remove_units);
+      if (litId.clause)
+	extra_reasons_lit.push_back (litId.clause->id);
+    }
+    assert (extra_reasons_lit.size () == 1);
+    LOG (tauto, "now creating lrat with other gate");
+    // if tauto can also be a tautology: neg_lhs_ids
+    // otherwise the clause is in pos_lhs_ids
+    for (auto &litId : other->pos_lhs_ids) {
+      assert (extra_reasons_ulit.empty ());
+      assert (litId.clause);
+      LOG (litId.clause, "binary clause to push into the reason");
+      litId.clause =
+          produce_rewritten_clause_lrat (litId.clause, 0, remove_units);
+      if (litId.clause)
+        extra_reasons_lit.push_back (litId.clause->id);
+    }
+    if (auto &litId = other->neg_lhs_ids) {
+      if (litId->current_lit == tauto->lhs ||
+          litId->current_lit == -tauto->lhs || true) {
+        assert (extra_reasons_ulit.empty ());
+        assert (litId->clause);
+        LOG (litId->clause, "binary clause to push into the reason");
+        litId->clause =
+            produce_rewritten_clause_lrat (litId->clause, 0, remove_units);
+        if (litId->clause)
+          extra_reasons_lit.push_back (litId->clause->id);
+      }
+    }
+    assert (extra_reasons_lit.size () == 2);
+    return;
+  }
+
   if (g_tautology || h_tautology) {
     // special case: actually we have an equivalence due to binary clauses
     // and some of the clauses from the gate are actually tautologies
@@ -2356,6 +2419,7 @@ void Closure::update_and_gate_build_lrat_chain (
     assert (!extra_reasons_other.empty ());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, other->lhs,
                                              remove_units);
+    assert (other->neg_lhs_ids);
     push_id_on_chain (extra_reasons_other, other->neg_lhs_ids->clause);
     assert (!extra_reasons_tauto.empty ());
     assert (!extra_reasons_other.empty ());
@@ -5966,7 +6030,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             if (internal->lrat)
               merge_and_gate_lrat_produce_lrat (g, h, reasons_implication,
                                                 reasons_back, false);
-            if (merge_literals (g->lhs, h->lhs, reasons_implication,
+            if (merge_literals (g, h, g->lhs, h->lhs, reasons_implication,
                                      reasons_back))
               ++internal->stats.congruence.ands;
           }
@@ -6021,7 +6085,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         // LHS can change for degenerated gates
 	if  (g->lhs != normalized_lhs)
 	  normalized_lhs = find_eager_representative(normalized_lhs);
-        if (merge_literals (normalized_lhs, h->lhs, extra_reasons_lit,
+        if (merge_literals (g, h, normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
           ++internal->stats.congruence.ites;
         delete_proof_chain ();
