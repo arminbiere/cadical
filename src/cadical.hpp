@@ -591,7 +591,7 @@ public:
   // and has the same state transition and conditions as 'assume' etc.
   //
   //   require (READY)
-  //   ensure (STEADY )
+  //   ensure (STEADY)
   //
   void reserve (int min_max_var);
 
@@ -603,7 +603,7 @@ public:
   // It has the same state transition and conditions as 'reserve' above.
   //
   //   require (READY)
-  //   ensure (STEADY )
+  //   ensure (STEADY)
   //
   int reserve_difference (int number_of_vars);
 
