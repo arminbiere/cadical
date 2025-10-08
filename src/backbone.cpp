@@ -600,6 +600,7 @@ void Internal::binary_clauses_backbone () {
   if (!propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
     learn_empty_clause ();
+    return;
   }
 
   for (auto lit : lits) {
