@@ -721,8 +721,17 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
     return false;
   stats.factored++;
   factoring.fresh.push_back (fresh);
-  for (Quotient *p = q; p; p = p->prev)
+  size_t count_pos_phase = 0;
+  size_t total = 0;
+  for (Quotient *p = q; p; p = p->prev) {
     add_factored_divider (p, fresh);
+    count_pos_phase += (phases.saved[abs (p->factor)] == 1);
+    ++total;
+  }
+  if (count_pos_phase >= total / 2)
+    phases.saved[fresh] = -1;
+  else
+    phases.saved[fresh] = 1;
   const int not_fresh = -fresh;
   blocked_clause (q, not_fresh);
   add_factored_quotient (q, not_fresh);
@@ -772,12 +781,12 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   if (factoring.fresh.empty ())
     return;
 
-#if 0 // the scores are very low anyway
+//#if 0 // the scores are very low anyway
   for (auto lit : factoring.fresh) {
     assert (lit > 0 && internal->max_var);
     const double old_score = internal->stab[lit];
     // make the scores a little different from each other with the newest having the highest score
-    const double new_score = 1.0 / (double)(internal->max_var - lit);
+    const double new_score = 1.0 / (double)(1+internal->max_var - lit);
     if (old_score == new_score)
       continue;
     if (!scores.contains (lit))
@@ -786,7 +795,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     internal->stab[lit] = new_score;
     scores.update (lit);
   }
-#endif
+//#endif
 
   for (auto lit : factoring.fresh) {
     LOG ("dequeuing %s", LOGLIT (lit));
@@ -912,6 +921,7 @@ int Internal::get_new_extension_variable () {
   const int current_max_external = external->max_var;
   const int new_external = current_max_external + 1;
   const int new_internal = external->internalize (new_external, true);
+  phases.saved[new_internal] = -1;
   // one sideeffect of internalize is enlarging the internal datastructures
   // which can initialize the watches (wtab)
   if (watching ())
