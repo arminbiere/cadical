@@ -7573,10 +7573,9 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     learn_empty_clause ();
     return false;
   }
-  if (congruence_delay.bumpreasons.limit) {
+  if (congruence_delay.bumpreasons.delay ()) {
     LOG ("delaying congruence %" PRId64 " more times",
          congruence_delay.bumpreasons.limit);
-    congruence_delay.bumpreasons.limit--;
     return false;
   }
 
@@ -7688,15 +7687,10 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   assert (!internal->occurring ());
 
   if (new_merged == old_merged) {
-    congruence_delay.bumpreasons.interval++;
+    congruence_delay.bumpreasons.bump_delay();
   } else {
-    congruence_delay.bumpreasons.interval /= 2;
+    congruence_delay.bumpreasons.reduce_delay();
   }
-
-  LOG ("delay congruence internal %" PRId64,
-       congruence_delay.bumpreasons.interval);
-  congruence_delay.bumpreasons.limit =
-      congruence_delay.bumpreasons.interval;
 
   return new_merged != old_merged;
 }
