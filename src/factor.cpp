@@ -117,7 +117,7 @@ Factoring::Factoring (Internal *i, int64_t l)
   initial = max_var;
   bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
-  quotients.first = quotients.last = 0;
+  quotients.first = quotients.last = quotients.xors = 0;
 }
 
 Factoring::~Factoring () {
@@ -174,7 +174,12 @@ void Internal::release_quotients (Factoring &factoring) {
     unmarkfact (factor, FACTORS);
     delete q;
   }
-  factoring.quotients.first = factoring.quotients.last = 0;
+  if (factoring.quotients.xors) {
+    // TODO: unmark?
+    delete factoring.quotients.xors;
+  }
+  factoring.quotients.first = factoring.quotients.last =
+      factoring.quotients.xors = 0;
 }
 
 size_t Internal::first_factor (Factoring &factoring, int factor) {
@@ -208,6 +213,13 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
     c->swept = false;
   }
   flauses.clear ();
+}
+
+// TODO: Compute an xor quotient.
+Quotient *Internal::xor_quotient (Factoring &factoring,
+                                  size_t *best_reduction_ptr) {
+
+  return factoring.quotients.xors;
 }
 
 Quotient *Internal::best_quotient (Factoring &factoring,
@@ -882,7 +894,15 @@ bool Internal::run_factorization (int64_t limit) {
         factorize_next (factoring, next, next_count);
       }
       size_t reduction;
+      // This is the best and-gate factor (classical BVA).
       Quotient *q = best_quotient (factoring, &reduction);
+      if (opts.factorxor && opts.factorsize >= 4) {
+        // Get an xor quotient which is better then the best
+        // classical quotient (or 0).
+        Quotient *p = xor_quotient (factoring, &reduction);
+        if (p)
+          q = p;
+      }
       if (q && (int) reduction > factoring.bound) {
         if (apply_factoring (factoring, q)) {
 #ifndef QUIET
