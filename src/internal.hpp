@@ -306,7 +306,8 @@ struct Internal {
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
 
-  static constexpr unsigned max_used = 31; // must fit into the header of the clause!
+  static constexpr unsigned max_used =
+      31; // must fit into the header of the clause!
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
@@ -816,7 +817,11 @@ struct Internal {
   void renotify_full_trail ();
 
   // adds the assigned literals to assigned
-  void renotify_full_trail_between_trail_pos (int start_level, int end_level, int propagator_level, std::vector<int> &assigned, bool start_new_level);
+  void renotify_full_trail_between_trail_pos (int start_level,
+                                              int end_level,
+                                              int propagator_level,
+                                              std::vector<int> &assigned,
+                                              bool start_new_level);
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
@@ -843,7 +848,8 @@ struct Internal {
   //
   void clear_phases (vector<signed char> &); // reset argument to zero
   void copy_phases (vector<signed char> &);  // copy 'saved' to argument
-  void save_assigned_phases (vector<signed char> &);  // save assigned literals to argument
+  void save_assigned_phases (
+      vector<signed char> &); // save assigned literals to argument
 
   // Resetting the saved phased in 'rephase.cpp'.
   //

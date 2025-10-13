@@ -808,9 +808,9 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   stats.bumped = queue.bumped;
   update_queue_unassigned (queue.last);
 
-  #ifndef NDEBUG
+#ifndef NDEBUG
   for (auto v : vars)
-    assert (val (v) || scores.contains(v));
+    assert (val (v) || scores.contains (v));
   lit = queue.first;
   int next_lit = links[lit].next;
   while (next_lit) {
@@ -869,6 +869,7 @@ bool Internal::run_factorization (int64_t limit) {
       continue;
     f.factor &= ~bit;
     const size_t first_count = first_factor (factoring, first);
+    // TODO: also extract xor matches in this loop.
     if (first_count > 1) {
       for (;;) {
         unsigned next_count;
