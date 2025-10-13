@@ -1762,4 +1762,20 @@ void Solver::error (const char *fmt, ...) {
   va_end (ap);
 }
 
+int64_t Solver::get_statistic_value (const char *opt) {
+  REQUIRE_INITIALIZED ();
+  if (!strcmp (opt, "conflicts"))
+    return internal->stats.conflicts;
+  if (!strcmp (opt, "decisions"))
+    return internal->stats.decisions;
+  if (!strcmp (opt, "propagations"))
+    return internal->stats.propagations.search;
+  if (!strcmp (opt, "clauses"))
+    return internal->stats.current.total;
+  if (!strcmp (opt, "fixed"))
+    return internal->stats.all.fixed;
+  if (!strcmp (opt, "eliminated"))
+    return internal->stats.all.eliminated + internal->stats.all.fasteliminated;
+  return -1;
+}
 } // namespace CaDiCaL

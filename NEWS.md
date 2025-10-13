@@ -39,11 +39,14 @@ Version 2.2.0
   there is now only ilb with values 0, 1 (= only assumptions), and 2
   (= full reuse).
 
-- The trace now allows to get equivalent literals during solving
+- The tracer now allows to get equivalent literals during solving
 
 - Support for compilation of shared library via `./configure -shared`.
 
 - Fixed VeriPB compatibility issues.
+
+- add `get_statistic_value` to be able to extract some information
+  about the current run.
 
 Version 2.1.3
 -------------

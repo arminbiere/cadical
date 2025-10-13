@@ -607,6 +607,11 @@ public:
   //
   int reserve_difference (int number_of_vars);
 
+  // Get the value of some statistics or -1 if the statistics does not
+  // exist or is not support. Only requires the state to be initialized.
+  //
+  int64_t get_statistic_value (const char *const);
+
 #ifndef NTRACING
   //------------------------------------------------------------------------
   // This function can be used to write API calls to a file.  The same
