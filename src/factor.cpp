@@ -216,9 +216,23 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 }
 
 // TODO: Compute an xor quotient.
-Quotient *Internal::xor_quotient (Factoring &factoring,
+Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
                                   size_t *best_reduction_ptr) {
-
+  // TODO: init quotient.
+  factoring.quotients.xors = new Quotient (first_factor);
+  size_t matches = 0;
+  int second = 0;
+  for (auto *c : occs (first_factor)) {
+    for (auto &lit : *c) {
+      // TODO: mark lit.
+    }
+    for (auto *d : occs (-first_factor)) {
+      bool matched = 0;
+      for (auto &lit : *d) {
+        // TODO: match with c.
+      }
+    }
+  }
   return factoring.quotients.xors;
 }
 
@@ -899,7 +913,7 @@ bool Internal::run_factorization (int64_t limit) {
       if (opts.factorxor && opts.factorsize >= 4) {
         // Get an xor quotient which is better then the best
         // classical quotient (or 0).
-        Quotient *p = xor_quotient (factoring, &reduction);
+        Quotient *p = xor_quotient (factoring, first, &reduction);
         if (p)
           q = p;
       }

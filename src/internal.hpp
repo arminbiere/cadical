@@ -1280,7 +1280,7 @@ struct Internal {
   void clear_nounted (vector<int> &);
   void clear_flauses (vector<Clause *> &);
   Quotient *best_quotient (Factoring &, size_t *);
-  Quotient *xor_quotient (Factoring &, size_t *);
+  Quotient *xor_quotient (Factoring &, int, size_t *);
   int next_factor (Factoring &, unsigned *);
   void factorize_next (Factoring &, int, unsigned);
   void resize_factoring (Factoring &factoring, int lit);
