@@ -224,6 +224,9 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 // literal. Reset by using a vector.
 Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
                                   size_t *num_clause_matches) {
+  // fast skip if the maximum number of matched clauses is 4.
+  if (occs (first_factor).size () < 5 || occs (-first_factor).size () < 5)
+    return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
   // these are set to 0 for sanity (TODO: but not used?).
@@ -1064,11 +1067,12 @@ bool Internal::run_factorization (int64_t limit) {
         // classical quotient (or 0).
         size_t xor_clauses;
         Quotient *p = xor_quotient (factoring, first, &xor_clauses);
-        assert (p);
-        if (xor_clauses && (xor_clauses - 8) > reduction)
+        // need 4 clauses for xor definition.
+        if (p && xor_clauses && (xor_clauses - 4) > reduction)
           q = p;
       }
       if (q && (int) reduction > factoring.bound) {
+        // q->second tells us wether we are doing xor or and factors.
         if (!q->second && apply_factoring (factoring, q)) {
 #ifndef QUIET
           factored++;
