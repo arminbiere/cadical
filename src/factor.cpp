@@ -241,8 +241,9 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   for (auto *c : occs (first_factor)) {
     if (c->size < 3)
       continue;
+    LOG (c, "xor factor marking");
     for (auto &lit : *c) {
-      mark (lit);
+      markfact (lit, NOUNTED);
     }
     for (auto *d : occs (-first_factor)) {
       if (d->size != c->size)
@@ -268,6 +269,8 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       }
       if (!matched)
         continue;
+      if (!other) // Technically self-subsuming but continue
+        continue;
       if (!noccs (other)++)
         second.push_back (other);
       res->qlauses.push_back (c);
@@ -275,8 +278,9 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       // also continue...
       // break;
     }
+    LOG (c, "xor factor unmarking");
     for (auto &lit : *c) {
-      unmark (lit);
+      unmarkfact (lit, NOUNTED);
     }
   }
   size_t matches = 0;
@@ -920,6 +924,8 @@ bool Internal::apply_xor_factoring (Factoring &factoring, Quotient *q) {
   stats.factored_xor++;
   factoring.fresh.push_back (fresh);
   add_factor_xor (q, fresh);
+  // CHECK if this is reachable..
+  assert (false);
   // TODO: check that these really do what they should.
   delete_unfactored (q);
   update_factored (factoring, q);
@@ -1074,17 +1080,21 @@ bool Internal::run_factorization (int64_t limit) {
           break;
         factorize_next (factoring, next, next_count);
       }
-      size_t reduction;
+      // only initialize to remove non-initialized warning later.
+      size_t reduction = 0;
       // This is the best and-gate factor (classical BVA).
       Quotient *q = best_quotient (factoring, &reduction);
       if (opts.factorxor && opts.factorsize > 2) {
         // Get an xor quotient which is better then the best
         // classical quotient (or 0).
-        size_t xor_clauses;
+        size_t xor_clauses = 0;
         Quotient *p = xor_quotient (factoring, first, &xor_clauses);
+        LOG ("best xor quotient with %zd clauses", xor_clauses);
         // need 4 clauses for xor definition.
-        if (p && xor_clauses && (xor_clauses - 4) > reduction)
+        if (p && xor_clauses && (xor_clauses - 4) > reduction) {
           q = p;
+          reduction = xor_clauses - 4;
+        }
       }
       if (q && (int) reduction > factoring.bound) {
         // q->second tells us wether we are doing xor or and factors.
