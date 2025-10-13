@@ -184,6 +184,8 @@ struct Stats {
 
   int64_t factor = 0;
   int64_t factored = 0;
+  int64_t factored_and = 0;
+  int64_t factored_xor = 0;
   int64_t factor_added = 0;
   int64_t variables_extension = 0;
   int64_t variables_original = 0;
@@ -340,7 +342,8 @@ struct Stats {
   int64_t incremental_decay = 0;
   struct {
     int64_t random_decisions = 0; // number of random decisions
-    int64_t random_decision_phases = 0; // number of phases of random decision
+    int64_t random_decision_phases =
+        0; // number of phases of random decision
   } randec;
 
   std::vector<uint64_t> bump_used = {0, 0};

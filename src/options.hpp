@@ -117,7 +117,7 @@ OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA o
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( factorunbump,      1,  0,  1,0,0,1, "extension variable with lowest importance [1: as in kissat]") \
-OPTION( factorxor,         1,  0,  1,0,0,1, "factor eliminated xor gates (needs factorsize >= 4)") \
+OPTION( factorxor,         1,  0,  1,0,0,1, "factor eliminated xor gates (needs factorsize > 2)") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( fastelimclslim,  1e2,  2,2e9,2,0,1, "fast BVE resolvent size limit") \

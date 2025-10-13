@@ -22,6 +22,8 @@ void Internal::factor_mode () {
 
   assert (!watching ());
   init_occs ();
+  if (opts.factorxor && opts.factorsize > 2)
+    init_noccs ();
 
   const int size_limit = opts.factorsize;
 
@@ -106,6 +108,8 @@ void Internal::factor_mode () {
 // go back to two watch scheme
 void Internal::reset_factor_mode () {
   reset_occs ();
+  if (opts.factorxor && opts.factorsize > 2)
+    reset_noccs ();
   init_watches ();
   connect_watches ();
 }
@@ -175,7 +179,7 @@ void Internal::release_quotients (Factoring &factoring) {
     delete q;
   }
   if (factoring.quotients.xors) {
-    // TODO: unmark?
+    // TODO: unmark? probs not.
     delete factoring.quotients.xors;
   }
   factoring.quotients.first = factoring.quotients.last =
@@ -216,24 +220,118 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 }
 
 // TODO: Compute an xor quotient.
+// use noccs to count the number of matches for each second potential
+// literal. Reset by using a vector.
 Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
-                                  size_t *best_reduction_ptr) {
-  // TODO: init quotient.
-  factoring.quotients.xors = new Quotient (first_factor);
-  size_t matches = 0;
-  int second = 0;
+                                  size_t *num_clause_matches) {
+  // init quotient.
+  Quotient *res = new Quotient (first_factor);
+  // these are set to 0 for sanity (TODO: but not used?).
+  res->next = 0;
+  res->prev = 0;
+  res->matched = 0;
+  res->bid = 0;
+  res->id = 0;
+  vector<int> second;
+  // match clause c (containing first_factor) with
+  // a clause d (containing -first_factor)
   for (auto *c : occs (first_factor)) {
+    if (c->size < 3)
+      continue;
     for (auto &lit : *c) {
-      // TODO: mark lit.
+      mark (lit);
     }
     for (auto *d : occs (-first_factor)) {
-      bool matched = 0;
+      if (d->size != c->size)
+        continue;
+      bool matched = true;
+      int other = 0;
       for (auto &lit : *d) {
         // TODO: match with c.
+        if (lit == -first_factor)
+          continue;
+        if (marked (lit))
+          continue;
+        if (!marked (-lit)) {
+          matched = false;
+          break;
+        }
+        // marked (-lit)
+        if (other) {
+          matched = false;
+          break;
+        }
+        other = lit;
       }
+      if (!matched)
+        continue;
+      if (!noccs (other)++)
+        second.push_back (other);
+      res->qlauses.push_back (c);
+      res->qlauses.push_back (d);
+      // also continue...
+      // break;
+    }
+    for (auto &lit : *c) {
+      unmark (lit);
     }
   }
-  return factoring.quotients.xors;
+  size_t matches = 0;
+  int best = 0;
+  for (auto &lit : second) {
+    size_t tmp = noccs (lit) + noccs (-lit);
+    if (tmp <= matches)
+      continue;
+    matches = tmp;
+    best = lit;
+  }
+  for (auto &lit : second) {
+    noccs (lit) = noccs (-lit) = 0;
+  }
+  // remove all clauses except for the best.
+  auto begin = res->qlauses.begin ();
+  auto p = res->qlauses.begin ();
+  auto q = res->qlauses.begin ();
+  auto end = res->qlauses.end ();
+  while (p != end) {
+    Clause *c = *q++ = *p++;
+    Clause *d = *q++ = *p++;
+    size_t keep = 0;
+    int phase = 0;
+    for (auto &lit : *c) {
+      if (lit == best) {
+        phase = best;
+        keep++;
+        break;
+      } else if (lit == -best) {
+        phase = -best;
+        keep++;
+        break;
+      }
+    }
+    if (!keep) {
+      q -= 2;
+      continue;
+    }
+    for (auto &lit : *d) {
+      if (lit == -phase) {
+        keep++;
+        break;
+      }
+    }
+    if (keep < 2) {
+      q -= 2;
+      continue;
+    }
+    // keep and continue.
+  }
+  res->qlauses.resize (q - begin);
+  res->second = best;
+  assert (res->qlauses.size () == matches);
+  *num_clause_matches = matches;
+  assert (!factoring.quotients.xors);
+  factoring.quotients.xors = res;
+  return res;
 }
 
 Quotient *Internal::best_quotient (Factoring &factoring,
@@ -690,6 +788,39 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   }
 }
 
+// this adds first the xor definition (fresh = factor ^ second)
+// and then for each pair in qlauses the resulting unfactored clause.
+void Internal::add_factor_xor (Quotient *q, int fresh) {
+  const int factor = q->factor;
+  const int second = q->second;
+  LOG ("factored xor %d = %d ^ %d", fresh, factor, second);
+  assert (clause.empty ());
+  assert (lrat_chain.empty ());
+  clause.push_back (fresh);
+  clause.push_back (factor);
+  clause.push_back (second);
+  new_factor_clause ();
+  clause.clear ();
+  clause.push_back (fresh);
+  clause.push_back (-factor);
+  clause.push_back (-second);
+  new_factor_clause ();
+  clause.clear ();
+  // TODO: get and add clause ids of previous two for lrat here.
+  clause.push_back (fresh);
+  clause.push_back (factor);
+  clause.push_back (-second);
+  new_factor_clause ();
+  clause.clear ();
+  clause.clear ();
+  clause.push_back (fresh);
+  clause.push_back (-factor);
+  clause.push_back (second);
+  new_factor_clause ();
+  clause.clear ();
+  // TODO: also for lrat need them in the second part.
+}
+
 // remove deleted clauses once factored.
 void Internal::eagerly_remove_from_occurences (Clause *c) {
   for (const auto &lit : *c) {
@@ -746,6 +877,7 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
   if (!fresh)
     return false;
   stats.factored++;
+  stats.factored_and++;
   factoring.fresh.push_back (fresh);
   for (Quotient *p = q; p; p = p->prev)
     add_factored_divider (p, fresh);
@@ -756,6 +888,23 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
     delete_unfactored (p);
   for (Quotient *p = q; p; p = p->prev)
     update_factored (factoring, p);
+  assert (fresh > 0);
+  resize_factoring (factoring, fresh);
+  return true;
+}
+
+// xor factoring.
+bool Internal::apply_xor_factoring (Factoring &factoring, Quotient *q) {
+  const int fresh = get_new_extension_variable ();
+  if (!fresh)
+    return false;
+  stats.factored++;
+  stats.factored_xor++;
+  factoring.fresh.push_back (fresh);
+  add_factor_xor (q, fresh);
+  // TODO: check that these really do what they should.
+  delete_unfactored (q);
+  update_factored (factoring, q);
   assert (fresh > 0);
   resize_factoring (factoring, fresh);
   return true;
@@ -910,15 +1059,21 @@ bool Internal::run_factorization (int64_t limit) {
       size_t reduction;
       // This is the best and-gate factor (classical BVA).
       Quotient *q = best_quotient (factoring, &reduction);
-      if (opts.factorxor && opts.factorsize >= 4) {
+      if (opts.factorxor && opts.factorsize > 2) {
         // Get an xor quotient which is better then the best
         // classical quotient (or 0).
-        Quotient *p = xor_quotient (factoring, first, &reduction);
-        if (p)
+        size_t xor_clauses;
+        Quotient *p = xor_quotient (factoring, first, &xor_clauses);
+        assert (p);
+        if (xor_clauses && (xor_clauses - 8) > reduction)
           q = p;
       }
       if (q && (int) reduction > factoring.bound) {
-        if (apply_factoring (factoring, q)) {
+        if (!q->second && apply_factoring (factoring, q)) {
+#ifndef QUIET
+          factored++;
+#endif
+        } else if (q->second && apply_xor_factoring (factoring, q)) {
 #ifndef QUIET
           factored++;
 #endif
