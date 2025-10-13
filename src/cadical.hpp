@@ -610,7 +610,7 @@ public:
   // Get the value of some statistics or -1 if the statistics does not
   // exist or is not support. Only requires the state to be initialized.
   //
-  int64_t get_statistic_value (const char *const);
+  int64_t get_statistic_value (const char *const) const;
 
 #ifndef NTRACING
   //------------------------------------------------------------------------

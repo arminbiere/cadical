@@ -1762,7 +1762,7 @@ void Solver::error (const char *fmt, ...) {
   va_end (ap);
 }
 
-int64_t Solver::get_statistic_value (const char *opt) {
+int64_t Solver::get_statistic_value (const char *opt) const {
   REQUIRE_INITIALIZED ();
   if (!strcmp (opt, "conflicts"))
     return internal->stats.conflicts;
