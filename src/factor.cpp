@@ -803,25 +803,40 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
   clause.push_back (factor);
   clause.push_back (second);
   new_factor_clause ();
+  if (lrat)
+    mini_chain.push_back (clause_id);
   clause.clear ();
   clause.push_back (fresh);
   clause.push_back (-factor);
   clause.push_back (-second);
   new_factor_clause ();
+  if (lrat) {
+    mini_chain.push_back (clause_id);
+    // add the last two clauses
+    lrat_chain.push_back (-clause_id);
+    lrat_chain.push_back (-clause_id + 1);
+  }
   clause.clear ();
   // TODO: get and add clause ids of previous two for lrat here.
   clause.push_back (fresh);
   clause.push_back (factor);
   clause.push_back (-second);
+  // but don't clear as lrat is the same.
+  if (lrat)
+    mini_chain.push_back (clause_id);
   new_factor_clause ();
   clause.clear ();
   clause.clear ();
   clause.push_back (fresh);
   clause.push_back (-factor);
   clause.push_back (second);
+  if (lrat) {
+    mini_chain.push_back (clause_id);
+    lrat_chain.clear ();
+  }
   new_factor_clause ();
   clause.clear ();
-  // TODO: also for lrat need them in the second part.
+  // mini_chain contains the relevant ids.
 }
 
 // remove deleted clauses once factored.
