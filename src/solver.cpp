@@ -1772,10 +1772,16 @@ int64_t Solver::get_statistic_value (const char *opt) const {
     return internal->stats.propagations.search;
   if (!strcmp (opt, "clauses"))
     return internal->stats.current.total;
+  if (!strcmp (opt, "redundant"))
+    return internal->stats.current.redundant;
+  if (!strcmp (opt, "irredundant"))
+    return internal->stats.current.irredundant;
   if (!strcmp (opt, "fixed"))
     return internal->stats.all.fixed;
   if (!strcmp (opt, "eliminated"))
     return internal->stats.all.eliminated + internal->stats.all.fasteliminated;
+  if (!strcmp (opt, "subsitutued"))
+    return internal->stats.all.substituted;
   return -1;
 }
 } // namespace CaDiCaL
