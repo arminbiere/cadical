@@ -243,6 +243,8 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
   for (auto *c : occs (first_factor)) {
     ticks++;
+    if (c->garbage)
+      continue;
     if (c->size < 3)
       continue;
     if (*ticks > limit)
@@ -254,6 +256,8 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     ticks += cache_lines (occs (-first_factor).size (), sizeof (Clause *));
     for (auto *d : occs (-first_factor)) {
       ticks++;
+      if (d->garbage)
+        continue;
       if (d->size != c->size)
         continue;
       if (*ticks > limit)
@@ -343,6 +347,8 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     }
     // keep and continue.
   }
+  // TODO: ensure that no clause is kept multiple times (due to duplicated
+  // matching clause).
   res->qlauses.resize (q - begin);
   res->second = best;
   assert (res->qlauses.size () == 2 * matches);
@@ -859,11 +865,117 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
   }
   // mini_chain contains the relevant ids.
   // TODO: add simplified clauses.
-  for (size_t idx = 0; idx < (q->qlauses.size () / 2); idx++) {
-    Clause *c = q->qlauses[idx];
-    Clause *d = q->qlauses[idx + 1];
+  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) {
+    Clause *c = q->qlauses[2 * idx];
+    Clause *d = q->qlauses[2 * idx + 1];
     // TODO: figure out if they can be resolved with the former or latter
     // two.
+    int64_t first_tmp_id = ++clause_id;
+    int64_t second_tmp_id = ++clause_id;
+    if (proof) {
+      size_t resolve = 0;
+      for (auto &lit : *c) {
+        if (lit == factor)
+          continue;
+        else if (lit == second)
+          resolve = 3;
+        else if (lit == -second)
+          resolve = 1;
+        assert (lit != !factor);
+        clause.push_back (lit);
+      }
+      if (resolve == 3)
+        clause.push_back (-fresh);
+      else
+        clause.push_back (fresh);
+      if (lrat) {
+        lrat_chain.push_back (c->id);
+        lrat_chain.push_back (mini_chain[resolve]);
+      }
+      proof->add_derived_clause (first_tmp_id, true, clause, lrat_chain);
+      lrat_chain.clear ();
+      clause.clear ();
+      for (auto &lit : *d) {
+        if (lit == -factor)
+          continue;
+        else if (lit == second)
+          resolve = 0;
+        else if (lit == -second)
+          resolve = 2;
+        assert (lit != factor);
+        clause.push_back (lit);
+      }
+      if (resolve == 2)
+        clause.push_back (-fresh);
+      else
+        clause.push_back (fresh);
+      if (lrat) {
+        lrat_chain.push_back (d->id);
+        lrat_chain.push_back (mini_chain[resolve]);
+      }
+      proof->add_derived_clause (second_tmp_id, true, clause, lrat_chain);
+      lrat_chain.clear ();
+      clause.clear ();
+    }
+    size_t resolve = 0;
+    for (auto &lit : *c) {
+      if (lit == factor)
+        continue;
+      else if (lit == second) {
+        resolve = 3;
+        continue;
+      } else if (lit == -second) {
+        resolve = 1;
+        continue;
+      }
+      clause.push_back (lit);
+    }
+    if (resolve == 3)
+      clause.push_back (-fresh);
+    else
+      clause.push_back (fresh);
+    if (lrat) {
+      lrat_chain.push_back (first_tmp_id);
+      lrat_chain.push_back (second_tmp_id);
+    }
+    new_factor_clause ();
+    lrat_chain.clear ();
+    clause.clear ();
+    if (proof) {
+      size_t resolve = 0;
+      for (auto &lit : *c) {
+        if (lit == factor)
+          continue;
+        else if (lit == second)
+          resolve = 3;
+        else if (lit == -second)
+          resolve = 1;
+        assert (lit != !factor);
+        clause.push_back (lit);
+      }
+      if (resolve == 3)
+        clause.push_back (-fresh);
+      else
+        clause.push_back (fresh);
+      proof->delete_clause (first_tmp_id, true, clause);
+      clause.clear ();
+      for (auto &lit : *d) {
+        if (lit == -factor)
+          continue;
+        else if (lit == second)
+          resolve = 0;
+        else if (lit == -second)
+          resolve = 2;
+        assert (lit != factor);
+        clause.push_back (lit);
+      }
+      if (resolve == 2)
+        clause.push_back (-fresh);
+      else
+        clause.push_back (fresh);
+      proof->delete_clause (second_tmp_id, true, clause);
+      clause.clear ();
+    }
   }
 }
 
