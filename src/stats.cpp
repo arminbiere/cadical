@@ -94,7 +94,8 @@ void Stats::print (Internal *internal) {
   }
   if (all || stats.incremental_decay) {
     PRT ("inc-decay:       %15" PRId64 "   %10.2f %%   per search",
-         stats.incremental_decay, percent (stats.incremental_decay, stats.searches));
+         stats.incremental_decay,
+         percent (stats.incremental_decay, stats.searches));
   }
   if (all || stats.conditioned) {
     PRT ("conditioned:     %15" PRId64
@@ -149,9 +150,12 @@ void Stats::print (Internal *internal) {
   }
   if (all || stats.randec.random_decisions) {
     PRT ("rand. dec phase: %15" PRId64 "   %10.2f    per interval",
-         stats.randec.random_decision_phases, relative (stats.randec.random_decision_phases, stats.decisions));
+         stats.randec.random_decision_phases,
+         relative (stats.randec.random_decision_phases, stats.decisions));
     PRT ("random decs:     %15" PRId64 "   %10.2f    per phase",
-         stats.randec.random_decisions, relative (stats.randec.random_decisions, stats.randec.random_decision_phases));
+         stats.randec.random_decisions,
+         relative (stats.randec.random_decisions,
+                   stats.randec.random_decision_phases));
   }
   if (all || stats.all.eliminated) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
@@ -241,6 +245,10 @@ void Stats::print (Internal *internal) {
   if (all || stats.factored) {
     PRT ("factored:        %15" PRId64 "   %10.2f %%  of variables",
          stats.factored, percent (stats.factored, internal->max_var));
+    PRT ("  ands:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_and, percent (stats.factored_and, stats.factored));
+    PRT ("  xors:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_xor, percent (stats.factored_xor, stats.factored));
     PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
          stats.factor, relative (stats.conflicts, stats.factor));
     PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",
