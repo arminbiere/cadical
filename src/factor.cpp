@@ -239,7 +239,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   // a clause d (containing -first_factor)
   // also counting count ticks!
   const int64_t limit = factoring.limit;
-  int64_t *ticks = &stats.ticks.factor;
+  int64_t ticks = stats.ticks.factor;
   ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
   for (auto *c : occs (first_factor)) {
     ticks++;
@@ -247,7 +247,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       continue;
     if (c->size < 3)
       continue;
-    if (*ticks > limit)
+    if (ticks > limit)
       break;
     LOG (c, "xor factor %d marking", first_factor);
     for (auto &lit : *c) {
@@ -260,7 +260,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
         continue;
       if (d->size != c->size)
         continue;
-      if (*ticks > limit)
+      if (ticks > limit)
         break;
       bool matched = true;
       int other = 0;
@@ -285,7 +285,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
         continue;
       if (!other) // Technically self-subsuming but continue
         continue;
-      if (!noccs (other)++)
+      if (!(noccs (other)++))
         second.push_back (other);
       res->qlauses.push_back (c);
       res->qlauses.push_back (d);
@@ -298,6 +298,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       unmarkfact (lit, NOUNTED);
     }
   }
+  stats.ticks.factor = ticks;
   size_t matches = 0;
   int best = 0;
   for (auto &lit : second) {
@@ -1285,6 +1286,9 @@ int Internal::get_new_extension_variable () {
     reset_watches ();
   // it does not enlarge otab, however, so we do this manually
   init_occs ();
+
+  if (opts.factorxor && opts.factorsize > 2)
+    init_noccs ();
   assert (vlit (new_internal));
   return new_internal;
 }
