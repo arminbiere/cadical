@@ -179,7 +179,7 @@ void Internal::release_quotients (Factoring &factoring) {
     delete q;
   }
   if (factoring.quotients.xors) {
-    // TODO: unmark? probs not.
+    // these are not marked.
     delete factoring.quotients.xors;
   }
   factoring.quotients.first = factoring.quotients.last =
@@ -219,9 +219,8 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
   flauses.clear ();
 }
 
-// TODO: Compute an xor quotient.
-// use noccs to count the number of matches for each second potential
-// literal. Reset by using a vector.
+// Compute an xor quotient. Use noccs to count the number of matches for
+// each second potential literal. Reset by using a vector.
 Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
                                   size_t *num_clause_matches) {
   // fast skip if the maximum number of matched clauses is 4.
@@ -238,25 +237,36 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   vector<int> second;
   // match clause c (containing first_factor) with
   // a clause d (containing -first_factor)
+  // also counting count ticks!
+  const int64_t limit = factoring.limit;
+  int64_t *ticks = &stats.ticks.factor;
+  ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
   for (auto *c : occs (first_factor)) {
+    ticks++;
     if (c->size < 3)
       continue;
-    LOG (c, "xor factor marking");
+    if (*ticks > limit)
+      break;
+    LOG (c, "xor factor %d marking", first_factor);
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
     }
+    ticks += cache_lines (occs (-first_factor).size (), sizeof (Clause *));
     for (auto *d : occs (-first_factor)) {
+      ticks++;
       if (d->size != c->size)
         continue;
+      if (*ticks > limit)
+        break;
       bool matched = true;
       int other = 0;
       for (auto &lit : *d) {
-        // TODO: match with c.
+        // match with c.
         if (lit == -first_factor)
           continue;
-        if (marked (lit))
+        if (getfact (lit, NOUNTED))
           continue;
-        if (!marked (-lit)) {
+        if (!getfact (-lit, NOUNTED)) {
           matched = false;
           break;
         }
@@ -275,6 +285,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
         second.push_back (other);
       res->qlauses.push_back (c);
       res->qlauses.push_back (d);
+      LOG (d, "xor factor matched");
       // also continue...
       // break;
     }
@@ -334,7 +345,7 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   }
   res->qlauses.resize (q - begin);
   res->second = best;
-  assert (res->qlauses.size () == matches);
+  assert (res->qlauses.size () == 2 * matches);
   *num_clause_matches = matches;
   assert (!factoring.quotients.xors);
   factoring.quotients.xors = res;
@@ -803,44 +814,57 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
   LOG ("factored xor %d = %d ^ %d", fresh, factor, second);
   assert (clause.empty ());
   assert (lrat_chain.empty ());
-  clause.push_back (fresh);
-  clause.push_back (factor);
-  clause.push_back (second);
-  new_factor_clause ();
-  if (lrat)
-    mini_chain.push_back (clause_id);
-  clause.clear ();
-  clause.push_back (fresh);
-  clause.push_back (-factor);
-  clause.push_back (-second);
-  new_factor_clause ();
-  if (lrat) {
-    mini_chain.push_back (clause_id);
-    // add the last two clauses
-    lrat_chain.push_back (-clause_id);
-    lrat_chain.push_back (-clause_id + 1);
+  {
+    clause.push_back (fresh);
+    clause.push_back (factor);
+    clause.push_back (second);
+    new_factor_clause ();
+    if (lrat)
+      mini_chain.push_back (clause_id);
+    clause.clear ();
   }
-  clause.clear ();
-  // TODO: get and add clause ids of previous two for lrat here.
-  clause.push_back (fresh);
-  clause.push_back (factor);
-  clause.push_back (-second);
-  // but don't clear as lrat is the same.
-  if (lrat)
-    mini_chain.push_back (clause_id);
-  new_factor_clause ();
-  clause.clear ();
-  clause.clear ();
-  clause.push_back (fresh);
-  clause.push_back (-factor);
-  clause.push_back (second);
-  if (lrat) {
-    mini_chain.push_back (clause_id);
-    lrat_chain.clear ();
+  {
+    clause.push_back (fresh);
+    clause.push_back (-factor);
+    clause.push_back (-second);
+    new_factor_clause ();
+    if (lrat) {
+      mini_chain.push_back (clause_id);
+      // add the last two clauses
+      lrat_chain.push_back (-clause_id);
+      lrat_chain.push_back (-clause_id + 1);
+    }
+    clause.clear ();
   }
-  new_factor_clause ();
-  clause.clear ();
+  {
+    clause.push_back (-fresh);
+    clause.push_back (factor);
+    clause.push_back (-second);
+    // but don't clear as lrat is the same.
+    new_factor_clause ();
+    if (lrat)
+      mini_chain.push_back (clause_id);
+    clause.clear ();
+  }
+  {
+    clause.push_back (-fresh);
+    clause.push_back (-factor);
+    clause.push_back (second);
+    new_factor_clause ();
+    if (lrat) {
+      mini_chain.push_back (clause_id);
+      lrat_chain.clear ();
+    }
+    clause.clear ();
+  }
   // mini_chain contains the relevant ids.
+  // TODO: add simplified clauses.
+  for (size_t idx = 0; idx < (q->qlauses.size () / 2); idx++) {
+    Clause *c = q->qlauses[idx];
+    Clause *d = q->qlauses[idx + 1];
+    // TODO: figure out if they can be resolved with the former or latter
+    // two.
+  }
 }
 
 // remove deleted clauses once factored.
@@ -924,8 +948,6 @@ bool Internal::apply_xor_factoring (Factoring &factoring, Quotient *q) {
   stats.factored_xor++;
   factoring.fresh.push_back (fresh);
   add_factor_xor (q, fresh);
-  // CHECK if this is reachable..
-  assert (false);
   // TODO: check that these really do what they should.
   delete_unfactored (q);
   update_factored (factoring, q);
@@ -1068,7 +1090,7 @@ bool Internal::run_factorization (int64_t limit) {
       continue;
     f.factor &= ~bit;
     const size_t first_count = first_factor (factoring, first);
-    // TODO: also extract xor matches in this loop.
+    // extract xor matches after the "normal" factors in this loop.
     if (first_count > 1) {
       for (;;) {
         unsigned next_count;

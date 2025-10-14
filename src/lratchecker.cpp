@@ -412,6 +412,7 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
             checked_lit (-lit) = false;
             mark (-lit) = false;
           }
+          LOG (c->literals, c->size, "non-blocked clause");
           return false;
         } else {
           // all literals outside of candidates are not valid RAT candidates
