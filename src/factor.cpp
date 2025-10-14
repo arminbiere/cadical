@@ -323,11 +323,6 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     Clause *d = *q++ = *p++;
     size_t keep = 0;
     int phase = 0;
-    if (c->swept || d->swept) {
-      q -= 2;
-      matches -= 1;
-      continue;
-    }
     for (auto &lit : *c) {
       if (lit == best) {
         phase = best;
@@ -351,6 +346,12 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     }
     if (keep < 2) {
       q -= 2;
+      continue;
+    }
+    if (c->swept || d->swept) {
+      q -= 2;
+      LOG ("factor decrement matches due to duplicate clause");
+      matches -= 1;
       continue;
     }
     c->swept = true;
@@ -989,6 +990,7 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
       clause.clear ();
     }
   }
+  mini_chain.clear ();
 }
 
 // remove deleted clauses once factored.
