@@ -310,7 +310,10 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   for (auto &lit : second) {
     noccs (lit) = noccs (-lit) = 0;
   }
-  // remove all clauses except for the best.
+  // Remove all clauses except for the best.
+  // Ensure that no clause is kept multiple times (due to duplicated
+  // matching clause) with the "swept" flag.
+  // Unfortunately this can lead to fewer matches.
   auto begin = res->qlauses.begin ();
   auto p = res->qlauses.begin ();
   auto q = res->qlauses.begin ();
@@ -320,6 +323,11 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     Clause *d = *q++ = *p++;
     size_t keep = 0;
     int phase = 0;
+    if (c->swept || d->swept) {
+      q -= 2;
+      matches -= 1;
+      continue;
+    }
     for (auto &lit : *c) {
       if (lit == best) {
         phase = best;
@@ -345,12 +353,16 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       q -= 2;
       continue;
     }
+    c->swept = true;
+    d->swept = true;
     // keep and continue.
   }
-  // TODO: ensure that no clause is kept multiple times (due to duplicated
-  // matching clause).
   res->qlauses.resize (q - begin);
   res->second = best;
+  for (auto c : res->qlauses) {
+    assert (c->swept);
+    c->swept = false;
+  }
   assert (res->qlauses.size () == 2 * matches);
   *num_clause_matches = matches;
   assert (!factoring.quotients.xors);
