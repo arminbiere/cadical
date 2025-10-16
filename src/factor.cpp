@@ -235,6 +235,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   res->bid = 0;
   res->id = 0;
   vector<int> second;
+  vector<int> pairs;
   // match clause c (containing first_factor) with
   // a clause d (containing -first_factor).
   // The two clauses should coincide except on one literal.
@@ -281,8 +282,12 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         continue;
       if (!other) // Technically self-subsuming but continue
         continue;
-      if (!(noccs (other)++))
+      if (!getfact (other, QUOTIENT)) {
         second.push_back (other);
+        markfact (other, QUOTIENT);
+      }
+      pairs.push_back (0);
+      pairs.push_back (other);
       res->qlauses.push_back (c);
       res->qlauses.push_back (d);
       LOG (c, "xorite factor matched first");
@@ -294,6 +299,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       unmarkfact (lit, NOUNTED);
     }
   }
+  // TODO: find highest pair count. using noccs.
+
   stats.ticks.factor = ticks;
   size_t second_matches = 0;
   size_t third_matches = 0;
