@@ -469,18 +469,18 @@ bool Checker::check_blocked () {
       for (int *i = c->literals; i < c->literals + c->size; i++) {
         const int lit = *i;
         if (val (lit) > 0) {
-          LOG (c->literals, c->size, "satisfied clause");
           count = 2;
           break;
         }
         if (mark (lit)) {
           count++;
-          LOG (c->literals, c->size, "clause");
           first = lit;
         }
       }
-      if (count == 1)
+      if (count == 1) {
         not_blocked.push_back (first);
+        LOG (c->literals, c->size, "CHECKER non-blocked %d clause", first);
+      }
     }
   }
   for (const auto &lit : not_blocked) {

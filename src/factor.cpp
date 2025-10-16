@@ -249,7 +249,6 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     if (ticks > limit)
       break;
-    LOG (c, "xor factor %d marking", first_factor);
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
     }
@@ -289,11 +288,11 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         second.push_back (other);
       res->qlauses.push_back (c);
       res->qlauses.push_back (d);
-      LOG (d, "xor factor matched");
+      LOG (c, "xorite factor matched first");
+      LOG (d, "xorite factor matched second");
       // also continue...
       // break;
     }
-    LOG (c, "xor factor unmarking");
     for (auto &lit : *c) {
       unmarkfact (lit, NOUNTED);
     }
@@ -854,7 +853,8 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   const int factor = q->factor;
   const int second = q->second;
   const int third = q->third;
-  LOG ("factored xor %d = %d ^ %d", fresh, factor, second);
+  LOG ("factored ite %d = if %d then %d else %d", fresh, factor, second,
+       third);
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   {
@@ -1246,7 +1246,7 @@ bool Internal::run_factorization (int64_t limit) {
         // classical quotient (or 0).
         size_t xorite_clauses = 0;
         Quotient *p = xorite_quotient (factoring, first, &xorite_clauses);
-        LOG ("best xor quotient with %zd clauses", xorite_clauses);
+        LOG ("best xorite quotient with %zd clauses", xorite_clauses);
         // need 4 clauses for xor or ite definition.
         if (p && xorite_clauses && (xorite_clauses - 4) > reduction) {
           q = p;

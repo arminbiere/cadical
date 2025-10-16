@@ -134,7 +134,7 @@ LratChecker::LratChecker (Internal *i)
 
 void LratChecker::connect_internal (Internal *i) {
   internal = i;
-  LOG ("connected to internal");
+  LOG ("LRAT CHECKER connected to internal");
 }
 
 LratChecker::~LratChecker () {
@@ -412,7 +412,7 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
             checked_lit (-lit) = false;
             mark (-lit) = false;
           }
-          LOG (c->literals, c->size, "non-blocked clause");
+          LOG (c->literals, c->size, "LRAT CHECKER non-blocked clause");
           return false;
         } else {
           // all literals outside of candidates are not valid RAT candidates
