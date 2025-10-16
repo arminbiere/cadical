@@ -131,7 +131,7 @@ inline bool Internal::backbone_propagate () {
       break;
   }
   int64_t delta = propagated2 - before;
-  stats.propagations.vivify += delta;
+  stats.propagations.backbone += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -142,6 +142,7 @@ inline void Internal::backbone_propagate2 () {
   require_mode (BACKBONE);
   int64_t &ticks = stats.ticks.backbone;
   assert (propagated2 <= trail.size ());
+  int64_t before = propagated2;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
@@ -164,6 +165,9 @@ inline void Internal::backbone_propagate2 () {
       }
     }
   }
+
+  int64_t delta = propagated2 - before;
+  stats.propagations.backbone += delta;
 }
 
 void Internal::schedule_backbone_cands (std::vector<int> &candidates) {

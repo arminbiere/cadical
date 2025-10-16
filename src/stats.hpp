@@ -26,6 +26,7 @@ struct Stats {
     int64_t search = 0;      // propagated literals during search
     int64_t transred = 0;    // propagated during transitive reduction
     int64_t vivify = 0;      // propagated during vivification
+    int64_t backbone = 0;    // propagated during backbones
   } propagations;
 
   struct {

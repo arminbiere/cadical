@@ -947,6 +947,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
       decompose ();   // ... and (ELS) afterwards.
     (void) vivify (); // resets watches
     transred ();      // builds big.
+    binary_clauses_backbone ();
     factor ();   // resets watches, partial occurrence list
   }
 
