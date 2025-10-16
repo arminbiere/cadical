@@ -121,7 +121,7 @@ Factoring::Factoring (Internal *i, int64_t l)
   initial = max_var;
   bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
-  quotients.first = quotients.last = quotients.xors = 0;
+  quotients.first = quotients.last = quotients.xorites = 0;
 }
 
 Factoring::~Factoring () {
@@ -178,12 +178,12 @@ void Internal::release_quotients (Factoring &factoring) {
     unmarkfact (factor, FACTORS);
     delete q;
   }
-  if (factoring.quotients.xors) {
+  if (factoring.quotients.xorites) {
     // these are not marked.
-    delete factoring.quotients.xors;
+    delete factoring.quotients.xorites;
   }
   factoring.quotients.first = factoring.quotients.last =
-      factoring.quotients.xors = 0;
+      factoring.quotients.xorites = 0;
 }
 
 size_t Internal::first_factor (Factoring &factoring, int factor) {
@@ -219,16 +219,16 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
   flauses.clear ();
 }
 
-// Compute an xor quotient. Use noccs to count the number of matches for
-// each second potential literal. Reset by using a vector.
-Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
-                                  size_t *num_clause_matches) {
+// Compute an xor or ite quotient. Use noccs to count the number of matches
+// for each second potential literal. Reset by using a vector.
+Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
+                                     size_t *num_clause_matches) {
   // fast skip if the maximum number of matched clauses is 4.
   if (occs (first_factor).size () < 5 || occs (-first_factor).size () < 5)
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
-  // these are set to 0 for sanity (TODO: but not used?).
+  // these are set to 0 for sanity (but not used).
   res->next = 0;
   res->prev = 0;
   res->matched = 0;
@@ -299,17 +299,25 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
     }
   }
   stats.ticks.factor = ticks;
-  size_t matches = 0;
-  int best = 0;
+  size_t second_matches = 0;
+  size_t third_matches = 0;
+  int second_best = 0;
+  int third_best = 0;
   for (auto &lit : second) {
-    size_t tmp = noccs (lit) + noccs (-lit);
-    if (tmp <= matches)
+    size_t tmp = noccs (lit);
+    if (tmp <= third_matches)
       continue;
-    matches = tmp;
-    best = lit;
+    third_matches = tmp;
+    third_best = lit;
+    if (tmp <= second_matches)
+      continue;
+    std::swap (second_best, third_best);
+    std::swap (second_matches, third_matches);
   }
+  size_t matches = second_matches + third_matches;
   for (auto &lit : second) {
-    noccs (lit) = noccs (-lit) = 0;
+    assert (noccs (lit));
+    noccs (lit) = 0;
   }
   // Remove all clauses except for the best.
   // Ensure that no clause is kept multiple times (due to duplicated
@@ -322,30 +330,37 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
   while (p != end) {
     Clause *c = *q++ = *p++;
     Clause *d = *q++ = *p++;
-    size_t keep = 0;
-    int phase = 0;
+    bool keep_second = 0;
+    bool keep_third = 0;
+    // ite-clause could contain both -second and -third.
     for (auto &lit : *c) {
-      if (lit == best) {
-        phase = best;
+      if (lit == -second_best) {
+        keep_second = true;
+      } else if (lit == -third_best) {
+        keep_third = true;
+      }
+    }
+    if (!keep_second && !keep_third) {
+      q -= 2;
+      continue;
+    }
+    // ite-clause could contain both second and third.
+    // When matching both we can learn two clauses. This
+    // does not reduce the total number of clauses. However,
+    // we can also just learn one of the two, ignoring third.
+    // using the swept flag we can insure that we are not
+    // using these same clauses again.
+    size_t keep = 0;
+    for (auto &lit : *d) {
+      if (lit == second_best && keep_second) {
         keep++;
         break;
-      } else if (lit == -best) {
-        phase = -best;
+      } else if (lit == third_best && keep_third) {
         keep++;
         break;
       }
     }
     if (!keep) {
-      q -= 2;
-      continue;
-    }
-    for (auto &lit : *d) {
-      if (lit == -phase) {
-        keep++;
-        break;
-      }
-    }
-    if (keep < 2) {
       q -= 2;
       continue;
     }
@@ -355,20 +370,26 @@ Quotient *Internal::xor_quotient (Factoring &factoring, int first_factor,
       matches -= 1;
       continue;
     }
+    // remember wether we matched on second or third for later.
+    if (keep_second)
+      res->matches.push_back (0);
+    else
+      res->matches.push_back (1);
     c->swept = true;
     d->swept = true;
     // keep and continue.
   }
   res->qlauses.resize (q - begin);
-  res->second = best;
+  res->second = second_best;
+  res->third = third_best;
   for (auto c : res->qlauses) {
     assert (c->swept);
     c->swept = false;
   }
   assert (res->qlauses.size () == 2 * matches);
   *num_clause_matches = matches;
-  assert (!factoring.quotients.xors);
-  factoring.quotients.xors = res;
+  assert (!factoring.quotients.xorites);
+  factoring.quotients.xorites = res;
   return res;
 }
 
@@ -826,11 +847,13 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   }
 }
 
-// this adds first the xor definition (fresh = factor ^ second)
-// and then for each pair in qlauses the resulting unfactored clause.
-void Internal::add_factor_xor (Quotient *q, int fresh) {
+// this adds first the ite definition (fresh = if factor then second else
+// third) and then for each pair in qlauses the resulting unfactored clause.
+// xor is just the special case where second = -third.
+void Internal::add_factor_xorite (Quotient *q, int fresh) {
   const int factor = q->factor;
   const int second = q->second;
+  const int third = q->third;
   LOG ("factored xor %d = %d ^ %d", fresh, factor, second);
   assert (clause.empty ());
   assert (lrat_chain.empty ());
@@ -859,7 +882,7 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
   {
     clause.push_back (-fresh);
     clause.push_back (factor);
-    clause.push_back (-second);
+    clause.push_back (third);
     // but don't clear as lrat is the same.
     new_factor_clause ();
     if (lrat)
@@ -869,7 +892,7 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
   {
     clause.push_back (-fresh);
     clause.push_back (-factor);
-    clause.push_back (second);
+    clause.push_back (-third);
     new_factor_clause ();
     if (lrat) {
       mini_chain.push_back (clause_id);
@@ -878,30 +901,25 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
     clause.clear ();
   }
   // mini_chain contains the relevant ids.
-  // TODO: add simplified clauses.
+  // add simplified clauses.
   for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) {
     Clause *c = q->qlauses[2 * idx];
     Clause *d = q->qlauses[2 * idx + 1];
-    // TODO: figure out if they can be resolved with the former or latter
-    // two.
+    // resolve tells us wether we matched on second or third.
+    size_t resolve = q->matches[idx];
     int64_t first_tmp_id = ++clause_id;
     int64_t second_tmp_id = ++clause_id;
     if (proof) {
-      size_t resolve = 0;
       for (auto &lit : *c) {
         if (lit == factor)
           continue;
-        else if (lit == second)
-          resolve = 3;
-        else if (lit == -second)
-          resolve = 1;
-        assert (lit != !factor);
+        assert (lit != -factor);
         clause.push_back (lit);
       }
-      if (resolve == 3)
-        clause.push_back (-fresh);
-      else
+      if (!resolve)
         clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
       if (lrat) {
         lrat_chain.push_back (c->id);
         lrat_chain.push_back (mini_chain[resolve]);
@@ -912,17 +930,13 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
       for (auto &lit : *d) {
         if (lit == -factor)
           continue;
-        else if (lit == second)
-          resolve = 0;
-        else if (lit == -second)
-          resolve = 2;
         assert (lit != factor);
         clause.push_back (lit);
       }
-      if (resolve == 2)
-        clause.push_back (-fresh);
-      else
+      if (!resolve)
         clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
       if (lrat) {
         lrat_chain.push_back (d->id);
         lrat_chain.push_back (mini_chain[resolve]);
@@ -931,23 +945,21 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
       lrat_chain.clear ();
       clause.clear ();
     }
-    size_t resolve = 0;
+    // ite-clause could contain -second and -third.
     for (auto &lit : *c) {
       if (lit == factor)
         continue;
-      else if (lit == second) {
-        resolve = 3;
+      else if (lit == -second && !resolve) {
         continue;
-      } else if (lit == -second) {
-        resolve = 1;
+      } else if (lit == -third && resolve) {
         continue;
       }
       clause.push_back (lit);
     }
-    if (resolve == 3)
-      clause.push_back (-fresh);
-    else
+    if (!resolve)
       clause.push_back (fresh);
+    else
+      clause.push_back (-fresh);
     if (lrat) {
       lrat_chain.push_back (first_tmp_id);
       lrat_chain.push_back (second_tmp_id);
@@ -956,37 +968,30 @@ void Internal::add_factor_xor (Quotient *q, int fresh) {
     lrat_chain.clear ();
     clause.clear ();
     if (proof) {
-      size_t resolve = 0;
+      // ite-clause could contain -second and -third.
       for (auto &lit : *c) {
         if (lit == factor)
           continue;
-        else if (lit == second)
-          resolve = 3;
-        else if (lit == -second)
-          resolve = 1;
-        assert (lit != !factor);
+        assert (lit != -factor);
         clause.push_back (lit);
       }
-      if (resolve == 3)
-        clause.push_back (-fresh);
-      else
+      if (!resolve)
         clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
       proof->delete_clause (first_tmp_id, true, clause);
       clause.clear ();
+      // ite-clause could contain second and third.
       for (auto &lit : *d) {
         if (lit == -factor)
           continue;
-        else if (lit == second)
-          resolve = 0;
-        else if (lit == -second)
-          resolve = 2;
         assert (lit != factor);
         clause.push_back (lit);
       }
-      if (resolve == 2)
-        clause.push_back (-fresh);
-      else
+      if (!resolve)
         clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
       proof->delete_clause (second_tmp_id, true, clause);
       clause.clear ();
     }
@@ -1067,14 +1072,17 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
 }
 
 // xor factoring.
-bool Internal::apply_xor_factoring (Factoring &factoring, Quotient *q) {
+bool Internal::apply_xorite_factoring (Factoring &factoring, Quotient *q) {
   const int fresh = get_new_extension_variable ();
   if (!fresh)
     return false;
   stats.factored++;
-  stats.factored_xor++;
+  if (q->second == -q->third)
+    stats.factored_xor++;
+  else
+    stats.factored_ite++;
   factoring.fresh.push_back (fresh);
-  add_factor_xor (q, fresh);
+  add_factor_xorite (q, fresh);
   // TODO: check that these really do what they should.
   delete_unfactored (q);
   update_factored (factoring, q);
@@ -1236,13 +1244,13 @@ bool Internal::run_factorization (int64_t limit) {
       if (opts.factorxor && opts.factorsize > 2) {
         // Get an xor quotient which is better then the best
         // classical quotient (or 0).
-        size_t xor_clauses = 0;
-        Quotient *p = xor_quotient (factoring, first, &xor_clauses);
-        LOG ("best xor quotient with %zd clauses", xor_clauses);
-        // need 4 clauses for xor definition.
-        if (p && xor_clauses && (xor_clauses - 4) > reduction) {
+        size_t xorite_clauses = 0;
+        Quotient *p = xorite_quotient (factoring, first, &xorite_clauses);
+        LOG ("best xor quotient with %zd clauses", xorite_clauses);
+        // need 4 clauses for xor or ite definition.
+        if (p && xorite_clauses && (xorite_clauses - 4) > reduction) {
           q = p;
-          reduction = xor_clauses - 4;
+          reduction = xorite_clauses - 4;
         }
       }
       if (q && (int) reduction > factoring.bound) {
@@ -1251,7 +1259,7 @@ bool Internal::run_factorization (int64_t limit) {
 #ifndef QUIET
           factored++;
 #endif
-        } else if (q->second && apply_xor_factoring (factoring, q)) {
+        } else if (q->second && apply_xorite_factoring (factoring, q)) {
 #ifndef QUIET
           factored++;
 #endif

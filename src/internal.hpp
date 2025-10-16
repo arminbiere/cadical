@@ -1280,7 +1280,7 @@ struct Internal {
   void clear_nounted (vector<int> &);
   void clear_flauses (vector<Clause *> &);
   Quotient *best_quotient (Factoring &, size_t *);
-  Quotient *xor_quotient (Factoring &, int, size_t *);
+  Quotient *xorite_quotient (Factoring &, int, size_t *);
   int next_factor (Factoring &, unsigned *);
   void factorize_next (Factoring &, int, unsigned);
   void resize_factoring (Factoring &factoring, int lit);
@@ -1290,12 +1290,12 @@ struct Internal {
   void add_factored_divider (Quotient *, int);
   void blocked_clause (Quotient *q, int);
   void add_factored_quotient (Quotient *, int not_fresh);
-  void add_factor_xor (Quotient *, int);
+  void add_factor_xorite (Quotient *, int);
   void eagerly_remove_from_occurences (Clause *c);
   void delete_unfactored (Quotient *q);
   void update_factored (Factoring &factoring, Quotient *q);
   bool apply_factoring (Factoring &factoring, Quotient *q);
-  bool apply_xor_factoring (Factoring &factoring, Quotient *q);
+  bool apply_xorite_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);

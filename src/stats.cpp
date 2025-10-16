@@ -249,6 +249,8 @@ void Stats::print (Internal *internal) {
          stats.factored_and, percent (stats.factored_and, stats.factored));
     PRT ("  xors:          %15" PRId64 "   %10.2f %%  of factored",
          stats.factored_xor, percent (stats.factored_xor, stats.factored));
+    PRT ("  ites:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_ite, percent (stats.factored_ite, stats.factored));
     PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
          stats.factor, relative (stats.conflicts, stats.factor));
     PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",

@@ -186,6 +186,7 @@ struct Stats {
   int64_t factored = 0;
   int64_t factored_and = 0;
   int64_t factored_xor = 0;
+  int64_t factored_ite = 0;
   int64_t factor_added = 0;
   int64_t variables_extension = 0;
   int64_t variables_original = 0;
