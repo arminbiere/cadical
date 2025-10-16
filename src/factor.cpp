@@ -236,7 +236,9 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   res->id = 0;
   vector<int> second;
   // match clause c (containing first_factor) with
-  // a clause d (containing -first_factor)
+  // a clause d (containing -first_factor).
+  // The two clauses should coincide except on one literal.
+  // TODO: figure out how to count matches and build pairs.
   // also counting count ticks!
   const int64_t limit = factoring.limit;
   int64_t ticks = stats.ticks.factor;
@@ -269,11 +271,6 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
           continue;
         if (getfact (lit, NOUNTED))
           continue;
-        if (!getfact (-lit, NOUNTED)) {
-          matched = false;
-          break;
-        }
-        // marked (-lit)
         if (other) {
           matched = false;
           break;
@@ -869,7 +866,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   {
     clause.push_back (fresh);
     clause.push_back (-factor);
-    clause.push_back (-second);
+    clause.push_back (third);
     new_factor_clause ();
     if (lrat) {
       mini_chain.push_back (clause_id);
@@ -882,7 +879,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   {
     clause.push_back (-fresh);
     clause.push_back (factor);
-    clause.push_back (third);
+    clause.push_back (-second);
     // but don't clear as lrat is the same.
     new_factor_clause ();
     if (lrat)
