@@ -234,7 +234,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   res->matched = 0;
   res->bid = 0;
   res->id = 0;
-  vector<int> second;
+  vector<int> seconds;
+  vector<int> thirds;
   vector<int> pairs;
   // match clause c (containing first_factor) with
   // a clause d (containing -first_factor).
@@ -282,8 +283,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         continue;
       if (!other) // Technically self-subsuming but continue
         continue;
-      if (!getfact (other, QUOTIENT)) {
-        second.push_back (other);
+      if (!getfact (abs (other), QUOTIENT)) {
+        thirds.push_back (abs (other));
         markfact (other, QUOTIENT);
       }
       pairs.push_back (0);
@@ -299,29 +300,56 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       unmarkfact (lit, NOUNTED);
     }
   }
-  // TODO: find highest pair count. using noccs.
+  for (auto &lit : thirds) {
+    unmarkfact (lit, QUOTIENT);
+  }
+  // TODO: find highest pair count (using noccs).
+  // TODO: ticks this.
+  size_t matches = 0;
+  int best_second = 0;
+  int best_third = 0;
+  for (auto &third : thirds) {
+    for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
+      int pair = pairs[2 * idx + 1];
+      if (pair != third || pair != -third)
+        continue;
+      Clause *c = res->qlauses[2 * idx];
+      Clause *d = res->qlauses[2 * idx + 1];
+      for (auto &lit : *d) {
+        markfact (lit, NOUNTED);
+      }
+      int other = 0;
+      for (auto &lit : *c) {
+        if (lit == first_factor)
+          continue;
+        if (getfact (lit, NOUNTED))
+          continue;
+        assert (!other);
+        other = lit;
+      }
+      assert (other);
+      assert (pairs.size () > 2 * idx && !pairs[2 * idx]);
+      pairs[2 * idx] = other;
+      for (auto &lit : *d) {
+        unmarkfact (lit, NOUNTED);
+      }
+      if (pair == -third)
+        other = -other;
+      if (!noccs (other)++)
+        seconds.push_back (other);
+    }
+    // noccs (other) contains count for (third, other) and (-third, -other).
+    for (auto &other : seconds) {
+      if ((size_t) noccs (other) > matches) {
+        matches = noccs (other);
+        best_second = other;
+        best_third = third;
+      }
+      noccs (other) = 0;
+    }
+  }
 
   stats.ticks.factor = ticks;
-  size_t second_matches = 0;
-  size_t third_matches = 0;
-  int second_best = 0;
-  int third_best = 0;
-  for (auto &lit : second) {
-    size_t tmp = noccs (lit);
-    if (tmp <= third_matches)
-      continue;
-    third_matches = tmp;
-    third_best = lit;
-    if (tmp <= second_matches)
-      continue;
-    std::swap (second_best, third_best);
-    std::swap (second_matches, third_matches);
-  }
-  size_t matches = second_matches + third_matches;
-  for (auto &lit : second) {
-    assert (noccs (lit));
-    noccs (lit) = 0;
-  }
   // Remove all clauses except for the best.
   // Ensure that no clause is kept multiple times (due to duplicated
   // matching clause) with the "swept" flag.
@@ -330,40 +358,18 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   auto p = res->qlauses.begin ();
   auto q = res->qlauses.begin ();
   auto end = res->qlauses.end ();
+  size_t idx = 0;
   while (p != end) {
     Clause *c = *q++ = *p++;
     Clause *d = *q++ = *p++;
-    bool keep_second = 0;
-    bool keep_third = 0;
-    // ite-clause could contain both -second and -third.
-    for (auto &lit : *c) {
-      if (lit == -second_best) {
-        keep_second = true;
-      } else if (lit == -third_best) {
-        keep_third = true;
-      }
-    }
-    if (!keep_second && !keep_third) {
-      q -= 2;
-      continue;
-    }
-    // ite-clause could contain both second and third.
-    // When matching both we can learn two clauses. This
-    // does not reduce the total number of clauses. However,
-    // we can also just learn one of the two, ignoring third.
-    // using the swept flag we can insure that we are not
-    // using these same clauses again.
-    size_t keep = 0;
-    for (auto &lit : *d) {
-      if (lit == second_best && keep_second) {
-        keep++;
-        break;
-      } else if (lit == third_best && keep_third) {
-        keep++;
-        break;
-      }
-    }
-    if (!keep) {
+    int second = pairs[idx++];
+    int third = pairs[idx++];
+    bool parity = false;
+    if (second == best_second && third == best_third)
+      parity = false;
+    else if (second == -best_second && third == -best_third)
+      parity = true;
+    else {
       q -= 2;
       continue;
     }
@@ -374,7 +380,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     }
     // remember wether we matched on second or third for later.
-    if (keep_second)
+    if (parity)
       res->matches.push_back (0);
     else
       res->matches.push_back (1);
@@ -383,8 +389,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     // keep and continue.
   }
   res->qlauses.resize (q - begin);
-  res->second = second_best;
-  res->third = third_best;
+  res->second = best_second;
+  res->third = best_third;
   for (auto c : res->qlauses) {
     assert (c->swept);
     c->swept = false;
