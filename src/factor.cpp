@@ -224,6 +224,7 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
                                      size_t *num_clause_matches) {
   // fast skip if the maximum number of matched clauses is 4.
+  LOG ("xorite for %d", first_factor);
   if (occs (first_factor).size () < 5 || occs (-first_factor).size () < 5)
     return 0;
   // init quotient.
@@ -285,7 +286,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         continue;
       if (!getfact (abs (other), QUOTIENT)) {
         thirds.push_back (abs (other));
-        markfact (other, QUOTIENT);
+        markfact (abs (other), QUOTIENT);
       }
       pairs.push_back (0);
       pairs.push_back (other);
@@ -303,15 +304,19 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   for (auto &lit : thirds) {
     unmarkfact (lit, QUOTIENT);
   }
-  // TODO: find highest pair count (using noccs).
-  // TODO: ticks this.
+  // find highest pair count (using noccs).
+  // TODO: improve this algorithm (maybe use counts to shortcut?).
   size_t matches = 0;
   int best_second = 0;
   int best_third = 0;
   for (auto &third : thirds) {
+    // need at least 10 matched clauses. TODO: dynamic?
+    if (res->qlauses.size () < 10)
+      break;
+    ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
     for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
       int pair = pairs[2 * idx + 1];
-      if (pair != third || pair != -third)
+      if (pair != third && pair != -third)
         continue;
       Clause *c = res->qlauses[2 * idx];
       Clause *d = res->qlauses[2 * idx + 1];
@@ -333,6 +338,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       for (auto &lit : *d) {
         unmarkfact (lit, NOUNTED);
       }
+      LOG ("factor pair (%d, %d)", other, pair);
       if (pair == -third)
         other = -other;
       if (!noccs (other)++)
@@ -921,9 +927,8 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     int64_t second_tmp_id = ++clause_id;
     if (proof) {
       for (auto &lit : *c) {
-        if (lit == factor)
+        if (lit == second || lit == -second)
           continue;
-        assert (lit != -factor);
         clause.push_back (lit);
       }
       if (!resolve)
@@ -932,15 +937,14 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
         clause.push_back (-fresh);
       if (lrat) {
         lrat_chain.push_back (c->id);
-        lrat_chain.push_back (mini_chain[resolve]);
+        lrat_chain.push_back (mini_chain[resolve * 2]);
       }
       proof->add_derived_clause (first_tmp_id, true, clause, lrat_chain);
       lrat_chain.clear ();
       clause.clear ();
       for (auto &lit : *d) {
-        if (lit == -factor)
+        if (lit == third || lit == -third)
           continue;
-        assert (lit != factor);
         clause.push_back (lit);
       }
       if (!resolve)
@@ -949,7 +953,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
         clause.push_back (-fresh);
       if (lrat) {
         lrat_chain.push_back (d->id);
-        lrat_chain.push_back (mini_chain[resolve]);
+        lrat_chain.push_back (mini_chain[resolve * 2 + 1]);
       }
       proof->add_derived_clause (second_tmp_id, true, clause, lrat_chain);
       lrat_chain.clear ();
@@ -959,9 +963,11 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     for (auto &lit : *c) {
       if (lit == factor)
         continue;
-      else if (lit == -second && !resolve) {
+      else if (lit == -second) {
+        assert (!resolve);
         continue;
-      } else if (lit == -third && resolve) {
+      } else if (lit == second) {
+        assert (resolve);
         continue;
       }
       clause.push_back (lit);
@@ -980,9 +986,8 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     if (proof) {
       // ite-clause could contain -second and -third.
       for (auto &lit : *c) {
-        if (lit == factor)
+        if (lit == second || lit == -second)
           continue;
-        assert (lit != -factor);
         clause.push_back (lit);
       }
       if (!resolve)
@@ -993,9 +998,8 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
       clause.clear ();
       // ite-clause could contain second and third.
       for (auto &lit : *d) {
-        if (lit == -factor)
+        if (lit == third || lit == -third)
           continue;
-        assert (lit != factor);
         clause.push_back (lit);
       }
       if (!resolve)
