@@ -1019,8 +1019,8 @@ struct Internal {
   // backbone computation
   //
   void backbone_decision (int lit);
-  bool backbone_propagate ();
-  void backbone_propagate2 ();
+  bool backbone_propagate (int64_t &);
+  void backbone_propagate2 (int64_t&);
   unsigned compute_backbone ();
   void backbone_unit_reassign (int lit); // only for reassigning already derived clauses!
   void backbone_unit_assign (int lit); // only for reassigning already derived clauses!
@@ -1033,7 +1033,7 @@ struct Internal {
                                    int64_t &ticks, unsigned inconsistent);
   void schedule_backbone_cands (std::vector<int> &candidates);
   void keep_backbone_candidates (const std::vector<int> &candidates);
-  int backbone_analyze (Clause *);
+  int backbone_analyze (Clause *, int64_t&);
   void binary_clauses_backbone ();
 
   // We monitor the maximum size and glue of clauses during 'reduce' and

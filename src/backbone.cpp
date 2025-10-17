@@ -25,8 +25,7 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
   lrat_chain.push_back (reason->id);
 }
 
-inline bool Internal::backbone_propagate () {
-  int64_t &ticks = stats.ticks.backbone;
+inline bool Internal::backbone_propagate (int64_t& ticks) {
   require_mode (BACKBONE);
   assert (!unsat);
   START (propagate);
@@ -138,9 +137,8 @@ inline bool Internal::backbone_propagate () {
   return !conflict;
 }
 
-inline void Internal::backbone_propagate2 () {
+inline void Internal::backbone_propagate2 (int64_t& ticks) {
   require_mode (BACKBONE);
-  int64_t &ticks = stats.ticks.backbone;
   assert (propagated2 <= trail.size ());
   int64_t before = propagated2;
   while (propagated2 != trail.size ()) {
@@ -155,8 +153,10 @@ inline void Internal::backbone_propagate2 () {
       if (b > 0)
         continue;
       ticks++;
-      if (b < 0)
-        conflict = w.clause; // but continue
+      if (b < 0) {
+        conflict = w.clause; // no need to continue
+        break;
+      }
       else {
         assert (lrat_chain.empty ());
         backbone_lrat_for_units (w.blit, w.clause);
@@ -206,11 +206,11 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
   }
   assert (candidates.size () <= 2*(size_t)max_var);
 
-  VERBOSE (3, "backbone schedule %zu backbone candidates in total %f (rescheduled: %d)", candidates.size (), percent (candidates.size (), max_var), not_rescheduled);
+  VERBOSE (3, "backbone schedule %zu backbone candidates in total %f (rescheduled: %f%%)", candidates.size (), percent (candidates.size (), 2*max_var), percent (not_rescheduled, 2*max_var));
 }
 
 
-int Internal::backbone_analyze (Clause *) {
+int Internal::backbone_analyze (Clause *, int64_t &ticks) {
   assert (conflict);
   assert (conflict->size == 2);
   analyzed.push_back (std::abs (conflict->literals[0]));
@@ -230,7 +230,8 @@ int Internal::backbone_analyze (Clause *) {
       continue;
     Clause *reason = var (lit).reason;
     LOG (reason, "resolving with reason of %s", LOGLIT (lit));
-    assert (reason), assert(reason != decision_reason);
+    assert (reason), assert (reason != decision_reason);
+    ++ticks;
     const int other = reason->literals[0] ^ reason->literals[1] ^ lit;
     Flags &f_o = flags (other);
     if (lrat)
@@ -255,27 +256,6 @@ inline void Internal::backbone_unit_reassign (int lit) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   return;
-  require_mode (BACKBONE);
-  const int idx = vidx (lit);
-  assert (!vals[idx]);
-  Clause *reason = nullptr;
-  assert (!flags (idx).eliminated () || !reason);
-  assert (reason == decision_reason || !reason || reason->size == 2);
-  Var &v = var (idx);
-  v.level = level;               // required to reuse decisions
-  v.trail = (int) trail.size (); // used in 'vivify_better_watch'
-  assert ((int) num_assigned < max_var);
-  num_assigned++;
-  v.reason = level ? reason : 0; // for conflict analysis
-  if (!level)
-    learn_unit_clause (lit);
-  const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
-  trail.push_back (lit);
-  LOG (reason, "backbone assign %d", lit);
 }
 
 inline void Internal::backbone_unit_assign (int lit) {
@@ -365,10 +345,10 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   auto q = p;
   const auto end = std::end (candidates);
   size_t failed = 0;
-  size_t previous = failed;
   ++stats.backbone.rounds;
 
   LOG (candidates, "candidates: ");
+  ticks += 1 + cache_lines (candidates.size (), sizeof (std::vector<int>::iterator*));
   while (p != end) {
     assert (p < end);
     assert (q <= p);
@@ -400,10 +380,8 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     }
     if (ticks >= ticks_limit)
       break;
-    int64_t old_ticks = stats.ticks.backbone;
     backbone_decision (probe);
-    backbone_propagate2 ();
-    ticks += (stats.ticks.backbone - old_ticks);
+    backbone_propagate2 (ticks);
     if (!conflict) {
       LOG (candidates, "propagating backbone probe %s successful; candidates:", LOGLIT (probe));
       continue;
@@ -411,7 +389,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
 
     ++failed;
     ++stats.backbone.units;
-    int uip = backbone_analyze (conflict);
+    int uip = backbone_analyze (conflict, ticks);
     backtrack_without_updating_phases (level - 1);
     backbone_unit_assign (uip);
     ++stats.units;
@@ -419,7 +397,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     if (external->learner)
       external->export_learned_unit_clause (uip);
 
-    backbone_propagate2 ();
+    backbone_propagate2 (ticks);
     if (conflict) {
       LOG ("propagating backbone forced %s failed", LOGLIT (uip));
       inconsistent = uip;
@@ -466,16 +444,17 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   LOG (candidates, "candidates after !inconsistent: ");
   if (level)
     backtrack_without_updating_phases ();
-  if (!inconsistent && previous < failed) {
-    for (size_t i = previous; i < failed; ++i) {
-      backbone_unit_reassign (units[i]);
+  if (!inconsistent && !units.empty ()) {
+    for (auto l : units) {
+      backbone_unit_reassign (l);
     }
-    if (!backbone_propagate ()) {
+    units.clear ();
+    if (!backbone_propagate (ticks)) {
       LOG (conflict, "final repropagation yielded conflict");
       learn_empty_clause ();
     }
   } else {
-    if (!backbone_propagate ()) {
+    if (!backbone_propagate (ticks)) {
       learn_empty_clause();
     }
   }
@@ -533,6 +512,11 @@ void Internal::keep_backbone_candidates (
 
 unsigned Internal::compute_backbone () {
   size_t failed = 0;
+
+  int64_t ticks = 0;
+  backbone_propagate2 (ticks);
+  assert (!conflict);
+
   std::vector<int> candidates, units;
   unsigned inconsistent = 0;
   assert (!conflict);
@@ -546,11 +530,12 @@ unsigned Internal::compute_backbone () {
   if (round_limit > max_rounds)
     round_limit = max_rounds;
 
-  SET_EFFORT_LIMIT (ticks_limit, backbone, true);
-  PHASE ("backbone", stats.backbone.phases, "backbone limit of %" PRId64 " ticks", ticks_limit);
-  int64_t ticks = 0;
+  SET_EFFORT_LIMIT (totalticks, backbone, false);
+  int64_t ticks_limit = totalticks - stats.ticks.backbone;
+  PHASE ("backbone", stats.backbone.phases,
+         "backbone limit of %" PRId64 " ticks", ticks_limit);
   size_t rounds = 0;
-  for (; ++rounds ;) {
+  for (; ++rounds;) {
     if (rounds >= round_limit) {
       LOG ("backround round limit %zu rounds", rounds);
       break;
@@ -559,7 +544,11 @@ unsigned Internal::compute_backbone () {
       LOG ("backround round limit %zu ticks", ticks);
       break;
     }
-    LOG ("backbound round %" PRId64 " of %" PRId64, rounds, max_rounds);
+    VERBOSE (3,
+             "backbone round %" PRId64 " of %" PRId64 " with %" PRId64
+             " ticks  (%f %% done) with %" PRId64 " failed so far",
+             rounds, max_rounds, ticks, percent (ticks, ticks_limit),
+             failed);
     size_t new_failed = compute_backbone_round (
         candidates, units, ticks_limit, ticks, inconsistent);
     failed += new_failed;
@@ -572,24 +561,29 @@ unsigned Internal::compute_backbone () {
   }
 
   if (inconsistent && !unsat) {
-    LOG ("using forced unit %s by repropagating at level 0", LOGLIT (inconsistent));
+    LOG ("using forced unit %s by repropagating at level 0",
+         LOGLIT (inconsistent));
     backtrack_without_updating_phases ();
     propagate ();
     learn_empty_clause ();
   }
   if (unsat) {
-    PHASE ("backbone", stats.backbone.phases, "inconsistent binary clauses");
+    PHASE ("backbone", stats.backbone.phases,
+           "inconsistent binary clauses");
   } else {
-    PHASE ("backbone", stats.backbone.phases, "found %zu backbone literals %zu round", failed, rounds);
+    PHASE ("backbone", stats.backbone.phases,
+           "found %zu backbone literals %zu round in %" PRId64 " ticks",
+           failed, rounds, ticks);
   }
 
   keep_backbone_candidates (candidates);
   if (level) {
     backtrack_without_updating_phases ();
-    if (!backbone_propagate ()) {
-      learn_empty_clause();
+    if (!backbone_propagate (ticks)) {
+      learn_empty_clause ();
     }
   }
+  stats.ticks.backbone += ticks;
   return failed;
 }
 
@@ -616,8 +610,6 @@ void Internal::binary_clauses_backbone () {
 
   assert (watching ());
   START_SIMPLIFIER (backbone, BACKBONE);
-  backbone_propagate2 ();
-  assert (!conflict);
   int failed = compute_backbone();
   assert (!level);
   private_steps = false;

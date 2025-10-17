@@ -56,7 +56,7 @@ void Stats::print (Internal *internal) {
   int64_t searchticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t inprobeticks = stats.ticks.vivify + stats.ticks.probe +
                          stats.ticks.factor + stats.ticks.ternary +
-                         stats.ticks.sweep;
+                         stats.ticks.sweep + stats.ticks.backbone;
   int64_t totalticks = searchticks + inprobeticks;
 
   size_t extendbytes = internal->external->extension.size ();
@@ -616,6 +616,8 @@ void Stats::print (Internal *internal) {
        stats.ticks.search[0], percent (stats.ticks.search[0], searchticks));
   PRT (" inprobeticks:   %15" PRId64 "   %10.2f %%  totalticks",
        inprobeticks, percent (inprobeticks, totalticks));
+  PRT ("   backboneticks:%15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.backbone, percent (stats.ticks.backbone, searchticks));
   PRT ("   factorticks:  %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.factor, percent (stats.ticks.factor, searchticks));
   PRT ("   probeticks:   %15" PRId64 "   %10.2f %%  searchticks",
@@ -628,13 +630,13 @@ void Stats::print (Internal *internal) {
        stats.ticks.vivify, percent (stats.ticks.vivify, searchticks));
   PRT ("   walkticks:    %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walk, percent (stats.ticks.walk, searchticks));
-  PRT ("   walkflipticks:    %15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkflipticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflip, percent (stats.ticks.walkflip, searchticks));
-  PRT ("   walkflipticksbrk: %15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkflipticksbrk:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflipbroken, percent (stats.ticks.walkflipbroken, searchticks));
-  PRT ("   walkflipticksWL:  %15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkflipticksWL:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflipWL, percent (stats.ticks.walkflipWL, searchticks));
-  PRT ("   walkpickticks:    %15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkpickticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkpick, percent (stats.ticks.walkpick, searchticks));
   PRT ("   walkbreak:    %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkbreak, percent (stats.ticks.walkbreak, searchticks));
