@@ -204,7 +204,7 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       }
     }
   }
-  assert (candidates.size () <= 2*max_var);
+  assert (candidates.size () <= 2*(size_t)max_var);
 
   VERBOSE (3, "backbone schedule %zu backbone candidates in total %f (rescheduled: %d)", candidates.size (), percent (candidates.size (), max_var), not_rescheduled);
 }
@@ -559,7 +559,7 @@ unsigned Internal::compute_backbone () {
       LOG ("backround round limit %zu ticks", ticks);
       break;
     }
-    LOG ("backbound round %d of %d", rounds, max_rounds);
+    LOG ("backbound round %" PRId64 " of %" PRId64, rounds, max_rounds);
     size_t new_failed = compute_backbone_round (
         candidates, units, ticks_limit, ticks, inconsistent);
     failed += new_failed;
