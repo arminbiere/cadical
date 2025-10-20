@@ -1346,7 +1346,7 @@ bool Internal::factor () {
   assert (!level);
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
-  if (!stats.factor || limit == last.factor.ticks)
+  if (!stats.factor)
     limit += opts.factoriniticks * 1e6;
 
   START_SIMPLIFIER (factor, FACTOR);
