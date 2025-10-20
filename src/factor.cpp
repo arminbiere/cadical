@@ -284,9 +284,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         continue;
       if (!other) // Technically self-subsuming but continue
         continue;
-      if (!getfact (abs (other), QUOTIENT)) {
+      if (!noccs (abs (other))++) {
         thirds.push_back (abs (other));
-        markfact (abs (other), QUOTIENT);
       }
       pairs.push_back (0);
       pairs.push_back (other);
@@ -301,8 +300,23 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       unmarkfact (lit, NOUNTED);
     }
   }
-  for (auto &lit : thirds) {
-    unmarkfact (lit, QUOTIENT);
+  {
+    const auto end = thirds.end ();
+    auto begin = thirds.begin ();
+    auto p = begin;
+    auto q = begin;
+    while (p != end) {
+      const auto &lit = *q++ = *p++;
+      const auto tmp = noccs (lit);
+      noccs (lit) = 0;
+      if (tmp < 2) {
+        q--;
+        LOG ("dropping candidate third %d with %" PRId64 " matches", lit,
+             tmp);
+      }
+      LOG ("keeping candidate third %d with %" PRId64 " matches", lit, tmp);
+    }
+    thirds.resize (q - begin);
   }
   // find highest pair count (using noccs).
   // TODO: improve this algorithm (maybe use counts to shortcut?).
@@ -372,9 +386,9 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     int third = pairs[idx++];
     bool parity = false;
     if (second == best_second && third == best_third)
-      parity = false;
-    else if (second == -best_second && third == -best_third)
       parity = true;
+    else if (second == -best_second && third == -best_third)
+      parity = false;
     else {
       q -= 2;
       continue;
@@ -386,10 +400,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     }
     // remember wether we matched on second or third for later.
-    if (parity)
-      res->matches.push_back (0);
-    else
-      res->matches.push_back (1);
+    res->matches.push_back (parity);
     c->swept = true;
     d->swept = true;
     // keep and continue.
@@ -1262,7 +1273,7 @@ bool Internal::run_factorization (int64_t limit) {
         Quotient *p = xorite_quotient (factoring, first, &xorite_clauses);
         LOG ("best xorite quotient with %zd clauses", xorite_clauses);
         // need 4 clauses for xor or ite definition.
-        if (p && xorite_clauses && (xorite_clauses - 4) > reduction) {
+        if (p && xorite_clauses > 4 && (xorite_clauses - 4) > reduction) {
           q = p;
           reduction = xorite_clauses - 4;
         }

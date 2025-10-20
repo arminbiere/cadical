@@ -23,8 +23,9 @@ Internal::Internal ()
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), sweep_incomplete (false), randomized_deciding (false), citten (0),
-      num_assigned (0), proof (0), opts (this),
+      marked_failed (true), sweep_incomplete (false),
+      randomized_deciding (false), citten (0), num_assigned (0), proof (0),
+      opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -669,8 +670,9 @@ void Internal::init_search_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s randomize decision limit %" PRId64 " after %" PRId64 " conflicts", mode,
-       lim.random_decision, lim.random_decision - stats.conflicts);
+  LOG ("%s randomize decision limit %" PRId64 " after %" PRId64
+       " conflicts",
+       mode, lim.random_decision, lim.random_decision - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 
@@ -761,6 +763,7 @@ void Internal::preprocess_quickly (bool always) {
 
   if (opts.fastelim)
     elimfast ();
+
   // if (opts.condition)
   // condition (false);
 #ifndef QUIET
