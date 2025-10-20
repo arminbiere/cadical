@@ -33,9 +33,9 @@ struct Limit {
   int keptglue;           // maximum kept glue in 'reduce'
   int64_t recompute_tier; // conflict limit for next tier recomputation
 
-  // How often rephased during (1) or out (0) of stabilization.
+  // How often rephased since beginning
   //
-  int64_t rephased[2];
+  int64_t rephased;
 
   // Current elimination bound per eliminated variable.
   //
