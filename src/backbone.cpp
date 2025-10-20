@@ -255,6 +255,9 @@ inline void Internal::backbone_unit_reassign (int lit) {
   LOG ("reassigning %s to level 0", LOGLIT (lit));
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
+#ifndef LOGGING
+  (void)lit;
+#endif
   return;
 }
 

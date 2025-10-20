@@ -128,7 +128,6 @@ void Internal::rephase () {
   backtrack ();
 
   size_t count = lim.rephased++;
-  bool stable_mode_only;
   char type;
 
   if (opts.walk) {
