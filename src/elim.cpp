@@ -617,7 +617,9 @@ void Internal::mark_eliminated_clauses_as_garbage (
 
   const int elit = internal->externalize (pivot);
   const int eidx = abs (elit);
-  const bool is_extension_var = opts.factornoreconstr && external->ervars[eidx] && !flags(pivot).factored_but_on_reconstruction_stack;
+  const bool is_extension_var =
+      opts.factornoreconstr && external->ervars[eidx] &&
+      !flags (pivot).factored_but_on_reconstruction_stack;
   const int64_t substitute = eliminator.gates.size ();
   if (substitute)
     LOG ("pushing %" PRId64 " gate clauses on extension stack", substitute);
@@ -635,7 +637,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
       if (c->size == 2)
         deleted_binary_clause = true;
       if (!is_extension_var)
-	external->push_clause_on_extension_stack (c, pivot);
+        external->push_clause_on_extension_stack (c, pivot);
 #ifndef NDEBUG
       pushed++;
 #endif
@@ -658,7 +660,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
       if (d->size == 2)
         deleted_binary_clause = true;
       if (!is_extension_var)
-	external->push_clause_on_extension_stack (d, -pivot);
+        external->push_clause_on_extension_stack (d, -pivot);
 #ifndef NDEBUG
       pushed++;
 #endif
@@ -850,6 +852,13 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
       continue;
     if (!flags (idx).elim)
       continue;
+    const int eidx = internal->externalize (idx);
+    assert (eidx > 0);
+    const bool is_extension_var = external->ervars[eidx];
+    if (is_extension_var) {
+      flags (idx).elim = true;
+      continue;
+    } // don't schedule factored variables.
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);
   }
