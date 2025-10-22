@@ -42,10 +42,8 @@ void Internal::factor_mode () {
     ticks++;
     if (c->garbage)
       continue;
-    /*
     if (c->redundant && c->size > 2)
       continue;
-    */
     if (c->size > size_limit)
       continue;
     if (c->size == 2) {

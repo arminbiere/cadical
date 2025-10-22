@@ -852,13 +852,6 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
       continue;
     if (!flags (idx).elim)
       continue;
-    const int eidx = internal->externalize (idx);
-    assert (eidx > 0);
-    const bool is_extension_var = external->ervars[eidx];
-    if (is_extension_var) {
-      flags (idx).elim = true;
-      continue;
-    } // don't schedule factored variables.
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);
   }
