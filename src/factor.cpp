@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "message.hpp"
 
 namespace CaDiCaL {
 
@@ -1333,6 +1334,21 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
+  {
+    unsigned actives = active ();
+    size_t log_active = log10 (actives);
+    size_t eliminations = stats.elimrounds;
+    unsigned delay = opts.factordelay;
+    size_t delaylimit = eliminations + delay;
+    if (log_active > delaylimit) {
+      VERBOSE (2,
+               "delaying factorization as "
+               "'%zu = log10(variables) = log10 (%u) "
+               " > eliminations + delay = %zu + %u = %zu",
+               log_active, actives, eliminations, delay, delaylimit);
+      return false;
+    }
+  }
   // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
   // assert (stats.mark.factor || clauses.empty ());
