@@ -1642,7 +1642,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     units = stats.sweep_units - units;
     solved = stats.sweep_solved - solved;
 #endif
-    VERBOSE (3,
+    VERBOSE (4,
              "complete swept variable %d backbone with %" PRIu64
              " units in %" PRIu64 " solver calls",
              externalize (idx), units, solved);
@@ -1918,7 +1918,7 @@ bool Internal::sweep () {
     const char *res =
 #endif
         sweep_variable (sweeper, idx);
-    VERBOSE (2, "swept[%" PRIu64 "] external variable %d %s", swept,
+    VERBOSE (3, "swept[%" PRIu64 "] external variable %d %s", swept,
              externalize (idx), res);
     if (++swept == limit) {
       VERBOSE (2,

@@ -752,6 +752,7 @@ void Internal::preprocess_quickly (bool always) {
 
   if (extract_gates (true))
     decompose ();
+  binary_clauses_backbone ();
 
   if (sweep ())
     decompose ();
@@ -880,7 +881,11 @@ int Internal::local_search_round (int round) {
   else
     limit = LONG_MAX;
 
-  int res = walk_round (limit, true);
+  int res;
+  if (opts.walkfullocc)
+    res = walk_full_occs_round (limit, true);
+  else
+    res = walk_round (limit, true);
 
   assert (localsearching);
   localsearching = false;

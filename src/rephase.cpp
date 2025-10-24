@@ -101,7 +101,10 @@ char Internal::rephase_walk () {
   stats.rephased.walk++;
   PHASE ("rephase", stats.rephased.total,
          "starting local search to improve current phase");
-  walk ();
+  if (opts.walkfullocc)
+    walk_full_occs ();
+  else
+    walk ();
   return 'W';
 }
 
@@ -384,6 +387,10 @@ void Internal::rephase () {
   last.rephase.conflicts = stats.conflicts;
   rephased = type;
 
+  if (!marked_failed || unsat_constraint) {
+    assert (opts.warmup);
+    return;
+  }
   if (stable)
     shuffle_scores ();
   else

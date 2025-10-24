@@ -43,6 +43,7 @@ r  start of solving after restoring clauses
 1  end of solving returns satisfiable
 0  end of solving returns unsatisfiable
 ?  end of solving due to interrupt
+k  binary backbone extraction ('kernel')
 l  lucky phase solving
 p  failed literal probing round (lower case 'p')
 .  before reducing redundant clauses

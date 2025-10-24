@@ -633,7 +633,7 @@ void Internal::vivify_sort_watched (Clause *c) {
 
   assert (new_level >= 0);
   if (new_level < level)
-    backtrack (new_level);
+    backtrack_without_updating_phases (new_level);
 
   assert (val (lit0) >= 0);
   assert (val (lit1) >= 0 || (val (lit0) > 0 && val (lit1) < 0 &&
@@ -905,7 +905,7 @@ bool Internal::vivify_instantiate (
   assert (!var (lit).reason);
   assert (var (lit).level);
   assert (val (lit));
-  backtrack (level - 1);
+  backtrack_without_updating_phases (level - 1);
   assert (val (lit) == 0);
   stats.vivifydecs++;
   vivify_assume (lit);
@@ -1563,7 +1563,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   auto &schedule = current_schedule (vivifier);
 
   PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 " with %zd clauses",
+         "starting %c vivification round ticks limit %" PRId64 " with %" PRId64 " clauses",
          vivifier.tag, ticks_limit, schedule.size ());
 
   assert (watching ());

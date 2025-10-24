@@ -48,6 +48,11 @@ Version 2.2.0
 - add `get_statistic_value` to be able to extract some information
   about the current run.
 
+- Improved walk algorithm. We have also ported the version from Kissat
+  (relying on full-occurrence list), deactivated by default.
+
+- Binary backone similarly to kissat.
+
 Version 2.1.3
 -------------
 

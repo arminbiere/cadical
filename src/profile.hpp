@@ -47,6 +47,7 @@ struct Internal;
   PROFILE (analyze, 3) \
   MROFILE (analyzestable, 4) \
   MROFILE (analyzeunstable, 4) \
+  PROFILE (backbone, 2) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \
@@ -103,7 +104,13 @@ struct Internal;
   PROFILE (transred, 3) \
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \
-  PROFILE (walk, 2)
+  PROFILE (walk, 2) \
+  PROFILE (walkpick, 3) \
+  PROFILE (walkbreak, 4) \
+  PROFILE (walkflip, 3) \
+  PROFILE (walkflipbroken, 4) \
+  PROFILE (walkflipWL, 4) \
+  PROFILE (warmup, 3)
 
 /*------------------------------------------------------------------------*/
 

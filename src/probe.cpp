@@ -834,7 +834,7 @@ bool Internal::probe () {
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
     if (probe_propagate ())
-      backtrack ();
+      backtrack_without_updating_phases ();
     else
       failed_literal (probe);
     clean_probehbr_lrat ();
@@ -942,10 +942,12 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
     if (extract_gates (preprocessing))
       decompose ();
+    binary_clauses_backbone ();
     if (sweep ())     // full occurrence list
       decompose ();   // ... and (ELS) afterwards.
     (void) vivify (); // resets watches
     transred ();      // builds big.
+    binary_clauses_backbone ();
     factor ();   // resets watches, partial occurrence list
   }
 

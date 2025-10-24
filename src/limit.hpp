@@ -89,7 +89,7 @@ struct Last {
   } transred;
   struct {
     int64_t ticks;
-  } sweep, vivify, probe;
+  } backbone, probe, sweep, vivify, walk;
   struct {
     int64_t fixed, subsumephases, marked;
   } elim;
@@ -155,6 +155,8 @@ struct Inc {
     last.NAME.ticks = TICKS; \
     const int64_t NEW_LIMIT = OLD_LIMIT + DELTA; \
     LIMIT = NEW_LIMIT; \
+  VERBOSE (2, "new ticks limit %" PRId64 "= %" PRId64 " + %f * %" PRId64, \
+    NEW_LIMIT, OLD_LIMIT, EFFORT, REFERENCE); \
   } while (0)
 
 } // namespace CaDiCaL

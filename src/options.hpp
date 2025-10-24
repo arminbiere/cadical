@@ -25,6 +25,11 @@ OPTION( arena,             1,  0,  1,0,0,1, "allocate clauses in arena") \
 OPTION( arenacompact,      1,  0,  1,0,0,1, "keep clauses compact") \
 OPTION( arenasort,         1,  0,  1,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3,0,0,1, "1=clause, 2=var, 3=queue") \
+OPTION( backbone,          1,  0,  2,0,0,1, "binary clause backbone") \
+OPTION( backboneeffort,   20,  0,1e5,0,0,1, "binary effort in per mile") \
+OPTION( backbonemaxrounds,1e3, 0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonerounds,  100,  0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonethresh,    5,  0,1e9,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( binary,            1,  0,  1,0,0,1, "use binary proof format") \
 OPTION( block,             0,  0,  1,0,1,1, "blocked clause elimination") \
 OPTION( blockmaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
@@ -203,6 +208,7 @@ OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
 OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of the run") \
+OPTION( stubbornIOfocused, 0,  0,  1,0,0,1, "force phases to I/O in focused mode every once in a while (requires rephase==2)") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumeclslim,   1e2,  0,2e9,2,0,1, "clause length limit") \
@@ -263,10 +269,12 @@ OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
 OPTION( walkeffort,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
+OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences instead of the single watched") \
+OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
+OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.

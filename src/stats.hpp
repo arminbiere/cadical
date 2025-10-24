@@ -26,16 +26,23 @@ struct Stats {
     int64_t search = 0;      // propagated literals during search
     int64_t transred = 0;    // propagated during transitive reduction
     int64_t vivify = 0;      // propagated during vivification
-    int64_t walk = 0;        // propagated during local search
+    int64_t backbone = 0;    // propagated during backbones
   } propagations;
 
   struct {
     int64_t search[2] = {0};
+    int64_t backbone = 0;
     int64_t factor = 0;
     int64_t probe = 0;
     int64_t sweep = 0;
     int64_t ternary = 0;
     int64_t vivify = 0;
+    int64_t walk = 0;
+    int64_t walkflip = 0; // ticks added to approximate walk
+    int64_t walkflipbroken = 0; // ticks added to approximate walk
+    int64_t walkflipWL = 0; // ticks added to approximate walk
+    int64_t walkbreak = 0; // ticks added to approximate walk
+    int64_t walkpick = 0; // ticks added to approximate walk
   } ticks;
 
   struct {
@@ -118,10 +125,19 @@ struct Stats {
   } rephased;
 
   struct {
+    int64_t decision = 0;
+    int64_t dummydecision = 0;
+    int64_t conflicts = 0;
+    int64_t propagated = 0;
+    int64_t count = 0;
+  } warmup;
+
+  struct {
     int64_t count = 0;
     int64_t broken = 0;
     int64_t flips = 0;
     int64_t minimum = 0;
+    int64_t improved = 0;
   } walk;
 
   struct {
@@ -368,6 +384,13 @@ struct Stats {
     int64_t trivial_ite = 0;
     int64_t unary_ites = 0;
   } congruence;
+
+  struct {
+    int64_t rounds = 0;
+    int64_t units = 0;
+    int64_t phases = 0;
+    int64_t probes = 0;
+  } backbone;
 
   Stats ();
 
