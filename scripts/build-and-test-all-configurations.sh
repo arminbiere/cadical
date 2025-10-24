@@ -1,11 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+
+startConfiguration=$1
+startConfiguration=${startConfiguration:-0}
 
 . `dirname $0`/colors.sh || exit 1
+
 
 ############################################################################
 
 die () {
   echo "build-and-test-all-configurations.sh: ${BAD}error${NORMAL}: $*" 1>&2
+  echo "You can pass the configuration number to start directly from one configuration"
   exit 1
 }
 
@@ -60,62 +65,76 @@ run () {
 
 ############################################################################
 
-# start with these two for fast fail
+END=29
 
-run		# default configuration (depends on 'MAKEFLAGS'!)
-run -p		# then check default pedantic first
+run_configuration () {
+    case $1 in		# default configuration (depends on 'MAKEFLAGS'!)
+	0) run -p;;		# then check default pedantic first
 
-run -q		# library users might want to disable messages
-run -q -p	# also check '--quiet' pedantically
+        1) run -q;;		# library users might want to disable messages
+        2) run -q -p;;	# also check '--quiet' pedantically
 
-# now start with the five single options
+        # now start with the five single options
 
-run -a		# actually enables all the four next options below
-run -c
-run -g
-run -l
+        3) run -a;;		# actually enables all the four next options below
+        4) run -c;;
+        5) run -g;;
+        6) run -l;;
 
-# all five single options pedantically
+        # all five single options pedantically
 
-run -a -p
-run -c -p
-run -g -p
-run -l -p
+        7) run -a -p;;
+        8) run -c -p;;
+        9) run -g -p;;
+        10) run -l -p;;
 
-# all legal pairs of single options
-# ('-a' can not be combined with any of the other options)
-# ('-g' can not be combined '-c')
+        # all legal pairs of single options
+        # ('-a' can not be combined with any of the other options)
+        # ('-g' can not be combined '-c')
 
-run -c -l
-run -c -q
-run -g -l
-run -g -q
+        11) run -c -l;;
+        12) run -c -q;;
+        13) run -g -l;;
+        14) run -g -q;;
 
-# the same pairs but now with pedantic compilation
+        # the same pairs but now with pedantic compilation
 
-run -c -l -p
-run -c -q -p
-run -g -l -p
-run -g -q -p
+        15) run -c -l -p;;
+        16) run -c -q -p;;
+        17) run -g -l -p;;
+        18) run -g -q -p;;
 
-# finally check that these also work to some extend
+        # finally check that these also work to some extend
 
-run --no-unlocked -q
-run --no-unlocked -a -p
+        19) run --no-unlocked -q;;
+        20) run --no-unlocked -a -p;;
 
-run --no-contracts -q
-run --no-contracts -a -p
+        21) run --no-contracts -q;;
+        22) run --no-contracts -a -p;;
 
-run --no-tracing -q
-run --no-tracing -a -p
+        23) run --no-tracing -q;;
+        24) run --no-tracing -a -p;;
 
-run -m32 -q
-run -m32 -a -p
+        25) run -m32 -q;;
+        26) run -m32 -a -p;;
 
-# Shared library builds
+        # Shared library builds
 
-run -shared
-run -shared -p
-run -shared -p -m32
+        27) run -shared;;
+        28) run -shared -p;;
+        $END) run -shared -p -m32;;
+    esac
+}
+
+
+for i in $(seq 0 $(($END - 1))); do
+    v=$(($i + $startConfiguration))
+    if [ $v -ge $END ]; then
+       v=$(( $v - $END ));
+    fi
+    echo "running configuration $v"
+    run_configuration $v
+done
+
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"
