@@ -252,9 +252,13 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
 }
 
 inline void Internal::backbone_unit_reassign (int lit) {
+#ifdef LOGGING
   LOG ("reassigning %s to level 0", LOGLIT (lit));
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
+#else
+  (void) lit;
+#endif
   return;
 }
 
@@ -541,12 +545,12 @@ unsigned Internal::compute_backbone () {
       break;
     }
     if (ticks >= ticks_limit) {
-      LOG ("backround round limit %zu ticks", ticks);
+      LOG ("backround round limit %" PRIu64 " ticks", ticks);
       break;
     }
     VERBOSE (3,
-             "backbone round %" PRId64 " of %" PRId64 " with %" PRId64
-             " ticks  (%f %% done) with %" PRId64 " failed so far",
+             "backbone round %zu of %zu with %" PRId64
+             " ticks  (%f %% done) with %zu failed so far",
              rounds, max_rounds, ticks, percent (ticks, ticks_limit),
              failed);
     size_t new_failed = compute_backbone_round (

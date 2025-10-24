@@ -47,7 +47,7 @@ struct Walker {
   void populate_table (double size);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
-  void save_final_minimum (int64_t flips, int64_t old_minimum);
+  void save_final_minimum (int64_t old_minimum);
 };
 
 // These are in essence the CB values from Adrian Balint's thesis.  They
@@ -210,21 +210,11 @@ void Walker::save_walker_trail (bool keep) {
 }
 
 // finally export the final minimum
-void Walker::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
+void Walker::save_final_minimum (int64_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
-  if (minimum == old_init_minimum) {
-    PHASE ("walk", internal->stats.walk.count,
-           "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
-           "%" PRId64 " ticks",
-           tout.bright_yellow_code (), minimum, tout.normal_code (), flips,
-           ticks);
-    return;
-  }
-
-  PHASE ("walk", internal->stats.walk.count,
-         "best phase minimum %" PRId64 " in %" PRId64 " flips and "
-         "%" PRId64 " ticks",
-         minimum, flips, ticks);
+#ifdef NDEBUG
+  (void) old_init_minimum;
+#endif
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
@@ -531,7 +521,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     walker.ticks +=
         1 + cache_lines (walker.broken.size (), sizeof (Clause *));
     auto j = walker.broken.begin (), i = j;
-#ifdef LOGGING
+#if defined(LOGGING) || defined(NDEBUG)
     int64_t made = 0;
 #endif
 
@@ -544,7 +534,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         const int clit = b.lit;
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
-#ifdef LOGGING
+#if defined(LOGGING) || defined(NDEBUG)
         assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
         assert (b.d->literals[0] == other || b.d->literals[1] == other);
 #endif
@@ -560,7 +550,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
 
           ++walker.ticks;
-#ifdef LOGGING
+#if defined(LOGGING) || defined(NDEBUG)
           made++;
 #endif
           j--;
@@ -596,7 +586,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 	LOG (d, "made");
         watch_literal (literals[0], literals[1], d);
         ++walker.ticks;
-#ifdef LOGGING
+#if defined(LOGGING) || defined(NDEBUG)
         made++;
 #endif
         j--;
@@ -610,12 +600,13 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       }
       LOG (d, "clause after undoing shift");
     }
-    LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64
-         " broken",
-         made, lit, j - walker.broken.begin ());
+#if defined(LOGGING) || defined(NDEBUG)
     assert ((int64_t) (j - walker.broken.begin ()) + made ==
             (int64_t) walker.broken.size ());
+#endif
     walker.broken.resize (j - walker.broken.begin ());
+    LOG ("made %" PRId64 " clauses by flipping %d, still %zu broken",
+         made, lit, walker.broken.size ());
 #ifndef NDEBUG
     for (auto d : walker.broken) {
       if (d.is_binary ()) {
@@ -813,7 +804,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
   // Instantiate data structures for this local search round.
   //
   Walker walker (internal, limit);
+#ifndef QUIET
   int old_global_minimum = stats.walk.minimum;
+#endif
 
   bool failed = false; // Inconsistent assumptions?
 
@@ -1004,8 +997,16 @@ int Internal::walk_round (int64_t limit, bool prev) {
       walk_save_minimum (walker);
     }
 
-    walker.save_final_minimum (flips, initial_minimum);
-    if (minimum < old_global_minimum)
+    walker.save_final_minimum (initial_minimum);
+
+#ifndef QUIET
+    if (minimum == initial_minimum) {
+      PHASE ("walk", internal->stats.walk.count,
+             "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
+             "%" PRId64 " ticks",
+             tout.bright_yellow_code (), minimum, tout.normal_code (),
+             flips, walker.ticks);
+    } else if (minimum < old_global_minimum)
       PHASE ("walk", stats.walk.count,
              "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
              "%" PRId64 " ticks",
@@ -1018,10 +1019,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
              minimum, flips, walker.ticks);
 
     if (opts.profile >= 2) {
-      PHASE ("walk", stats.walk.count,
-             "%.2f million ticks per second",
-             1e-6 * relative (walker.ticks,
-                       time () - profiles.walk.started));
+      PHASE ("walk", stats.walk.count, "%.2f million ticks per second",
+             1e-6 *
+                 relative (walker.ticks, time () - profiles.walk.started));
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
              relative (1e-3 * flips, time () - profiles.walk.started));
@@ -1032,6 +1032,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips", 1e-3 * flips);
     }
+#endif
 
     if (minimum > 0) {
       LOG ("minimum %" PRId64 " non-zero thus potentially continue",
@@ -1100,7 +1101,7 @@ void Internal::walk () {
     limit = opts.walkmineff;
   // local search is very cache friendly, so we actually really go over a lot of ticks
   if (limit > 1e3 * opts.walkmaxeff){
-    MSG ("reached maximum efficiency %zd", limit);
+    MSG ("reached maximum efficiency %" PRId64, limit);
     limit =  1e3 * opts.walkmaxeff;
   }
   (void) walk_round (limit, false);

@@ -1563,7 +1563,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   auto &schedule = current_schedule (vivifier);
 
   PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 " with %" PRId64 " clauses",
+         "starting %c vivification round ticks limit %" PRId64 " with %zu clauses",
          vivifier.tag, ticks_limit, schedule.size ());
 
   assert (watching ());

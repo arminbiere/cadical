@@ -310,7 +310,7 @@ void Closure::extract_binaries () {
   binaries.clear ();
   STOP (extractbinaries);
   VERBOSE (2,
-           "[congruence-%zd] extracted %zu binaries (plus %zu already "
+           "[congruence-%" PRId64 "] extracted %zu binaries (plus %zu already "
            "present and %zu "
            "duplicates)",
            internal->stats.congruence.rounds,
@@ -3347,7 +3347,7 @@ void Closure::extract_and_gates () {
   }
 
   VERBOSE (2,
-           "[congruence-%zd] "
+           "[congruence-%" PRId64 "] "
            "found %" PRIu64 " AND gates",
            internal->stats.congruence.rounds,
            internal->stats.congruence.and_gates - gates_before);
@@ -4272,7 +4272,7 @@ void Closure::extract_xor_gates () {
       continue;
     extract_xor_gates_with_base_clause (c);
   }
-  VERBOSE (2, "[congruence-%zd] found %zd XOR clauses",
+  VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR clauses",
            internal->stats.congruence.rounds,
 	   internal->stats.congruence.xor_gates - gates_before);
   reset_xor_gate_extraction ();
@@ -4395,7 +4395,7 @@ void Closure::find_equivalences () {
   // force removal of memory
   mu1_ids.clear();
   shrink_vector(mu1_ids);
-  VERBOSE (2, "[congruence-%zd] found %zd equivalences", internal->stats.congruence.rounds, schedule.size ());
+  VERBOSE (2, "[congruence-%" PRId64 "] found %zd equivalences", internal->stats.congruence.rounds, schedule.size ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -7050,12 +7050,15 @@ void Closure::init_ite_gate_extraction (
   CONTINUE_COUNTING_NEXT_CLAUSE:;
   }
 
-  VERBOSE (4, "counted %zu ternary ITE clauses "
-       "(%.0f%% of %" PRIu64 " irredundant clauses)",
-       ternary.size (),
-       percent (ternary.size (), internal->stats.current.irredundant),
-       internal->stats.current.irredundant);
+  VERBOSE (4,
+           "counted %zu ternary ITE clauses "
+           "(%.0f%% of %" PRIu64 " irredundant clauses)",
+           ternary.size (),
+           percent (ternary.size (), internal->stats.current.irredundant),
+           internal->stats.current.irredundant);
+#ifndef QUIET
   size_t connected = 0;
+#endif
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
@@ -7520,7 +7523,7 @@ void Closure::extract_ite_gates () {
     }
   }
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
-  VERBOSE (2, "[congruence-%zd] found %zd ITE clauses",
+  VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " ITE clauses",
            internal->stats.congruence.rounds,
 	   internal->stats.congruence.ite_gates - gates_before);
   reset_ite_gate_extraction ();

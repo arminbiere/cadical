@@ -72,7 +72,7 @@ struct WalkerFO {
   void connect_clause (int lit, Clause * clause, unsigned pos) {
     assert (pos < tclauses.size ());
     assert (tclauses[pos].clause == clause);
-    LOG (clause, "connecting clause on %d with already in occurrences %" PRId64, lit, occs(lit).size ());
+    LOG (clause, "connecting clause on %d with already in occurrences %zu", lit, occs(lit).size ());
     occs(lit).push_back(Tagged (clause, pos));
   }
   void connect_clause (Clause *clause, unsigned pos) {
@@ -131,7 +131,7 @@ struct WalkerFO {
   WalkerFO (Internal *, double size, int64_t limit);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
-  void save_final_minimum (int64_t flips, int64_t old_minimum);
+  void save_final_minimum (int64_t old_minimum);
   void make_clauses_along_occurrences(int lit);
   void make_clauses_along_unsatisfied(int lit);
   void make_clauses (int lit);
@@ -298,22 +298,11 @@ void WalkerFO::save_walker_trail (bool keep) {
 }
 
 // finally export the final minimum
-void WalkerFO::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
+void WalkerFO::save_final_minimum (int64_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
-  if (minimum == old_init_minimum) {
-    PHASE ("walk", internal->stats.walk.count,
-           "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
-           "%" PRId64 " ticks",
-           tout.bright_yellow_code (), minimum, tout.normal_code (), flips,
-           ticks);
-    return;
-  }
-
-
-  PHASE ("walk", internal->stats.walk.count,
-         "best phase minimum %" PRId64 " in %" PRId64 " flips and "
-         "%" PRId64 " ticks",
-         minimum, flips, ticks);
+#ifdef NDEBUG
+  (void) old_init_minimum;
+#endif
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
@@ -493,7 +482,7 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
     this->make_clause(c);
     made++;
   }
-  LOG("made %" PRId64 " clauses by flipping %d, still %zu broken", made, lit, broken.size ());
+  LOG("made %zu clauses by flipping %d, still %zu broken", made, lit, broken.size ());
   LOG("made %zu clauses with flipped %s", made, LOGLIT(lit));
   (void)made;
 }
@@ -866,7 +855,21 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
       walk_full_occs_save_minimum (walker);
     }
 
-    walker.save_final_minimum (flips, initial_minimum);
+    walker.save_final_minimum (initial_minimum);
+#ifndef QUIET
+    if (minimum == initial_minimum) {
+      PHASE ("walk", internal->stats.walk.count,
+             "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
+             "%" PRId64 " ticks",
+             tout.bright_yellow_code (), minimum, tout.normal_code (),
+             flips, walker.ticks);
+    } else {
+      PHASE ("walk", internal->stats.walk.count,
+             "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+             "%" PRId64 " ticks",
+             minimum, flips, walker.ticks);
+    }
+#endif
 
     if (opts.profile >= 2) {
       PHASE ("walk", stats.walk.count,
@@ -951,7 +954,7 @@ void Internal::walk_full_occs () {
     limit = opts.walkmineff;
   // local search is very cache friendly, so we actually really go over a lot of ticks
   if (limit > 1e3 * opts.walkmaxeff){
-    MSG ("reached maximum efficiency %zd", limit);
+    MSG ("reached maximum efficiency %" PRId64, limit);
     limit =  1e3 * opts.walkmaxeff;
   }
   (void) walk_full_occs_round (limit, false);
