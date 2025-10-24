@@ -290,6 +290,8 @@ inline void Internal::analyze_literal (int lit, int &open,
       assert (id);
       unit_chain.push_back (id);
       return;
+    } else if (lrat && v.reason->size == 2){
+      binary_lrat_ids[abs (lit)] = v.reason->id;
     }
   }
 
@@ -317,6 +319,8 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
                                       int &antecedent_size) {
   assert (reason);
   assert (reason != external_reason);
+  assert (reason->size != 2 || !lrat || !lit ||
+          (binary_lrat_ids[abs(lit)] == reason->id));
   bump_clause (reason);
   if (lrat)
     lrat_chain.push_back (reason->id);
@@ -1176,6 +1180,8 @@ void Internal::analyze () {
       assert (!opts.exteagerreasons);
       reason = learn_external_reason_clause (-uip, 0, true);
       var (uip).reason = reason;
+      if (lrat && reason->size == 2)
+        binary_lrat_ids[abs(uip)] = reason->id;
     }
     assert (reason != external_reason);
     LOG (reason, "analyzing %d reason", uip);

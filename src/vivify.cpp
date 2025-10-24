@@ -150,6 +150,9 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
   assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = level ? reason : 0; // for conflict analysis
+  if (lrat && reason && v.reason->size == 2) {
+    binary_lrat_ids[abs (lit)] = reason->id;
+  }
   if (!level)
     learn_unit_clause (lit);
   const signed char tmp = sign (lit);
@@ -730,6 +733,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
     LOG ("uip is %d", uip);
     Var &w = var (uip);
     reason = w.reason;
+    assert (!lrat || !reason || reason->size != 2 || binary_lrat_ids[abs (uip)] == reason->id);
     if (lrat && reason)
       lrat_chain.push_back (reason->id);
   }

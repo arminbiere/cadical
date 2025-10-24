@@ -301,6 +301,9 @@ inline void Internal::probe_assign (int lit, int parent) {
   assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = level ? probe_reason : 0;
+  if (lrat && v.reason && v.reason->id) {
+    binary_lrat_ids[idx] = probe_reason->id;
+  }
   probe_reason = 0;
   set_parent_reason_literal (lit, parent);
   if (!level)

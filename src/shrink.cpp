@@ -83,6 +83,9 @@ int inline Internal::shrink_literal (int lit, int blevel,
       assert (!v.level);
       return 0;
     }
+    if (lrat && v.reason->size == 2) {
+      binary_lrat_ids[abs (lit)] = v.reason->id;
+    }
   }
   assert (v.reason != external_reason);
   if (f.shrinkable) {

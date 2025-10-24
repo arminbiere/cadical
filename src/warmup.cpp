@@ -46,7 +46,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason){
   if (!lit_level)
     LOG ("root-level unit assign %d @ 0", lit);
   else
-    LOG (reason, "search assign %d @ %d", lit, lit_level);
+    LOG (reason, "warmup search assign %d @ %d", lit, lit_level);
 #endif
 
   assert (watching ());

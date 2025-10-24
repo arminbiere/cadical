@@ -257,6 +257,7 @@ struct Internal {
   size_t no_conflict_until;  // largest trail prefix without conflict
   vector<int> trail;         // currently assigned literals
   vector<int> clause;        // simplified in parsing & learning
+  vector<int64_t> binary_lrat_ids;// ids of currently assigned binary clauses
   vector<int> assumptions;   // assumed literals
   vector<int> constraint;    // literals of the constraint
   bool unsat_constraint;     // constraint used for unsatisfiability?

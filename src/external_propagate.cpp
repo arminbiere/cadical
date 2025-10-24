@@ -579,6 +579,9 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
     assert (v.level <= level);
     if (v.reason == external_reason) {
       v.reason = learn_external_reason_clause (-other, 0, true);
+      if (lrat && v.reason && v.reason->size == 2) {
+        binary_lrat_ids[abs (other)] = v.reason->id;
+      }
     }
     if (v.level && v.reason) {
       f.seen = true;

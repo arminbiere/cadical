@@ -350,6 +350,8 @@ void Internal::compact () {
   mapper.map_vector (phases.target);
   mapper.map_vector (phases.best);
   mapper.map_vector (phases.prev);
+  if (lrat)
+    mapper.map_vector (binary_lrat_ids);
 
   // Special code for 'frozentab'.
   //

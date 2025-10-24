@@ -18,6 +18,7 @@ void Internal::new_proof_on_demand () {
 void Internal::resize_unit_clauses_idx () {
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
   unit_clauses_idx.resize (2 * new_vsize, 0);
+  enlarge_only (binary_lrat_ids, new_vsize);
 }
 
 void Internal::force_lrat () {

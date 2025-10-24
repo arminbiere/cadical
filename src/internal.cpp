@@ -123,6 +123,7 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
+  LOG ("enlarge internal size from %zd to new size %zd with lrat: %d", vsize, new_vsize, lrat);
   // Ordered in the size of allocated memory (larger block first).
   if (lrat || frat)
     enlarge_zero (unit_clauses_idx, 2 * new_vsize);
@@ -146,6 +147,10 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.best, new_vsize);
   enlarge_zero (phases.prev, new_vsize);
   enlarge_zero (marks, new_vsize);
+  if (lrat || frat) {
+    LOG ("binary_lrat_ids has now size %d", new_vsize);
+    enlarge_only (binary_lrat_ids, new_vsize);
+  }
 }
 
 void Internal::init_vars (int new_max_var) {
@@ -326,6 +331,7 @@ int Internal::cdcl_loop_with_inprocessing () {
       condition (); // globally blocked clauses
     else
       res = decide (); // next decision
+    assert (!lrat || binary_lrat_ids.size () > max_var);
   }
 
   if (stable) {

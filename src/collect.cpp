@@ -63,6 +63,14 @@ void Internal::remove_falsified_literals (Clause *c) {
     j--;
   }
   stats.collected += shrink_clause (c, j - c->begin ());
+
+  if (lrat && j - c->begin () == 2) {
+    for (auto lit : *c) {
+      const auto &v = var (lit);
+      if (v.reason == c)
+	binary_lrat_ids[abs (lit)] = c->id;
+    }
+  }
 }
 
 // If there are new units (fixed variables) since the last garbage

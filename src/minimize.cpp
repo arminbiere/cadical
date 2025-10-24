@@ -41,6 +41,8 @@ bool Internal::minimize_literal (int lit, int depth) {
       assert (!v.level);
       return true;
     }
+    if (lrat && v.reason->size == 2)
+      binary_lrat_ids[abs(lit)] = v.reason->id;
   }
   assert (v.reason != external_reason);
   const const_literal_iterator end = v.reason->end ();

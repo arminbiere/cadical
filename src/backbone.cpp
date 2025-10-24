@@ -297,6 +297,9 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
     learn_unit_clause (lit);
+  if (lrat && v.reason && v.reason->size == 2) {
+    binary_lrat_ids[idx] = reason->id;
+  }
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
@@ -320,6 +323,11 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
     learn_unit_clause (lit);
+  if (lrat && level && reason != decision_reason) {
+    assert (v.reason);
+    assert (reason->size == 2);
+    binary_lrat_ids[idx] = reason->id;
+  }
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;

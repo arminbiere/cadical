@@ -137,6 +137,9 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   v.level = lit_level;
   v.trail = trail.size ();
   v.reason = reason;
+  if (lrat && reason && reason->size == 2) {
+    binary_lrat_ids[idx] = reason->id;
+  }
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
   num_assigned++;
