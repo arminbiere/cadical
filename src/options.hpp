@@ -268,7 +268,7 @@ OPTION( vivifytier2eff,    2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
-OPTION( walkeffort,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( walkeffort,       80,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences instead of the single watched") \
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
