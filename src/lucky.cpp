@@ -21,7 +21,7 @@ namespace CaDiCaL {
 
 int Internal::unlucky (int res) {
   if (level > 0)
-    backtrack ();
+    backtrack_without_updating_phases ();
   if (conflict)
     conflict = 0;
   return res;
@@ -128,7 +128,8 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
   if (no_conflict)
     return false;
   if (level > 1) {
-    backtrack (level - 1);
+    conflict = nullptr;
+    backtrack_without_updating_phases (level - 1);
     search_assume_decision (-dec);
     no_conflict = propagate ();
     if (no_conflict)
@@ -346,7 +347,7 @@ int Internal::negative_horn_satisfiable () {
       continue;
     if (!negative_literal) {
       if (level > 0)
-        backtrack ();
+        backtrack_without_updating_phases ();
       LOG (c, "no negative unassigned literal in");
       return unlucky (0);
     }
