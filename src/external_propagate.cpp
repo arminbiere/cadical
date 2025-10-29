@@ -508,6 +508,7 @@ void Internal::add_external_clause (int propagated_elit,
   assert (!from_propagator);
   force_no_backtrack = no_backtrack;
   from_propagator = true;
+  ext_clause_forgettable = external->propagator->are_reasons_forgettable;
   while (elit) {
     assert (external->is_observed[abs (elit)]);
     external->add (elit);
