@@ -75,8 +75,6 @@ void External::init (int new_max_var, bool extension) {
     internal->stats.variables_extension += new_vars;
   else
     internal->stats.variables_original += new_vars;
-  if (new_max_var >= (int64_t) is_observed.size ())
-    is_observed.resize (1 + (size_t) new_max_var, false);
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
@@ -416,6 +414,8 @@ void External::remove_observed_var (int elit) {
   if (eidx > max_var)
     return;
 
+  if ((size_t)eidx <= is_observed.size ())
+    return;
   if (is_observed[eidx]) {
     // Follow opposite order of add_observed_var, first remove internal
     // is_observed
@@ -439,11 +439,11 @@ void External::reset_observed_vars () {
   if (!is_observed.size ())
     return;
 
-  assert (!max_var || (size_t) max_var + 1 == is_observed.size ());
-
   for (auto elit : vars) {
     int eidx = abs (elit);
     assert (eidx <= max_var);
+    if ((size_t)eidx >= is_observed.size ())
+      break;
     if (is_observed[eidx]) {
       int ilit = internalize (elit);
       internal->remove_observed_var (ilit);

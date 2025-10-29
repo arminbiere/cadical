@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include <algorithm>
+
 namespace CaDiCaL {
 
 /*----------------------------------------------------------------------------*/
@@ -876,7 +878,7 @@ bool Internal::external_check_solution () {
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
     // anymore.
-    for (int idx = 1; idx <= external->max_var; idx++) {
+    for (int idx = 1; idx <= std::min ((int)external->is_observed.size () - 1, external->max_var); idx++) {
       if (!external->is_observed[idx])
         continue;
       const int lit = external->ival (idx);
