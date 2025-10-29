@@ -39,6 +39,11 @@ void External::init (int new_max_var, bool extension) {
   if ((size_t) new_max_var >= vsize)
     enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);
+  ext_units.reserve (2*new_max_var+2);
+  e2i.reserve (new_max_var+1);
+  ervars.reserve (new_max_var+1);
+  ext_flags.reserve (new_max_var+1);
+  internal->i2e.reserve (new_max_var+1);
   if (!max_var) {
     assert (e2i.empty ());
     e2i.push_back (0);
