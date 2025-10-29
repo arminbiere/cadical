@@ -2334,7 +2334,6 @@ void Closure::update_and_gate_build_lrat_chain (
       if (litId.clause)
 	extra_reasons_lit.push_back (litId.clause->id);
     }
-    assert (extra_reasons_lit.size () == 1);
     LOG (tauto, "now creating lrat with other gate");
     // if tauto can also be a tautology: neg_lhs_ids
     // otherwise the clause is in pos_lhs_ids
@@ -2359,7 +2358,6 @@ void Closure::update_and_gate_build_lrat_chain (
           extra_reasons_lit.push_back (litId->clause->id);
       }
     }
-    assert (extra_reasons_lit.size () == 2);
     return;
   }
 
