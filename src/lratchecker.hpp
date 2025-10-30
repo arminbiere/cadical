@@ -3,7 +3,8 @@
 
 /*------------------------------------------------------------------------*/
 #include "tracer.hpp"
-#include <stdint.h>
+#include <cstdint>
+#include <unordered_map>
 
 namespace CaDiCaL {
 
@@ -48,7 +49,7 @@ class LratChecker : public StatTracer {
 
   std::vector<signed char> checked_lits;
   std::vector<signed char> marks; // mark bits of literals
-  unordered_map<int64_t, std::vector<int>> clauses_to_reconstruct;
+  std::unordered_map<int64_t, std::vector<int>> clauses_to_reconstruct;
   std::vector<int> assumptions;
   std::vector<int> constraint;
   bool concluded;
