@@ -536,7 +536,7 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
       assert (lrat_chain.size () == 2);
     }
     if (clause.size () > 1) {
-      new_factor_clause ();
+      new_factor_clause (0);
     } else {
       const int unit = clause[0];
       const signed char tmp = val (unit);
@@ -597,7 +597,7 @@ void Internal::add_factored_divider (Quotient *q, int fresh) {
   LOG ("factored %d divider %d", factor, fresh);
   clause.push_back (fresh);
   clause.push_back (factor);
-  new_factor_clause ();
+  new_factor_clause (fresh);
   clause.clear ();
   if (lrat)
     mini_chain.push_back (-clause_id);
@@ -616,7 +616,8 @@ void Internal::blocked_clause (Quotient *q, int not_fresh) {
   for (Quotient *p = q; p; p = p->prev)
     clause.push_back (-p->factor);
   assert (!lrat || mini_chain.size ());
-  proof->add_derived_clause (new_id, true, clause, mini_chain);
+  proof->add_derived_rat_clause (new_id, true, externalize (not_fresh),
+                                 clause, mini_chain);
   mini_chain.clear ();
   clause.clear ();
 }
@@ -650,7 +651,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
       lrat_chain.push_back (q->bid);
     }
     clause.push_back (not_fresh);
-    new_factor_clause ();
+    new_factor_clause (0);
     clause.clear ();
     lrat_chain.clear ();
   }
@@ -808,9 +809,9 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   stats.bumped = queue.bumped;
   update_queue_unassigned (queue.last);
 
-  #ifndef NDEBUG
+#ifndef NDEBUG
   for (auto v : vars)
-    assert (val (v) || scores.contains(v));
+    assert (val (v) || scores.contains (v));
   lit = queue.first;
   int next_lit = links[lit].next;
   while (next_lit) {

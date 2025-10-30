@@ -45,7 +45,7 @@ public:
   void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override;
 
-  void add_derived_clause (int64_t, bool, const std::vector<int> &,
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
                            const std::vector<int64_t> &) override;
 
   void delete_clause (int64_t, bool, const std::vector<int> &) override;

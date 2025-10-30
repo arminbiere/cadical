@@ -113,7 +113,6 @@ extern "C" {
 
 namespace CaDiCaL {
 
-
 using namespace std;
 
 struct Coveror;
@@ -311,7 +310,8 @@ struct Internal {
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
 
-  static constexpr unsigned max_used = 31; // must fit into the header of the clause!
+  static constexpr unsigned max_used =
+      31; // must fit into the header of the clause!
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
@@ -330,7 +330,6 @@ struct Internal {
   ~Internal ();
 
   /*----------------------------------------------------------------------*/
-
 
   // Internal delegates and helpers for corresponding functions in
   // 'External' and 'Solver'.  The 'init_vars' function initializes
@@ -834,7 +833,11 @@ struct Internal {
   void renotify_full_trail ();
 
   // adds the assigned literals to assigned
-  void renotify_full_trail_between_trail_pos (int start_level, int end_level, int propagator_level, std::vector<int> &assigned, bool start_new_level);
+  void renotify_full_trail_between_trail_pos (int start_level,
+                                              int end_level,
+                                              int propagator_level,
+                                              std::vector<int> &assigned,
+                                              bool start_new_level);
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
@@ -861,7 +864,8 @@ struct Internal {
   //
   void clear_phases (vector<signed char> &); // reset argument to zero
   void copy_phases (vector<signed char> &);  // copy 'saved' to argument
-  void save_assigned_phases (vector<signed char> &);  // save assigned literals to argument
+  void save_assigned_phases (
+      vector<signed char> &); // save assigned literals to argument
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -1021,10 +1025,12 @@ struct Internal {
   //
   void backbone_decision (int lit);
   bool backbone_propagate (int64_t &);
-  void backbone_propagate2 (int64_t&);
+  void backbone_propagate2 (int64_t &);
   unsigned compute_backbone ();
-  void backbone_unit_reassign (int lit); // only for reassigning already derived clauses!
-  void backbone_unit_assign (int lit); // only for reassigning already derived clauses!
+  void backbone_unit_reassign (
+      int lit); // only for reassigning already derived clauses!
+  void backbone_unit_assign (
+      int lit); // only for reassigning already derived clauses!
   void backbone_assign_any (int lit, Clause *reason);
   void backbone_assign (int lit, Clause *reason);
   void backbone_lrat_for_units (int lit, Clause *c);
@@ -1034,7 +1040,7 @@ struct Internal {
                                    int64_t &ticks, unsigned inconsistent);
   void schedule_backbone_cands (std::vector<int> &candidates);
   void keep_backbone_candidates (const std::vector<int> &candidates);
-  int backbone_analyze (Clause *, int64_t&);
+  int backbone_analyze (Clause *, int64_t &);
   void binary_clauses_backbone ();
 
   // We monitor the maximum size and glue of clauses during 'reduce' and
@@ -1330,7 +1336,7 @@ struct Internal {
   bool run_factorization (int64_t limit);
   bool factor ();
   int get_new_extension_variable ();
-  Clause *new_factor_clause ();
+  Clause *new_factor_clause (int);
   void adjust_scores_and_phases_of_fresh_variables (Factoring &);
 
   // instantiate
@@ -1398,8 +1404,8 @@ struct Internal {
   int walk_full_occs_round (int64_t limit, bool prev);
   void walk_full_occs ();
   void walk_full_occs_save_minimum (WalkerFO &);
-  void make_clauses_along_occurrences(WalkerFO &walker, int lit);
-  void make_clauses_along_unsatisfied(WalkerFO &walker, int lit);
+  void make_clauses_along_occurrences (WalkerFO &walker, int lit);
+  void make_clauses_along_unsatisfied (WalkerFO &walker, int lit);
 
   // Warmup
   inline void warmup_assign (int lit, Clause *reason);
@@ -1915,7 +1921,6 @@ inline bool Internal::search_limits_hit () {
 }
 
 /*------------------------------------------------------------------------*/
-
 
 } // namespace CaDiCaL
 

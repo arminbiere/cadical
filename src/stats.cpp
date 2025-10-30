@@ -93,17 +93,22 @@ void Stats::print (Internal *internal) {
   }
   if (all || stats.incremental_decay) {
     PRT ("inc-decay:       %15" PRId64 "   %10.2f %%   per search",
-         stats.incremental_decay, percent (stats.incremental_decay, stats.searches));
+         stats.incremental_decay,
+         percent (stats.incremental_decay, stats.searches));
   }
   if (all || stats.backbone.rounds) {
     PRT ("backbone:        %15" PRId64 "   %10.2f %%  of vars",
-         stats.backbone.probes, percent (stats.backbone.probes, stats.vars));
+         stats.backbone.probes,
+         percent (stats.backbone.probes, stats.vars));
     PRT ("   rounds:       %15" PRId64 "   %10.2f    per phase",
-         stats.backbone.rounds, relative (stats.backbone.rounds, stats.backbone.phases));
+         stats.backbone.rounds,
+         relative (stats.backbone.rounds, stats.backbone.phases));
     PRT ("   phases:       %15" PRId64 "   %10.2f    interval",
-         stats.backbone.phases, relative (stats.conflicts, stats.backbone.phases));
+         stats.backbone.phases,
+         relative (stats.conflicts, stats.backbone.phases));
     PRT ("   units:        %15" PRId64 "   %10.2f    per phase",
-         stats.backbone.units, relative (stats.backbone.units, stats.backbone.phases));
+         stats.backbone.units,
+         relative (stats.backbone.units, stats.backbone.phases));
   }
   if (all || stats.conditioned) {
     PRT ("conditioned:     %15" PRId64
@@ -158,9 +163,12 @@ void Stats::print (Internal *internal) {
   }
   if (all || stats.randec.random_decisions) {
     PRT ("rand. dec phase: %15" PRId64 "   %10.2f    per interval",
-         stats.randec.random_decision_phases, relative (stats.randec.random_decision_phases, stats.decisions));
+         stats.randec.random_decision_phases,
+         relative (stats.randec.random_decision_phases, stats.decisions));
     PRT ("random decs:     %15" PRId64 "   %10.2f    per phase",
-         stats.randec.random_decisions, relative (stats.randec.random_decisions, stats.randec.random_decision_phases));
+         stats.randec.random_decisions,
+         relative (stats.randec.random_decisions,
+                   stats.randec.random_decision_phases));
   }
   if (all || stats.all.eliminated) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
@@ -639,9 +647,11 @@ void Stats::print (Internal *internal) {
   PRT ("   walkflipticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflip, percent (stats.ticks.walkflip, searchticks));
   PRT ("   walkflipticksbrk:%15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks.walkflipbroken, percent (stats.ticks.walkflipbroken, searchticks));
+       stats.ticks.walkflipbroken,
+       percent (stats.ticks.walkflipbroken, searchticks));
   PRT ("   walkflipticksWL:%15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks.walkflipWL, percent (stats.ticks.walkflipWL, searchticks));
+       stats.ticks.walkflipWL,
+       percent (stats.ticks.walkflipWL, searchticks));
   PRT ("   walkpickticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkpick, percent (stats.ticks.walkpick, searchticks));
   PRT ("   walkbreak:    %15" PRId64 "   %10.2f %%  searchticks",
@@ -748,7 +758,8 @@ void Stats::print (Internal *internal) {
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk.broken, relative (stats.walk.broken, stats.walk.flips));
     PRT ("  improved:      %15" PRId64 "   %10.2f    per walk",
-         stats.walk.improved, relative (stats.walk.improved, stats.walk.count));
+         stats.walk.improved,
+         relative (stats.walk.improved, stats.walk.count));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
@@ -859,6 +870,8 @@ void LratChecker::print_stats () {
        stats.original, percent (stats.original, stats.added));
   MSG ("derived:         %15" PRId64 "   %10.2f %%  of all clauses",
        stats.derived, percent (stats.derived, stats.added));
+  MSG ("rat:         %15" PRId64 "   %10.2f %%  of derived clauses",
+       stats.rat, percent (stats.rat, stats.derived));
   MSG ("deleted:         %15" PRId64 "   %10.2f %%  of all clauses",
        stats.deleted, percent (stats.deleted, stats.added));
   MSG ("finalized:       %15" PRId64 "   %10.2f %%  of all clauses",

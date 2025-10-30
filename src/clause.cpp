@@ -579,13 +579,17 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   return res;
 }
 
-Clause *Internal::new_factor_clause () {
+Clause *Internal::new_factor_clause (int witness) {
   external->check_learned_clause ();
   stats.factor_added++;
   stats.literals_factored += clause.size ();
   Clause *res = new_clause (false, 0);
   if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
+    if (witness)
+      proof->add_derived_rat_clause (res, externalize (witness),
+                                     lrat_chain);
+    else
+      proof->add_derived_clause (res, lrat_chain);
   }
   assert (!watching ());
   assert (occurring ());

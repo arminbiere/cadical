@@ -6,11 +6,12 @@
 #ifndef _craigtracer_hpp_INCLUDED
 #define _craigtracer_hpp_INCLUDED
 
-#include "cadical.hpp"
-#include "tracer.hpp"
+#include "../src/cadical.hpp"
+#include "../src/tracer.hpp"
 
 #include <iostream>
 #include <set>
+#include <stdint.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -141,7 +142,8 @@ public:
                             const std::vector<int> &c,
                             bool restore) override;
   void
-  add_derived_clause (int64_t id, bool redundant, const std::vector<int> &c,
+  add_derived_clause (int64_t id, bool redundant, int,
+                      const std::vector<int> &c,
                       const std::vector<int64_t> &proof_chain) override;
   void
   add_assumption_clause (int64_t id, const std::vector<int> &c,
