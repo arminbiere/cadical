@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include "util.hpp"
+
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -39,11 +41,11 @@ void External::init (int new_max_var, bool extension) {
   if ((size_t) new_max_var >= vsize)
     enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);
-  ext_units.reserve (2*new_max_var+2);
-  e2i.reserve (new_max_var+1);
-  ervars.reserve (new_max_var+1);
-  ext_flags.reserve (new_max_var+1);
-  internal->i2e.reserve (new_max_var+1);
+  reserve_at_least (ext_units, 2*new_max_var+2);
+  reserve_at_least (e2i, new_max_var+1);
+  reserve_at_least (ervars, new_max_var+1);
+  reserve_at_least (ext_flags, new_max_var+1);
+  reserve_at_least (internal->i2e, new_max_var+1);
   if (!max_var) {
     assert (e2i.empty ());
     e2i.push_back (0);
