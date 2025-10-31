@@ -2663,6 +2663,8 @@ void Trace::generate_limits (Random &random) {
     push_back (new LimitCall ("conflicts", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
+  if (random.generate_double () < 0.05)
+    push_back (new LimitCall ("ticks", random.pick_log (0, 1e9)));
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)

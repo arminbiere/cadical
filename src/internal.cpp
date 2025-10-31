@@ -621,9 +621,19 @@ void Internal::init_search_limits () {
     LOG ("no limit on decisions");
   } else {
     lim.decisions = stats.decisions + inc.decisions;
-    LOG ("conflict limit after %" PRId64 " decisions at %" PRId64
+    LOG ("decision limit after %" PRId64 " decisions at %" PRId64
          " decisions",
          inc.decisions, lim.decisions);
+  }
+
+  if (inc.ticks < 0) {
+    lim.ticks = -1;
+    LOG ("no limit on ticks");
+  } else {
+    lim.ticks = stats.ticks.search[0] + stats.ticks.search[1] + inc.ticks;
+    LOG ("ticks limit after %" PRId64 " ticks at %" PRId64
+         " ticks",
+         inc.ticks, lim.ticks);
   }
 
   /*----------------------------------------------------------------------*/

@@ -27,7 +27,10 @@ Version 2.2.0
   + introducing the 'kitten' solver to cadical. Enables semantic search
     for equivalences in sub-parts of the formula.
 
-- Ticks.
+- Ticks for improved scheduling
+
+  + you can also use ticks to limit the runtime like the
+    conflict/decision limit before.
 
 - Improved lucky, by allowing it to do several conflicts.
 

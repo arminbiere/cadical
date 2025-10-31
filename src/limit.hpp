@@ -16,6 +16,7 @@ struct Limit {
   int64_t decisions;     // decision limit if non-negative
   int64_t preprocessing; // limit on preprocessing rounds
   int64_t localsearch;   // limit on local search rounds
+  int64_t ticks;        // ticks limit if non-negative
 
   int64_t compact;   // conflict limit for next 'compact'
   int64_t condition; // conflict limit for next 'condition'
@@ -125,6 +126,7 @@ struct Inc {
   int64_t stabilize;     // base ticks limit after first mode switch
   int64_t conflicts;     // next conflict limit if non-negative
   int64_t decisions;     // next decision limit if non-negative
+  int64_t ticks;         // next ticks limit if non-negative
   int64_t preprocessing; // next preprocessing limit if non-negative
   int64_t localsearch;   // next local search limit if non-negative
   Inc ();

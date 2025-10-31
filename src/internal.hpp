@@ -1503,6 +1503,7 @@ struct Internal {
   void limit_conflicts (int);     // Force conflict limit.
   void limit_preprocessing (int); // Enable 'n' preprocessing rounds.
   void limit_local_search (int);  // Enable 'n' local search rounds.
+  void limit_ticks (int64_t);     // Force ticks limit.
 
   // External versions can access limits by 'name'.
   //
@@ -1914,6 +1915,11 @@ inline bool Internal::search_limits_hit () {
 
   if (lim.decisions >= 0 && stats.decisions >= lim.decisions) {
     LOG ("decision limit %" PRId64 " reached", lim.decisions);
+    return true;
+  }
+
+  if (lim.ticks >= 0 && stats.ticks.search[0] + stats.ticks.search[1] >= lim.ticks) {
+    LOG ("ticks limit %" PRId64 " reached", lim.ticks);
     return true;
   }
 
