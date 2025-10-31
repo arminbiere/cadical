@@ -213,7 +213,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
          clauses, tout.normal_code ());
 
     if (strict != FORCED)
-      solver->reserve (vars);
+      solver->resize (vars);
     internal->reserve_ids (clauses);
   } else if (!parse_inccnf_too)
     PER ("expected 'c' after 'p '");

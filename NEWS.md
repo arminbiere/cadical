@@ -13,9 +13,13 @@ Version 2.2.0
     new variable to derive equisatisfiable clauses which replace the old ones.
 
   + breaking change to incremental usage. To incrementally add new
-    variables to the solver, either use `vars ()`, `reserve_vars ()`
-    or `reserve_difference ()`, see specification in `cadical.hpp`.
+    variables to the solver, either use `vars ()`, `resize_difference ()`,
+	see specification in `cadical.hpp`.
     As a hot-fix, disable with `set ('factor', 0)`
+
+  + Warning: Factor is currenly on in the development branch, but we
+    expect to have factor off in the 2.2 release and plan to activate
+    it by default in the next release.
 
 - Clausal Sweeping.
 
@@ -52,6 +56,9 @@ Version 2.2.0
   (relying on full-occurrence list), deactivated by default.
 
 - Binary backone similarly to kissat.
+
+- `reserve` is deprecated due to the misleading name. Use the drop-in
+  replacement `resize` instead.
 
 Version 2.1.3
 -------------

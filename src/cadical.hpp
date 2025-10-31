@@ -510,6 +510,11 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
+  [[deprecated ("use the function implied instead with the same semantics and arguments")]]
+  void get_entrailed_literals (std::vector<int> &implicants) {
+    implied (implicants);
+  }
+
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
   // zero if the formula is proven to be satisfiable or unsatisfiable.  This
@@ -577,8 +582,10 @@ public:
   // the user is required to use this to check which variables are currently
   // free before adding new variables of their own.
   // The alternative is to reserve variables in batches with
-  // 'reserve_difference'. Using 'reserve' in combination with any technique
+  // 'resize_difference'. Using 'resize' in combination with any technique
   // that could add variables (currently only factor) is not advised.
+  // After each application of `add`, `vars ()` will return an updated
+  // value, even if you did not import the entire clause yet.
   //
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
@@ -593,6 +600,8 @@ public:
   //   require (READY)
   //   ensure (STEADY)
   //
+  void resize (int min_max_var);
+  [[deprecated ("use the function resize instead with the same semantics and arguments.")]]
   void reserve (int min_max_var);
 
   // Increase the maximum variable index by a number of new variables.
@@ -605,7 +614,7 @@ public:
   //   require (READY)
   //   ensure (STEADY)
   //
-  int reserve_difference (int number_of_vars);
+  int resize_difference (int number_of_vars);
 
   // Get the value of some statistics or -1 if the statistics does not
   // exist or is not support. Only requires the state to be initialized.

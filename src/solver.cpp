@@ -433,7 +433,7 @@ int Solver::vars () {
   return res;
 }
 
-void Solver::reserve (int min_max_var) {
+void Solver::resize (int min_max_var) {
   TRACE ("reserve", min_max_var);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
@@ -442,14 +442,18 @@ void Solver::reserve (int min_max_var) {
   LOG_API_CALL_END ("reserve", min_max_var);
 }
 
-int Solver::reserve_difference (int number_of_vars) {
-  TRACE ("reserve_difference", number_of_vars);
+void Solver::reserve (int min_max_var) {
+  resize (min_max_var);
+}
+
+int Solver::resize_difference (int number_of_vars) {
+  TRACE ("resize_difference", number_of_vars);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_extended ();
   int new_max_var = external->max_var + number_of_vars;
   external->init (new_max_var);
-  LOG_API_CALL_END ("reserve_difference", number_of_vars);
+  LOG_API_CALL_END ("resize_difference", number_of_vars);
   return new_max_var;
 }
 
