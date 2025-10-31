@@ -1,7 +1,8 @@
 Version 2.2.0
 -------------
 
-- Renamed `get_entrailed_literals` by `implied`.
+- Renamed `get_entrailed_literals` by `implied`. The call is now also
+  allowed in the state SATISFIED state.
 
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.

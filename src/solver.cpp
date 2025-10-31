@@ -1,3 +1,4 @@
+#include "cadical.hpp"
 #include "internal.hpp"
 
 /*------------------------------------------------------------------------*/
@@ -731,8 +732,8 @@ int Solver::propagate () {
 void Solver::implied (std::vector<int> &entrailed) {
   TRACE ("implied");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == INCONCLUSIVE,
-           "can only get implied literals only in unknown state");
+  REQUIRE (state () == INCONCLUSIVE || state () == SATISFIED,
+           "can only get implied literals only in unknown or satisfied state");
   external->conclude_unknown ();
   external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)

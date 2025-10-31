@@ -1008,6 +1008,7 @@ class Mobical : public Handler {
   friend class Trace;
   friend struct ValCall;
   friend struct FlipCall;
+  friend struct ImpliedCall;
   friend struct FlippableCall;
   friend struct MeltCall;
   friend class MockPropagator;
@@ -1731,12 +1732,13 @@ struct ImpliedCall : public Call {
   ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
     std::vector<int> entrailed;
-    s->implied (entrailed);
+    if (mobical.donot.enforce || s->state () == State::SATISFIED || s->state () == State::INCONCLUSIVE)
+      s->implied (entrailed);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "get_entrailed_literals" << endl; }
+  void print (ostream &o) { o << "implied" << endl; }
   Call *copy () { return new ImpliedCall (arg); }
-  const char *keyword () { return "get_entrailed_literals"; }
+  const char *keyword () { return "implied"; }
 };
 
 struct ResetAssumptionsCall : public Call {
@@ -2331,6 +2333,9 @@ private:
   void generate_propagator (Random &, int minvars, int maxvars);
   void generate_lemmas (Random &);
 
+  void generate_propagate (Random &);
+  void generate_implied (Random &);
+
   void generate_limits (Random &);
 };
 
@@ -2632,6 +2637,23 @@ void Trace::generate_resize_difference (Random &random) {
   int new_max_var = random.pick_int (0, 100);
   push_back (new ResizeDifferenceCall (new_max_var));
 }
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_implied (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new ImpliedCall ());
+}
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_propagate (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new PropagateCall ());
+}
+
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_limits (Random &random) {
@@ -3096,6 +3118,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     for (int j = 0; j < clauses; j++)
       generate_queries (random), generate_resize (random, maxvars),
           generate_resize_difference (random),
+	  generate_implied(random), generate_propagate(random),
           generate_clause (random, minvars, maxvars, uniform);
 
     if (in_connection && random.generate_bool ()) {
@@ -4397,6 +4420,10 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'resize'", second);
       c = new ResizeCall (lit);
+    } else if (!strcmp (keyword, "resize_difference")) {
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'resize'", first);
+      c = new ResizeDifferenceCall (lit);
     } else if (!strcmp (keyword, "phase")) {
       if (!first)
         error ("argument to 'phase' missing");
@@ -4668,7 +4695,7 @@ void Reader::parse () {
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
       c = new PropagateAssumptionsCall ();
-    } else if (!strcmp (keyword, "get_entrailed_literals")) {
+    } else if (!strcmp (keyword, "get_entrailed_literals") || !strcmp (keyword, "implied")) {
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       c = new ResetAssumptionsCall ();
