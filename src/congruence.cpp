@@ -2840,7 +2840,7 @@ bool Closure::simplify_gates (int lit) {
 /*------------------------------------------------------------------------*/
 // AND gates
 
-Gate *Closure::find_and_lits (const vector<int> &rhs, Gate *except) {
+Gate *Closure::find_and_lits (vector<int> &rhs, Gate *except) {
   assert (is_sorted (begin (rhs), end (rhs),
                      sort_literals_by_var_smaller (internal)));
   return find_gate_lits (rhs, Gate_Type::And_Gate, except);
@@ -2849,25 +2849,24 @@ Gate *Closure::find_and_lits (const vector<int> &rhs, Gate *except) {
 // search for the gate in the hash-table.  We cannot use find, as we might
 // be changing a gate, so there might be 2 gates with the same LHS (the one
 // we are changing and the other we are looking for)
-Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
+Gate *Closure::find_gate_lits (vector<int> &rhs, Gate_Type typ,
                                Gate *except) {
 #ifdef LOGGING
   g->id = 0;
 #endif
   Gate *h = nullptr;
+  dummy_search_gate->tag = typ;
+  std::swap (dummy_search_gate->rhs, rhs);
+  assert (dummy_search_gate->lhs == 0);
+  assert (dummy_search_gate->garbage == false);
+
   if ((!except || !except->indexed)) {
-    dummy_search_gate->tag = typ;
-    dummy_search_gate->rhs = rhs;
-    assert (dummy_search_gate->lhs == 0);
-    assert (dummy_search_gate->garbage == false);
     auto git = table.find (dummy_search_gate);
     if (git != std::end (table))
       h = *git; 
     assert (!except || h != except);
   }
   else {
-    dummy_search_gate->tag = typ;
-    dummy_search_gate->rhs = rhs;
     const auto &its = table.equal_range (dummy_search_gate);
     for (auto it = its.first; it != its.second; ++it) {
       LOG ((*it), "checking gate in the table");
@@ -2875,13 +2874,14 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
         continue;
       if ((*it)->tag != typ)
         continue;
-      if ((*it)->rhs != rhs)
+      if ((*it)->rhs != dummy_search_gate->rhs)
         continue;
       h = *it;
       break;
     }
   }
 
+  std::swap (dummy_search_gate->rhs, rhs);
   if (h) {
     LOG (g, "searching");
     LOG (h, "already existing");
@@ -3589,7 +3589,7 @@ void Closure::check_xor_gate_implied (Gate const *const g) {
   clause.clear ();
 }
 
-Gate *Closure::find_xor_lits (const vector<int> &rhs) {
+Gate *Closure::find_xor_lits (vector<int> &rhs) {
   assert (is_sorted (begin (rhs), end (rhs),
                      sort_literals_by_var_smaller (internal)));
   return find_gate_lits (rhs, Gate_Type::XOr_Gate);
