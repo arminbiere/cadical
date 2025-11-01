@@ -435,12 +435,12 @@ int Solver::vars () {
 }
 
 void Solver::resize (int min_max_var) {
-  TRACE ("reserve", min_max_var);
+  TRACE ("resize", min_max_var);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_extended ();
   external->init (min_max_var);
-  LOG_API_CALL_END ("reserve", min_max_var);
+  LOG_API_CALL_END ("resize", min_max_var);
 }
 
 void Solver::reserve (int min_max_var) {
