@@ -16,6 +16,9 @@ Closure::Closure (Internal *i)
       fresh_id (internal->clause_id)
 #endif
 {
+  dummy_search_gate = new Gate ();
+  dummy_search_gate->lhs = 0;
+  dummy_search_gate->garbage = false;
 }
 
 char &Closure::lazy_propagated (int lit) {
@@ -2848,39 +2851,45 @@ Gate *Closure::find_and_lits (const vector<int> &rhs, Gate *except) {
 // we are changing and the other we are looking for)
 Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
                                Gate *except) {
-  Gate *g = new Gate;
-  g->tag = typ;
-  g->rhs = rhs;
-  g->lhs = 0;
-  g->garbage = false;
 #ifdef LOGGING
   g->id = 0;
 #endif
-  const auto &its = table.equal_range (g);
   Gate *h = nullptr;
-  for (auto it = its.first; it != its.second; ++it) {
-    LOG ((*it), "checking gate in the table");
-    if (*it == except)
-      continue;
-    assert ((*it)->lhs != g->lhs);
-    if ((*it)->tag != g->tag)
-      continue;
-    if ((*it)->rhs != g->rhs)
-      continue;
-    h = *it;
-    break;
+  if ((!except || !except->indexed)) {
+    dummy_search_gate->tag = typ;
+    dummy_search_gate->rhs = rhs;
+    assert (dummy_search_gate->lhs == 0);
+    assert (dummy_search_gate->garbage == false);
+    auto git = table.find (dummy_search_gate);
+    if (git != std::end (table))
+      h = *git; 
+    assert (!except || h != except);
+  }
+  else {
+    dummy_search_gate->tag = typ;
+    dummy_search_gate->rhs = rhs;
+    const auto &its = table.equal_range (dummy_search_gate);
+    for (auto it = its.first; it != its.second; ++it) {
+      LOG ((*it), "checking gate in the table");
+      if (*it == except)
+        continue;
+      if ((*it)->tag != typ)
+        continue;
+      if ((*it)->rhs != rhs)
+        continue;
+      h = *it;
+      break;
+    }
   }
 
   if (h) {
     LOG (g, "searching");
     LOG (h, "already existing");
-    delete g;
     return h;
   }
 
   else {
     LOG (g->rhs, "gate not found in table");
-    delete g;
     return nullptr;
   }
 }
