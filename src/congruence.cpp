@@ -4951,7 +4951,7 @@ void Closure::forward_subsume_matching_clauses () {
   LOG ("found %.0f%%",
        (double) count_matchable /
            (double) (internal->max_var ? internal->max_var : 1));
-  std::vector<Clause *> candidates;
+  std::vector<ClauseSize> candidates;
   auto &analyzed = internal->analyzed;
 
   for (auto *c : internal->clauses) {
@@ -5009,11 +5009,11 @@ void Closure::forward_subsume_matching_clauses () {
   size_t tried = 0, subsumed = 0;
   internal->init_occs ();
   for (auto c : candidates) {
-    assert (c->size != 2);
+    assert (c.size != 2);
     if (internal->terminated_asynchronously ())
       break;
     ++tried;
-    if (find_subsuming_clause (c)) {
+    if (find_subsuming_clause (c.clause)) {
       ++subsumed;
     }
   }
@@ -7148,7 +7148,7 @@ void Closure::init_ite_gate_extraction (
   }
 
   VERBOSE (4,
-           "counted %zu ternary ITE clauses "
+           "counted %zu ternary ITE gates"
            "(%.0f%% of %" PRIu64 " irredundant clauses)",
            ternary.size (),
            percent (ternary.size (), internal->stats.current.irredundant),
