@@ -699,9 +699,9 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
         analyzed.push_back (other);
         f.seen = true;
       }
-      if (start->redundant) {
-        const int new_glue = recompute_glue (start);
-        promote_clause (start, new_glue);
+      if (reason != start && reason->redundant) {
+        const int new_glue = recompute_glue (reason);
+        promote_clause (reason, new_glue);
       }
       if (subsumes) {
         assert (reason);

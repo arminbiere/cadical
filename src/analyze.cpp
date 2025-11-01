@@ -207,6 +207,7 @@ int Internal::recompute_glue (Clause *c) {
   int res = 0;
   const int64_t stamp = ++stats.recomputed;
   for (const auto &lit : *c) {
+    assert (val (lit));
     int level = var (lit).level;
     assert (gtab[level] <= stamp);
     if (gtab[level] == stamp)
