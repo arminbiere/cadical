@@ -285,9 +285,9 @@ struct CompactBinary {
 };
 
 struct Hash {
-  Hash (std::array<int, 16> &ncs) : nonces (ncs) {}
-  std::array<int, 16> &nonces;
-  size_t operator() (const Gate *const g) const;
+  Hash (std::array<uint64_t, 16> &ncs) : nonces (ncs) {}
+  const std::array<uint64_t, 16> &nonces;
+  inline size_t operator() (const Gate *const g) const;
 };
 
 struct Rewrite {
@@ -303,13 +303,17 @@ struct Rewrite {
 struct Closure {
 
   Closure (Internal *i);
+  ~Closure () {
+    delete dummy_search_gate;
+  }
+  Gate *dummy_search_gate = nullptr;
 
   Internal *const internal;
   vector<Clause*> extra_clauses;
   vector<CompactBinary> binaries;
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
-  std::array<int, 16> nonces;
+  std::array<uint64_t, 16> nonces;
   typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
 
   vector<bool> scheduled;

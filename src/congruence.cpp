@@ -128,12 +128,13 @@ void check_correct_ite_flags (const Gate *const g) {
 
 /*------------------------------------------------------------------------*/
 
-static size_t hash_lits (std::array<int, 16> &nonces,
-                         const vector<int> &lits) {
-  uint64_t hash = 0;
-  const auto end_nonces = end (nonces);
-  const auto begin_nonces = begin (nonces);
-  auto n = begin_nonces;
+static inline size_t hash_lits (const std::array<uint64_t, 16> &nonces,
+                         const vector<int> &lits, Gate_Type tag) {
+  uint64_t hash = ((uint64_t)tag << 4) | ((uint64_t)tag >> 50);
+  const auto end_nonces = std::end (nonces);
+  const auto begin_nonces = std::begin (nonces);
+  auto n = begin_nonces + (uint64_t) tag;
+  assert (n < end_nonces);
   for (int lit : lits) {
     hash += lit;
     hash *= *n++;
@@ -145,8 +146,8 @@ static size_t hash_lits (std::array<int, 16> &nonces,
   return (size_t) hash;
 }
 
-size_t Hash::operator() (const Gate *const g) const {
-  return hash_lits (nonces, g->rhs);
+inline size_t Hash::operator() (const Gate *const g) const {
+  return hash_lits (nonces, g->rhs, g->tag);
 }
 
 bool gate_contains (Gate *g, int lit) {
@@ -2125,8 +2126,8 @@ void Closure::init_closure () {
   }
   units = internal->propagated;
   Random rand (internal->stats.congruence.rounds);
-  for (auto &n : nonces) {
-    n = 1 | rand.next ();
+  for (uint64_t &n : nonces) {
+    n = static_cast<uint64_t>(1) | rand.next ();
   }
 #ifdef LOGGING
   fresh_id = internal->clause_id;
@@ -4662,7 +4663,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   GatesTable::iterator git = (g->indexed ? table.find (g) : end (table));
   size_t j = 0, dst_count = 0;
   bool original_dst_negated = (dst < 0);
-  dst = abs (dst);
+  dst = internal->vidx (dst);
   unsigned negate = original_dst_negated;
   const size_t size = g->rhs.size ();
   for (size_t i = 0; i < size; ++i) {
@@ -4933,7 +4934,7 @@ void Closure::forward_subsume_matching_clauses () {
     const int repr = find_representative (lit);
     if (lit == repr)
       continue;
-    const int repr_idx = abs (repr);
+    const int repr_idx = internal->vidx (repr);
     if (!matchable[idx]) {
       LOG ("matchable %d", idx);
       matchable[idx] = true;
@@ -6169,6 +6170,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     mark_garbage (g);
 
   assert (chain.empty ());
+  ++internal->stats.congruence.rewritten_ites;
 }
 
 void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
