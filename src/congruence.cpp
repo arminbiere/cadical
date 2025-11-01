@@ -2852,7 +2852,7 @@ Gate *Closure::find_and_lits (vector<int> &rhs, Gate *except) {
 Gate *Closure::find_gate_lits (vector<int> &rhs, Gate_Type typ,
                                Gate *except) {
 #ifdef LOGGING
-  g->id = 0;
+  dummy_search_gate->id = 0;
 #endif
   Gate *h = nullptr;
   dummy_search_gate->tag = typ;
@@ -2883,13 +2883,13 @@ Gate *Closure::find_gate_lits (vector<int> &rhs, Gate_Type typ,
 
   std::swap (dummy_search_gate->rhs, rhs);
   if (h) {
-    LOG (g, "searching");
+    LOG (dummy_search_gate, "searching");
     LOG (h, "already existing");
     return h;
   }
 
   else {
-    LOG (g->rhs, "gate not found in table");
+    LOG (dummy_search_gate->rhs, "gate not found in table");
     return nullptr;
   }
 }
