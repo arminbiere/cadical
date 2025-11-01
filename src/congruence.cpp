@@ -4328,7 +4328,7 @@ void Closure::extract_xor_gates () {
       continue;
     extract_xor_gates_with_base_clause (c);
   }
-  VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR clauses",
+  VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR gates",
            internal->stats.congruence.rounds,
            internal->stats.congruence.xor_gates - gates_before);
   reset_xor_gate_extraction ();
