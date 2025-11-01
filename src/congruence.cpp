@@ -3550,6 +3550,8 @@ void Closure::check_xor_gate_implied (Gate const *const g) {
   if (internal->lrat) {
     return;
   }
+  if (!internal->opts.check)
+    return;
   const int lhs = g->lhs;
   LOG (g, "checking implied");
   auto &clause = internal->clause;
@@ -3786,9 +3788,9 @@ void Closure::simplify_and_sort_xor_lrat_clauses (
 void Closure::add_xor_matching_proof_chain (
     Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2,
     vector<LRAT_ID> &to_lrat, vector<LRAT_ID> &back_lrat) {
-  if (lhs1 == lhs2)
-    return;
   if (!internal->proof)
+    return;
+  if (lhs1 == lhs2)
     return;
   assert (unsimplified.empty ());
   unsimplified = g->rhs;
@@ -4721,6 +4723,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   }
 
   check_xor_gate_implied (g);
+  ++internal->stats.congruence.rewritten_xors;
 }
 
 // update to produce proofs
@@ -5386,6 +5389,8 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
     std::vector<LRAT_ID> &reasons_back, std::vector<LRAT_ID> &reasons_unit,
     bool rewritting_then, bool &learn_units) {
 
+  if (!internal->proof)
+    return;
   const size_t idx1 = rewritting_then ? 0 : 2;
   const size_t idx2 = idx1 + 1;
   const size_t other_idx1 = rewritting_then ? 2 : 0;
@@ -5397,8 +5402,6 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
   const int repr_lit_to_merge = find_eager_representative (lit_to_merge);
   const int repr_other_lit = find_eager_representative (other_lit);
   const int repr_lhs = find_eager_representative (g->lhs);
-  if (!internal->proof)
-    return;
 
   LOG ("cond: %d, merging %d and rewriting to %d", cond_lit, lit_to_merge,
        other_lit);
@@ -6608,13 +6611,13 @@ void Closure::simplify_ite_gate (Gate *g) {
 void Closure::add_ite_matching_proof_chain (
     Gate *g, Gate *h, int lhs1, int lhs2, std::vector<LRAT_ID> &reasons1,
     std::vector<LRAT_ID> &reasons2) {
+  if (!internal->proof)
+    return;
   check_ite_lrat_reasons (g);
   check_ite_lrat_reasons (h);
   assert (g->lhs == lhs1);
   assert (h->lhs == lhs2);
   if (lhs1 == lhs2)
-    return;
-  if (!internal->proof)
     return;
   LOG (g, "starting ITE matching proof chain");
   if (g->degenerated_gate != Special_Gate::NORMAL) {

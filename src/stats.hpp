@@ -376,6 +376,8 @@ struct Stats {
     int64_t unary_and = 0;
     int64_t unaries = 0;
     int64_t rewritten_ands = 0;
+    int64_t rewritten_xors = 0;
+    int64_t rewritten_ites = 0;
     int64_t simplified = 0;
     int64_t simplified_ands = 0;
     int64_t simplified_xors = 0;

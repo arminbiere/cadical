@@ -792,13 +792,22 @@ void Stats::print (Internal *internal) {
     PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
          stats.congruence.unaries,
          relative (stats.congruence.rounds, stats.congruence.unaries));
-    PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per round",
+    int64_t rewritten = stats.congruence.rewritten_ands + stats.congruence.rewritten_xors + stats.congruence.rewritten_ites;
+    PRT ("   rewritten:    %15" PRId64 "   %10.2f    per round",
+         rewritten,
+         percent (rewritten, stats.congruence.rounds));
+    PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per rewritten",
          stats.congruence.rewritten_ands,
-         relative (stats.congruence.rounds,
-                   stats.congruence.rewritten_ands));
-    PRT ("   subsumed:     %15" PRId64 "   %10.2f    per round",
+         percent (stats.congruence.rewritten_ands, rewritten));
+    PRT ("   rewri.-xors:  %15" PRId64 "   %10.2f%%  per rewritten",
+         stats.congruence.rewritten_xors,
+         percent (stats.congruence.rewritten_xors, rewritten));
+    PRT ("   rewri.-ites:  %15" PRId64 "   %10.2f%%  per rewritten",
+         stats.congruence.rewritten_ites,
+         percent (stats.congruence.rewritten_ites, rewritten));
+    PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per rewritten",
          stats.congruence.subsumed,
-         relative (stats.congruence.rounds, stats.congruence.subsumed));
+         relative (stats.congruence.subsumed, stats.congruence.rounds));
   }
 
   LINE ();
