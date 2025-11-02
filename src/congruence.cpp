@@ -3829,7 +3829,7 @@ void Closure::add_xor_matching_proof_chain (
     return;
   assert (unsimplified.empty ());
   unsimplified.reserve (g->arity ());
-  for (auto lit : *g)
+  for (auto lit : g->rhs)
     unsimplified.push_back (lit);
   vector<LitClausePair> first;
   vector<LitClausePair> second;
