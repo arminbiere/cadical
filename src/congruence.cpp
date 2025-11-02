@@ -132,8 +132,8 @@ void check_correct_ite_flags (const Gate *const g) {
 /*------------------------------------------------------------------------*/
 
 static inline size_t hash_lits (const std::array<uint64_t, 16> &nonces,
-                         const vector<int> &lits, Gate_Type tag) {
-  uint64_t hash = ((uint64_t)tag << 4) | ((uint64_t)tag >> 50);
+                                const vector<int> &lits, Gate_Type tag) {
+  uint64_t hash = ((uint64_t) tag << 4) | ((uint64_t) tag >> 50);
   const auto end_nonces = std::end (nonces);
   const auto begin_nonces = std::begin (nonces);
   auto n = begin_nonces + (uint64_t) tag;
@@ -490,7 +490,7 @@ int Closure::find_representative (int lit) {
 
   return res;
 }
-  
+
 int Closure::find_representative_and_compress_no_proofs (int lit) {
   int res = lit;
   int nxt = lit;
@@ -513,7 +513,7 @@ int Closure::find_representative_already_compressed (int lit) {
 
   return res;
 }
-  
+
 int Closure::find_representative_and_compress (int lit, bool update_eager) {
   LOG ("finding representative of %d", lit);
   int res = lit;
@@ -753,7 +753,7 @@ void Closure::index_gate (Gate *g) {
   LOG (g, "adding to hash table");
   table.insert (g);
   g->indexed = true;
-  assert (table.find (g) != table.end());
+  assert (table.find (g) != table.end ());
 }
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
@@ -2154,7 +2154,7 @@ void Closure::init_closure () {
   units = internal->propagated;
   Random rand (internal->stats.congruence.rounds);
   for (uint64_t &n : nonces) {
-    n = static_cast<uint64_t>(1) | rand.next ();
+    n = static_cast<uint64_t> (1) | rand.next ();
   }
 #ifdef LOGGING
   fresh_id = internal->clause_id;
@@ -2644,7 +2644,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
         ++internal->stats.congruence.ands;
     } else {
       if (g->indexed) {
-        assert (it != table.end());
+        assert (it != table.end ());
         LOG (g, "removing from table");
         (void) table.erase (it);
       }
@@ -2888,10 +2888,9 @@ Gate *Closure::find_gate_lits (vector<int> &rhs, Gate_Type typ,
   if ((!except || !except->indexed)) {
     auto git = table.find (dummy_search_gate);
     if (git != std::end (table))
-      h = *git; 
+      h = *git;
     assert (!except || h != except);
-  }
-  else {
+  } else {
     const auto &its = table.equal_range (dummy_search_gate);
     for (auto it = its.first; it != its.second; ++it) {
       LOG ((*it), "checking gate in the table");
@@ -3829,7 +3828,7 @@ void Closure::add_xor_matching_proof_chain (
     return;
   assert (unsimplified.empty ());
   unsimplified.reserve (g->arity ());
-  for (auto lit : *g)
+  for (auto lit : g->rhs)
     unsimplified.push_back (lit);
   vector<LitClausePair> first;
   vector<LitClausePair> second;
@@ -3932,7 +3931,7 @@ void Closure::add_xor_matching_proof_chain (
 Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
                              int lhs) {
   rhs.clear ();
-  rhs.reserve (lits.size());
+  rhs.reserve (lits.size ());
   for (auto lit : lits) {
     if (lhs != lit && -lhs != lit) {
       assert (lit > 0);
@@ -4503,7 +4502,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   assert (internal->val (src) == internal->val (dst));
   LOG (g, "rewriting %d into %d in", src, dst);
   GatesTable::iterator git = (g->indexed ? table.find (g) : end (table));
-  assert (!g->indexed || git != table.end());
+  assert (!g->indexed || git != table.end ());
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
   auto q = begin (g->rhs);
@@ -4991,10 +4990,8 @@ void Closure::forward_subsume_matching_clauses () {
     }
   }
 
-
   VERBOSE (3, "congruence found %" PRId64 "  matchable variables %.0f%%",
-           count_matchable,
-	   percent (count_matchable,internal->max_var));
+           count_matchable, percent (count_matchable, internal->max_var));
   std::vector<ClauseSize> candidates;
   auto &analyzed = internal->analyzed;
   size_t potential = 0;
@@ -5149,7 +5146,8 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
         if (v < 0)
           continue;
         assert (!v);
-        const int repr_other = find_representative_already_compressed (other);
+        const int repr_other =
+            find_representative_already_compressed (other);
         if (!marked (repr_other))
           goto CONTINUE_WITH_NEXT_CLAUSE;
         LOG ("subsuming due to %d -> %d", other, repr_other);
