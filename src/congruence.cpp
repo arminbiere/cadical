@@ -4967,8 +4967,10 @@ void Closure::forward_subsume_matching_clauses () {
   size_t count_matchable = 0;
 #endif
   for (auto idx : internal->vars) {
-    if (!internal->flags (idx).active ())
+    if (!internal->flags (idx).active ()) {
+      (void)find_representative_and_compress_no_proofs (idx);
       continue;
+    }
     const int lit = idx;
     const int repr = find_representative_and_compress_no_proofs (lit);
     if (lit == repr)
