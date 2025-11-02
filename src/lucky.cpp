@@ -333,15 +333,14 @@ int Internal::positive_horn_satisfiable () {
 
 int Internal::lucky_decide_assumptions () {
   assert (!level);
-  for (auto lit : assumptions) {
-    if (val (lit) < 0) {
-      LOG ("assumption %s falsified", LOGLIT (lit));
+  assert (!constraint.size ());
+  int res = 0;
+  while ((size_t)level < assumptions.size ()) {
+    res = decide ();
+    if (res == 20) {
       marked_failed = false;
       return 20;
     }
-    if (val (lit) > 0)
-      continue;
-    search_assume_decision (lit);
     if (!propagate ()) {
       break;
     }
