@@ -368,6 +368,10 @@ struct Closure {
   int find_lrat_representative_with_marks (int lit);
   // representative in the union-find structure in the lazy equivalences
   int find_representative (int lit);
+  // representative in the union-find structure in the lazy equivalences.
+  // only useful if you do not care about proofs like during forward subsumption.
+  int find_representative_and_compress_no_proofs (int lit);
+  int find_representative_already_compressed (int lit);
   // find the representative and produce the binary clause representing the
   // normalization from the literal to the result.
   int find_representative_and_compress (int, bool update_eager = true);

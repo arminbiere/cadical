@@ -805,7 +805,7 @@ void Stats::print (Internal *internal) {
     PRT ("   rewri.-ites:  %15" PRId64 "   %10.2f%%  per rewritten",
          stats.congruence.rewritten_ites,
          percent (stats.congruence.rewritten_ites, rewritten));
-    PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per rewritten",
+    PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per round",
          stats.congruence.subsumed,
          relative (stats.congruence.subsumed, stats.congruence.rounds));
   }
