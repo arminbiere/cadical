@@ -5026,7 +5026,7 @@ void Closure::forward_subsume_matching_clauses () {
           contains_matchable = true;
       }
 
-      const int repr = find_representative (lit);
+      const int repr = find_representative_and_compress_no_proofs (lit);
       assert (!internal->val (repr));
       if (marked (repr))
         continue;
