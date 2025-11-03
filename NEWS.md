@@ -32,7 +32,11 @@ Version 2.2.0
   + you can also use ticks to limit the runtime like the
     conflict/decision limit before.
 
-- Improved lucky, by allowing it to do several conflicts.
+- Improved lucky, by allowing it to do several conflicts and finding
+  new units.
+
+  + lucky is now able to handle assumptions. Set `luckyassumptions` to
+  false if you do not want that.
 
 - New light preprocessing round on with lucky, congruence, factor, and
   a new (very limited) BVE (fast elim). Fast elimination is never run

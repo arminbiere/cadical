@@ -4966,8 +4966,10 @@ void Closure::forward_subsume_matching_clauses () {
   size_t count_matchable = 0;
 #endif
   for (auto idx : internal->vars) {
-    if (!internal->flags (idx).active ())
+    if (!internal->flags (idx).active ()) {
+      (void)find_representative_and_compress_no_proofs (idx);
       continue;
+    }
     const int lit = idx;
     const int repr = find_representative_and_compress_no_proofs (lit);
     if (lit == repr)
@@ -4990,8 +4992,9 @@ void Closure::forward_subsume_matching_clauses () {
     }
   }
 
-  VERBOSE (3, "congruence found %" PRId64 "  matchable variables %.0f%%",
-           count_matchable, percent (count_matchable, internal->max_var));
+  VERBOSE (3, "congruence found %zu matchable variables %.0f%%",
+           count_matchable,
+	   percent (count_matchable,internal->max_var));
   std::vector<ClauseSize> candidates;
   auto &analyzed = internal->analyzed;
   size_t potential = 0;
@@ -5021,7 +5024,7 @@ void Closure::forward_subsume_matching_clauses () {
           contains_matchable = true;
       }
 
-      const int repr = find_representative (lit);
+      const int repr = find_representative_and_compress_no_proofs (lit);
       assert (!internal->val (repr));
       if (marked (repr))
         continue;
@@ -5049,8 +5052,8 @@ void Closure::forward_subsume_matching_clauses () {
   }
 
   VERBOSE (3,
-           "[congruence-%" PRId64 "] considering %" PRId64
-           " matchable subsumption candidates out of %" PRId64 " %.0f%%",
+           "[congruence-%" PRId64 "] considering %zu "
+           "matchable subsumption candidates out of %zu %.0f%%",
            internal->stats.congruence.rounds, candidates.size (), potential,
            percent (candidates.size (), potential));
 
@@ -5067,8 +5070,8 @@ void Closure::forward_subsume_matching_clauses () {
     }
   }
   VERBOSE (3,
-           "[congruence-%" PRId64 "] subsumed %" PRId64
-           " clauses out of %zu tried %.0f%% clauses",
+           "[congruence-%" PRId64 "] subsumed %zu "
+           "clauses out of %zu tried %.0f%% clauses",
            internal->stats.congruence.rounds, subsumed, tried,
            percent (subsumed, tried));
   STOP (congruencematching);
@@ -5915,10 +5918,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // cond ? then_lit : !then_lit
       // cond & then_lit | !cond & !then_lit
       // !(cond ^ then_lit)
+      //
+      // For the clause 11 = 11 ? 9 : 8, we have empty clauses. The flag is
+      // only useful for debugging
+      const bool allow_empty_lrat_clause =
+          g->degenerated_gate != Special_Gate::NORMAL;
       if (lhs == cond) {
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
-                                                 false);
         if (internal->lrat) {
+	  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs, false, allow_empty_lrat_clause);
           assert (g->pos_lhs_ids.size () == 2);
           lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
           lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
@@ -5926,9 +5933,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         learn_congruence_unit (then_lit);
         garbage = true;
       } else if (not_lhs == cond) {
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
-                                                 false);
         if (internal->lrat) {
+          produce_rewritten_clause_lrat_and_clean (
+              g->pos_lhs_ids, not_lhs, false, allow_empty_lrat_clause);
           assert (g->pos_lhs_ids.size () == 2);
           lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
           lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
@@ -5936,9 +5943,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         learn_congruence_unit (-then_lit);
         garbage = true;
       } else if (not_lhs == then_lit) {
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
-                                                 false);
         if (internal->lrat) {
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
+                                                   false, allow_empty_lrat_clause);
           assert (g->pos_lhs_ids.size () == 2);
           lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
           lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
