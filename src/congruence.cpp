@@ -4994,7 +4994,7 @@ void Closure::forward_subsume_matching_clauses () {
   }
 
 
-  VERBOSE (3, "congruence found %" PRId64 "  matchable variables %.0f%%",
+  VERBOSE (3, "congruence found %zu matchable variables %.0f%%",
            count_matchable,
 	   percent (count_matchable,internal->max_var));
   std::vector<ClauseSize> candidates;
@@ -5054,8 +5054,8 @@ void Closure::forward_subsume_matching_clauses () {
   }
 
   VERBOSE (3,
-           "[congruence-%" PRId64 "] considering %" PRId64
-           " matchable subsumption candidates out of %" PRId64 " %.0f%%",
+           "[congruence-%" PRId64 "] considering %zu "
+           "matchable subsumption candidates out of %zu %.0f%%",
            internal->stats.congruence.rounds, candidates.size (), potential,
            percent (candidates.size (), potential));
 
@@ -5072,8 +5072,8 @@ void Closure::forward_subsume_matching_clauses () {
     }
   }
   VERBOSE (3,
-           "[congruence-%" PRId64 "] subsumed %" PRId64
-           " clauses out of %zu tried %.0f%% clauses",
+           "[congruence-%" PRId64 "] subsumed %zu "
+           "clauses out of %zu tried %.0f%% clauses",
            internal->stats.congruence.rounds, subsumed, tried,
            percent (subsumed, tried));
   STOP (congruencematching);
