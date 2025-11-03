@@ -9,7 +9,7 @@ startConfiguration=0
 die () {
   echo "build-and-test-all-configurations.sh [-j N] [-s StartConfiguration]: ${BAD}error${NORMAL}: $*" 1>&2
   echo "You can pass the configuration number to start directly from one configuration"
-  echo "The argument to -j is not optional."
+  echo "The argument to -j is not optional. It only refers to makefile arguments, the compilation is not run in parallel."
   exit 1
 }
 
