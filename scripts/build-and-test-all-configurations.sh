@@ -1,16 +1,15 @@
 #!/bin/bash
 
-startConfiguration=$1
-startConfiguration=${startConfiguration:-0}
-
 . `dirname $0`/colors.sh || exit 1
 
+startConfiguration=0
 
 ############################################################################
 
 die () {
-  echo "build-and-test-all-configurations.sh: ${BAD}error${NORMAL}: $*" 1>&2
+  echo "build-and-test-all-configurations.sh [-j N] [-s StartConfiguration]: ${BAD}error${NORMAL}: $*" 1>&2
   echo "You can pass the configuration number to start directly from one configuration"
+  echo "The argument to -j is not optional."
   exit 1
 }
 
@@ -54,11 +53,11 @@ run () {
     configureoptions=" $*"
     description="$*"
   fi
-  echo "$environment$configure$configureoptions && make$makeoptions test"
+  echo "$environment$configure$configureoptions && make$makeoptions$makeflags test"
   $configure$configureoptions $* >/dev/null 2>&1 && \
-  make$makeoptions test >/dev/null 2>&1
+  make$makeoptions$makeflags test >/dev/null 2>&1
   test $? = 0 || die "Configuration \`$description' failed."
-  make$makeoptions clean >/dev/null 2>&1
+  make$makeoptions$makeflags clean >/dev/null 2>&1
   test $? = 0 || die "Cleaning up for \`$description' failed."
   ok=`expr $ok + 1`
 }
@@ -66,6 +65,21 @@ run () {
 ############################################################################
 
 END=29
+
+while getopts "j:s:h" arg; do
+  case $arg in
+    h)
+      die ""
+      ;;
+    j)
+      strength=$OPTARG
+      makeflags=" -j${OPTARG}"
+      ;;
+    s)
+      startConfiguration=$OPTARG
+      ;;
+  esac
+done
 
 run_configuration () {
     case $1 in		# default configuration (depends on 'MAKEFLAGS'!)
