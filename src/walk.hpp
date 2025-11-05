@@ -6,12 +6,12 @@
 namespace CaDiCaL {
 struct TaggedBinary {
   int lit, other;
-#ifdef LOGGING
+#if defined(LOGGING) || !defined(NDEBUG)
   Clause *d;
 #endif
   TaggedBinary ()
       : lit (0), other (0)
-#ifdef LOGGING
+#if defined(LOGGING) || !defined(NDEBUG)
         ,
         d (nullptr)
 #endif
@@ -21,7 +21,7 @@ struct TaggedBinary {
 
   TaggedBinary (Clause *c, int clit, int cother)
       : lit (clit), other (cother)
-#ifdef LOGGING
+#if defined(LOGGING) || !defined(NDEBUG)
         ,
         d (c)
 #endif
@@ -37,7 +37,7 @@ struct TaggedBinary {
     assert (c->size == 2);
     lit = c->literals[0];
     other = c->literals[1];
-#ifdef LOGGING
+#if defined(LOGGING) || !defined(NDEBUG)
     d = c;
 #else
     (void) c;
