@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <queue>
 #include <string>
 #include <sys/types.h>
@@ -211,6 +210,18 @@ inline bool ite_flags_cond_lhs (int8_t flag) {
   return (flag & COND_LHS) == COND_LHS;
 }
 
+// std::optional is C++17 sadly
+struct my_dummy_optional {
+  LitClausePair content;
+  my_dummy_optional () : content (0, 0) {}
+  bool operator() () const { return content.current_lit; }
+  my_dummy_optional operator= (LitClausePair p) {
+    content = p;
+    return *this;
+  }
+  void reset () { content = LitClausePair (0,0);}
+};
+
 /*------------------------------------------------------------------------*/
 
 // The core structure of this algorithm: the gate. It is composed of a
@@ -256,7 +267,7 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   vector<LitClausePair> pos_lhs_ids;
-  std::optional<LitClausePair> neg_lhs_ids;
+  my_dummy_optional neg_lhs_ids;
   int8_t degenerated_gate = Special_Gate::NORMAL;
   vector<int> rhs;
 
@@ -477,7 +488,7 @@ struct Closure {
   void push_id_on_chain (std::vector<LRAT_ID> &chain,
                          const std::vector<LitClausePair> &c);
   void push_id_on_chain (std::vector<LRAT_ID> &chain,
-                         const std::optional<LitClausePair> &c);
+                         const my_dummy_optional &c);
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
@@ -639,7 +650,7 @@ struct Closure {
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
                                                 int execept_lhs = 0,
                                                 bool = true, bool = false);
-  void produce_rewritten_clause_lrat_and_clean (optional<LitClausePair> &,
+  void produce_rewritten_clause_lrat_and_clean (my_dummy_optional &,
                                                 int execept_lhs = 0,
                                                 bool = true);
 

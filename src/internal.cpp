@@ -48,7 +48,7 @@ Internal::Internal ()
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
 
-  static_assert (max_used == (1 << USED_SIZE) - 1);
+  /*with C++17: static_*/assert (max_used == (1 << USED_SIZE) - 1);
 }
 
 Internal::~Internal () {

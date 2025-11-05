@@ -330,11 +330,9 @@ fi
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
 
-CXXFLAGS="$CXXFLAGS -std=c++17"
-
 if [ $pedantic = yes ]
 then
-  CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
   CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
@@ -381,7 +379,7 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Since C++17 is becoming the standard newer versions of 'g++' (7.3 for
+# Since C++11 is becoming the standard newer versions of 'g++' (7.3 for
 # instance) discourage certain GCC extensions, particularly the GCC version
 # of variadic macros, if the same concept exists in the standard.  This
 # forced us to replace all GCC style 'ARGS...' macros with '...' and
@@ -391,7 +389,7 @@ fi
 # explicitly enforce the new standard with '-std=c++17'.  Here we try to
 # figure out whether we need that flag. 
 
-feature=./configure-requires-c++17
+feature=./configure-requires-c++11
 cat <<EOF > $feature.cpp
 #include <cstdio>
 #include <vector>
@@ -416,28 +414,28 @@ if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
   then
-    msg "compiler supports all required C99/C++17 extensions"
+    msg "compiler supports all required C99/C++11 extensions"
   else
-    die "checking compilation without '-std=c++17' failed"
+    die "checking compilation without '-std=c++11' failed"
   fi
 else
-  CXXFLAGS="$CXXFLAGS -std=c++17"
+  CXXFLAGS="$CXXFLAGS -std=c++11"
   if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
     if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
     then
-      msg "using '-std=c++17' for all required C99/C++17 extensions"
+      msg "using '-std=c++11' for all required C99/C++11 extensions"
     else
-      die "checking compilation with '-std=c++17' failed"
+      die "checking compilation with '-std=c++11' failed"
     fi
   else
-    die "compiler does not support C99/C++17 even with '-std=c++17'"
+    die "compiler does not support C99/C++11 even with '-std=c++11'"
   fi
 fi
 
 #--------------------------------------------------------------------------#
 
-# Flexible array members are in C99 but not in C++17 but essential.  Thus
+# Flexible array members are in C99 but not in C++11 but essential.  Thus
 # with pedantic compilation we have to fake them which in turn might produce
 # warnings.  To control those build variances with respect to warnings
 # we check the support of flexible array members explicitly.

@@ -222,8 +222,8 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
     lrat_chain.push_back (conflict->id);
   conflict = nullptr;
 
-  for (auto t = rbegin (trail);;) {
-    assert (t < rend (trail));
+  for (auto t = trail.rbegin ();;) {
+    assert (t < trail.rend ());
     int lit = *t++;
     LOG ("analyzing %s", LOGLIT (lit));
     if (!flags (lit).seen)
