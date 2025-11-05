@@ -3118,7 +3118,7 @@ void Closure::check_not_tmp_binary_clause (Clause *c) {
 #else
   (void) c;
 #endif
-};
+}
 
 Clause *Closure::maybe_promote_tmp_binary_clause (Clause *c) {
   assert (internal->lrat);
@@ -3135,7 +3135,7 @@ Clause *Closure::maybe_promote_tmp_binary_clause (Clause *c) {
   Clause *res = add_binary_clause (c->literals[0], c->literals[1]);
   LOG (res, "promoted to");
   return res;
-};
+}
 
 Clause *Closure::add_tmp_binary_clause (int a, int b) {
   assert (internal->clause.empty ());
