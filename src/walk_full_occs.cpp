@@ -400,6 +400,7 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
     scores.push_back (score);
     sum += score;
   }
+  (void) propagations; // TODO unused?
   LOG ("scored %zd literals", scores.size ());
   assert (!scores.empty ());
   assert (this->scores.size () <= (size_t) c->size);

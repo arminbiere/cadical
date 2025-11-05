@@ -392,6 +392,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
     walker.scores.push_back (score);
     sum += score;
   }
+  (void) propagations; // TODO actually unused?
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
   assert (walker.scores.size () <= (size_t) c->size);
@@ -452,6 +453,7 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
     walker.scores.push_back (score);
     sum += score;
   }
+  (void) propagations; // TODO unused?
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
   assert (walker.scores.size () <= (size_t) 2);
@@ -521,7 +523,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     walker.ticks +=
         1 + cache_lines (walker.broken.size (), sizeof (Clause *));
     auto j = walker.broken.begin (), i = j;
-#if defined(LOGGING) || defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
     int64_t made = 0;
 #endif
 
@@ -534,7 +536,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         const int clit = b.lit;
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
-#if defined(LOGGING) || defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
         assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
         assert (b.d->literals[0] == other || b.d->literals[1] == other);
 #endif
@@ -550,7 +552,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
 
           ++walker.ticks;
-#if defined(LOGGING) || defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
           made++;
 #endif
           j--;
@@ -586,7 +588,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 	LOG (d, "made");
         watch_literal (literals[0], literals[1], d);
         ++walker.ticks;
-#if defined(LOGGING) || defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
         made++;
 #endif
         j--;
@@ -600,10 +602,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       }
       LOG (d, "clause after undoing shift");
     }
-#if defined(LOGGING) || defined(NDEBUG)
     assert ((int64_t) (j - walker.broken.begin ()) + made ==
             (int64_t) walker.broken.size ());
-#endif
     walker.broken.resize (j - walker.broken.begin ());
     LOG ("made %" PRId64 " clauses by flipping %d, still %zu broken",
          made, lit, walker.broken.size ());

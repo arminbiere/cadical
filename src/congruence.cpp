@@ -4315,6 +4315,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     inc_lits (lits);
   LOG (lits, "found all needed %u matching clauses:", found);
   assert (found == 1u << arity);
+  (void) found;
   if (negated) {
     auto p = begin (lits);
     int lit;
@@ -4401,6 +4402,7 @@ void Closure::find_units () {
     assert (internal->analyzed.empty ());
   }
   LOG ("found %zd units", units);
+  (void) units;
 }
 
 void Closure::find_equivalences () {
