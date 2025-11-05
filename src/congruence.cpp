@@ -245,6 +245,7 @@ void Closure::extract_binaries () {
   }
 
   size_t extracted = 0, already_present = 0, duplicated = 0;
+  (void) extracted, (void) already_present, (void) duplicated;
 
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size; ++i) {
@@ -5000,6 +5001,7 @@ void Closure::forward_subsume_matching_clauses () {
   std::vector<ClauseSize> candidates;
   auto &analyzed = internal->analyzed;
   size_t potential = 0;
+  (void) potential;
 
   for (auto *c : internal->clauses) {
     if (c->garbage)
@@ -5061,6 +5063,7 @@ void Closure::forward_subsume_matching_clauses () {
 
   rsort (begin (candidates), end (candidates), smaller_clause_size_rank ());
   size_t tried = 0, subsumed = 0;
+  (void) tried, (void) subsumed;
   internal->init_occs ();
   for (auto c : candidates) {
     assert (c.size != 2);
