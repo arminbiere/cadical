@@ -485,11 +485,15 @@ void Internal::add_external_clause (int propagated_elit,
     // irredundant. In case they would be unforgettably important, the
     // propagator can add them as an explicit unforgettable external clause
     // or set 'are_reasons_forgettable' to false.
-    ext_clause_forgettable = external->propagator->are_reasons_forgettable;
+    from_propagator = true;
+    ext_clause_forgettable =
+        external->propagator->are_reasons_forgettable ();
+    assert (ext_clause_forgettable);
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
     elit = external->propagator->cb_add_reason_clause_lit (propagated_elit);
+    from_propagator = false;
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
@@ -508,7 +512,7 @@ void Internal::add_external_clause (int propagated_elit,
   assert (!from_propagator);
   force_no_backtrack = no_backtrack;
   from_propagator = true;
-  ext_clause_forgettable = external->propagator->are_reasons_forgettable;
+  ext_clause_forgettable = external->propagator->are_reasons_forgettable ();
   while (elit) {
     assert (external->is_observed[abs (elit)]);
     external->add (elit);

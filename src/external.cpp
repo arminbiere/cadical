@@ -359,7 +359,7 @@ void External::add_observed_var (int elit) {
   // not on the current level)
   internal->add_observed_var (ilit);
 
-  if (propagator->is_lazy)
+  if (propagator->is_lazy ())
     return;
 
   // In case this variable was already assigned (e.g. via unit clause) and

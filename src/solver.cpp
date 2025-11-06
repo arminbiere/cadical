@@ -997,7 +997,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   external->propagator = propagator;
   internal->connect_propagator ();
   internal->external_prop = true;
-  internal->external_prop_is_lazy = propagator->is_lazy;
+  internal->external_prop_is_lazy = propagator->is_lazy ();
   LOG_API_CALL_END ("connect_external_propagator");
 }
 

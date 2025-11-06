@@ -1163,9 +1163,10 @@ public:
 class ExternalPropagator {
 
 public:
-  bool is_lazy = false; // lazy propagator only checks complete assignments
-  bool are_reasons_forgettable =
-      false; // Reason external clauses can be deleted
+  virtual bool
+  is_lazy () = 0; // lazy propagator only checks complete assignments
+  virtual bool are_reasons_forgettable () = 0; // Reason external clauses
+                                               // can be deleted
 
   virtual ~ExternalPropagator () {}
 

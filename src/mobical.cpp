@@ -413,6 +413,8 @@ public:
     observed_fixed.clear ();
   }
 
+  bool is_lazy () override { return true; }
+  bool are_reasons_forgettable () override { return true; }
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
 
@@ -953,7 +955,7 @@ public:
   }
 
   /* ----------------- ExternalPropagator functions end ------------------*/
-};
+}; // namespace CaDiCaL
 
 // This is the class for the Mobical application.
 

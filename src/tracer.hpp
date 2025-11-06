@@ -17,7 +17,6 @@ enum ConclusionType { CONFLICT = 1, ASSUMPTIONS = 2, CONSTRAINT = 4 };
 class Tracer {
 
 public:
-  Tracer () {}
   virtual ~Tracer () {}
 
   /*------------------------------------------------------------------------*/
@@ -142,7 +141,6 @@ public:
 
 class InternalTracer : public Tracer {
 public:
-  InternalTracer () {}
   virtual ~InternalTracer () {}
 
   virtual void connect_internal (Internal *) {}
@@ -150,7 +148,6 @@ public:
 
 class StatTracer : public InternalTracer {
 public:
-  StatTracer () {}
   virtual ~StatTracer () {}
 
   virtual void print_stats () {}
@@ -159,7 +156,6 @@ public:
 class FileTracer : public InternalTracer {
 
 public:
-  FileTracer () {}
   virtual ~FileTracer () {}
 
   virtual bool closed () = 0;
