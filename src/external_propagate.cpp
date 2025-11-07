@@ -488,7 +488,6 @@ void Internal::add_external_clause (int propagated_elit,
     from_propagator = true;
     ext_clause_forgettable =
         external->propagator->are_reasons_forgettable ();
-    assert (ext_clause_forgettable);
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
