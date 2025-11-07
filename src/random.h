@@ -25,11 +25,11 @@ static inline unsigned kissat_pick_random (generator *rng, unsigned l,
   const unsigned delta = r - l;
   const unsigned tmp = kissat_next_random32 (rng);
   const double fraction = tmp / 4294967296.0;
-  assert (0 <= fraction), assert (fraction < 1);
+  assert (0 <= fraction); assert (fraction < 1);
   const unsigned scaled = delta * fraction;
   assert (scaled < delta);
   const unsigned res = l + scaled;
-  assert (l <= res), assert (res < r);
+  assert (l <= res); assert (res < r);
   return res;
 }
 

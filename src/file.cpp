@@ -49,7 +49,7 @@ File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
       close_file (c), child_pid (p), file (f), _name (strdup (n)),
       _lineno (1), _bytes (0) {
   (void) w;
-  assert (f), assert (n);
+  Assert (f); Assert (n);
 }
 
 /*------------------------------------------------------------------------*/
@@ -129,7 +129,7 @@ static int sig7z[] = {0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, EOF};
 static int lzmasig[] = {0x5D, EOF};
 
 bool File::match (Internal *internal, const char *path, const int *sig) {
-  assert (path);
+  Assert (path);
   FILE *tmp = fopen (path, "r");
   if (!tmp) {
     WARNING ("failed to open '%s' to check signature", path);
@@ -170,7 +170,7 @@ char *File::find_program (const char *prg) {
     size_t pathlen = (q - p) + prglen;
     char *path = new char[pathlen + 1];
     snprintf (path, pathlen + 1, "%s/%s", p, prg);
-    assert (strlen (path) == pathlen);
+    Assert (strlen (path) == pathlen);
     if (exists (path))
       res = path;
     else
@@ -274,14 +274,14 @@ static std::mutex compressed_file_writing_mutex;
 
 FILE *File::write_pipe (Internal *internal, const char *command,
                         const char *path, int &child_pid) {
-  assert (command[0] && command[0] != ' ');
+  Assert (command[0] && command[0] != ' ');
   MSG ("writing through command '%s' to '%s'", command, path);
 #ifdef QUIET
   (void) internal;
 #endif
   std::vector<char *> args;
   split_str (command, args);
-  assert (!args.empty ());
+  Assert (!args.empty ());
   args.push_back (0);
   char **argv = args.data ();
   char *absolute_command_path = find_program (argv[0]);
@@ -421,7 +421,7 @@ File *File::write (Internal *internal, const char *path) {
 }
 
 void File::close (bool print) {
-  assert (file);
+  Assert (file);
 #ifndef QUIET
   if (internal->opts.quiet)
     print = false;
@@ -493,7 +493,7 @@ void File::close (bool print) {
 }
 
 void File::flush () {
-  assert (file);
+  Assert (file);
   fflush (file);
 }
 

@@ -29,8 +29,8 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   START_SIMPLIFIER (deduplicate, DEDUP);
   stats.deduplications++;
 
-  assert (!level);
-  assert (watching ());
+  Assert (!level);
+  Assert (watching ());
 
   vector<int> stack; // To save marked literals and unmark them later.
 
@@ -49,7 +49,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
       const int lit = sign * idx; // Consider all literals.
 
-      assert (stack.empty ());
+      Assert (stack.empty ());
       Watches &ws = watches (lit);
 
       // We are removing references to garbage clause. Thus no 'auto'.
@@ -81,7 +81,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           if (!c->redundant) {
             watch_iterator k;
             for (k = ws.begin ();; k++) {
-              assert (k != i);
+              Assert (k != i);
               if (!k->binary ())
                 continue;
               if (k->blit != other)
@@ -109,12 +109,12 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           unit = lit;
           if (lrat) {
             // taken from fradical
-            assert (lrat_chain.empty ());
+            Assert (lrat_chain.empty ());
             lrat_chain.push_back (c->id);
             // We've forgotten where the other binary clause is, so go find
             // it again
             for (watch_iterator k = ws.begin ();; k++) {
-              assert (k != i);
+              Assert (k != i);
               if (!k->binary ())
                 continue;
               if (k->blit != -other)

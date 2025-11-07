@@ -114,7 +114,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->glue <= tier2limit && used >= max_used - 1)
       continue;
     if (c->hyper) {          // Hyper binary and ternary resolvents
-      assert (c->size <= 3); // are only kept for one reduce round
+      Assert (c->size <= 3); // are only kept for one reduce round
       if (!used)
         mark_garbage (c); // unless
       continue;           //  used recently.
@@ -167,7 +167,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 // If chronological backtracking produces out-of-order assigned units, then
 // it is necessary to completely propagate them at the root level in order
 // to derive all implied units.  Otherwise the blocking literals in
-// 'flush_watches' are messed up and assertion 'FW1' fails.
+// 'flush_watches' are messed up and Assertion 'FW1' fails.
 
 bool Internal::propagate_out_of_order_units () {
   if (!level)
@@ -175,7 +175,7 @@ bool Internal::propagate_out_of_order_units () {
   int oou = 0;
   for (size_t i = control[1].trail; !oou && i < trail.size (); i++) {
     const int lit = trail[i];
-    assert (val (lit) > 0);
+    Assert (val (lit) > 0);
     if (var (lit).level)
       continue;
     LOG ("found out-of-order assigned unit %d", oou);
@@ -183,7 +183,7 @@ bool Internal::propagate_out_of_order_units () {
   }
   if (!oou)
     return true;
-  assert (opts.chrono || external_prop);
+  Assert (opts.chrono || external_prop);
   backtrack (0);
   if (propagate ())
     return true;

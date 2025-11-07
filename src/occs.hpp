@@ -24,7 +24,7 @@ inline void remove_occs (Occs &os, Clause *c) {
     if (c == d)
       i--;
   }
-  assert (i + 1 == end);
+  Assert (i + 1 == end);
   os.resize (i - os.begin ());
 }
 

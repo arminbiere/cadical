@@ -19,7 +19,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 inline double Internal::compute_elim_score (unsigned lit) {
-  assert (1 <= lit), assert (lit <= (unsigned) max_var);
+  Assert (1 <= lit); Assert (lit <= (unsigned) max_var);
   const unsigned uidx = 2 * lit;
   const double pos = internal->ntab[uidx];
   const double neg = internal->ntab[uidx + 1];
@@ -65,7 +65,7 @@ bool Internal::ineliminating () {
   if (!preprocessing && !opts.inprocessing)
     return false;
   if (preprocessing)
-    assert (lim.preprocessing);
+    Assert (lim.preprocessing);
 
   // Respect (increasing) conflict limit.
   //
@@ -90,7 +90,7 @@ bool Internal::ineliminating () {
 
 void Internal::elim_update_added_clause (Eliminator &eliminator,
                                          Clause *c) {
-  assert (!c->redundant);
+  Assert (!c->redundant);
   ElimSchedule &schedule = eliminator.schedule;
   for (const auto &lit : *c) {
     if (!active (lit))
@@ -111,7 +111,7 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
   if (frozen (lit))
     return;
   int64_t &score = noccs (lit);
-  assert (score > 0);
+  Assert (score > 0);
   score--;
   const int idx = abs (lit);
   ElimSchedule &schedule = eliminator.schedule;
@@ -125,11 +125,11 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
 
 void Internal::elim_update_removed_clause (Eliminator &eliminator,
                                            Clause *c, int except) {
-  assert (!c->redundant);
+  Assert (!c->redundant);
   for (const auto &lit : *c) {
     if (lit == except)
       continue;
-    assert (lit != -except);
+    Assert (lit != -except);
     elim_update_removed_lit (eliminator, lit);
   }
 }
@@ -141,14 +141,14 @@ void Internal::elim_update_removed_clause (Eliminator &eliminator,
 // and also marks clauses satisfied by those units as garbage immediately.
 
 void Internal::elim_propagate (Eliminator &eliminator, int root) {
-  assert (val (root) > 0);
+  Assert (val (root) > 0);
   vector<int> work;
   size_t i = 0;
   work.push_back (root);
   while (i < work.size ()) {
     int lit = work[i++];
     LOG ("elimination propagation of %d", lit);
-    assert (val (lit) > 0);
+    Assert (val (lit) > 0);
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
       if (c->garbage)
@@ -212,12 +212,12 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator &eliminator,
   LOG (c, "pivot %d on-the-fly self-subsuming resolution", pivot);
   stats.elimotfstr++;
   stats.strengthened++;
-  assert (clause.empty ());
+  Assert (clause.empty ());
   for (const auto &lit : *c) {
     if (lit == pivot)
       continue;
     const signed char tmp = val (lit);
-    assert (tmp <= 0);
+    Assert (tmp <= 0);
     if (tmp < 0)
       continue;
     clause.push_back (lit);
@@ -266,8 +266,8 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
                                 int pivot, Clause *d,
                                 const bool propagate_eagerly) {
 
-  assert (!c->redundant);
-  assert (!d->redundant);
+  Assert (!c->redundant);
+  Assert (!d->redundant);
 
   stats.elimres++;
 
@@ -278,8 +278,8 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
     swap (c, d);
   }
 
-  assert (!level);
-  assert (clause.empty ());
+  Assert (!level);
+  Assert (clause.empty ());
 
   int satisfied = 0;    // Contains this satisfying literal.
   int tautological = 0; // Clashing literal if tautological.
@@ -295,7 +295,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       s++;
       continue;
     }
-    assert (lit != -pivot);
+    Assert (lit != -pivot);
     const signed char tmp = val (lit);
     if (tmp > 0) {
       satisfied = lit;
@@ -334,7 +334,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       t++;
       continue;
     }
-    assert (lit != pivot);
+    Assert (lit != pivot);
     signed char tmp = val (lit);
     if (tmp > 0) {
       satisfied = lit;
@@ -355,8 +355,10 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       break;
     } else if (!tmp)
       clause.push_back (lit), t++;
-    else
-      assert (tmp > 0), t++;
+    else{
+      Assert (tmp > 0);
+      t++;
+    }
   }
 
   clear_analyzed_literals ();
@@ -405,15 +407,15 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   }
 
   LOG (clause, "resolvent");
-  assert (!lrat || !lrat_chain.empty ());
+  Assert (!lrat || !lrat_chain.empty ());
 
   // Double self-subsuming resolution.  The clauses 'c' and 'd' are
   // identical except for the pivot which occurs in different phase.  The
   // resolvent subsumes both antecedents.
 
   if (s > size && t > size) {
-    assert (s == size + 1);
-    assert (t == size + 1);
+    Assert (s == size + 1);
+    Assert (t == size + 1);
     clause.clear ();
     // LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
@@ -430,7 +432,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   // with 'pivot' removed and then marking 'c' as garbage.
 
   if (s > size) {
-    assert (s == size + 1);
+    Assert (s == size + 1);
     clause.clear ();
     // LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
@@ -440,7 +442,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   // Same single self-subsuming resolution situation, but only for 'd'.
 
   if (t > size) {
-    assert (t == size + 1);
+    Assert (t == size + 1);
     clause.clear ();
     // LRAT is c + d (+ eventual units) -> same.
     elim_on_the_fly_self_subsumption (eliminator, d, -pivot);
@@ -469,8 +471,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
 
   stats.elimtried++;
 
-  assert (!unsat);
-  assert (active (pivot));
+  Assert (!unsat);
+  Assert (active (pivot));
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
@@ -492,11 +494,11 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
-    assert (!c->redundant);
+    Assert (!c->redundant);
     if (c->garbage)
       continue;
     for (const auto &d : ns) {
-      assert (!d->redundant);
+      Assert (!d->redundant);
       if (d->garbage)
         continue;
       if (!resolve_gates && substitute && c->gate == d->gate)
@@ -562,13 +564,13 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
     stats.eliminated_def++;
     break;
   default:
-    assert (eliminator.gatetype == NO);
+    Assert (eliminator.gatetype == NO);
   }
 
   LOG ("adding all resolvents on %d", pivot);
 
-  assert (!val (pivot));
-  assert (!flags (pivot).eliminated ());
+  Assert (!val (pivot));
+  Assert (!flags (pivot).eliminated ());
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
@@ -589,7 +591,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
-      assert (!lrat || !lrat_chain.empty ());
+      Assert (!lrat || !lrat_chain.empty ());
       Clause *r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);
@@ -611,7 +613,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
 
 void Internal::mark_eliminated_clauses_as_garbage (
     Eliminator &eliminator, int pivot, bool &deleted_binary_clause) {
-  assert (!unsat);
+  Assert (!unsat);
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
@@ -628,7 +630,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
   for (const auto &c : ps) {
     if (c->garbage)
       continue;
-    assert (!c->redundant);
+    Assert (!c->redundant);
     if (!substitute || c->gate) {
       if (proof && !is_extension_var)
         proof->weaken_minus (c);
@@ -651,7 +653,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
   for (const auto &d : ns) {
     if (d->garbage)
       continue;
-    assert (!d->redundant);
+    Assert (!d->redundant);
     if (!substitute || d->gate) {
       if (proof && !is_extension_var)
         proof->weaken_minus (d);
@@ -668,8 +670,10 @@ void Internal::mark_eliminated_clauses_as_garbage (
   }
   erase_occs (ns);
 
+#ifndef NDEBUG
   if (substitute)
-    assert (pushed <= substitute);
+    Assert (pushed <= substitute);
+#endif
 
   // Unfortunately, we can not use the trick by Niklas Soerensson anymore,
   // which avoids saving all clauses on the extension stack.  This would
@@ -684,7 +688,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
 
   if (!active (pivot))
     return;
-  assert (!frozen (pivot));
+  Assert (!frozen (pivot));
 
   // First flush garbage clauses.
   //
@@ -698,17 +702,17 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
   LOG ("pivot %d occurs positively %" PRId64
        " times and negatively %" PRId64 " times",
        pivot, pos, neg);
-  assert (!eliminator.schedule.contains (abs (pivot)));
-  assert (pos <= neg);
+  Assert (!eliminator.schedule.contains (abs (pivot)));
+  Assert (pos <= neg);
 
   if (pos && neg > opts.elimocclim) {
     LOG ("too many occurrences thus not eliminated %d", pivot);
-    assert (!eliminator.schedule.contains (abs (pivot)));
+    Assert (!eliminator.schedule.contains (abs (pivot)));
     return;
   }
 
   LOG ("trying to eliminate %d", pivot);
-  assert (!flags (pivot).eliminated ());
+  Assert (!flags (pivot).eliminated ());
 
   // Sort occurrence lists, such that shorter clauses come first.
   Occs &ps = occs (pivot);
@@ -771,15 +775,15 @@ void Internal::
 
 int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
-  assert (opts.elim);
-  assert (!unsat);
+  Assert (opts.elim);
+  Assert (!unsat);
 
   START_SIMPLIFIER (elim, ELIM);
   stats.elimrounds++;
 
   int64_t marked_before = last.elim.marked;
   last.elim.marked = stats.mark.elim;
-  assert (!level);
+  Assert (!level);
 
   int64_t resolution_limit;
 
@@ -818,7 +822,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
       else if (tmp < 0)
         falsified = true;
       else
-        assert (active (lit));
+        Assert (active (lit));
     }
     if (satisfied)
       mark_garbage (c); // forces more precise counts
@@ -837,7 +841,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
   Eliminator eliminator (this);
   ElimSchedule &schedule = eliminator.schedule;
-  assert (schedule.empty ());
+  Assert (schedule.empty ());
 
   // Now find elimination candidates which occurred in clauses removed since
   // the last time we ran bounded variable elimination, which in turned
@@ -1005,7 +1009,7 @@ void Internal::increase_elimination_bound () {
 void Internal::init_citten () {
   if (!opts.elimdef)
     return;
-  assert (!citten);
+  Assert (!citten);
   citten = kitten_init ();
 }
 
@@ -1034,7 +1038,7 @@ void Internal::elim (bool update_limits) {
          "starting at most %d elimination rounds", opts.elimrounds);
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = true;
   }
 
@@ -1081,7 +1085,7 @@ void Internal::elim (bool update_limits) {
     if (!round_complete) {
       PHASE ("elim-phase", stats.elimphases, "last round %d incomplete %s",
              round, eliminated ? "but successful" : "and unsuccessful");
-      assert (!phase_complete);
+      Assert (!phase_complete);
       break;
     }
 
@@ -1090,7 +1094,7 @@ void Internal::elim (bool update_limits) {
              round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
-      assert (!phase_complete);
+      Assert (!phase_complete);
       break;
     }
 
@@ -1110,7 +1114,7 @@ void Internal::elim (bool update_limits) {
     PHASE ("elim-phase", stats.elimphases,
            "no new variable elimination candidates");
 
-    assert (round_complete);
+    Assert (round_complete);
     phase_complete = true;
   }
 
@@ -1157,7 +1161,7 @@ void Internal::elim (bool update_limits) {
 #endif
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = false;
   }
 

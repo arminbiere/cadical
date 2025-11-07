@@ -70,10 +70,10 @@ void EMA::update (Internal *internal, double y, const char *name) {
   double new_exp, div, new_value;
   if (old_exp) {
     new_exp = old_exp * beta;
-    assert (new_exp < 1);
+    Assert (new_exp < 1);
     exp = new_exp;
     div = 1 - new_exp;
-    assert (div > 0);
+    Assert (div > 0);
     new_value = new_biased / div;
   } else {
     new_value = new_biased;

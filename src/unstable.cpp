@@ -4,7 +4,7 @@
 namespace CaDiCaL {
 
 bool Internal::propagate_unstable () {
-  assert (!stable);
+  Assert (!stable);
   START (propunstable);
   bool res = propagate ();
   STOP (propunstable);
@@ -12,14 +12,14 @@ bool Internal::propagate_unstable () {
 }
 
 void Internal::analyze_unstable () {
-  assert (!stable);
+  Assert (!stable);
   START (analyzeunstable);
   analyze ();
   STOP (analyzeunstable);
 }
 
 int Internal::decide_unstable () {
-  assert (!stable);
+  Assert (!stable);
   return decide ();
 }
 

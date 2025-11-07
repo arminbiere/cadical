@@ -34,7 +34,7 @@ void Format::push_uint64 (uint64_t u) {
 }
 
 static bool match_format (const char *&str, const char *pattern) {
-  assert (pattern);
+  Assert (pattern);
   const char *p = str;
   const char *q = pattern;
   while (*q)

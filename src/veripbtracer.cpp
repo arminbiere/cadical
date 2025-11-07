@@ -22,7 +22,7 @@ VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     uint64_t nonce = random.next ();
     if (!(nonce & 1))
       nonce++;
-    assert (nonce), assert (nonce & 1);
+    Assert (nonce); Assert (nonce & 1);
     nonces[n] = nonce;
   }
 #ifndef NDEBUG
@@ -50,7 +50,7 @@ VeripbTracer::~VeripbTracer () {
 /*------------------------------------------------------------------------*/
 
 void VeripbTracer::enlarge_clauses () {
-  assert (num_clauses == size_clauses);
+  Assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
   LOG ("VeriPB Tracer enlarging clauses from %" PRIu64 " to %" PRIu64,
        (uint64_t) size_clauses, (uint64_t) new_size_clauses);
@@ -81,13 +81,13 @@ HashId *VeripbTracer::new_clause () {
 }
 
 void VeripbTracer::delete_clause (HashId *c) {
-  assert (c);
+  Assert (c);
   num_clauses--;
   delete c;
 }
 
 uint64_t VeripbTracer::reduce_hash (uint64_t hash, uint64_t size) {
-  assert (size > 0);
+  Assert (size > 0);
   unsigned shift = 32;
   uint64_t res = hash;
   while ((((uint64_t) 1) << shift) > size) {
@@ -95,12 +95,12 @@ uint64_t VeripbTracer::reduce_hash (uint64_t hash, uint64_t size) {
     shift >>= 1;
   }
   res &= size - 1;
-  assert (res < size);
+  Assert (res < size);
   return res;
 }
 
 uint64_t VeripbTracer::compute_hash (const int64_t id) {
-  assert (id > 0);
+  Assert (id > 0);
   unsigned j = id % num_nonces;             // Dont know if this is a good
   uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or even better
   return last_hash = tmp;                   // than just using id.
@@ -129,7 +129,7 @@ bool VeripbTracer::find_and_delete (const int64_t id) {
   }
   if (!c)
     return false;
-  assert (c && res);
+  Assert (c && res);
   *res = c->next;
   delete_clause (c);
   return true;
@@ -147,15 +147,19 @@ void VeripbTracer::insert () {
 /*------------------------------------------------------------------------*/
 
 inline void VeripbTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+#ifndef NDEBUG
+  Assert (binary);
+#endif
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void VeripbTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+#ifndef NDEBUG
+  Assert (binary);
+#endif
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned x = 2 * abs (lit) + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -168,8 +172,10 @@ inline void VeripbTracer::put_binary_lit (int lit) {
 }
 
 inline void VeripbTracer::put_binary_id (int64_t id, bool can_be_negative) {
-  assert (binary);
-  assert (file);
+#ifndef NDEBUG
+  Assert (binary);
+#endif
+  Assert (file);
   uint64_t x = abs (id);
   if (can_be_negative) {
     x = 2 * x + (id < 0);
@@ -189,7 +195,7 @@ inline void VeripbTracer::put_binary_id (int64_t id, bool can_be_negative) {
 void VeripbTracer::veripb_add_derived_clause (int64_t id, bool redundant,
                                               int witness,
                                               const vector<int> &clause) {
-  assert (witness == clause[0]);
+  Assert (witness == clause[0]);
   file->put ("red ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
@@ -220,7 +226,7 @@ void VeripbTracer::veripb_add_derived_clause (
     const vector<int64_t> &chain) {
   file->put ("pol ");
   bool first = true;
-  assert (!chain.empty ());
+  Assert (!chain.empty ());
   for (auto p = chain.rbegin (); p != chain.rend (); p++) {
     auto cid = *p;
     if (first) {
@@ -399,7 +405,7 @@ void VeripbTracer::print_statistics () {
 #endif
 
 void VeripbTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -412,7 +418,7 @@ void VeripbTracer::close (bool print) {
 }
 
 void VeripbTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {

@@ -16,7 +16,7 @@ struct TaggedBinary {
         d (nullptr)
 #endif
   {
-    assert (false);
+    Assert (false);
   };
 
   TaggedBinary (Clause *c, int clit, int cother)
@@ -26,15 +26,15 @@ struct TaggedBinary {
         d (c)
 #endif
   {
-    assert (c->literals[0] == lit || c->literals[1] == lit);
-    assert (c->literals[0] == other || c->literals[1] == other);
+    Assert (c->literals[0] == lit || c->literals[1] == lit);
+    Assert (c->literals[0] == other || c->literals[1] == other);
 #ifndef LOGGING
     (void) c;
 #endif
   }
 
   TaggedBinary (Clause *c) {
-    assert (c->size == 2);
+    Assert (c->size == 2);
     lit = c->literals[0];
     other = c->literals[1];
 #if defined(LOGGING) || !defined(NDEBUG)
@@ -75,11 +75,11 @@ struct ClauseOrBinary {
   ClauseOrBinary (TaggedBinary &&c) : binary (true) { tagged.b = c; }
   bool is_binary () const { return binary; }
   Clause *clause () const {
-    assert (!binary);
+    Assert (!binary);
     return tagged.clause;
   }
   TaggedBinary &tagged_binary () {
-    assert (binary);
+    Assert (binary);
     return tagged.b;
   }
 };

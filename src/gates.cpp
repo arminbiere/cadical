@@ -19,7 +19,7 @@ namespace CaDiCaL {
 
 int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
                                                Clause *c, int first) {
-  assert (!c->garbage);
+  Assert (!c->garbage);
   int second = 0;
   for (const auto &lit : *c) {
     if (lit == first)
@@ -42,7 +42,7 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
     return 0;
   if (second == INT_MIN)
     return 0;
-  assert (active (second));
+  Assert (active (second));
 #ifdef LOGGING
   if (c->size == 2)
     LOG (c, "found binary");
@@ -115,8 +115,8 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
   if (!eliminator.gates.empty ())
     return;
 
-  assert (!marked (first));
-  assert (eliminator.marked.empty ());
+  Assert (!marked (first));
+  Assert (eliminator.marked.empty ());
 
   const Occs &os = occs (first);
   for (const auto &c : os) {
@@ -133,11 +133,11 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
       LOG ("found binary resolved unit %d", first);
       if (lrat) {
         Clause *d = find_binary_clause (first, -second);
-        assert (d);
+        Assert (d);
         for (auto &lit : *d) {
           if (lit == first || lit == -second)
             continue;
-          assert (val (lit) < 0);
+          Assert (val (lit) < 0);
           Flags &f = flags (lit);
           if (f.seen)
             continue;
@@ -150,7 +150,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
         for (auto &lit : *c) {
           if (lit == first || lit == second)
             continue;
-          assert (val (lit) < 0);
+          Assert (val (lit) < 0);
           Flags &f = flags (lit);
           if (f.seen)
             continue;
@@ -202,7 +202,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
   if (!opts.elimequivs)
     return;
 
-  assert (opts.elimsubst);
+  Assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -231,11 +231,11 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
       // still solved potential issues with flags
       if (lrat) {
         Clause *d = find_binary_clause (pivot, second);
-        assert (d);
+        Assert (d);
         for (auto &lit : *d) {
           if (lit == pivot || lit == second)
             continue;
-          assert (val (lit) < 0);
+          Assert (val (lit) < 0);
           Flags &f = flags (lit);
           if (f.seen)
             continue;
@@ -248,7 +248,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
         for (auto &lit : *c) {
           if (lit == -pivot || lit == second)
             continue;
-          assert (val (lit) < 0);
+          Assert (val (lit) < 0);
           Flags &f = flags (lit);
           if (f.seen)
             continue;
@@ -279,7 +279,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
     stats.elimgates++;
 
     LOG (c, "first gate clause");
-    assert (!c->gate);
+    Assert (!c->gate);
     c->gate = true;
     eliminator.gates.push_back (c);
 
@@ -295,10 +295,10 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
         break;
       }
     }
-    assert (d);
+    Assert (d);
 
     LOG (d, "second gate clause");
-    assert (!d->gate);
+    Assert (!d->gate);
     d->gate = true;
     eliminator.gates.push_back (d);
     eliminator.gatetype = EQUI;
@@ -321,7 +321,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimands)
     return;
 
-  assert (opts.elimsubst);
+  Assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -348,7 +348,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
     for (const auto &lit : *c) {
       if (lit == -pivot)
         continue;
-      assert (lit != pivot);
+      Assert (lit != pivot);
       signed char tmp = val (lit);
       if (tmp < 0)
         continue;
@@ -383,7 +383,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       for (const auto &lit : *c) {
         if (lit == -pivot)
           continue;
-        assert (lit != pivot);
+        Assert (lit != pivot);
         if (!first)
           fputs (" & ", stdout);
         printf ("%d", -lit);
@@ -399,18 +399,18 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
     eliminator.gatetype = AND;
 
     (void) arity;
-    assert (!c->gate);
+    Assert (!c->gate);
     c->gate = true;
     eliminator.gates.push_back (c);
     for (const auto &lit : *c) {
       if (lit == -pivot)
         continue;
-      assert (lit != pivot);
+      Assert (lit != pivot);
       signed char tmp = val (lit);
       if (tmp < 0)
         continue;
-      assert (!tmp);
-      assert (marked (lit) < 0);
+      Assert (!tmp);
+      Assert (marked (lit) < 0);
       marks[vidx (lit)] *= 2;
     }
 
@@ -426,12 +426,12 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       if (tmp != 2)
         continue;
       LOG (d, "AND gate binary side clause");
-      assert (!d->gate);
+      Assert (!d->gate);
       d->gate = true;
       eliminator.gates.push_back (d);
       count++;
     }
-    assert (count >= arity);
+    Assert (count >= arity);
     (void) count;
 
     break;
@@ -503,7 +503,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
   if (!opts.elimites)
     return;
 
-  assert (opts.elimsubst);
+  Assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -523,7 +523,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       swap (ai, bi);
     if (ci == pivot)
       swap (ai, ci);
-    assert (ai == pivot);
+    Assert (ai == pivot);
     for (auto j = i + 1; j != end; j++) {
       Clause *dj = *j;
       int aj, bj, cj;
@@ -533,7 +533,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
         swap (aj, bj);
       if (cj == pivot)
         swap (aj, cj);
-      assert (aj == pivot);
+      Assert (aj == pivot);
       if (abs (bi) == abs (cj))
         swap (bj, cj);
       if (abs (ci) == abs (cj))
@@ -551,10 +551,10 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       LOG (d1, "3rd if-then-else");
       LOG (d2, "4th if-then-else");
       LOG ("found ITE gate %d == (%d ? %d : %d)", pivot, -bi, -ci, -cj);
-      assert (!di->gate);
-      assert (!dj->gate);
-      assert (!d1->gate);
-      assert (!d2->gate);
+      Assert (!di->gate);
+      Assert (!dj->gate);
+      Assert (!d1->gate);
+      Assert (!d2->gate);
       di->gate = true;
       dj->gate = true;
       d1->gate = true;
@@ -634,7 +634,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimxors)
     return;
 
-  assert (opts.elimsubst);
+  Assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -658,7 +658,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
     if (arity > opts.elimxorlim)
       continue;
 
-    assert (eliminator.gates.empty ());
+    Assert (eliminator.gates.empty ());
 
     unsigned needed = (1u << arity) - 1; // additional clauses
     unsigned signs = 0;                  // literals to negate
@@ -685,7 +685,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
     }
 
     eliminator.gates.push_back (d);
-    assert (eliminator.gates.size () == (1u << arity));
+    Assert (eliminator.gates.size () == (1u << arity));
 
 #ifdef LOGGING
     if (opts.log) {
@@ -696,7 +696,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
       for (const auto &lit : *d) {
         if (lit == pivot)
           continue;
-        assert (lit != -pivot);
+        Assert (lit != -pivot);
         if (!first)
           fputs (" ^ ", stdout);
         printf ("%d", lit);
@@ -741,7 +741,7 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
   if (val (pivot))
     return;
 
-  assert (eliminator.gates.empty ());
+  Assert (eliminator.gates.empty ());
 
   find_equivalence (eliminator, pivot);
   find_and_gate (eliminator, pivot);
@@ -754,7 +754,7 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
 void Internal::unmark_gate_clauses (Eliminator &eliminator) {
   LOG ("unmarking %zd gate clauses", eliminator.gates.size ());
   for (const auto &c : eliminator.gates) {
-    assert (c->gate);
+    Assert (c->gate);
     c->gate = false;
   }
   eliminator.gates.clear ();

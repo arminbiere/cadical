@@ -28,15 +28,15 @@ FratTracer::~FratTracer () {
 /*------------------------------------------------------------------------*/
 
 inline void FratTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void FratTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+  Assert (binary);
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned x = 2 * abs (lit) + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -49,8 +49,8 @@ inline void FratTracer::put_binary_lit (int lit) {
 }
 
 inline void FratTracer::put_binary_id (int64_t id, bool can_be_negative) {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   uint64_t x = abs (id);
   if (can_be_negative) {
     x = 2 * x + (id < 0);
@@ -249,7 +249,7 @@ void FratTracer::print_statistics () {
 #endif
 
 void FratTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -262,7 +262,7 @@ void FratTracer::close (bool print) {
 }
 
 void FratTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {

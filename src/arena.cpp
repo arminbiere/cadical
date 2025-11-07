@@ -14,7 +14,7 @@ Arena::~Arena () {
 
 void Arena::prepare (size_t bytes) {
   LOG ("preparing 'to' space of arena with %zd bytes", bytes);
-  assert (!to.start);
+  Assert (!to.start);
   to.top = to.start = new char[bytes];
   to.end = to.start + bytes;
 }

@@ -42,9 +42,9 @@ void Internal::start_random_sequence () {
   if (!opts.randec)
     return;
 
-  assert (!stable || opts.randecstable);
-  assert (stable || opts.randecfocused);
-  assert (!randomized_deciding);
+  Assert (!stable || opts.randecstable);
+  Assert (stable || opts.randecfocused);
+  Assert (!randomized_deciding);
 
   const uint64_t count = ++stats.randec.random_decision_phases;
   const unsigned length = opts.randeclength * log (count + 10);
@@ -65,7 +65,7 @@ void Internal::start_random_sequence () {
 }
 
 int Internal::next_random_decision () {
-  assert (max_var);
+  Assert (max_var);
   if (!opts.randec)
     return 0;
   if (stable && !opts.randecstable)
@@ -101,7 +101,7 @@ int Internal::next_random_decision () {
       continue;
     return idx;
   }
-  assert (false);
+  Assert (false);
   __builtin_unreachable ();
 }
 
@@ -130,7 +130,7 @@ int Internal::decide_phase (int idx, bool target) {
     phase = phases.saved[idx];
     LOG ("trying force_saved_phase, i.e., %d", phase);
   }
-  assert (force_saved_phase || !phase);
+  Assert (force_saved_phase || !phase);
   if (!phase) {
     phase = phases.forced[idx]; // swapped with opts.forcephase case!
     LOG ("trying forced phase, i.e., %d", phase);
@@ -161,7 +161,7 @@ int Internal::decide_phase (int idx, bool target) {
   }
 
   // The following should not be necessary and in some version we had even
-  // a hard 'COVER' assertion here to check for this.   Unfortunately it
+  // a hard 'COVER' Assertion here to check for this.   Unfortunately it
   // triggered for some users and we could not get to the root cause of
   // 'phase' still not being set here.  The logic for phase and target
   // saving is pretty complex, particularly in combination with local
@@ -196,7 +196,7 @@ bool Internal::satisfied () {
     return false;
   if (num_assigned < (size_t) max_var)
     return false;
-  assert (num_assigned == (size_t) max_var);
+  Assert (num_assigned == (size_t) max_var);
   if (propagated < trail.size ())
     return false;
   size_t assigned = num_assigned;
@@ -216,12 +216,12 @@ bool Internal::better_decision (int lit, int other) {
 // that not all variables are assigned.
 
 int Internal::decide () {
-  assert (!satisfied ());
+  Assert (!satisfied ());
   START (decide);
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
-    assert (assumed (lit));
+    Assert (assumed (lit));
     const signed char tmp = val (lit);
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
@@ -268,7 +268,7 @@ int Internal::decide () {
         break;
       }
 
-      assert (!tmp);
+      Assert (!tmp);
       LOG ("constraint literal %d unassigned", lit);
 
       if (!unassigned_lit || better_decision (lit, unassigned_lit))
@@ -317,7 +317,7 @@ int Internal::decide () {
 #ifndef NDEBUG
     for (auto lit : constraint)
       sum -= lit;
-    assert (!sum); // Checksum of literal should not change!
+    Assert (!sum); // Checksum of literal should not change!
 #endif
 
   } else {

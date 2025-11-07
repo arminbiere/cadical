@@ -1,7 +1,7 @@
 #ifndef _range_hpp_INCLUDED
 #define _range_hpp_INCLUDED
 
-#include <cassert>
+#include "util.hpp"
 
 namespace CaDiCaL {
 
@@ -77,14 +77,14 @@ class Range {
 
 public:
   // forward iterator
-  iterator begin () const { return assert (n >= 0), iterator (inc (0)); }
-  iterator end () const { return assert (n >= 0), iterator (inc (n)); }
+  iterator begin () const { Assert (n >= 0); return iterator (inc (0)); }
+  iterator end () const { Assert (n >= 0); return iterator (inc (n)); }
 
   // Reverse iteration methods
-  reverse_iterator rbegin () const { return assert (n >= 0), reverse_iterator (n); }
-  reverse_iterator rend () const { return assert (n >= 0), reverse_iterator (0); }
+  reverse_iterator rbegin () const { Assert (n >= 0); return reverse_iterator (n); }
+  reverse_iterator rend () const { Assert (n >= 0); return reverse_iterator (0); }
 
-  Range (int &m) : n (m) { assert (m >= 0); }
+  Range (int &m) : n (m) { Assert (m >= 0); }
 };
 
 // Same, but iterating over literals '-1,1,-2,2,....,-max_var,max_var'.
@@ -109,9 +109,9 @@ class Sange {
   int &n;
 
 public:
-  iterator begin () const { return assert (n >= 0), iterator (inc (0)); }
-  iterator end () const { return assert (n >= 0), iterator (inc (n)); }
-  Sange (int &m) : n (m) { assert (m >= 0); }
+  iterator begin () const {  Assert (n >= 0); return iterator (inc (0)); }
+  iterator end () const {  Assert (n >= 0);return iterator (inc (n)); }
+  Sange (int &m) : n (m) { Assert (m >= 0); }
 };
 
 } // namespace CaDiCaL

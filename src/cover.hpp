@@ -10,7 +10,7 @@
 
 /*------------------------------------------------------------------------*/
 
-// Coverage goal, used similar to 'assert' (but with flipped condition) and
+// Coverage goal, used similar to 'Assert' (but with flipped condition) and
 // also included even if 'NDEBUG' is defined (in optimizing compilation).
 //
 // This should in essence not be used in production code.

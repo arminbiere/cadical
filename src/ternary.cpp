@@ -23,9 +23,9 @@ namespace CaDiCaL {
 // literals already exists.
 
 bool Internal::ternary_find_binary_clause (int a, int b) {
-  assert (occurring ());
-  assert (active (a));
-  assert (active (b));
+  Assert (occurring ());
+  Assert (active (a));
+  Assert (active (b));
   size_t s = occs (a).size ();
   size_t t = occs (b).size ();
   int lit = s < t ? a : b;
@@ -49,10 +49,10 @@ bool Internal::ternary_find_binary_clause (int a, int b) {
 // literals already exists or is subsumed by an existing binary clause.
 
 bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
-  assert (occurring ());
-  assert (active (a));
-  assert (active (b));
-  assert (active (c));
+  Assert (occurring ());
+  Assert (active (a));
+  Assert (active (b));
+  Assert (active (c));
   size_t r = occs (a).size ();
   size_t s = occs (b).size ();
   size_t t = occs (c).size ();
@@ -79,7 +79,7 @@ bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
       if (lits[0] == c && lits[1] == b)
         return true;
     } else {
-      assert (d->size == 3);
+      Assert (d->size == 3);
       if (lits[0] == a && lits[1] == b && lits[2] == c)
         return true;
       if (lits[0] == a && lits[1] == c && lits[2] == b)
@@ -111,9 +111,9 @@ bool Internal::hyper_ternary_resolve (Clause *c, int pivot, Clause *d) {
   LOG (c, "1st antecedent");
   LOG (d, "2nd antecedent");
   stats.ternres++;
-  assert (c->size == 3);
-  assert (d->size == 3);
-  assert (clause.empty ());
+  Assert (c->size == 3);
+  Assert (d->size == 3);
+  Assert (clause.empty ());
   for (const auto &lit : *c)
     if (lit != pivot)
       clause.push_back (lit);
@@ -160,7 +160,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
     if (c->garbage)
       continue;
     if (c->size != 3) {
-      assert (c->size == 2);
+      Assert (c->size == 2);
       continue;
     }
     if (--steps < 0)
@@ -182,7 +182,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       if (d->garbage)
         continue;
       if (d->size != 3) {
-        assert (d->size == 2);
+        Assert (d->size == 2);
         continue;
       }
       for (const auto &lit : *d)
@@ -192,13 +192,13 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
         }
       if (assigned)
         continue;
-      assert (clause.empty ());
+      Assert (clause.empty ());
       htrs--;
       if (hyper_ternary_resolve (c, pivot, d)) {
         size_t size = clause.size ();
         bool red = (size == 3 || (c->redundant && d->redundant));
         if (lrat) {
-          assert (lrat_chain.empty ());
+          Assert (lrat_chain.empty ());
           lrat_chain.push_back (c->id);
           lrat_chain.push_back (d->id);
         }
@@ -218,7 +218,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
           stats.htrs2++;
           break;
         } else {
-          assert (r->size == 3);
+          Assert (r->size == 3);
           stats.htrs3++;
         }
       } else {
@@ -235,8 +235,8 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
 // number of positive and negative occurrence.
 
 void Internal::ternary_idx (int idx, int64_t &steps, int64_t &htrs) {
-  assert (0 < idx);
-  assert (idx <= max_var);
+  Assert (0 < idx);
+  Assert (idx <= max_var);
   steps -= 3;
   if (!active (idx))
     return;
@@ -266,7 +266,7 @@ void Internal::ternary_idx (int idx, int64_t &steps, int64_t &htrs) {
 
 bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
 
-  assert (!unsat);
+  Assert (!unsat);
 
 #ifndef QUIET
   int64_t bincon = 0;
@@ -298,7 +298,7 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
       bincon++;
 #endif
     } else {
-      assert (c->size == 3);
+      Assert (c->size == 3);
       if (!marked)
         continue;
 #ifndef QUIET
@@ -347,7 +347,7 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
     PHASE ("ternary", stats.ternary, "completed hyper ternary resolution");
 
   reset_occs ();
-  assert (!unsat);
+  Assert (!unsat);
 
   return remain; // Are there variables that should be tried again?
 }
@@ -373,9 +373,9 @@ bool Internal::ternary () {
   START_SIMPLIFIER (ternary, TERNARY);
   stats.ternary++;
 
-  assert (!level);
+  Assert (!level);
 
-  assert (!unsat);
+  Assert (!unsat);
   if (watching ())
     reset_watches ();
 
@@ -430,8 +430,8 @@ bool Internal::ternary () {
       break;
   }
 
-  assert (!occurring ());
-  assert (!unsat);
+  Assert (!occurring ());
+  Assert (!unsat);
   init_watches ();
   connect_watches ();
   if (!propagate ()) {

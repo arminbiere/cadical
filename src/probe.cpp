@@ -19,7 +19,7 @@ bool Internal::inprobing () {
   if (!preprocessing && !opts.inprocessing)
     return false;
   if (preprocessing)
-    assert (lim.preprocessing);
+    Assert (lim.preprocessing);
   if (stats.inprobingphases && last.inprobe.reductions == stats.reductions)
     return false;
   return lim.inprobe <= stats.conflicts;
@@ -86,9 +86,9 @@ void Internal::init_probehbr_lrat () {
 void Internal::get_probehbr_lrat (int lit, int uip) {
   if (!lrat || opts.probehbr)
     return;
-  assert (lit);
-  assert (lrat_chain.empty ());
-  assert (val (uip) < 0);
+  Assert (lit);
+  Assert (lrat_chain.empty ());
+  Assert (val (uip) < 0);
   lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
   int64_t id = unit_id (-uip);
   lrat_chain.push_back (id);
@@ -100,9 +100,9 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
 void Internal::set_probehbr_lrat (int lit, int uip) {
   if (!lrat || opts.probehbr)
     return;
-  assert (lit);
-  assert (lrat_chain.size ());
-  assert (probehbr_chains[vlit (lit)][vlit (uip)].empty ());
+  Assert (lit);
+  Assert (lrat_chain.size ());
+  Assert (probehbr_chains[vlit (lit)][vlit (uip)].empty ());
   probehbr_chains[vlit (lit)][vlit (uip)] = lrat_chain;
   lrat_chain.clear ();
 }
@@ -151,20 +151,20 @@ int Internal::probe_dominator (int a, int b) {
   require_mode (PROBE);
   int l = a, k = b;
   Var *u = &var (l), *v = &var (k);
-  assert (val (l) > 0), assert (val (k) > 0);
-  assert (u->level == 1), assert (v->level == 1);
+  Assert (val (l) > 0); Assert (val (k) > 0);
+  Assert (u->level == 1); Assert (v->level == 1);
   while (l != k) {
     if (u->trail > v->trail)
       swap (l, k), swap (u, v);
     if (!get_parent_reason_literal (l))
       return l;
     int parent = get_parent_reason_literal (k);
-    assert (parent), assert (val (parent) > 0);
+    Assert (parent); Assert (val (parent) > 0);
     v = &var (k = parent);
-    assert (v->level == 1);
+    Assert (v->level == 1);
   }
   LOG ("dominator %d of %d and %d", l, a, b);
-  assert (val (l) > 0);
+  Assert (val (l) > 0);
   return l;
 }
 
@@ -217,17 +217,17 @@ int Internal::probe_dominator (int a, int b) {
 
 inline int Internal::hyper_binary_resolve (Clause *reason) {
   require_mode (PROBE);
-  assert (level == 1);
-  assert (reason->size > 2);
+  Assert (level == 1);
+  Assert (reason->size > 2);
   const const_literal_iterator end = reason->end ();
   const int *lits = reason->literals;
   const_literal_iterator k;
 #ifndef NDEBUG
   // First literal unassigned, all others false.
-  assert (!val (lits[0]));
+  Assert (!val (lits[0]));
   for (k = lits + 1; k != end; k++)
-    assert (val (*k) < 0);
-  assert (var (lits[1]).level == 1);
+    Assert (val (*k) < 0);
+  Assert (var (lits[1]).level == 1);
 #endif
   LOG (reason, "hyper binary resolving");
   stats.hbrs++;
@@ -236,7 +236,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
   int dom = -lit, non_root_level_literals = 0;
   for (k = lits + 2; k != end; k++) {
     const int other = -*k;
-    assert (val (other) > 0);
+    Assert (val (other) > 0);
     if (!var (other).level)
       continue;
     dom = probe_dominator (dom, other);
@@ -252,7 +252,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
       stats.hbreds++;
     LOG ("new %s hyper binary resolvent %d %d",
          (red ? "redundant" : "irredundant"), -dom, lits[0]);
-    assert (clause.empty ());
+    Assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
     probe_dominator_lrat (dom, reason);
@@ -271,7 +271,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     }
   } else if (non_root_level_literals && lrat) {
     // still calculate LRAT and remember for later
-    assert (!opts.probehbr);
+    Assert (!opts.probehbr);
     probe_dominator_lrat (dom, reason);
     clear_analyzed_literals ();
     set_probehbr_lrat (dom, lits[0]);
@@ -292,13 +292,13 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
 inline void Internal::probe_assign (int lit, int parent) {
   require_mode (PROBE);
   int idx = vidx (lit);
-  assert (!val (idx));
-  assert (!flags (idx).eliminated () || !parent);
-  assert (!parent || val (parent) > 0);
+  Assert (!val (idx));
+  Assert (!flags (idx).eliminated () || !parent);
+  Assert (!parent || val (parent) > 0);
   Var &v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
-  assert ((int) num_assigned < max_var);
+  Assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = level ? probe_reason : 0;
   probe_reason = 0;
@@ -306,11 +306,11 @@ inline void Internal::probe_assign (int lit, int parent) {
   if (!level)
     learn_unit_clause (lit);
   else
-    assert (level == 1);
+    Assert (level == 1);
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
   trail.push_back (lit);
 
   // Do not save the current phase during inprocessing but remember the
@@ -331,8 +331,8 @@ inline void Internal::probe_assign (int lit, int parent) {
 
 void Internal::probe_assign_decision (int lit) {
   require_mode (PROBE);
-  assert (!level);
-  assert (propagated == trail.size ());
+  Assert (!level);
+  Assert (propagated == trail.size ());
   level++;
   control.push_back (Level (lit, trail.size ()));
   probe_assign (lit, 0);
@@ -340,8 +340,8 @@ void Internal::probe_assign_decision (int lit) {
 
 void Internal::probe_assign_unit (int lit) {
   require_mode (PROBE);
-  assert (!level);
-  assert (active (lit));
+  Assert (!level);
+  Assert (active (lit));
   probe_assign (lit, 0);
 }
 
@@ -355,12 +355,12 @@ inline void Internal::probe_lrat_for_units (int lit) {
   if (level)
     return; // not decision level 0
   LOG ("building chain for units");
-  assert (lrat_chain.empty ());
-  assert (probe_reason);
+  Assert (lrat_chain.empty ());
+  Assert (probe_reason);
   for (auto &reason_lit : *probe_reason) {
     if (lit == reason_lit)
       continue;
-    assert (val (reason_lit));
+    Assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
     const int signed_reason_lit = val (reason_lit) * reason_lit;
@@ -398,8 +398,8 @@ inline void Internal::probe_propagate2 () {
       if (b < 0)
         conflict = w.clause; // but continue
       else {
-        assert (lrat_chain.empty ());
-        assert (!probe_reason);
+        Assert (lrat_chain.empty ());
+        Assert (!probe_reason);
         probe_reason = w.clause;
         probe_lrat_for_units (w.blit);
         probe_assign (w.blit, -lit);
@@ -411,7 +411,7 @@ inline void Internal::probe_propagate2 () {
 
 bool Internal::probe_propagate () {
   require_mode (PROBE);
-  assert (!unsat);
+  Assert (!unsat);
   START (propagate);
   int64_t before = propagated2 = propagated;
   int64_t &ticks = stats.ticks.probe;
@@ -452,12 +452,12 @@ bool Internal::probe_propagate () {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            Assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
           w.clause->pos = k - lits;
-          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
           if (v > 0)
             ws[j - 1].blit = r;
           else if (!v) {
@@ -472,14 +472,14 @@ bool Internal::probe_propagate () {
             ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
-              assert (lrat_chain.empty ());
-              assert (!probe_reason);
+              Assert (lrat_chain.empty ());
+              Assert (!probe_reason);
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
             } else {
               ticks++;
-              assert (lrat_chain.empty ());
-              assert (!probe_reason);
+              Assert (lrat_chain.empty ());
+              Assert (!probe_reason);
               probe_reason = w.clause;
               probe_lrat_for_units (other);
               probe_assign_unit (other);
@@ -516,11 +516,11 @@ void Internal::failed_literal (int failed) {
   stats.failed++;
   stats.probefailed++;
 
-  assert (!unsat);
-  assert (conflict);
-  assert (level == 1);
-  assert (analyzed.empty ());
-  assert (lrat_chain.empty ());
+  Assert (!unsat);
+  Assert (conflict);
+  Assert (level == 1);
+  Assert (analyzed.empty ());
+  Assert (lrat_chain.empty ());
 
   START (analyze);
 
@@ -530,7 +530,7 @@ void Internal::failed_literal (int failed) {
   for (const auto &lit : *conflict) {
     const int other = -lit;
     if (!var (other).level) {
-      assert (val (other) > 0);
+      Assert (val (other) > 0);
       continue;
     }
     uip = uip ? probe_dominator (uip, other) : other;
@@ -540,7 +540,7 @@ void Internal::failed_literal (int failed) {
     clear_analyzed_literals ();
 
   LOG ("found probing UIP %d", uip);
-  assert (uip);
+  Assert (uip);
 
   vector<int> work;
 
@@ -548,14 +548,14 @@ void Internal::failed_literal (int failed) {
   while (parent != failed) {
     const int next = get_parent_reason_literal (parent);
     parent = next;
-    assert (parent);
+    Assert (parent);
     work.push_back (parent);
   }
 
   backtrack ();
   conflict = 0;
 
-  assert (!val (uip));
+  Assert (!val (uip));
   probe_assign_unit (-uip);
   lrat_chain.clear ();
 
@@ -564,16 +564,16 @@ void Internal::failed_literal (int failed) {
 
   size_t j = 0;
   while (!unsat && j < work.size ()) {
-    // assert (!opts.probehbr);        assertion fails ...
+    // Assert (!opts.probehbr);        Assertion fails ...
     const int parent = work[j++];
     const signed char tmp = val (parent);
     if (tmp > 0) {
-      assert (!opts.probehbr); // ... assertion should hold here
+      Assert (!opts.probehbr); // ... Assertion should hold here
       get_probehbr_lrat (parent, uip);
       LOG ("clashing failed parent %d", parent);
       learn_empty_clause ();
     } else if (tmp == 0) {
-      assert (!opts.probehbr); // ... and here
+      Assert (!opts.probehbr); // ... and here
       LOG ("found unassigned failed parent %d", parent);
       get_probehbr_lrat (parent, uip); // this is computed during
       probe_assign_unit (-parent);     // propagation and can include
@@ -588,13 +588,13 @@ void Internal::failed_literal (int failed) {
 
   STOP (analyze);
 
-  assert (unsat || val (failed) < 0);
+  Assert (unsat || val (failed) < 0);
 }
 
 /*------------------------------------------------------------------------*/
 
 bool Internal::is_binary_clause (Clause *c, int &a, int &b) {
-  assert (!level);
+  Assert (!level);
   if (c->garbage)
     return false;
   int first = 0, second = 0;
@@ -632,7 +632,7 @@ struct probe_negated_noccs_rank {
 
 void Internal::generate_probes () {
 
-  assert (probes.empty ());
+  Assert (probes.empty ());
 
   int64_t &ticks = stats.ticks.probe;
 
@@ -697,7 +697,7 @@ void Internal::generate_probes () {
 
 void Internal::flush_probes () {
 
-  assert (!probes.empty ());
+  Assert (!probes.empty ());
   int64_t &ticks = stats.ticks.probe;
 
   init_noccs ();
@@ -724,7 +724,7 @@ void Internal::flush_probes () {
       continue;
     if (have_pos_bin_occs)
       lit = -lit;
-    assert (!noccs (lit)), assert (noccs (-lit) > 0);
+    Assert (!noccs (lit)); Assert (noccs (-lit) > 0);
     if (propfixed (lit) >= stats.all.fixed)
       continue;
     LOG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
@@ -823,7 +823,7 @@ bool Internal::probe () {
   for (auto idx : vars)
     propfixed (idx) = propfixed (-idx) = -1;
 
-  assert (unsat || propagated == trail.size ());
+  Assert (unsat || propagated == trail.size ());
   propagated = propagated2 = trail.size ();
 
   int probe;
@@ -924,7 +924,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   stats.inprobingphases++;
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = true;
   }
   const int before = active ();
@@ -952,7 +952,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   }
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = false;
   }
 
@@ -962,9 +962,9 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   const int after = active ();
   const int after_extended = stats.variables_extension;
   const int diff_extended = after_extended - before_extended;
-  assert (diff_extended >= 0);
+  Assert (diff_extended >= 0);
   const int removed = before - after + diff_extended;
-  assert (removed >= 0);
+  Assert (removed >= 0);
 
   if (removed) {
     stats.inprobesuccess++;

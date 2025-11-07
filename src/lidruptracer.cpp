@@ -21,7 +21,7 @@ LidrupTracer::LidrupTracer (Internal *i, File *f, bool b)
     uint64_t nonce = random.next ();
     if (!(nonce & 1))
       nonce++;
-    assert (nonce), assert (nonce & 1);
+    Assert (nonce); Assert (nonce & 1);
     nonces[n] = nonce;
   }
 #ifndef NDEBUG
@@ -50,7 +50,7 @@ LidrupTracer::~LidrupTracer () {
 /*------------------------------------------------------------------------*/
 
 void LidrupTracer::enlarge_clauses () {
-  assert (num_clauses == size_clauses);
+  Assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
   LOG ("LIDRUP Tracer enlarging clauses of tracer from %" PRIu64
        " to %" PRIu64,
@@ -88,13 +88,13 @@ LidrupClause *LidrupTracer::new_clause () {
 }
 
 void LidrupTracer::delete_clause (LidrupClause *c) {
-  assert (c);
+  Assert (c);
   num_clauses--;
   delete c;
 }
 
 uint64_t LidrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
-  assert (size > 0);
+  Assert (size > 0);
   unsigned shift = 32;
   uint64_t res = hash;
   while ((((uint64_t) 1) << shift) > size) {
@@ -102,12 +102,12 @@ uint64_t LidrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
     shift >>= 1;
   }
   res &= size - 1;
-  assert (res < size);
+  Assert (res < size);
   return res;
 }
 
 uint64_t LidrupTracer::compute_hash (const int64_t id) {
-  assert (id > 0);
+  Assert (id > 0);
   unsigned j = id % num_nonces;
   uint64_t tmp = nonces[j] * (uint64_t) id;
   return last_hash = tmp;
@@ -128,7 +128,7 @@ bool LidrupTracer::find_and_delete (const int64_t id) {
   }
   if (!c)
     return false;
-  assert (c && res);
+  Assert (c && res);
   *res = c->next;
   for (auto &lit : c->literals) {
     imported_clause.push_back (lit);
@@ -157,15 +157,15 @@ inline void LidrupTracer::flush_if_piping () {
 }
 
 inline void LidrupTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void LidrupTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+  Assert (binary);
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned x = 2 * abs (lit) + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -178,8 +178,8 @@ inline void LidrupTracer::put_binary_lit (int lit) {
 }
 
 inline void LidrupTracer::put_binary_id (int64_t id, bool can_be_negative) {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   uint64_t x = abs (id);
   if (can_be_negative) {
     x = 2 * x + (id < 0);
@@ -256,7 +256,7 @@ void LidrupTracer::lidrup_add_original_clause (int64_t id,
 }
 
 void LidrupTracer::lidrup_batch_weaken_restore_and_delete () {
-  assert (batch_weaken.empty () || batch_delete.empty ());
+  Assert (batch_weaken.empty () || batch_delete.empty ());
   if (!batch_weaken.empty ()) {
     if (binary) {
       file->put ('w');
@@ -341,8 +341,8 @@ void LidrupTracer::lidrup_conclude_and_delete (
     else
       file->put ("u ");
     if (!find_and_delete (id)) {
-      assert (imported_clause.empty ());
-      assert (conclusion.size () == 1);
+      Assert (imported_clause.empty ());
+      Assert (conclusion.size () == 1);
       if (binary) {
         put_binary_zero ();
         put_binary_id (id);
@@ -463,7 +463,7 @@ void LidrupTracer::add_derived_clause (int64_t id, bool, int,
                                        const vector<int64_t> &chain) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (clause, "LIDRUP TRACER tracing addition of derived clause");
   lidrup_add_derived_clause (id, clause, chain);
 #ifndef QUIET
@@ -476,7 +476,7 @@ void LidrupTracer::add_assumption_clause (int64_t id,
                                           const vector<int64_t> &chain) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (clause,
        "LIDRUP TRACER tracing addition of assumption clause[%" PRId64 "]",
        id);
@@ -493,10 +493,10 @@ void LidrupTracer::add_assumption_clause (int64_t id,
 void LidrupTracer::delete_clause (int64_t id, bool, const vector<int> &) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG ("LIDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
   if (find_and_delete (id)) {
-    assert (imported_clause.empty ());
+    Assert (imported_clause.empty ());
     if (!batch_delete.empty () || !batch_restore.empty ())
       lidrup_batch_weaken_restore_and_delete ();
     batch_weaken.push_back (id);
@@ -516,7 +516,7 @@ void LidrupTracer::delete_clause (int64_t id, bool, const vector<int> &) {
 void LidrupTracer::weaken_minus (int64_t id, const vector<int> &) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG ("LIDRUP TRACER tracing weaken minus of clause[%" PRId64 "]", id);
   last_id = id;
   insert ();
@@ -526,7 +526,7 @@ void LidrupTracer::conclude_unsat (ConclusionType,
                                    const vector<int64_t> &conclusion) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (conclusion, "LIDRUP TRACER tracing conclusion of clause(s)");
   lidrup_conclude_and_delete (conclusion);
 }
@@ -543,7 +543,7 @@ void LidrupTracer::add_original_clause (int64_t id, bool,
 #endif
     return lidrup_add_original_clause (id, clause);
   }
-  assert (restored);
+  Assert (restored);
   if (find_and_delete (id)) {
     LOG (clause,
          "LIDRUP TRACER the clause was not yet weakened, so no restore");
@@ -627,7 +627,7 @@ void LidrupTracer::print_statistics () {
 #endif
 
 void LidrupTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -640,7 +640,7 @@ void LidrupTracer::close (bool print) {
 }
 
 void LidrupTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   lidrup_batch_weaken_restore_and_delete ();
   file->flush ();
 #ifndef QUIET

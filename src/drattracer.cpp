@@ -28,17 +28,17 @@ DratTracer::~DratTracer () {
 /*------------------------------------------------------------------------*/
 
 inline void DratTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void DratTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+  Assert (binary);
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned idx = abs (lit);
-  assert (idx < (1u << 31));
+  Assert (idx < (1u << 31));
   unsigned x = 2u * idx + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -125,7 +125,7 @@ void DratTracer::print_statistics () {
 #endif
 
 void DratTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -138,7 +138,7 @@ void DratTracer::close (bool print) {
 }
 
 void DratTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {

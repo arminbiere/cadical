@@ -16,7 +16,7 @@ void External::push_id_on_extension_stack (int64_t id) {
 }
 
 void External::push_clause_literal_on_extension_stack (int ilit) {
-  assert (ilit);
+  Assert (ilit);
   const int elit = internal->externalize (ilit);
   const int eidx = abs (elit);
   const bool is_extension_var = ervars[eidx];
@@ -27,16 +27,16 @@ void External::push_clause_literal_on_extension_stack (int ilit) {
   }
 
 
-  assert (elit);
+  Assert (elit);
   extension.push_back (elit);
   LOG ("pushing clause literal %d on extension stack (internal %d)", elit,
        ilit);
 }
 
 void External::push_witness_literal_on_extension_stack (int ilit) {
-  assert (ilit);
+  Assert (ilit);
   const int elit = internal->externalize (ilit);
-  assert (elit);
+  Assert (elit);
   extension.push_back (elit);
   LOG ("pushing witness literal %d on extension stack (internal %d)", elit,
        ilit);
@@ -86,10 +86,10 @@ void External::push_binary_clause_on_extension_stack (int64_t id, int pivot,
 
 void External::push_external_clause_and_witness_on_extension_stack (
     const vector<int> &c, const vector<int> &w, int64_t id) {
-  assert (id);
+  Assert (id);
   extension.push_back (0);
   for (const auto &elit : w) {
-    assert (elit != INT_MIN);
+    Assert (elit != INT_MIN);
     init (abs (elit));
     extension.push_back (elit);
     mark (witness, elit);
@@ -101,7 +101,7 @@ void External::push_external_clause_and_witness_on_extension_stack (
   extension.push_back (lower_bits);
   extension.push_back (0);
   for (const auto &elit : c) {
-    assert (elit != INT_MIN);
+    Assert (elit != INT_MIN);
     init (abs (elit));
     extension.push_back (elit);
   }
@@ -121,7 +121,7 @@ void External::push_external_clause_and_witness_on_extension_stack (
 
 void External::extend () {
 
-  assert (!extended);
+  Assert (!extended);
   START (extend);
   internal->stats.extensions++;
 
@@ -156,34 +156,34 @@ void External::extend () {
   while (i != begin) {
     bool satisfied = false;
     int lit;
-    assert (i != begin);
+    Assert (i != begin);
     while ((lit = *--i)) {
       if (satisfied)
         continue;
       if (ival (lit) == lit)
         satisfied = true;
-      assert (i != begin);
+      Assert (i != begin);
     }
-    assert (i != begin);
+    Assert (i != begin);
     LOG ("id=%" PRId64, ((int64_t) *i << 32) + *(i - 1));
-    assert (*i || *(i - 1));
+    Assert (*i || *(i - 1));
     --i;
-    assert (i != begin);
+    Assert (i != begin);
     --i;
-    assert (i != begin);
-    assert (!*i);
+    Assert (i != begin);
+    Assert (!*i);
     --i;
-    assert (i != begin);
+    Assert (i != begin);
     if (satisfied)
       while (*--i)
-        assert (i != begin);
+        Assert (i != begin);
     else {
       while ((lit = *--i)) {
         const int tmp = ival (lit); // not 'signed char'!!!
         if (tmp != lit) {
           LOG ("flipping blocking literal %d", lit);
-          assert (lit);
-          assert (lit != INT_MIN);
+          Assert (lit);
+          Assert (lit != INT_MIN);
           size_t idx = abs (lit);
           if (idx >= vals.size ())
             vals.resize (idx + 1, false);
@@ -193,7 +193,7 @@ void External::extend () {
           flipped++;
 #endif
         }
-        assert (i != begin);
+        Assert (i != begin);
       }
     }
   }
@@ -216,14 +216,14 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     int lit;
     while ((lit = *--i))
       clause.push_back (lit);
-    assert (!lit);
+    Assert (!lit);
     --i;
     const int64_t id =
         ((int64_t) * (i - 1) << 32) + static_cast<int64_t> (*i);
-    assert (id);
+    Assert (id);
     i -= 2;
-    assert (!*i);
-    assert (i != begin);
+    Assert (!*i);
+    Assert (i != begin);
     while ((lit = *--i))
       witness.push_back (lit);
     reverse (clause.begin (), clause.end ());
@@ -246,18 +246,18 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
   if (i != end) {
     int lit = *i++;
     do {
-      assert (!lit), (void) lit;
+      Assert (!lit); (void) lit;
       while ((lit = *i++))
         witness.push_back (lit);
-      assert (!lit);
-      assert (i != end);
-      assert (!*i);
+      Assert (!lit);
+      Assert (i != end);
+      Assert (!*i);
       const int64_t id =
           ((int64_t) *i << 32) + static_cast<int64_t> (*(i + 1));
-      assert (id > 0);
+      Assert (id > 0);
       i += 3;
-      assert (*i);
-      assert (i != end);
+      Assert (*i);
+      Assert (i != end);
       while (i != end && (lit = *i++))
         clause.push_back (lit);
       if (!it.witness (clause, witness, id))

@@ -10,7 +10,7 @@ void Internal::reset_shrinkable () {
   for (const auto &lit : shrinkable) {
     LOG ("resetting lit %i", lit);
     Flags &f = flags (lit);
-    assert (f.shrinkable);
+    Assert (f.shrinkable);
     f.shrinkable = false;
 #ifdef LOGGING
     ++reset;
@@ -31,7 +31,7 @@ void Internal::mark_shrinkable_as_removable (
     Flags &f = flags (lit);
     const Var &v = var (lit);
     if (v.level == blevel) {
-      assert (!f.poison);
+      Assert (!f.poison);
       ++minireset;
     } else
       ++kept;
@@ -45,8 +45,8 @@ void Internal::mark_shrinkable_as_removable (
 
   for (const int lit : shrinkable) {
     Flags &f = flags (lit);
-    assert (f.shrinkable);
-    assert (!f.poison);
+    Assert (f.shrinkable);
+    Assert (!f.poison);
     f.shrinkable = false;
 #ifdef LOGGING
     ++reset;
@@ -65,11 +65,11 @@ void Internal::mark_shrinkable_as_removable (
 
 int inline Internal::shrink_literal (int lit, int blevel,
                                      unsigned max_trail) {
-  assert (val (lit) < 0);
+  Assert (val (lit) < 0);
 
   Flags &f = flags (lit);
   Var &v = var (lit);
-  assert (v.level <= blevel);
+  Assert (v.level <= blevel);
 
   if (!v.level) {
     LOG ("skipping root level assigned %d", (lit));
@@ -77,14 +77,14 @@ int inline Internal::shrink_literal (int lit, int blevel,
   }
 
   if (v.reason == external_reason) {
-    assert (!opts.exteagerreasons);
+    Assert (!opts.exteagerreasons);
     v.reason = learn_external_reason_clause (-lit, 0, true);
     if (!v.reason) {
-      assert (!v.level);
+      Assert (!v.level);
       return 0;
     }
   }
-  assert (v.reason != external_reason);
+  Assert (v.reason != external_reason);
   if (f.shrinkable) {
     LOG ("skipping already shrinkable literal %d", (lit));
     return 0;
@@ -110,7 +110,7 @@ int inline Internal::shrink_literal (int lit, int blevel,
   f.poison = false;
   shrinkable.push_back (lit);
   if (opts.shrinkreap) {
-    assert (max_trail < trail.size ());
+    Assert (max_trail < trail.size ());
     const unsigned dist = max_trail - v.trail;
     reap.push (dist);
   }
@@ -121,11 +121,11 @@ unsigned Internal::shrunken_block_uip (
     int uip, int blevel, std::vector<int>::reverse_iterator &rbegin_block,
     std::vector<int>::reverse_iterator &rend_block,
     std::vector<int>::size_type minimized_start, const int uip0) {
-  assert (clause[0] == uip0);
+  Assert (clause[0] == uip0);
 
   LOG ("UIP on level %u, uip: %i (replacing by %i)", blevel, uip, uip0);
-  assert (rend_block > rbegin_block);
-  assert (rend_block < clause.rend ());
+  Assert (rend_block > rbegin_block);
+  Assert (rend_block < clause.rend ());
   unsigned block_shrunken = 0;
   *rbegin_block = -uip;
   Var &v = var (-uip);
@@ -147,10 +147,10 @@ unsigned Internal::shrunken_block_uip (
     *p = uip0;
     // if (lit == -uip) continue;
     ++block_shrunken;
-    assert (clause[0] == uip0);
+    Assert (clause[0] == uip0);
   }
   mark_shrinkable_as_removable (blevel, minimized_start);
-  assert (clause[0] == uip0);
+  Assert (clause[0] == uip0);
   return block_shrunken;
 }
 
@@ -160,18 +160,18 @@ void inline Internal::shrunken_block_no_uip (
     unsigned &block_minimized, const int uip0) {
   STOP (shrink);
   START (minimize);
-  assert (rend_block > rbegin_block);
+  Assert (rend_block > rbegin_block);
   LOG ("no UIP found, now minimizing");
   for (auto p = rbegin_block; p != rend_block; ++p) {
-    assert (p != clause.rend () - 1);
+    Assert (p != clause.rend () - 1);
     const int lit = *p;
     if (opts.minimize && minimize_literal (-lit)) {
-      assert (!flags (lit).keep);
+      Assert (!flags (lit).keep);
       ++block_minimized;
       *p = uip0;
     } else {
       flags (lit).keep = true;
-      assert (flags (lit).keep);
+      Assert (flags (lit).keep);
     }
   }
   STOP (minimize);
@@ -182,17 +182,15 @@ void Internal::push_literals_of_block (
     const std::vector<int>::reverse_iterator &rbegin_block,
     const std::vector<int>::reverse_iterator &rend_block, int blevel,
     unsigned max_trail) {
-  assert (rbegin_block < rend_block);
+  Assert (rbegin_block < rend_block);
   for (auto p = rbegin_block; p != rend_block; ++p) {
-    assert (p != clause.rend () - 1);
-    assert (!flags (*p).keep);
+    Assert (p != clause.rend () - 1);
+    Assert (!flags (*p).keep);
     const int lit = *p;
     LOG ("pushing lit %i of blevel %i", lit, var (lit).level);
-#ifndef NDEBUG
     int tmp =
-#endif
         shrink_literal (lit, blevel, max_trail);
-    assert (tmp > 0);
+    Assert (tmp > 0);
   }
 }
 
@@ -200,24 +198,22 @@ unsigned inline Internal::shrink_next (int blevel, unsigned &open,
                                        unsigned &max_trail) {
   const auto &t = &trail;
   if (opts.shrinkreap) {
-    assert (!reap.empty ());
+    Assert (!reap.empty ());
     const unsigned dist = reap.pop ();
     --open;
-    assert (dist <= max_trail);
+    Assert (dist <= max_trail);
     const unsigned pos = max_trail - dist;
-    assert (pos < t->size ());
+    Assert (pos < t->size ());
     const int uip = (*t)[pos];
-    assert (val (uip) > 0);
+    Assert (val (uip) > 0);
     LOG ("trying to shrink literal %d at trail[%u] and level %d", uip, pos,
          blevel);
     return uip;
   } else {
     int uip;
-#ifndef NDEBUG
     unsigned init_max_trail = max_trail;
-#endif
     do {
-      assert (max_trail <= init_max_trail);
+      Assert (max_trail <= init_max_trail);
       uip = (*t)[max_trail--];
     } while (!flags (uip).shrinkable);
     --open;
@@ -233,14 +229,12 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
                                                unsigned max_trail) {
   LOG ("shrinking along the reason of lit %i", uip);
   unsigned open = 0;
-#ifndef NDEBUG
   const Flags &f = flags (uip);
-#endif
   const Var &v = var (uip);
 
-  assert (f.shrinkable);
-  assert (v.level == blevel);
-  assert (v.reason);
+  Assert (f.shrinkable);
+  Assert (v.level == blevel);
+  Assert (v.reason);
 
   if (opts.minimizeticks)
     stats.ticks.search[stable]++;
@@ -251,7 +245,7 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
     for (int lit : c) {
       if (lit == uip)
         continue;
-      assert (val (lit) < 0);
+      Assert (val (lit) < 0);
       int tmp = shrink_literal (lit, blevel, max_trail);
       if (tmp < 0) {
         failed_ptr = true;
@@ -273,13 +267,13 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
                         int blevel, unsigned &open,
                         unsigned &block_minimized, const int uip0,
                         unsigned max_trail) {
-  assert (shrinkable.empty ());
-  assert (blevel <= this->level);
-  assert (open < clause.size ());
-  assert (rbegin_lits >= clause.rbegin ());
-  assert (rend_block < clause.rend ());
-  assert (rbegin_lits < rend_block);
-  assert (opts.shrink);
+  Assert (shrinkable.empty ());
+  Assert (blevel <= this->level);
+  Assert (open < clause.size ());
+  Assert (rbegin_lits >= clause.rbegin ());
+  Assert (rend_block < clause.rend ());
+  Assert (rbegin_lits < rend_block);
+  Assert (opts.shrink);
 
 #ifdef LOGGING
 
@@ -301,18 +295,18 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
 
   if (!failed) {
     push_literals_of_block (rbegin_lits, rend_block, blevel, max_trail);
-    assert (!opts.shrinkreap || reap.size () == open);
+    Assert (!opts.shrinkreap || reap.size () == open);
 
-    assert (open > 0);
+    Assert (open > 0);
     while (!failed) {
-      assert (!opts.shrinkreap || reap.size () == open);
+      Assert (!opts.shrinkreap || reap.size () == open);
       uip = shrink_next (blevel, open, max_trail);
       if (open == 0) {
         break;
       }
       open += shrink_along_reason (uip, blevel, resolve_large_clauses,
                                    failed, max_trail2);
-      assert (open >= 1);
+      Assert (open >= 1);
     }
 
     if (!failed)
@@ -370,7 +364,7 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
 
 {
   LOG ("shrinking block");
-  assert (rbegin_block < clause.rend () - 1);
+  Assert (rbegin_block < clause.rend () - 1);
   int blevel;
   unsigned open = 0;
   unsigned max_trail;
@@ -378,7 +372,7 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
   // find begining of block;
   std::vector<int>::reverse_iterator rend_block;
   {
-    assert (rbegin_block <= clause.rend ());
+    Assert (rbegin_block <= clause.rend ());
     const int lit = *rbegin_block;
     const int idx = vidx (lit);
     blevel = vtab[idx].level;
@@ -388,7 +382,7 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
     rend_block = rbegin_block;
     bool finished;
     do {
-      assert (rend_block < clause.rend () - 1);
+      Assert (rend_block < clause.rend () - 1);
       const int lit = *(++rend_block);
       const int idx = vidx (lit);
       finished = (blevel != vtab[idx].level);
@@ -401,10 +395,10 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
 
     } while (!finished);
   }
-  assert (open > 0);
-  assert (open < clause.size ());
-  assert (rbegin_block < clause.rend ());
-  assert (rend_block < clause.rend ());
+  Assert (open > 0);
+  Assert (open < clause.size ());
+  Assert (rbegin_block < clause.rend ());
+  Assert (rend_block < clause.rend ());
 
   unsigned block_shrunken = 0, block_minimized = 0;
   if (open < 2) {
@@ -424,7 +418,7 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
 }
 
 void Internal::shrink_and_minimize_clause () {
-  assert (opts.minimize || opts.shrink > 0);
+  Assert (opts.minimize || opts.shrink > 0);
   LOG (clause, "shrink first UIP clause");
 
   START (shrink);
@@ -434,7 +428,7 @@ void Internal::shrink_and_minimize_clause () {
   unsigned total_shrunken = 0;
   unsigned total_minimized = 0;
 
-  LOG (clause, "shrink first UIP clause (asserting lit: %i)", clause[0]);
+  LOG (clause, "shrink first UIP clause (Asserting lit: %i)", clause[0]);
 
   auto rend_lits = clause.rend () - 1;
   auto rend_block = clause.rbegin ();
@@ -442,7 +436,7 @@ void Internal::shrink_and_minimize_clause () {
 
   // for direct LRAT we remember how the clause used to look
   vector<int> old_clause_lrat;
-  assert (minimize_chain.empty ());
+  Assert (minimize_chain.empty ());
   if (lrat)
     for (auto &i : clause)
       old_clause_lrat.push_back (i);
@@ -462,11 +456,11 @@ void Internal::shrink_and_minimize_clause () {
   {
     std::vector<int>::size_type i = 1;
     for (std::vector<int>::size_type j = 1; j < clause.size (); ++j) {
-      assert (i <= j);
+      Assert (i <= j);
       clause[i] = clause[j];
       if (lrat) {
-        assert (j < old_clause_lrat.size ());
-        assert (mini_chain.empty ());
+        Assert (j < old_clause_lrat.size ());
+        Assert (mini_chain.empty ());
         if (clause[j] != old_clause_lrat[j]) {
           calculate_minimize_chain (-old_clause_lrat[j], stack);
           for (auto p : mini_chain) {
@@ -478,14 +472,16 @@ void Internal::shrink_and_minimize_clause () {
       if (clause[j] == uip0) {
         continue;
       }
-      assert (flags (clause[i]).keep);
+      Assert (flags (clause[i]).keep);
       ++i;
       LOG ("keeping literal %i", clause[j]);
     }
     clause.resize (i);
   }
-  assert (old_size ==
+#ifndef NDEBUG
+  Assert (old_size ==
           (unsigned) clause.size () + total_shrunken + total_minimized);
+#endif
   LOG (clause, "after shrinking first UIP clause");
   LOG ("clause shrunken by %zd literals (including %u minimized)",
        old_size - clause.size (), total_minimized);

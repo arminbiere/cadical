@@ -10,12 +10,12 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
   if (level)
     return; // not decision level 0
   LOG ("backbone building chain for units");
-  assert (lrat_chain.empty ());
-  assert (reason);
+  Assert (lrat_chain.empty ());
+  Assert (reason);
   for (auto &reason_lit : *reason) {
     if (lit == reason_lit)
       continue;
-    assert (val (reason_lit));
+    Assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
     const int signed_reason_lit = val (reason_lit) * reason_lit;
@@ -27,7 +27,7 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
 
 inline bool Internal::backbone_propagate (int64_t& ticks) {
   require_mode (BACKBONE);
-  assert (!unsat);
+  Assert (!unsat);
   START (propagate);
   int64_t before = propagated2 = propagated;
   for (;;) {
@@ -87,12 +87,12 @@ inline bool Internal::backbone_propagate (int64_t& ticks) {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            Assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
           w.clause->pos = k - lits;
-          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
           if (v > 0)
             j[-1].blit = r;
           else if (!v) {
@@ -105,7 +105,7 @@ inline bool Internal::backbone_propagate (int64_t& ticks) {
             j--;
           } else if (!u) {
             ticks++;
-            assert (v < 0);
+            Assert (v < 0);
             build_chain_for_units (other, w.clause, 0);
             backbone_assign_any (other, w.clause);
             lrat_chain.clear ();
@@ -114,8 +114,8 @@ inline bool Internal::backbone_propagate (int64_t& ticks) {
               LOG ("ignoring conflict due to clause to vivify");
               continue;
             }
-            assert (u < 0);
-            assert (v < 0);
+            Assert (u < 0);
+            Assert (v < 0);
             conflict = w.clause;
             break;
           }
@@ -139,7 +139,7 @@ inline bool Internal::backbone_propagate (int64_t& ticks) {
 
 inline void Internal::backbone_propagate2 (int64_t& ticks) {
   require_mode (BACKBONE);
-  assert (propagated2 <= trail.size ());
+  Assert (propagated2 <= trail.size ());
   int64_t before = propagated2;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
@@ -158,7 +158,7 @@ inline void Internal::backbone_propagate2 (int64_t& ticks) {
         break;
       }
       else {
-        assert (lrat_chain.empty ());
+        Assert (lrat_chain.empty ());
         backbone_lrat_for_units (w.blit, w.clause);
         backbone_assign (w.blit, w.clause);
         lrat_chain.clear ();
@@ -204,15 +204,15 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       }
     }
   }
-  assert (candidates.size () <= 2*(size_t)max_var);
+  Assert (candidates.size () <= 2*(size_t)max_var);
 
   VERBOSE (3, "backbone schedule %zu backbone candidates in total %f (rescheduled: %f%%)", candidates.size (), percent (candidates.size (), 2*max_var), percent (not_rescheduled, 2*max_var));
 }
 
 
 int Internal::backbone_analyze (Clause *, int64_t &ticks) {
-  assert (conflict);
-  assert (conflict->size == 2);
+  Assert (conflict);
+  Assert (conflict->size == 2);
   analyzed.push_back (std::abs (conflict->literals[0]));
   flags (conflict->literals[0]).seen = true;
   analyzed.push_back (std::abs (conflict->literals[1]));
@@ -223,14 +223,14 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
   conflict = nullptr;
 
   for (auto t = trail.rbegin ();;) {
-    assert (t < trail.rend ());
+    Assert (t < trail.rend ());
     int lit = *t++;
     LOG ("analyzing %s", LOGLIT (lit));
     if (!flags (lit).seen)
       continue;
     Clause *reason = var (lit).reason;
     LOG (reason, "resolving with reason of %s", LOGLIT (lit));
-    assert (reason), assert (reason != decision_reason);
+    Assert (reason); Assert (reason != decision_reason);
     ++ticks;
     const int other = reason->literals[0] ^ reason->literals[1] ^ lit;
     Flags &f_o = flags (other);
@@ -254,8 +254,8 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
 inline void Internal::backbone_unit_reassign (int lit) {
 #ifdef LOGGING
   LOG ("reassigning %s to level 0", LOGLIT (lit));
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
 #else
   (void) lit;
 #endif
@@ -266,11 +266,11 @@ inline void Internal::backbone_unit_assign (int lit) {
   LOG ("assigning %s to level 0", LOGLIT (lit));
   require_mode (BACKBONE);
   const int idx = vidx (lit);
-  assert (!vals[idx]);
+  Assert (!vals[idx]);
   Var &v = var (idx);
   v.level = 0;               // required to reuse decisions
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
-  assert ((int) num_assigned < max_var);
+  Assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = 0; // for conflict analysis
   learn_unit_clause (lit);
@@ -278,8 +278,8 @@ inline void Internal::backbone_unit_assign (int lit) {
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
   trail.push_back (lit);
   LOG ("backbone assign %d to level 0", lit);
 }
@@ -287,13 +287,13 @@ inline void Internal::backbone_unit_assign (int lit) {
 inline void Internal::backbone_assign_any (int lit, Clause *reason) {
   require_mode (BACKBONE);
   const int idx = vidx (lit);
-  assert (!vals[idx]);
-  assert (!flags (idx).eliminated () || !reason);
-  assert (reason == decision_reason || !reason || reason->size >= 2);
+  Assert (!vals[idx]);
+  Assert (!flags (idx).eliminated () || !reason);
+  Assert (reason == decision_reason || !reason || reason->size >= 2);
   Var &v = var (idx);
   v.level = level;               // required to reuse decisions
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
-  assert ((int) num_assigned < max_var);
+  Assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
@@ -301,8 +301,8 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
   trail.push_back (lit);
   LOG (reason, "backbone assign %d", lit);
 }
@@ -310,13 +310,13 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
 inline void Internal::backbone_assign (int lit, Clause *reason) {
   require_mode (BACKBONE);
   const int idx = vidx (lit);
-  assert (!vals[idx]);
-  assert (!flags (idx).eliminated () || !reason);
-  assert (reason == decision_reason || !reason || reason->size == 2);
+  Assert (!vals[idx]);
+  Assert (!flags (idx).eliminated () || !reason);
+  Assert (reason == decision_reason || !reason || reason->size == 2);
   Var &v = var (idx);
   v.level = level;               // required to reuse decisions
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
-  assert ((int) num_assigned < max_var);
+  Assert ((int) num_assigned < max_var);
   num_assigned++;
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
@@ -324,15 +324,15 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
   trail.push_back (lit);
   LOG (reason, "backbone assign %d", lit);
 }
 
 void Internal::backbone_decision (int lit) {
   require_mode (BACKBONE);
-  assert (propagated2 == trail.size ());
+  Assert (propagated2 == trail.size ());
   new_trail_level (lit);
   notify_decision ();
   LOG ("search decide %d", lit);
@@ -344,7 +344,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
                                            const int64_t ticks_limit,
                                            int64_t &ticks,
                                            unsigned inconsistent) {
-  assert (!conflict);
+  Assert (!conflict);
   auto p = begin (candidates);
   auto q = p;
   const auto end = std::end (candidates);
@@ -354,9 +354,9 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   LOG (candidates, "candidates: ");
   ticks += 1 + cache_lines (candidates.size (), sizeof (std::vector<int>::iterator*));
   while (p != end) {
-    assert (p < end);
-    assert (q <= p);
-    assert (!conflict);
+    Assert (p < end);
+    Assert (q <= p);
+    Assert (!conflict);
     const int probe = (*q = *p);
     ++stats.backbone.probes;
 
@@ -397,7 +397,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     backtrack_without_updating_phases (level - 1);
     backbone_unit_assign (uip);
     ++stats.units;
-    assert (!conflict);
+    Assert (!conflict);
     if (external->learner)
       external->export_learned_unit_clause (uip);
 
@@ -413,7 +413,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   }
   while (p != end)
     *q++ = *p++;
-  assert (q <= end);
+  Assert (q <= end);
   candidates.resize (q - begin (candidates));
   LOG (candidates, "candidates: ");
 
@@ -440,7 +440,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
         LOG ("keeping falsified probe %s", LOGLIT (probe));
         continue;
       }
-      assert (!v);
+      Assert (!v);
       LOG ("keeping unassigned probe %s", LOGLIT (probe));
     }
     candidates.resize (q - begin (candidates));
@@ -482,15 +482,15 @@ void Internal::keep_backbone_candidates (
     else
       prioritized += f.backbone0;
   }
-  assert (prioritized <= remain);
+  Assert (prioritized <= remain);
   if (!remain) {
 #ifndef NDEBUG
   for (auto v : candidates) {
     const Flags &f = flags (v);
     if (!f.active ())
       continue;
-    assert (!f.backbone0);
-    assert (!f.backbone1);
+    Assert (!f.backbone0);
+    Assert (!f.backbone1);
   }
 #endif
     return;
@@ -504,10 +504,10 @@ void Internal::keep_backbone_candidates (
         continue;
       ++remain;
       if (v < 0) {
-        assert (!f.backbone1);
+        Assert (!f.backbone1);
         f.backbone1 = true;
       } else {
-        assert (!f.backbone0);
+        Assert (!f.backbone0);
         f.backbone0 = true;
       }
     }
@@ -519,11 +519,11 @@ unsigned Internal::compute_backbone () {
 
   int64_t ticks = 0;
   backbone_propagate2 (ticks);
-  assert (!conflict);
+  Assert (!conflict);
 
   std::vector<int> candidates, units;
   unsigned inconsistent = 0;
-  assert (!conflict);
+  Assert (!conflict);
 
   ++stats.backbone.phases;
   schedule_backbone_cands (candidates);
@@ -609,13 +609,13 @@ void Internal::binary_clauses_backbone () {
     Watches &w = watches (lit);
     std::stable_partition (begin (w), end (w), [] (Watch w) {return w.binary();});
   }
-  assert (propagated2 <= trail.size());
+  Assert (propagated2 <= trail.size());
   private_steps = true;
 
-  assert (watching ());
+  Assert (watching ());
   START_SIMPLIFIER (backbone, BACKBONE);
   int failed = compute_backbone();
-  assert (!level);
+  Assert (!level);
   private_steps = false;
 
   report ('k', !failed);

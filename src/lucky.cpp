@@ -29,7 +29,7 @@ int Internal::unlucky (int res) {
 
 int Internal::trivially_false_satisfiable () {
   LOG ("checking that all clauses contain a negative literal");
-  assert (!level);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -68,7 +68,7 @@ int Internal::trivially_false_satisfiable () {
     search_assume_decision (-idx);
     if (propagate ())
       continue;
-    assert (level > 0);
+    Assert (level > 0);
     LOG ("propagation failed including redundant clauses");
     return unlucky (0);
   }
@@ -78,7 +78,7 @@ int Internal::trivially_false_satisfiable () {
 
 int Internal::trivially_true_satisfiable () {
   LOG ("checking that all clauses contain a positive literal");
-  assert (!level);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -117,7 +117,7 @@ int Internal::trivially_true_satisfiable () {
     search_assume_decision (idx);
     if (propagate ())
       continue;
-    assert (level > 0);
+    Assert (level > 0);
     LOG ("propagation failed including redundant clauses");
     return unlucky (0);
   }
@@ -141,7 +141,7 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
     return true;
   } else {
     analyze ();
-    assert (!level);
+    Assert (!level);
     no_conflict = propagate ();
     if (!no_conflict) {
       analyze ();
@@ -154,8 +154,8 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 
 int Internal::forward_false_satisfiable () {
   LOG ("checking increasing variable index false assignment");
-  assert (!unsat);
-  assert (!level);
+  Assert (!unsat);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -174,15 +174,15 @@ int Internal::forward_false_satisfiable () {
       goto START;
   }
   VERBOSE (1, "forward assuming variables false satisfies formula");
-  assert (satisfied ());
+  Assert (satisfied ());
   stats.lucky.forward.zero++;
   return 10;
 }
 
 int Internal::forward_true_satisfiable () {
   LOG ("checking increasing variable index true assignment");
-  assert (!unsat);
-  assert (!level);
+  Assert (!unsat);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -201,7 +201,7 @@ int Internal::forward_true_satisfiable () {
       goto START;
   }
   VERBOSE (1, "forward assuming variables true satisfies formula");
-  assert (satisfied ());
+  Assert (satisfied ());
   stats.lucky.forward.one++;
   return 10;
 }
@@ -210,8 +210,8 @@ int Internal::forward_true_satisfiable () {
 
 int Internal::backward_false_satisfiable () {
   LOG ("checking decreasing variable index false assignment");
-  assert (!unsat);
-  assert (!level);
+  Assert (!unsat);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -231,15 +231,15 @@ int Internal::backward_false_satisfiable () {
       goto START;
   }
   VERBOSE (1, "backward assuming variables false satisfies formula");
-  assert (satisfied ());
+  Assert (satisfied ());
   stats.lucky.backward.zero++;
   return 10;
 }
 
 int Internal::backward_true_satisfiable () {
   LOG ("checking decreasing variable index true assignment");
-  assert (!unsat);
-  assert (!level);
+  Assert (!unsat);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -259,7 +259,7 @@ int Internal::backward_true_satisfiable () {
       goto START;
   }
   VERBOSE (1, "backward assuming variables true satisfies formula");
-  assert (satisfied ());
+  Assert (satisfied ());
   stats.lucky.backward.one++;
   return 10;
 }
@@ -274,7 +274,7 @@ int Internal::backward_true_satisfiable () {
 
 int Internal::positive_horn_satisfiable () {
   LOG ("checking that all clauses are positive horn satisfiable");
-  assert (!level);
+  Assert (!level);
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -306,7 +306,7 @@ int Internal::positive_horn_satisfiable () {
       LOG (c, "no positive unassigned literal in");
       return unlucky (0);
     }
-    assert (positive_literal > 0);
+    Assert (positive_literal > 0);
     LOG (c, "found positive literal %d in", positive_literal);
     search_assume_decision (positive_literal);
     if (propagate ())
@@ -327,15 +327,15 @@ int Internal::positive_horn_satisfiable () {
     return unlucky (0);
   }
   VERBOSE (1, "clauses are positive horn satisfied");
-  assert (!conflict);
-  assert (satisfied ());
+  Assert (!conflict);
+  Assert (satisfied ());
   stats.lucky.horn.positive++;
   return 10;
 }
 
 int Internal::lucky_decide_assumptions () {
-  assert (!level);
-  assert (!constraint.size ());
+  Assert (!level);
+  Assert (!constraint.size ());
   int res = 0;
   while ((size_t)level < assumptions.size ()) {
     res = decide ();
@@ -353,10 +353,10 @@ int Internal::lucky_decide_assumptions () {
     LOG (conflict, "setting assumption lead to conflict");
     analyze_wrapper ();
     backtrack (0);
-    assert (!conflict);
+    Assert (!conflict);
     int res = 0;
     while (!res) {
-      assert ((size_t)level <= assumptions.size ());
+      Assert ((size_t)level <= assumptions.size ());
       if (unsat)
         res = 20;
       else if (!propagate ()) {
@@ -365,14 +365,14 @@ int Internal::lucky_decide_assumptions () {
 	res = decide_wrapper ();
       }
     }
-    assert (res == 20);
+    Assert (res == 20);
     return 20;
   }
   return 0;
 }
 
 int Internal::negative_horn_satisfiable () {
-  assert (!level);
+  Assert (!level);
   LOG ("checking that all clauses are negative horn satisfiable");
   int res = lucky_decide_assumptions ();
   if (res)
@@ -407,7 +407,7 @@ int Internal::negative_horn_satisfiable () {
       LOG (c, "no negative unassigned literal in");
       return unlucky (0);
     }
-    assert (negative_literal < 0);
+    Assert (negative_literal < 0);
     LOG (c, "found negative literal %d in", negative_literal);
     search_assume_decision (negative_literal);
     if (propagate ())
@@ -428,8 +428,8 @@ int Internal::negative_horn_satisfiable () {
     return unlucky (0);
   }
   VERBOSE (1, "clauses are negative horn satisfied");
-  assert (!conflict);
-  assert (satisfied ());
+  Assert (!conflict);
+  Assert (satisfied ());
   stats.lucky.horn.negative++;
   return 10;
 }
@@ -437,7 +437,7 @@ int Internal::negative_horn_satisfiable () {
 /*------------------------------------------------------------------------*/
 
 int Internal::lucky_phases () {
-  assert (!level);
+  Assert (!level);
   require_mode (SEARCH);
   if (!opts.lucky)
     return 0;
@@ -457,7 +457,7 @@ int Internal::lucky_phases () {
   START (search);
   START (lucky);
   LOG ("starting lucky");
-  assert (!searching_lucky_phases);
+  Assert (!searching_lucky_phases);
   searching_lucky_phases = true;
   stats.lucky.tried++;
   const int64_t active_before = stats.active;
@@ -476,14 +476,16 @@ int Internal::lucky_phases () {
     res = negative_horn_satisfiable ();
   if (!res)
     res = positive_horn_satisfiable ();
-  if (res < 0)
-    assert (termination_forced), res = 0;
+  if (res < 0) {
+    Assert (termination_forced);
+    res = 0;
+  }
   if (res == 10)
     stats.lucky.succeeded++;
   report ('l', !res);
-  assert (searching_lucky_phases);
+  Assert (searching_lucky_phases);
 
-  assert (res || !level);
+  Assert (res || !level);
   if (res != 20) {
     if (!propagate ()) {
       LOG ("propagating units after elimination results in empty clause");

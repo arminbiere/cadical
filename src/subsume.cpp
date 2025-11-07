@@ -75,13 +75,13 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
 #ifdef NDEBUG
   (void) subsumed;
 #endif
-  // Only use 'subsumed' for these following assertion checks.  Otherwise we
+  // Only use 'subsumed' for these following Assertion checks.  Otherwise we
   // only require that 'subsumed' has all its literals marked.
   //
-  assert (!subsumed->garbage);
-  assert (!subsuming->garbage);
-  assert (subsuming != subsumed);
-  assert (subsuming->size <= subsumed->size);
+  Assert (!subsumed->garbage);
+  Assert (!subsuming->garbage);
+  Assert (subsuming != subsumed);
+  Assert (subsuming->size <= subsumed->size);
 
   stats.subchecks++;
   if (subsuming->size == 2)
@@ -104,8 +104,8 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
     else
       flipped = lit;
   }
-  assert (prev);
-  assert (!subsuming->literals[0]);
+  Assert (prev);
+  Assert (!subsuming->literals[0]);
   subsuming->literals[0] = prev;
   if (failed)
     return 0;
@@ -124,7 +124,7 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
 
 inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.subsumed++;
-  assert (subsuming->size <= subsumed->size);
+  Assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
     stats.subred++;
@@ -142,9 +142,9 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.current.irredundant++;
   stats.added.irredundant++;
   stats.irrlits += subsuming->size;
-  assert (stats.current.redundant > 0);
+  Assert (stats.current.redundant > 0);
   stats.current.redundant--;
-  assert (stats.added.redundant > 0);
+  Assert (stats.added.redundant > 0);
   stats.added.redundant--;
   // ... and keep 'stats.added.total'.
 }
@@ -157,7 +157,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   stats.strengthened++;
-  assert (c->size > 2);
+  Assert (c->size > 2);
   LOG (c, "removing %d in", lit);
   if (proof) {
     LOG (lrat_chain, "strengthening clause with chain");
@@ -166,7 +166,10 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   if (!c->redundant)
     mark_removed (lit);
   auto new_end = remove (c->begin (), c->end (), lit);
-  assert (new_end + 1 == c->end ()), (void) new_end;
+#ifndef NDEBUG
+  Assert (new_end + 1 == c->end ());
+#endif
+  (void) new_end;
   (void) shrink_clause (c, c->size - 1);
   // bump_clause2 (c);
   LOG (c, "strengthened");
@@ -185,7 +188,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
                                             vector<Clause *> &shrunken) {
 
   stats.subtried++;
-  assert (!level);
+  Assert (!level);
   LOG (c, "trying to subsume");
 
   mark (c); // signed!
@@ -262,7 +265,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       //
       const Occs &os = occs (sign * lit);
       for (const auto &e : os) {
-        assert (!e->garbage); // sanity check
+        Assert (!e->garbage); // sanity check
         if (e->garbage)
           continue; // defensive: not needed
         flipped = subsume_check (e, c);
@@ -288,7 +291,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
   if (flipped) {
     LOG (d, "strengthening");
     if (lrat) {
-      assert (lrat_chain.empty ());
+      Assert (lrat_chain.empty ());
       lrat_chain.push_back (c->id);
       lrat_chain.push_back (d->id);
     }
@@ -296,7 +299,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       c->used = d->used;
     strengthen_clause (c, -flipped);
     lrat_chain.clear ();
-    assert (likely_to_be_kept_clause (c));
+    Assert (likely_to_be_kept_clause (c));
     shrunken.push_back (c);
     return -1;
   }
@@ -369,7 +372,7 @@ bool Internal::subsume_round () {
 
   int old_marked_candidate_variables_for_elimination = stats.mark.elim;
 
-  assert (!level);
+  Assert (!level);
 
   // Allocate schedule and occurrence lists.
   //
@@ -461,7 +464,7 @@ bool Internal::subsume_round () {
       break;
 
     Clause *c = s.clause;
-    assert (!c->garbage);
+    Assert (!c->garbage);
 
     checked++;
 
@@ -621,7 +624,7 @@ void Internal::subsume () {
   stats.subsumephases++;
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = true;
   }
 
@@ -638,7 +641,7 @@ void Internal::subsume () {
 
   transred ();
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = false;
   }
 }

@@ -20,7 +20,7 @@ void Internal::shuffle_scores () {
     return;
   if (!opts.shufflescores)
     return;
-  assert (!level);
+  Assert (!level);
   stats.shuffled++;
   LOG ("shuffling scores");
   vector<int> shuffle;

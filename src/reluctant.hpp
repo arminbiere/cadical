@@ -1,7 +1,7 @@
 #ifndef _reluctant_hpp_INCLUDED
 #define _reluctant_hpp_INCLUDED
 
-#include <cassert>
+#include "util.hpp"
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -31,7 +31,7 @@ public:
   Reluctant () : period (0), trigger (false) {}
 
   void enable (int p, int64_t l) {
-    assert (p > 0);
+    Assert (p > 0);
     u = v = 1;
     period = countdown = p;
     trigger = false;

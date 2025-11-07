@@ -51,14 +51,14 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
                                const vector<int>::const_iterator &end,
                                const int64_t id) {
   LOG (begin, end, "restoring external clause[%" PRId64 "]", id);
-  assert (eclause.empty ());
-  assert (id);
+  Assert (eclause.empty ());
+  Assert (id);
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
     if (internal->proof && internal->lrat) {
       const auto &elit = *p;
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
-      assert ((size_t) eidx < ext_units.size ());
+      Assert ((size_t) eidx < ext_units.size ());
       const int64_t id = ext_units[eidx];
       bool added = ext_flags[abs (elit)];
       if (id && !added) {
@@ -83,7 +83,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
 
 void External::restore_clauses () {
 
-  assert (internal->opts.restoreall == 2 || !tainted.empty ());
+  Assert (internal->opts.restoreall == 2 || !tainted.empty ());
 
   START (restore);
   internal->stats.restorations++;
@@ -120,7 +120,7 @@ void External::restore_clauses () {
 
     clauses.weakened++;
 
-    assert (!*p);
+    Assert (!*p);
     const auto saved = q; // Save old start.
     *q++ = *p++;          // Copy zero '0'.
 
@@ -129,7 +129,7 @@ void External::restore_clauses () {
     int tlit = 0; // Negation tainted.
     int elit;
     //
-    assert (p != end_of_extension);
+    Assert (p != end_of_extension);
     //
     while ((elit = *q++ = *p++)) {
 
@@ -138,7 +138,7 @@ void External::restore_clauses () {
         LOG ("negation of witness literal %d tainted", tlit);
       }
 
-      assert (p != end_of_extension);
+      Assert (p != end_of_extension);
     }
 
     // now copy the id of the clause
@@ -146,8 +146,8 @@ void External::restore_clauses () {
     LOG ("id is %" PRId64, id);
     *q++ = *p++;
     *q++ = *p++;
-    assert (id);
-    assert (!*p);
+    Assert (id);
+    Assert (!*p);
     *q++ = *p++;
 
     // Now find 'end_of_clause' (clause starts at 'p') and at the same time
@@ -160,7 +160,7 @@ void External::restore_clauses () {
         satisfied = elit;
       end_of_clause++;
     }
-    assert (id);
+    Assert (id);
 
     // Do not apply our 'FLUSH' rule to remove satisfied (implied) clauses
     // if the corresponding option is set simply by resetting 'satisfied'.
@@ -244,20 +244,20 @@ void External::restore_clauses () {
   p = extension.end ();
   while (p != begin_of_extension) {
     while (*--p)
-      assert (p != begin_of_extension);
+      Assert (p != begin_of_extension);
     int elit;
-    assert (p != begin_of_extension);
+    Assert (p != begin_of_extension);
     --p;
-    assert (p != begin_of_extension);
-    assert (*p || *(p - 1));
+    Assert (p != begin_of_extension);
+    Assert (*p || *(p - 1));
     --p;
-    assert (p != begin_of_extension);
-    assert (!*p);
+    Assert (p != begin_of_extension);
+    Assert (!*p);
     --p;
-    assert (p != begin_of_extension);
+    Assert (p != begin_of_extension);
     while ((elit = *--p)) {
       mark (witness, elit);
-      assert (p != begin_of_extension);
+      Assert (p != begin_of_extension);
     }
   }
 

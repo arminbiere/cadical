@@ -5,8 +5,8 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 inline unsigned Checker::l2u (int lit) {
-  assert (lit);
-  assert (lit != INT_MIN);
+  Assert (lit);
+  Assert (lit != INT_MIN);
   unsigned res = 2 * (abs (lit) - 1);
   if (lit < 0)
     res++;
@@ -14,22 +14,22 @@ inline unsigned Checker::l2u (int lit) {
 }
 
 inline signed char Checker::val (int lit) {
-  assert (lit);
-  assert (lit != INT_MIN);
-  assert (abs (lit) < size_vars);
-  assert (vals[lit] == -vals[-lit]);
+  Assert (lit);
+  Assert (lit != INT_MIN);
+  Assert (abs (lit) < size_vars);
+  Assert (vals[lit] == -vals[-lit]);
   return vals[lit];
 }
 
 signed char &Checker::mark (int lit) {
   const unsigned u = l2u (lit);
-  assert (u < marks.size ());
+  Assert (u < marks.size ());
   return marks[u];
 }
 
 inline CheckerWatcher &Checker::watcher (int lit) {
   const unsigned u = l2u (lit);
-  assert (u < watchers.size ());
+  Assert (u < watchers.size ());
   return watchers[u];
 }
 
@@ -37,7 +37,8 @@ inline CheckerWatcher &Checker::watcher (int lit) {
 
 CheckerClause *Checker::new_clause () {
   const size_t size = simplified.size ();
-  assert (size > 1), assert (size <= UINT_MAX);
+  Assert (size > 1);
+  Assert (size <= UINT_MAX);
   const size_t bytes = sizeof (CheckerClause) + (size - 2) * sizeof (int);
   CheckerClause *res = (CheckerClause *) new char[bytes];
   DeferDeleteArray<char> delete_res ((char *) res);
@@ -63,8 +64,8 @@ CheckerClause *Checker::new_clause () {
       break;
     }
   }
-  assert (!val (literals[0]));
-  assert (!val (literals[1]));
+  Assert (!val (literals[0]));
+  Assert (!val (literals[1]));
   watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
 
@@ -74,18 +75,18 @@ CheckerClause *Checker::new_clause () {
 
 void Checker::delete_clause (CheckerClause *c) {
   if (c->size) {
-    assert (c->size > 1);
-    assert (num_clauses);
+    Assert (c->size > 1);
+    Assert (num_clauses);
     num_clauses--;
   } else {
-    assert (num_garbage);
+    Assert (num_garbage);
     num_garbage--;
   }
   delete[] (char *) c;
 }
 
 void Checker::enlarge_clauses () {
-  assert (num_clauses == size_clauses);
+  Assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
   LOG ("CHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
        (uint64_t) size_clauses, (uint64_t) new_size_clauses);
@@ -131,7 +132,7 @@ void Checker::collect_garbage_clauses () {
         c->next = garbage;
         garbage = c;
         num_garbage++;
-        assert (num_clauses);
+        Assert (num_clauses);
         num_clauses--;
       } else
         p = &c->next;
@@ -163,7 +164,7 @@ void Checker::collect_garbage_clauses () {
   for (CheckerClause *c = garbage, *next; c; c = next)
     next = c->next, delete_clause (c);
 
-  assert (!num_garbage);
+  Assert (!num_garbage);
   garbage = 0;
 }
 
@@ -181,7 +182,7 @@ Checker::Checker (Internal *i)
     uint64_t nonce = random.next ();
     if (!(nonce & 1))
       nonce++;
-    assert (nonce), assert (nonce & 1);
+    Assert (nonce); Assert (nonce & 1);
     nonces[n] = nonce;
   }
 
@@ -213,7 +214,7 @@ Checker::~Checker () {
 
 void Checker::enlarge_vars (int64_t idx) {
 
-  assert (0 < idx), assert (idx <= INT_MAX);
+  Assert (0 < idx); Assert (idx <= INT_MAX);
 
   int64_t new_size_vars = size_vars ? 2 * size_vars : 2;
   while (idx >= new_size_vars)
@@ -237,12 +238,12 @@ void Checker::enlarge_vars (int64_t idx) {
   watchers.resize (2 * new_size_vars);
   marks.resize (2 * new_size_vars);
 
-  assert (idx < new_size_vars);
+  Assert (idx < new_size_vars);
 }
 
 inline void Checker::import_literal (int lit) {
-  assert (lit);
-  assert (lit != INT_MIN);
+  Assert (lit);
+  Assert (lit != INT_MIN);
   int idx = abs (lit);
   if (idx >= size_vars)
     enlarge_vars (idx);
@@ -289,7 +290,7 @@ bool Checker::tautological () {
 /*------------------------------------------------------------------------*/
 
 uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
-  assert (size > 0);
+  Assert (size > 0);
   unsigned shift = 32;
   uint64_t res = hash;
   while ((((uint64_t) 1) << shift) > size) {
@@ -297,7 +298,7 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
     shift >>= 1;
   }
   res &= size - 1;
-  assert (res < size);
+  Assert (res < size);
   return res;
 }
 
@@ -344,7 +345,7 @@ void Checker::insert () {
 /*------------------------------------------------------------------------*/
 
 inline void Checker::assign (int lit) {
-  assert (!val (lit));
+  Assert (!val (lit));
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
@@ -354,26 +355,26 @@ inline void Checker::assume (int lit) {
   signed char tmp = val (lit);
   if (tmp > 0)
     return;
-  assert (!tmp);
+  Assert (!tmp);
   stats.assumptions++;
   assign (lit);
 }
 
 void Checker::backtrack (unsigned previously_propagated) {
 
-  assert (previously_propagated <= trail.size ());
+  Assert (previously_propagated <= trail.size ());
 
   while (trail.size () > previously_propagated) {
     int lit = trail.back ();
-    assert (val (lit) > 0);
-    assert (val (-lit) < 0);
+    Assert (val (lit) > 0);
+    Assert (val (-lit) < 0);
     vals[lit] = vals[-lit] = 0;
     trail.pop_back ();
   }
 
   trail.resize (previously_propagated);
   next_to_propagate = previously_propagated;
-  assert (trail.size () == next_to_propagate);
+  Assert (trail.size () == next_to_propagate);
 }
 
 /*------------------------------------------------------------------------*/
@@ -386,15 +387,15 @@ bool Checker::propagate () {
   while (res && next_to_propagate < trail.size ()) {
     int lit = trail[next_to_propagate++];
     stats.propagations++;
-    assert (val (lit) > 0);
-    assert (abs (lit) < size_vars);
+    Assert (val (lit) > 0);
+    Assert (abs (lit) < size_vars);
     CheckerWatcher &ws = watcher (-lit);
     const auto end = ws.end ();
     auto j = ws.begin (), i = j;
     for (; res && i != end; i++) {
       CheckerWatch &w = *j++ = *i;
       const int blit = w.blit;
-      assert (blit != -lit);
+      Assert (blit != -lit);
       const signed char blit_val = val (blit);
       if (blit_val > 0)
         continue;
@@ -405,16 +406,16 @@ bool Checker::propagate () {
         else
           assign (w.blit); // but still sound
       } else {
-        assert (size > 2);
+        Assert (size > 2);
         CheckerClause *c = w.clause;
         if (!c->size) {
           j--;
           continue;
         } // skip garbage clauses
-        assert (size == c->size);
+        Assert (size == c->size);
         int *lits = c->literals;
         int other = lits[0] ^ lits[1] ^ (-lit);
-        assert (other != -lit);
+        Assert (other != -lit);
         signed char other_val = val (other);
         if (other_val > 0) {
           j[-1].blit = other;
@@ -511,7 +512,7 @@ void Checker::add_clause (const char *type) {
     const signed char tmp = val (lit);
     if (tmp < 0)
       continue;
-    assert (!tmp);
+    Assert (!tmp);
     if (unit) {
       unit = INT_MIN;
       break;
@@ -599,10 +600,10 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   if (!tautological ()) {
     CheckerClause **p = find (), *d = *p;
     if (d) {
-      assert (d->size > 1);
+      Assert (d->size > 1);
       // Remove from hash table, mark as garbage, connect to garbage list.
       num_garbage++;
-      assert (num_clauses);
+      Assert (num_clauses);
       num_clauses--;
       *p = d->next;
       d->next = garbage;

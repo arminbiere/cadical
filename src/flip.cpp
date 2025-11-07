@@ -11,7 +11,7 @@ bool Internal::flip (int lit) {
 
   /*
   if (flags (lit).unused ()) {
-    assert (lit <= max_var);
+    Assert (lit <= max_var);
     mark_active (lit);
     set_val (lit, 1);
     return true;
@@ -31,9 +31,9 @@ bool Internal::flip (int lit) {
 
   const int idx = vidx (lit);
   const signed char original_value = vals[idx];
-  assert (original_value);
+  Assert (original_value);
   lit = original_value < 0 ? -idx : idx;
-  assert (val (lit) > 0);
+  Assert (val (lit) > 0);
 
   // Here we go over all the clauses in which 'lit' is watched by 'lit' and
   // check whether assigning 'lit' to false would break watching invariants
@@ -57,7 +57,7 @@ bool Internal::flip (int lit) {
     const signed char b = val (w.blit);
     if (b > 0)
       continue;
-    assert (b < 0);
+    Assert (b < 0);
     res = false;
     break;
   }
@@ -96,7 +96,7 @@ bool Internal::flip (int lit) {
         k++;
       if (v < 0) {
         k = lits + 2;
-        assert (w.clause->pos <= size);
+        Assert (w.clause->pos <= size);
         while (k != middle && (v = val (r = *k)) < 0)
           k++;
       }
@@ -106,8 +106,8 @@ bool Internal::flip (int lit) {
         break;
       }
 
-      assert (v > 0);
-      assert (lits + 2 <= k), assert (k <= w.clause->end ());
+      Assert (v > 0);
+      Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
       w.clause->pos = k - lits;
       lits[0] = other, lits[1] = r, *k = lit;
       watch_literal (r, lit, w.clause);
@@ -133,24 +133,24 @@ bool Internal::flip (int lit) {
 
     const int idx = vidx (lit);
     const signed char original_value = vals[idx];
-    assert (original_value);
+    Assert (original_value);
     lit = original_value < 0 ? -idx : idx;
-    assert (val (lit) > 0);
+    Assert (val (lit) > 0);
 
     LOG ("flipping value of %d = 1 to %d = -1", lit, lit);
 
     set_val (idx, -original_value);
-    assert (val (-lit) > 0);
-    assert (val (lit) < 0);
+    Assert (val (-lit) > 0);
+    Assert (val (lit) < 0);
 
     Var &v = var (idx);
-    assert (trail[v.trail] == lit);
+    Assert (trail[v.trail] == lit);
     trail[v.trail] = -lit;
     if (opts.ilb) {
       if (!tainted_literal)
         tainted_literal = lit;
       else {
-        assert (val (tainted_literal));
+        Assert (val (tainted_literal));
         if (v.level < var (tainted_literal).level) {
           tainted_literal = lit;
         }
@@ -171,7 +171,7 @@ bool Internal::flippable (int lit) {
 
   /*
   if (flags (lit).unused ()) {
-    assert (lit <= max_var);
+    Assert (lit <= max_var);
     mark_active (lit);
     return true;
   }
@@ -189,9 +189,9 @@ bool Internal::flippable (int lit) {
 
   const int idx = vidx (lit);
   const signed char original_value = vals[idx];
-  assert (original_value);
+  Assert (original_value);
   lit = original_value < 0 ? -idx : idx;
-  assert (val (lit) > 0);
+  Assert (val (lit) > 0);
 
   // Here we go over all the clauses in which 'lit' is watched by 'lit' and
   // check whether assigning 'lit' to false would break watching invariants
@@ -209,7 +209,7 @@ bool Internal::flippable (int lit) {
     const signed char b = val (w.blit);
     if (b > 0)
       continue;
-    assert (b < 0);
+    Assert (b < 0);
 
     if (w.binary ()) {
       res = false;
@@ -239,7 +239,7 @@ bool Internal::flippable (int lit) {
       k++;
     if (v < 0) {
       k = lits + 2;
-      assert (w.clause->pos <= size);
+      Assert (w.clause->pos <= size);
       while (k != middle && (v = val (r = *k)) < 0)
         k++;
     }
@@ -249,9 +249,9 @@ bool Internal::flippable (int lit) {
       break;
     }
 
-    assert (v > 0);
-    assert (lits + 2 <= k);
-    assert (k <= w.clause->end ());
+    Assert (v > 0);
+    Assert (lits + 2 <= k);
+    Assert (k <= w.clause->end ());
     w.clause->pos = k - lits;
     i->blit = r;
   }

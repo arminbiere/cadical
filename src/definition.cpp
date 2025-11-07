@@ -27,17 +27,17 @@ static void traverse_definition_core (void *state, unsigned id) {
   Eliminator *eliminator = extractor->eliminator;
   const size_t size_clauses0 = clauses0.size ();
   const size_t size_clauses1 = clauses1.size ();
-  assert (size_clauses0 <= UINT_MAX);
+  Assert (size_clauses0 <= UINT_MAX);
   unsigned sign;
-  assert (id < size_clauses0 + size_clauses1);
+  Assert (id < size_clauses0 + size_clauses1);
   if (id < size_clauses0) {
     clause = clauses0[id];
     sign = 1;
   } else {
     unsigned tmp = id - size_clauses0;
 #ifndef NDEBUG
-    assert (size_clauses1 <= UINT_MAX);
-    assert (tmp < size_clauses1);
+    Assert (size_clauses1 <= UINT_MAX);
+    Assert (tmp < size_clauses1);
 #endif
     clause = clauses1[tmp];
     sign = 2;
@@ -73,7 +73,7 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
     for (const unsigned *p = lits; p != end; p++)
       pc.literals.push_back (internal->citten2lit (*p)); // conversion
     proof_clauses.push_back (pc);
-    assert (proof);
+    Assert (proof);
     proof->add_derived_clause (pc.id, true, pc.literals, pc.chain);
   } else {
     internal->assign_unit (unit);
@@ -98,27 +98,27 @@ static void traverse_one_sided_core_lemma_with_lrat (
   const vector<Clause *> &clauses1 = extractor->clauses[1];
   vector<proof_clause> &proof_clauses = eliminator->proof_clauses;
   if (!learned) { // remember clauses for mapping to kitten internal
-    assert (size);
-    assert (!chain_size);
+    Assert (size);
+    Assert (!chain_size);
     proof_clause pc;
     pc.cid = cid;
     pc.learned = false;
     const size_t size_clauses0 = clauses0.size ();
-    assert (size_clauses0 <= UINT_MAX);
+    Assert (size_clauses0 <= UINT_MAX);
     if (id < size_clauses0) {
       pc.id = clauses0[id]->id;
     } else {
       unsigned tmp = id - size_clauses0;
 #ifndef NDEBUG
       const size_t size_clauses1 = clauses1.size ();
-      assert (size_clauses1 <= UINT_MAX);
-      assert (tmp < size_clauses1);
+      Assert (size_clauses1 <= UINT_MAX);
+      Assert (tmp < size_clauses1);
 #endif
       pc.id = clauses1[tmp]->id;
     }
     proof_clauses.push_back (pc);
   } else { // actually add to proof
-    assert (chain_size);
+    Assert (chain_size);
     if (size) {
       proof_clause pc;
       pc.id = ++(internal->clause_id);
@@ -136,14 +136,14 @@ static void traverse_one_sided_core_lemma_with_lrat (
             break;
           }
         }
-        assert (id);
+        Assert (id);
         pc.chain.push_back (id);
       }
       proof_clauses.push_back (pc);
-      assert (proof);
+      Assert (proof);
       proof->add_derived_clause (pc.id, true, pc.literals, pc.chain);
     } else { // learn unit finish proof
-      assert (internal->lrat_chain.empty ());
+      Assert (internal->lrat_chain.empty ());
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
         int64_t id = 0;
         for (const auto &cpc : proof_clauses) {
@@ -152,11 +152,11 @@ static void traverse_one_sided_core_lemma_with_lrat (
             break;
           }
         }
-        assert (id);
+        Assert (id);
         internal->lrat_chain.push_back (id);
       }
       internal->assign_unit (unit);
-      assert (internal->lrat_chain.empty ());
+      Assert (internal->lrat_chain.empty ());
       for (const auto &pc : proof_clauses) {
         if (pc.learned)
           proof->delete_clause (pc.id, true, pc.literals);
@@ -184,9 +184,9 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     return;
   if (!eliminator.gates.empty ())
     return;
-  assert (!val (lit));
-  assert (!level);
-  assert (citten);
+  Assert (!val (lit));
+  Assert (!level);
+  Assert (citten);
   const int not_lit = -lit;
   definition_extractor extractor;
   extractor.lit = lit;
@@ -226,18 +226,16 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       kitten_shuffle_clauses (citten);
       kitten_set_ticks_limit (citten, 10 * limit);
       int tmp = kitten_solve (citten);
-      assert (!tmp || tmp == 20);
+      Assert (!tmp || tmp == 20);
       if (!tmp) {
         LOG ("aborting core extraction");
         goto ABORT;
       }
-#ifndef NDEBUG
       unsigned previous = reduced;
-#endif
       reduced = kitten_compute_clausal_core (citten, &learned);
       LOG ("%d sub-solver core of size %u original clauses out of %u", i,
            reduced, exported);
-      assert (reduced <= previous);
+      Assert (reduced <= previous);
 #if not defined(LOGGING) && defined(NDEBUG)
       (void) reduced;
 #endif
@@ -246,7 +244,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
     kitten_traverse_core_ids (citten, &extractor, traverse_definition_core);
-    assert (eliminator.definition_unit);
+    Assert (eliminator.definition_unit);
     int unit = 0;
     if (eliminator.definition_unit == 2) {
       unit = not_lit;

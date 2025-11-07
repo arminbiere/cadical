@@ -18,8 +18,8 @@ void Internal::transred () {
   if (!stats.current.redundant && !stats.current.irredundant)
     return;
 
-  assert (opts.transred);
-  assert (!level);
+  Assert (opts.transred);
+  Assert (!level);
 
   START_SIMPLIFIER (transred, TRANSRED);
   stats.transreds++;
@@ -127,7 +127,7 @@ void Internal::transred () {
     //
     const bool irredundant = !c->redundant;
 
-    assert (work.empty ());
+    Assert (work.empty ());
     mark (src);
     work.push_back (src);
     LOG ("transred assign %d", src);
@@ -137,13 +137,13 @@ void Internal::transred () {
 
     size_t j = 0; // 'propagated' in BFS
 
-    assert (lrat_chain.empty ());
-    assert (mini_chain.empty ());
+    Assert (lrat_chain.empty ());
+    Assert (mini_chain.empty ());
     vector<int> parents;
 
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
-      assert (marked (lit) > 0);
+      Assert (marked (lit) > 0);
       LOG ("transred propagating %d", lit);
       propagations++;
       const Watches &ws = watches (-lit);
@@ -198,7 +198,7 @@ void Internal::transred () {
       const int lit = work.back ();
       work.pop_back ();
       if (lrat && failed && !work.empty ()) {
-        assert (!parents.empty () && !mini_chain.empty ());
+        Assert (!parents.empty () && !mini_chain.empty ());
         LOG ("transred LRAT current lit %d next pos %d next neg %d", lit,
              next_pos, next_neg);
         if (lit == failed_lit || lit == next_pos) {
@@ -214,7 +214,7 @@ void Internal::transred () {
       unmark (lit);
     }
     mini_chain.clear ();
-    assert (mini_chain.empty ());
+    Assert (mini_chain.empty ());
     if (lrat && failed) {
       reverse (lrat_chain.begin (), lrat_chain.end ());
     }

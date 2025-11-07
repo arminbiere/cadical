@@ -55,7 +55,7 @@ static uint64_t hash_machine_identifier () {
     char buffer[128];
     memset (buffer, 0, sizeof buffer);
     size_t bytes = fread (buffer, 1, sizeof buffer - 1, file);
-    assert (bytes);
+    Assert (bytes);
     fclose (file);
     if (bytes && bytes < sizeof buffer) {
       buffer[bytes] = 0;

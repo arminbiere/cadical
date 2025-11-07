@@ -18,7 +18,7 @@ bool Internal::compacting () {
   if (stats.conflicts < lim.compact)
     return false;
   int inactive = max_var - active ();
-  assert (inactive >= 0);
+  Assert (inactive >= 0);
   if (!inactive)
     return false;
   if (inactive < opts.compactmin)
@@ -52,7 +52,7 @@ struct Mapper {
     table = new int[internal->max_var + 1u];
     clear_n (table, internal->max_var + 1u);
 
-    assert (!internal->level);
+    Assert (!internal->level);
 
     for (auto src : internal->vars) {
       const Flags &f = internal->flags (src);
@@ -72,10 +72,10 @@ struct Mapper {
   // Map old variable indices.  A result of zero means not mapped.
   //
   int map_idx (int src) {
-    assert (0 < src);
-    assert (src <= internal->max_var);
+    Assert (0 < src);
+    Assert (src <= internal->max_var);
     const int res = table[src];
-    assert (res <= new_max_var);
+    Assert (res <= new_max_var);
     return res;
   }
 
@@ -89,14 +89,14 @@ struct Mapper {
     if (!res) {
       const signed char tmp = internal->val (src);
       if (tmp) {
-        assert (first_fixed);
+        Assert (first_fixed);
         res = map_first_fixed;
         if (tmp != first_fixed_val)
           res = -res;
       }
     } else if ((src) < 0)
       res = -res;
-    assert (abs (res) <= new_max_var);
+    Assert (abs (res) <= new_max_var);
     return res;
   }
 
@@ -108,8 +108,8 @@ struct Mapper {
       const int dst = map_idx (src);
       if (!dst)
         continue;
-      assert (0 < dst);
-      assert (dst <= src);
+      Assert (0 < dst);
+      Assert (dst <= src);
       v[dst] = v[src];
     }
     v.resize (new_vsize);
@@ -124,8 +124,8 @@ struct Mapper {
       const int dst = map_idx (src);
       if (!dst)
         continue;
-      assert (0 < dst);
-      assert (dst <= src);
+      Assert (0 < dst);
+      Assert (dst <= src);
       v[2 * dst] = v[2 * src];
       v[2 * dst + 1] = v[2 * src + 1];
     }
@@ -143,7 +143,7 @@ struct Mapper {
     for (; i != end; i++) {
       const int src = *i;
       int dst = map_idx (abs (src));
-      assert (abs (dst) <= abs (src));
+      Assert (abs (dst) <= abs (src));
       if (!dst)
         continue;
       if (src < 0)
@@ -163,19 +163,19 @@ void Internal::compact () {
 
   START (compact);
 
-  assert (active () < max_var);
+  Assert (active () < max_var);
 
   stats.compacts++;
 
-  assert (!level);
-  assert (!unsat);
-  assert (!conflict);
-  assert (clause.empty ());
-  assert (levels.empty ());
-  assert (analyzed.empty ());
-  assert (minimized.empty ());
-  assert (control.size () == 1);
-  assert (propagated == trail.size ());
+  Assert (!level);
+  Assert (!unsat);
+  Assert (!conflict);
+  Assert (clause.empty ());
+  Assert (levels.empty ());
+  Assert (analyzed.empty ());
+  Assert (minimized.empty ());
+  Assert (control.size () == 1);
+  Assert (propagated == trail.size ());
 
   garbage_collection ();
 
@@ -188,14 +188,14 @@ void Internal::compact () {
     LOG ("no variable fixed");
 
   if (!assumptions.empty ()) {
-    assert (!external->assumptions.empty ());
+    Assert (!external->assumptions.empty ());
     LOG ("temporarily reset internal assumptions");
     reset_assumptions ();
   }
 
   const bool is_constraint = !constraint.empty ();
   if (is_constraint) {
-    assert (!external->constraint.empty ());
+    Assert (!external->constraint.empty ());
     LOG ("temporarily reset internal constraint");
     reset_constraint ();
   }
@@ -213,11 +213,11 @@ void Internal::compact () {
       continue;
     }
     if (lrat || frat) {
-      assert (eidx > 0);
-      assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
+      Assert (eidx > 0);
+      Assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
       int64_t id1 = external->ext_units[2 * eidx];
       int64_t id2 = external->ext_units[2 * eidx + 1];
-      assert (!id1 || !id2);
+      Assert (!id1 || !id2);
       if (!id1 && !id2) {
         int64_t new_id1 = unit_clauses (2 * src);
         int64_t new_id2 = unit_clauses (2 * src + 1);
@@ -237,7 +237,7 @@ void Internal::compact () {
   if (lrat || frat) {
     for (auto src : internal->vars) {
       const int dst = mapper.map_idx (src);
-      assert (dst <= src);
+      Assert (dst <= src);
       const signed char tmp = internal->val (src);
       if (!dst && !tmp) {
         unit_clauses (2 * src) = 0;
@@ -245,10 +245,10 @@ void Internal::compact () {
         continue;
       }
       if (!tmp || src == mapper.first_fixed) {
-        assert (0 < dst);
+        Assert (0 < dst);
         if (dst == src)
           continue;
-        assert (!unit_clauses (2 * dst) && !unit_clauses (2 * dst + 1));
+        Assert (!unit_clauses (2 * dst) && !unit_clauses (2 * dst + 1));
         unit_clauses (2 * dst) = unit_clauses (2 * src);
         unit_clauses (2 * dst + 1) = unit_clauses (2 * src + 1);
         unit_clauses (2 * src) = 0;
@@ -263,7 +263,7 @@ void Internal::compact () {
       }
       unit_clauses (2 * src) = 0;
       unit_clauses (2 * src + 1) = 0;
-      assert (id);
+      Assert (id);
     }
     unit_clauses_idx.resize (2 * mapper.new_vsize);
     shrink_vector (unit_clauses_idx);
@@ -271,12 +271,12 @@ void Internal::compact () {
   // Map the literals in all clauses.
   //
   for (const auto &c : clauses) {
-    assert (!c->garbage);
+    Assert (!c->garbage);
     for (auto &src : *c) {
-      assert (!val (src));
+      Assert (!val (src));
       int dst;
       dst = mapper.map_lit (src);
-      assert (dst || c->garbage);
+      Assert (dst || c->garbage);
       src = dst;
     }
   }
@@ -299,7 +299,7 @@ void Internal::compact () {
       const int dst = mapper.map_idx (idx);
       if (!dst)
         continue;
-      assert (active (idx));
+      Assert (active (idx));
       if (prev)
         links[prev].next = dst;
       else
@@ -319,15 +319,15 @@ void Internal::compact () {
   // In the second part we map, flush and shrink arrays.
   /*======================================================================*/
 
-  assert (trail.size () == num_assigned);
+  Assert (trail.size () == num_assigned);
   mapper.map_flush_and_shrink_lits (trail);
   propagated = trail.size ();
   num_assigned = trail.size ();
   if (mapper.first_fixed) {
-    assert (trail.size () == 1);
+    Assert (trail.size () == 1);
     var (mapper.first_fixed).trail = 0; // before mapping 'vtab'
   } else
-    assert (trail.empty ());
+    Assert (trail.empty ());
 
   if (!probes.empty ())
     mapper.map_flush_and_shrink_lits (probes);
@@ -359,7 +359,7 @@ void Internal::compact () {
       continue;
     if (src == dst)
       continue;
-    assert (dst < src);
+    Assert (dst < src);
     if ((size_t) src >= frozentab.size ())
       break;
     if ((size_t) dst >= frozentab.size ())
@@ -379,7 +379,7 @@ void Internal::compact () {
         continue;
       if (src == dst)
         continue;
-      assert (dst < src);
+      Assert (dst < src);
 
       relevanttab[dst] += relevanttab[src];
       relevanttab[src] = 0;
@@ -393,12 +393,12 @@ void Internal::compact () {
   if (!external->assumptions.empty ()) {
 
     for (const auto &elit : external->assumptions) {
-      assert (elit);
-      assert (elit != INT_MIN);
+      Assert (elit);
+      Assert (elit != INT_MIN);
       int eidx = abs (elit);
-      assert (eidx <= external->max_var);
+      Assert (eidx <= external->max_var);
       int ilit = external->e2i[eidx];
-      assert (ilit); // Because we froze all!!!
+      Assert (ilit); // Because we froze all!!!
       if (elit < 0)
         ilit = -ilit;
       assume (ilit);
@@ -427,14 +427,14 @@ void Internal::compact () {
 
   // 'constrain' uses 'val', so this code has to be after remapping that
   if (is_constraint) {
-    assert (!level);
-    assert (!external->constraint.back ());
+    Assert (!level);
+    Assert (!external->constraint.back ());
     for (auto elit : external->constraint) {
-      assert (elit != INT_MIN);
+      Assert (elit != INT_MIN);
       int eidx = abs (elit);
-      assert (eidx <= external->max_var);
+      Assert (eidx <= external->max_var);
       int ilit = external->e2i[eidx];
-      assert (!ilit == !elit);
+      Assert (!ilit == !elit);
       if (elit < 0)
         ilit = -ilit;
       LOG ("re adding lit external %d internal %d to constraint", elit,
@@ -474,7 +474,7 @@ void Internal::compact () {
   // elements with 'zero' destination should be flushed.
 
   vector<int> saved;
-  assert (saved.empty ());
+  Assert (saved.empty ());
   if (!scores.empty ()) {
     while (!scores.empty ()) {
       const int src = scores.front ();

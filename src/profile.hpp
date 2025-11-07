@@ -225,7 +225,7 @@ struct Profiles {
 #define START_INNER_WALK() \
   do { \
     require_mode (SEARCH); \
-    assert (!preprocessing); \
+    Assert (!preprocessing); \
     NON_QUIET_PROFILE_CODE ( \
         const double N = time (); const int L = internal->opts.profile; \
         if (stable && internal->profiles.stable.level <= L) \
@@ -243,7 +243,7 @@ struct Profiles {
 #define STOP_INNER_WALK() \
   do { \
     require_mode (SEARCH); \
-    assert (!preprocessing); \
+    Assert (!preprocessing); \
     reset_mode (WALK); \
     NON_QUIET_PROFILE_CODE ( \
         const double N = time (); const int L = internal->opts.profile; \
@@ -262,7 +262,7 @@ struct Profiles {
 #define START_OUTER_WALK() \
   do { \
     require_mode (SEARCH); \
-    assert (!preprocessing); \
+    Assert (!preprocessing); \
     NON_QUIET_PROFILE_CODE (START (walk);) \
     set_mode (WALK); \
   } while (0)
@@ -273,7 +273,7 @@ struct Profiles {
 #define STOP_OUTER_WALK() \
   do { \
     require_mode (SEARCH); \
-    assert (!preprocessing); \
+    Assert (!preprocessing); \
     reset_mode (WALK); \
     NON_QUIET_PROFILE_CODE (STOP (walk);) \
   } while (0)

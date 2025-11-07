@@ -93,7 +93,7 @@ struct probe_negated_noccs_rank {
 
 void Internal::lookahead_flush_probes () {
 
-  assert (!probes.empty ());
+  Assert (!probes.empty ());
 
   init_noccs ();
   for (const auto &c : clauses) {
@@ -116,7 +116,7 @@ void Internal::lookahead_flush_probes () {
       continue;
     if (have_pos_bin_occs)
       lit = -lit;
-    assert (!noccs (lit)), assert (noccs (-lit) > 0);
+    Assert (!noccs (lit)); Assert (noccs (-lit) > 0);
     if (propfixed (lit) >= stats.all.fixed)
       continue;
     MSG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
@@ -140,7 +140,7 @@ void Internal::lookahead_flush_probes () {
 
 void Internal::lookahead_generate_probes () {
 
-  assert (probes.empty ());
+  Assert (probes.empty ());
 
   // First determine all the literals which occur in binary clauses. It is
   // way faster to go over the clauses once, instead of walking the watch
@@ -335,7 +335,7 @@ int Internal::lookahead_probing () {
   for (int idx = 1; idx <= max_var; idx++)
     propfixed (idx) = propfixed (-idx) = -1;
 
-  assert (unsat || propagated == trail.size ());
+  Assert (unsat || propagated == trail.size ());
   propagated = propagated2 = trail.size ();
 
   int probe;
@@ -435,12 +435,12 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   reset_limits ();
   MSG ("generate cubes with %zu assumptions\n", assumptions.size ());
 
-  assert (ntab.empty ());
+  Assert (ntab.empty ());
   std::vector<int> current_assumptions{assumptions};
   std::vector<std::vector<int>> cubes{{assumptions}};
   auto loccs{lookahead_populate_locc ()};
   LOG ("loccs populated\n");
-  assert (ntab.empty ());
+  Assert (ntab.empty ());
 
   for (int i = 0; i < depth; ++i) {
     LOG ("Probing at depth %i, currently %zu have been generated", i,
@@ -449,8 +449,8 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
     cubes.clear ();
 
     for (size_t j = 0; j < cubes2.size (); ++j) {
-      assert (ntab.empty ());
-      assert (!unsat);
+      Assert (ntab.empty ());
+      Assert (!unsat);
       reset_assumptions ();
       for (auto lit : cubes2[j])
         assume (lit);
@@ -478,7 +478,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
         continue;
       }
 
-      assert (res != 0);
+      Assert (res != 0);
       LOG ("splitting on lit %i", res);
       std::vector<int> cube1{cubes2[j]};
       cube1.push_back (res);
@@ -492,7 +492,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
       break;
   }
 
-  assert (std::for_each (
+  Assert (std::for_each (
       std::begin (cubes), std::end (cubes),
       [] (std::vector<int> cube) { return non_tautological_cube (cube); }));
   reset_assumptions ();

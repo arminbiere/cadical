@@ -31,17 +31,17 @@ LratTracer::~LratTracer () {
 /*------------------------------------------------------------------------*/
 
 inline void LratTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void LratTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+  Assert (binary);
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned idx = abs (lit);
-  assert (idx < (1u << 31));
+  Assert (idx < (1u << 31));
   unsigned x = 2 * idx + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -54,8 +54,8 @@ inline void LratTracer::put_binary_lit (int lit) {
 }
 
 inline void LratTracer::put_binary_id (int64_t id) {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   uint64_t x = abs (id);
   x = 2 * x + (id < 0);
   unsigned char ch;
@@ -172,7 +172,7 @@ void LratTracer::print_statistics () {
 #endif
 
 void LratTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -185,7 +185,7 @@ void LratTracer::close (bool print) {
 }
 
 void LratTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {

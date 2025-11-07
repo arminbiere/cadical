@@ -24,7 +24,7 @@ Clause *Eliminator::dequeue () {
     return 0;
   Clause *res = backward.front ();
   backward.pop ();
-  assert (res->enqueued);
+  Assert (res->enqueued);
   res->enqueued = false;
   LOG (res, "backward dequeue");
   return res;
@@ -38,8 +38,8 @@ Eliminator::~Eliminator () {
 /*------------------------------------------------------------------------*/
 
 void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
-  assert (opts.elimbackward);
-  assert (!c->redundant);
+  Assert (opts.elimbackward);
+  Assert (!c->redundant);
   if (c->garbage)
     return;
   LOG (c, "attempting backward subsumption and strengthening with");
@@ -47,7 +47,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   unsigned size = 0;
   int best = 0;
   bool satisfied = false;
-  assert (mini_chain.empty ());
+  Assert (mini_chain.empty ());
   for (const auto &lit : *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) {
@@ -70,7 +70,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   } else if (len > (size_t) opts.elimocclim) {
     LOG ("skipping backward subsumption due to too many occurrences");
   } else {
-    assert (len);
+    Assert (len);
     LOG ("literal %d has smallest number of occurrences %zd", best, len);
     LOG ("marked %d literals in clause of size %d", size, c->size);
     for (auto &d : occs (best)) {
@@ -117,9 +117,9 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           stats.elimbwsub++;
         } else {
           int unit = 0;
-          assert (minimize_chain.empty ());
-          assert (analyzed.empty ());
-          assert (lrat_chain.empty ());
+          Assert (minimize_chain.empty ());
+          Assert (analyzed.empty ());
+          Assert (lrat_chain.empty ());
           // figure out wether we strengthen c or get a new unit
           for (const auto &lit : *d) {
             const signed char tmp = val (lit);
@@ -127,7 +127,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
               if (!lrat)
                 continue;
               Flags &f = flags (lit);
-              assert (!f.seen);
+              Assert (!f.seen);
               if (f.seen)
                 continue;
               f.seen = true;
@@ -151,7 +151,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             // {c\d}U{d\c} otherwise just the unit ids from {c\d}
             for (const auto &lit : *c) {
               const signed char tmp = val (lit);
-              assert (tmp <= 0);
+              Assert (tmp <= 0);
               if (tmp >= 0)
                 continue;
               Flags &f = flags (lit);
@@ -183,11 +183,11 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           } else if (lrat)
             clear_analyzed_literals ();
           if (satisfied) {
-            assert (lrat_chain.empty ());
+            Assert (lrat_chain.empty ());
             mark_garbage (d);
             elim_update_removed_clause (eliminator, d);
           } else if (unit && unit != INT_MIN) {
-            assert (unit);
+            Assert (unit);
             LOG (d, "unit %d through hyper unary resolution with", unit);
             assign_unit (unit);
             elim_propagate (eliminator, unit);
@@ -198,7 +198,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             remove_occs (occs (negated), d);
             elim_update_removed_lit (eliminator, negated);
             stats.elimbwstr++;
-            assert (negated != best);
+            Assert (negated != best);
             eliminator.enqueue (d);
           }
           lrat_chain.clear ();
@@ -214,7 +214,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
 
 void Internal::elim_backward_clauses (Eliminator &eliminator) {
   if (!opts.elimbackward) {
-    assert (eliminator.backward.empty ());
+    Assert (eliminator.backward.empty ());
     return;
   }
   START (backward);

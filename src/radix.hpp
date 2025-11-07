@@ -1,7 +1,7 @@
 #ifndef _radix_hpp_INCLUDED
 #define _radix_hpp_INCLUDED
 
-#include <cassert>
+#include "util.hpp"
 #include <cstring>
 #include <iterator>
 #include <vector>
@@ -42,7 +42,7 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
   typedef typename iterator_traits<I>::value_type T;
   typedef typename Rank::Type R;
 
-  assert (first <= last);
+  Assert (first <= last);
   const size_t n = last - first;
   if (n <= 1)
     return;
@@ -119,7 +119,7 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
     }
 
     if (!initialized) {
-      assert (&*c == &*a); // MS VC++
+      Assert (&*c == &*a); // MS VC++
       v.resize (n);
       b = v.begin ();
       initialized = true;
@@ -147,7 +147,7 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
 
 #ifndef NDEBUG
   for (I p = first; p + 1 != last; p++)
-    assert (rank (p[0]) <= rank (p[1]));
+    Assert (rank (p[0]) <= rank (p[1]));
 #endif
 }
 

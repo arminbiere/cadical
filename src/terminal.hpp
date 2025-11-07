@@ -11,14 +11,14 @@ class Terminal {
   bool reset_on_exit; // Reset on exit.
 
   void escape () {
-    assert (connected);
+    Assert (connected);
     fputs ("\033[", file);
   }
 
   void color (int color, bool bright) {
     if (!use_colors)
       return;
-    assert (connected);
+    Assert (connected);
     escape ();
     fputc (bright ? '1' : '0', file);
     fprintf (file, ";%dm", color);

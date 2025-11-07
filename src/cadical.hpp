@@ -49,13 +49,13 @@ enum Status {
 //   solver->add (-TIE), solver->add (-SHIRT), solver->add (0);
 //
 //   int res = solver->solve ();    // Solve instance.
-//   assert (res == 10);            // Check it is 'SATISFIABLE'.
+//   Assert (res == 10);            // Check it is 'SATISFIABLE'.
 //
 //   res = solver->val (TIE);       // Obtain assignment of 'TIE'.
-//   assert (res < 0);              // Check 'TIE' assigned to 'false'.
+//   Assert (res < 0);              // Check 'TIE' assigned to 'false'.
 //
 //   res = solver->val (SHIRT);     // Obtain assignment of 'SHIRT'.
-//   assert (res > 0);              // Check 'SHIRT' assigned to 'true'.
+//   Assert (res > 0);              // Check 'SHIRT' assigned to 'true'.
 //
 //   // ------------------------------------------------------------------
 //   // Incrementally solve again under one assumption.
@@ -63,13 +63,13 @@ enum Status {
 //   solver->assume (TIE);          // Now force 'TIE' to true.
 //
 //   res = solver->solve ();        // Solve again incrementally.
-//   assert (res == 20);            // Check it is 'UNSATISFIABLE'.
+//   Assert (res == 20);            // Check it is 'UNSATISFIABLE'.
 //
 //   res = solver->failed (TIE);    // Check 'TIE' responsible.
-//   assert (res);                  // Yes, 'TIE' in core.
+//   Assert (res);                  // Yes, 'TIE' in core.
 //
 //   res = solver->failed (SHIRT);  // Check 'SHIRT' responsible.
-//   assert (!res);                 // No, 'SHIRT' not in core.
+//   Assert (!res);                 // No, 'SHIRT' not in core.
 //
 //   // ------------------------------------------------------------------
 //   // Incrementally solve once more under another assumption.
@@ -77,13 +77,13 @@ enum Status {
 //   solver->assume (-SHIRT);       // Now force 'SHIRT' to false.
 //
 //   res = solver->solve ();        // Solve again incrementally.
-//   assert (res == 20);            // Check it is 'UNSATISFIABLE'.
+//   Assert (res == 20);            // Check it is 'UNSATISFIABLE'.
 //
 //   res = solver->failed (TIE);    // Check 'TIE' responsible.
-//   assert (!res);                 // No, 'TIE' not in core.
+//   Assert (!res);                 // No, 'TIE' not in core.
 //
 //   res = solver->failed (-SHIRT); // Check '!SHIRT' responsible.
-//   assert (res);                  // Yes, '!SHIRT' in core.
+//   Assert (res);                  // Yes, '!SHIRT' in core.
 //
 //   // ------------------------------------------------------------------
 //

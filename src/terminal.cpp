@@ -3,9 +3,9 @@
 namespace CaDiCaL {
 
 Terminal::Terminal (FILE *f) : file (f), reset_on_exit (false) {
-  assert (file);
+  Assert (file);
   int fd = fileno (f);
-  assert (fd == 1 || fd == 2);
+  Assert (fd == 1 || fd == 2);
   use_colors = connected = isatty (fd);
 }
 

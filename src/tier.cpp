@@ -18,7 +18,7 @@ void Internal::recompute_tier () {
   uint64_t total_used = 0;
   for (auto u : stats.used[stable])
     total_used += u;
-  assert (total_used == stats.bump_used[stable]);
+  Assert (total_used == stats.bump_used[stable]);
 #endif
 
   if (!stats.bump_used[stable]) {
@@ -54,10 +54,10 @@ void Internal::recompute_tier () {
     }
   }
 
-  assert (tier1[stable] > 0);
+  Assert (tier1[stable] > 0);
 
-  assert (tier1[stable]);
-  assert (tier2[stable]);
+  Assert (tier1[stable]);
+  Assert (tier2[stable]);
 
   if (tier1[stable] < opts.tier1minglue) {
     LOG ("tier1 limit of %d is too low, setting %d instead", tier1[stable], opts.tier1minglue);
@@ -69,7 +69,7 @@ void Internal::recompute_tier () {
   }
   if (tier1[stable] >= tier2[stable])
     tier2[stable] = tier1[stable] + 1;
-  assert (tier2[stable] > tier1[stable]);
+  Assert (tier2[stable] > tier1[stable]);
 
   PHASE ("retiered", stats.tierecomputed, "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode", tier1[stable],
        stable ? "stable" : "focused", tier2[stable], stable ? "stable" : "focused");
@@ -90,11 +90,11 @@ void Internal::print_tier_usage_statistics () {
       MSG ("tier1 > tier 2 due to the options, giving up");
       break;
     }
-    assert (tier1 <= tier2);
+    Assert (tier1 <= tier2);
     unsigned prefix, suffix;
     unsigned span = tier2 - tier1 + 1;
     const unsigned max_printed = 5;
-    assert (max_printed & 1), assert (max_printed / 2 > 0);
+    Assert (max_printed & 1); Assert (max_printed / 2 > 0);
     if (span > max_printed) {
       prefix = tier1 + max_printed / 2 - 1;
       suffix = tier2 - max_printed / 2 + 1;

@@ -39,7 +39,7 @@ bool Internal::conditioning () {
   if (!preprocessing && !opts.inprocessing)
     return false;
   if (preprocessing)
-    assert (lim.preprocessing);
+    Assert (lim.preprocessing);
 
   // Triggered in regular 'opts.conditionint' conflict intervals.
   //
@@ -79,13 +79,13 @@ bool Internal::conditioning () {
 
 void Internal::condition_unassign (int lit) {
   LOG ("condition unassign %d", lit);
-  assert (val (lit) > 0);
+  Assert (val (lit) > 0);
   set_val (lit, 0);
 }
 
 void Internal::condition_assign (int lit) {
   LOG ("condition assign %d", lit);
-  assert (!val (lit));
+  Assert (!val (lit));
   set_val (lit, 1);
 }
 
@@ -104,15 +104,15 @@ inline bool Internal::is_autarky_literal (int lit) const {
 
 inline void Internal::mark_as_conditional_literal (int lit) {
   LOG ("marking %d as conditional literal", lit);
-  assert (val (lit) > 0);
+  Assert (val (lit) > 0);
   setbit (lit, 0);
-  assert (is_conditional_literal (lit));
-  assert (!is_autarky_literal (lit));
+  Assert (is_conditional_literal (lit));
+  Assert (!is_autarky_literal (lit));
 }
 
 inline void Internal::unmark_as_conditional_literal (int lit) {
   LOG ("unmarking %d as conditional literal", lit);
-  assert (is_conditional_literal (lit));
+  Assert (is_conditional_literal (lit));
   unsetbit (lit, 0);
 }
 
@@ -130,13 +130,13 @@ inline bool Internal::is_in_candidate_clause (int lit) const {
 inline void Internal::mark_in_candidate_clause (int lit) {
   LOG ("marking %d as literal of the candidate clause", lit);
   mark67 (lit);
-  assert (is_in_candidate_clause (lit));
-  assert (!is_in_candidate_clause (-lit));
+  Assert (is_in_candidate_clause (lit));
+  Assert (!is_in_candidate_clause (-lit));
 }
 
 inline void Internal::unmark_in_candidate_clause (int lit) {
   LOG ("unmarking %d as literal of the candidate clause", lit);
-  assert (is_in_candidate_clause (lit));
+  Assert (is_in_candidate_clause (lit));
   unmark67 (lit);
 }
 
@@ -350,10 +350,10 @@ long Internal::condition_round (long delta) {
     //
     if (negative > 0 && positive > 0) {
       LOG (c, "found %d negative literals in candidate", negative);
-      assert (watch);
-      assert (val (watch) > 0);
+      Assert (watch);
+      Assert (val (watch) > 0);
       Occs &os = occs (watch);
-      assert (os.size () == minsize);
+      Assert (os.size () == minsize);
       os.push_back (c);
 #ifndef QUIET
       watched++;
@@ -375,7 +375,7 @@ long Internal::condition_round (long delta) {
         signed char tmp = val (lit);
         if (!tmp)
           continue;
-        assert (tmp < 0);
+        Assert (tmp < 0);
         if (!var (lit).level)
           continue; // Not unassigned yet!
         if (is_conditional_literal (-lit))
@@ -389,7 +389,7 @@ long Internal::condition_round (long delta) {
              new_conditionals);
 
       initial.conditional += new_conditionals;
-      assert (initial.autarky >= new_conditionals);
+      Assert (initial.autarky >= new_conditionals);
       initial.autarky -= new_conditionals;
     }
 
@@ -408,14 +408,14 @@ long Internal::condition_round (long delta) {
 #ifdef LOGGING
   for (size_t i = 0; i < conditional.size (); i++) {
     LOG ("initial conditional %d", conditional[i]);
-    assert (is_conditional_literal (conditional[i]));
+    Assert (is_conditional_literal (conditional[i]));
   }
   for (size_t i = 0; i < trail.size (); i++)
     if (is_autarky_literal (trail[i]))
       LOG ("initial autarky %d", trail[i]);
 #endif
-  assert (initial.conditional == conditional.size ());
-  assert (initial.assigned == initial.conditional + initial.autarky);
+  Assert (initial.conditional == conditional.size ());
+  Assert (initial.assigned == initial.conditional + initial.autarky);
 
   stats.condassinit += initial.assigned;
   stats.condcondinit += initial.conditional;
@@ -448,7 +448,7 @@ long Internal::condition_round (long delta) {
   //
   // TODO consider computing conditioned and unconditioned over all clauses.
   //
-  assert (conditioned + unconditioned == candidates.size ());
+  Assert (conditioned + unconditioned == candidates.size ());
   if (conditioned && unconditioned) {
     stable_sort (candidates.begin (), candidates.end (),
                  less_conditioned ());
@@ -457,13 +457,13 @@ long Internal::condition_round (long delta) {
            unconditioned, percent (unconditioned, candidates.size ()));
   } else if (conditioned && !unconditioned) {
     for (auto const &c : candidates) {
-      assert (c->conditioned);
+      Assert (c->conditioned);
       c->conditioned = false; // Reset 'conditioned' bit.
     }
     PHASE ("condition", stats.conditionings,
            "all %zd candidates tried before", conditioned);
   } else {
-    assert (!conditioned);
+    Assert (!conditioned);
     PHASE ("condition", stats.conditionings, "all %zd candidates are fresh",
            unconditioned);
   }
@@ -506,8 +506,8 @@ long Internal::condition_round (long delta) {
 #ifndef QUIET
     untried--;
 #endif
-    assert (!c->garbage);
-    assert (!c->redundant);
+    Assert (!c->garbage);
+    Assert (!c->redundant);
 
     LOG (c, "candidate");
     c->conditioned = 1; // Next time later.
@@ -559,17 +559,17 @@ long Internal::condition_round (long delta) {
       size_t conditional, unassigned;
     } next = {0, 0};
 
-    assert (unassigned.empty ());
-    assert (conditional.size () == initial.conditional);
+    Assert (unassigned.empty ());
+    Assert (conditional.size () == initial.conditional);
 
     while (watched_autarky_literal && stats.condprops < limit &&
            next.conditional < conditional.size ()) {
 
-      assert (next.unassigned == unassigned.size ());
+      Assert (next.unassigned == unassigned.size ());
 
       const int conditional_lit = conditional[next.conditional++];
       LOG ("processing next conditional %d", conditional_lit);
-      assert (is_conditional_literal (conditional_lit));
+      Assert (is_conditional_literal (conditional_lit));
 
       if (is_in_candidate_clause (-conditional_lit)) {
         LOG ("conditional %d negated in candidate clause", conditional_lit);
@@ -580,11 +580,11 @@ long Internal::condition_round (long delta) {
            conditional_lit);
 
       condition_unassign (conditional_lit);
-      assert (!is_conditional_literal (conditional_lit));
+      Assert (!is_conditional_literal (conditional_lit));
       unassigned.push_back (conditional_lit);
 
-      assert (remain.assigned > 0);
-      assert (remain.conditional > 0);
+      Assert (remain.assigned > 0);
+      Assert (remain.conditional > 0);
       remain.conditional--;
       remain.assigned--;
 
@@ -592,7 +592,7 @@ long Internal::condition_round (long delta) {
              next.unassigned < unassigned.size ()) {
         const int unassigned_lit = unassigned[next.unassigned++];
         LOG ("processing next unassigned %d", unassigned_lit);
-        assert (!val (unassigned_lit));
+        Assert (!val (unassigned_lit));
 #ifndef QUIET
         props++;
 #endif
@@ -635,7 +635,7 @@ long Internal::condition_round (long delta) {
             i--; // Drop watch!
             LOG (d, "watching %d in", replacement);
 
-            assert (replacement != unassigned_lit);
+            Assert (replacement != unassigned_lit);
             occs (replacement).push_back (d);
 
             continue; // ... with next watched clause 'd'.
@@ -661,7 +661,7 @@ long Internal::condition_round (long delta) {
             conditional.push_back (-lit);
 
             remain.conditional++;
-            assert (remain.autarky > 0);
+            Assert (remain.autarky > 0);
             remain.autarky--;
 
             if (-lit != watched_autarky_literal)
@@ -713,7 +713,7 @@ long Internal::condition_round (long delta) {
     LOG ("remaining conditional part of size %zd", remain.conditional);
     LOG ("remaining autarky part of size %zd", remain.autarky);
     //
-    assert (remain.assigned - remain.conditional == remain.autarky);
+    Assert (remain.assigned - remain.conditional == remain.autarky);
     //
 #if defined(LOGGING) || !defined(NDEBUG)
     //
@@ -732,21 +732,21 @@ long Internal::condition_round (long delta) {
         check.assigned++;
         if (is_conditional_literal (lit)) {
           LOG ("remaining conditional %d", lit);
-          assert (!is_autarky_literal (lit));
+          Assert (!is_autarky_literal (lit));
           check.conditional++;
         } else {
-          assert (is_autarky_literal (lit));
+          Assert (is_autarky_literal (lit));
           LOG ("remaining autarky %d", lit);
           check.autarky++;
         }
       } else {
-        assert (!is_autarky_literal (lit));
-        assert (!is_conditional_literal (lit));
+        Assert (!is_autarky_literal (lit));
+        Assert (!is_conditional_literal (lit));
       }
     }
-    assert (remain.assigned == check.assigned);
-    assert (remain.conditional == check.conditional);
-    assert (remain.autarky == check.autarky);
+    Assert (remain.assigned == check.assigned);
+    Assert (remain.conditional == check.conditional);
+    Assert (remain.autarky == check.autarky);
 #endif
 
     // Success if an autarky literal is left in the clause and
@@ -754,8 +754,8 @@ long Internal::condition_round (long delta) {
     // limit was hit.
     //
     if (watched_autarky_literal && stats.condprops < limit) {
-      assert (is_autarky_literal (watched_autarky_literal));
-      assert (is_in_candidate_clause (watched_autarky_literal));
+      Assert (is_autarky_literal (watched_autarky_literal));
+      Assert (is_in_candidate_clause (watched_autarky_literal));
 
       blocked++;
       stats.conditioned++;
@@ -861,7 +861,9 @@ long Internal::condition_round (long delta) {
   }
   LOG ("unassigned %d additionally assigned literals",
        additionally_unassigned);
-  assert (additionally_unassigned == additionally_assigned);
+#ifndef NDEBUG
+  Assert (additionally_unassigned == additionally_assigned);
+#endif
 
   if (level > initial_level) {
     LOG ("reset condition decision level");
@@ -877,14 +879,14 @@ long Internal::condition_round (long delta) {
   for (size_t i = 0; i < initial_trail_level; i++) {
     const int lit = trail[i];
     const signed char tmp = val (lit);
-    assert (tmp >= 0);
+    Assert (tmp >= 0);
     if (!tmp)
       condition_assign (lit);
   }
 
 #ifndef NDEBUG
   for (const auto &lit : trail)
-    assert (!marked (lit));
+    Assert (!marked (lit));
 #endif
 
   unprotect_reasons ();
@@ -913,7 +915,7 @@ void Internal::condition (bool update_limits) {
     limit = opts.conditionmineff;
   if (limit > opts.conditionmaxeff)
     limit = opts.conditionmaxeff;
-  assert (stats.current.irredundant);
+  Assert (stats.current.irredundant);
   limit *= 2.0 * active () / (double) stats.current.irredundant;
   limit = max (limit, 2l * active ());
 

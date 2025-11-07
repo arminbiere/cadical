@@ -598,7 +598,7 @@ int App::main (int argc, char **argv) {
   //
   FILE *less_pipe;
   if (less) {
-    assert (isatty (1));
+    Assert (isatty (1));
     less_pipe = popen ("less -r", "w");
     if (!less_pipe)
       APPERR ("could not execute and open pipe to 'less -r' command");
@@ -657,14 +657,14 @@ int App::main (int argc, char **argv) {
           "setting conflict limit to %d conflicts (due to '%s')",
           conflict_limit, conflict_limit_specified);
       bool succeeded = solver->limit ("conflicts", conflict_limit);
-      assert (succeeded), (void) succeeded;
+      Assert (succeeded); (void) succeeded;
     }
     if (decision_limit >= 0) {
       solver->message (
           "setting decision limit to %d decisions (due to '%s')",
           decision_limit, decision_limit_specified);
       bool succeeded = solver->limit ("decisions", decision_limit);
-      assert (succeeded), (void) succeeded;
+      Assert (succeeded); (void) succeeded;
     }
   }
   if (verbose () || proof_specified)
@@ -831,7 +831,7 @@ int App::main (int argc, char **argv) {
           solver->add (0);
           failed.clear ();
         } else {
-          assert (!res);
+          Assert (!res);
           inconclusive++;
           if (timesup)
             break;
@@ -925,7 +925,7 @@ int App::main (int argc, char **argv) {
 
 void App::init () {
 
-  assert (!solver);
+  Assert (!solver);
 
 #ifndef _WIN32
   time_limit = -1;

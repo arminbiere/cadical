@@ -30,7 +30,7 @@ int64_t Internal::flush_elimfast_occs (int lit) {
       break;
     }
     if (++res > occslim) {
-      assert (opts.fastelimbound < 0 || res == failed);
+      Assert (opts.fastelimbound < 0 || res == failed);
       break;
     }
   }
@@ -54,13 +54,13 @@ int64_t Internal::flush_elimfast_occs (int lit) {
 
 bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
                                                 int pivot) {
-  assert (eliminator.gates.empty ());
-  assert (!eliminator.definition_unit);
+  Assert (eliminator.gates.empty ());
+  Assert (!eliminator.definition_unit);
 
   stats.elimtried++;
 
-  assert (!unsat);
-  assert (active (pivot));
+  Assert (!unsat);
+  Assert (active (pivot));
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
@@ -95,11 +95,11 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
-    assert (!c->redundant);
+    Assert (!c->redundant);
     if (c->garbage)
       continue;
     for (const auto &d : ns) {
-      assert (!d->redundant);
+      Assert (!d->redundant);
       if (d->garbage)
         continue;
       if (resolve_clauses (eliminator, c, pivot, d, true)) {
@@ -139,13 +139,13 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
                                                int pivot) {
 
-  assert (eliminator.gates.empty ());
-  assert (!eliminator.definition_unit);
+  Assert (eliminator.gates.empty ());
+  Assert (!eliminator.definition_unit);
 
   LOG ("adding all resolvents on %d", pivot);
 
-  assert (!val (pivot));
-  assert (!flags (pivot).eliminated ());
+  Assert (!val (pivot));
+  Assert (!flags (pivot).eliminated ());
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
@@ -164,7 +164,7 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
-      assert (!lrat || !lrat_chain.empty ());
+      Assert (!lrat || !lrat_chain.empty ());
       Clause *r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);
@@ -188,7 +188,7 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
 
   if (!active (pivot))
     return;
-  assert (!frozen (pivot));
+  Assert (!frozen (pivot));
 
   // First flush garbage clauses and check limits.
 
@@ -197,14 +197,14 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
   int64_t pos = flush_elimfast_occs (pivot);
   if (pos > bound) {
     LOG ("too many occurrences thus not eliminated %d", pivot);
-    assert (!eliminator.schedule.contains (abs (pivot)));
+    Assert (!eliminator.schedule.contains (abs (pivot)));
     return;
   }
 
   int64_t neg = flush_elimfast_occs (-pivot);
   if (neg > bound) {
     LOG ("too many occurrences thus not eliminated %d", -pivot);
-    assert (!eliminator.schedule.contains (abs (pivot)));
+    Assert (!eliminator.schedule.contains (abs (pivot)));
     return;
   }
 
@@ -222,11 +222,11 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
        " times and negatively %" PRId64 " times",
        pivot, pos, neg);
 
-  assert (!eliminator.schedule.contains (abs (pivot)));
-  assert (pos <= neg);
+  Assert (!eliminator.schedule.contains (abs (pivot)));
+  Assert (pos <= neg);
 
   LOG ("trying to eliminate %d", pivot);
-  assert (!flags (pivot).eliminated ());
+  Assert (!flags (pivot).eliminated ());
 
   // Sort occurrence lists, such that shorter clauses come first.
   Occs &ps = occs (pivot);
@@ -264,14 +264,14 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
 int Internal::elimfast_round (bool &completed,
                               bool &deleted_binary_clause) {
 
-  assert (opts.fastelim);
-  assert (!unsat);
+  Assert (opts.fastelim);
+  Assert (!unsat);
 
   START_SIMPLIFIER (fastelim, ELIM);
 
   stats.elimfastrounds++;
 
-  assert (!level);
+  Assert (!level);
 
   int64_t resolution_limit;
 
@@ -310,7 +310,7 @@ int Internal::elimfast_round (bool &completed,
       else if (tmp < 0)
         falsified = true;
       else
-        assert (active (lit));
+        Assert (active (lit));
     }
     if (satisfied)
       mark_garbage (c); // forces more precise counts
@@ -329,7 +329,7 @@ int Internal::elimfast_round (bool &completed,
 
   Eliminator eliminator (this);
   ElimSchedule &schedule = eliminator.schedule;
-  assert (schedule.empty ());
+  Assert (schedule.empty ());
 
   // Now find elimination candidates which occurred in clauses removed since
   // the last time we ran bounded variable elimination, which in turned
@@ -451,7 +451,7 @@ void Internal::elimfast () {
          "starting at most %d elimination rounds", opts.fastelimrounds);
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = true;
   }
 
@@ -491,7 +491,7 @@ void Internal::elimfast () {
       PHASE ("fastelim-phase", stats.elimphases,
              "last round %d incomplete %s", round,
              eliminated ? "but successful" : "and unsuccessful");
-      assert (!phase_complete);
+      Assert (!phase_complete);
       break;
     }
 
@@ -500,7 +500,7 @@ void Internal::elimfast () {
              round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
-      assert (!phase_complete);
+      Assert (!phase_complete);
       break;
     }
 
@@ -516,7 +516,7 @@ void Internal::elimfast () {
     PHASE ("fastelim-phase", stats.elimphases,
            "no new variable elimination candidates");
 
-    assert (round_complete);
+    Assert (round_complete);
     phase_complete = true;
   }
 
@@ -562,7 +562,7 @@ void Internal::elimfast () {
 #endif
 
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     private_steps = false;
   }
 }

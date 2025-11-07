@@ -172,7 +172,7 @@ void Internal::report (char type, int verbose) {
     if (opts.quiet || (verbose > opts.verbose))
       return;
   if (!reported) {
-    assert (!lim.report);
+    Assert (!lim.report);
     reported = true;
     MSG ("%stime measured in %s time %s%s", tout.magenta_code (),
          internal->opts.realtime ? "real" : "process",
@@ -182,7 +182,7 @@ void Internal::report (char type, int verbose) {
   Report reports[num_reports];
   int n = 0;
 #define REPORT(HEAD, PREC, MIN, EXPR) \
-  assert (n < num_reports); \
+  Assert (n < num_reports); \
   reports[n++] = Report (HEAD, PREC, MIN, (double) (EXPR));
   REPORTS
 #undef REPORT

@@ -75,7 +75,7 @@ bool Config::set (Options &opts, const char *name) {
     const NameVal *BEGIN = N##_config; \
     const NameVal *END = BEGIN + sizeof N##_config / sizeof (NameVal); \
     for (const NameVal *P = BEGIN; P != END; P++) { \
-      assert (Options::has (P->name)); \
+      Assert (Options::has (P->name)); \
       opts.set (P->name, P->val); \
     } \
     return true; \

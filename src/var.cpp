@@ -26,13 +26,13 @@ void Internal::check_var_stats () {
     if (f.pure ())
       pure++;
   }
-  assert (stats.now.fixed == fixed);
-  assert (stats.now.eliminated == eliminated);
-  assert (stats.now.substituted == substituted);
-  assert (stats.now.pure == pure);
+  Assert (stats.now.fixed == fixed);
+  Assert (stats.now.eliminated == eliminated);
+  Assert (stats.now.substituted == substituted);
+  Assert (stats.now.pure == pure);
   int64_t inactive = unused + fixed + eliminated + substituted + pure;
-  assert (stats.inactive == inactive);
-  assert (max_var == stats.active + stats.inactive);
+  Assert (stats.inactive == inactive);
+  Assert (max_var == stats.active + stats.inactive);
 #endif
 }
 

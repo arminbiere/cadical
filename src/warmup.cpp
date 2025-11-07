@@ -11,35 +11,35 @@ namespace CaDiCaL {
 // specific warmup version with saving of the target.
 inline void Internal::warmup_assign (int lit, Clause *reason){
 
-  assert (level); // no need to learn unit clauses here
+  Assert (level); // no need to learn unit clauses here
   require_mode (SEARCH);
 
   const int idx = vidx (lit);
-  assert (reason != external_reason);
-  assert (!vals[idx]);
-  assert (!flags (idx).eliminated () || reason == decision_reason);
-  assert (!searching_lucky_phases);
-  assert (lrat_chain.empty());
+  Assert (reason != external_reason);
+  Assert (!vals[idx]);
+  Assert (!flags (idx).eliminated () || reason == decision_reason);
+  Assert (!searching_lucky_phases);
+  Assert (lrat_chain.empty());
   Var &v = var (idx);
   int lit_level;
-  assert (!(reason == external_reason &&
+  Assert (!(reason == external_reason &&
 	    ((size_t) level <= assumptions.size () + (!!constraint.size ()))));
-  assert (reason);
-  assert (level || reason == decision_reason);
+  Assert (reason);
+  Assert (level || reason == decision_reason);
   // we  purely assign in order here
   lit_level = level;
 
   v.level = lit_level;
   v.trail = trail.size();
   v.reason = reason;
-  assert ((int) num_assigned < max_var);
-  assert (num_assigned == trail.size ());
+  Assert ((int) num_assigned < max_var);
+  Assert (num_assigned == trail.size ());
   num_assigned++;
   const signed char tmp = sign (lit);
   phases.saved[idx] = tmp;
   set_val (idx, tmp);
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  Assert (val (lit) > 0);
+  Assert (val (-lit) < 0);
 
   trail.push_back (lit);
 #ifdef LOGGING
@@ -49,7 +49,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason){
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
 
-  assert (watching ());
+  Assert (watching ());
   const Watches &ws = watches (-lit);
   if (!ws.empty ()) {
     const Watch &w = ws[0];
@@ -60,10 +60,10 @@ inline void Internal::warmup_assign (int lit, Clause *reason){
 
 void Internal::warmup_propagate_beyond_conflict () {
 
-  assert (!unsat);
+  Assert (!unsat);
 
   START (propagate);
-  assert (!ignore);
+  Assert (!ignore);
 
   int64_t before = propagated;
 
@@ -120,7 +120,7 @@ void Internal::warmup_propagate_beyond_conflict () {
         }
 
       } else {
-        assert (w.clause->size > 2);
+        Assert (w.clause->size > 2);
 
         // The cache line with the clause data is forced to be loaded here
         // and thus this first memory access below is the real hot-spot of
@@ -147,14 +147,14 @@ void Internal::warmup_propagate_beyond_conflict () {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            Assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
 
           w.clause->pos = k - lits; // always save position
 
-          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
 
           if (v > 0) {
 
@@ -178,7 +178,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
           } else if (!u) {
 
-            assert (v < 0);
+            Assert (v < 0);
 
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
@@ -186,8 +186,8 @@ void Internal::warmup_propagate_beyond_conflict () {
             build_chain_for_units (other, w.clause, 0);
             warmup_assign (other, w.clause);
           } else {
-            assert (u < 0);
-            assert (v < 0);
+            Assert (u < 0);
+            Assert (v < 0);
 
 	    // ignoring conflict
             ++stats.warmup.conflicts;
@@ -201,7 +201,7 @@ void Internal::warmup_propagate_beyond_conflict () {
     }
   }
 
-  assert (propagated == trail.size ());
+  Assert (propagated == trail.size ());
 
   stats.warmup.propagated += (trail.size() - before);
   STOP (propagate);
@@ -209,12 +209,12 @@ void Internal::warmup_propagate_beyond_conflict () {
 
 
 int Internal::warmup_decide () {
-  assert (!satisfied ());
+  Assert (!satisfied ());
   START (decide);
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
-    assert (assumed (lit));
+    Assert (assumed (lit));
     const signed char tmp = val (lit);
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
@@ -260,7 +260,7 @@ int Internal::warmup_decide () {
         break;
       }
 
-      assert (!tmp);
+      Assert (!tmp);
       LOG ("constraint literal %d unassigned", lit);
 
       if (!unassigned_lit || better_decision (lit, unassigned_lit))
@@ -309,7 +309,7 @@ int Internal::warmup_decide () {
 #ifndef NDEBUG
     for (auto lit : constraint)
       sum -= lit;
-    assert (!sum); // Checksum of literal should not change!
+    Assert (!sum); // Checksum of literal should not change!
 #endif
 
   } else {
@@ -329,8 +329,8 @@ int Internal::warmup_decide () {
 }
 
 int Internal::warmup () {
-  assert (!unsat);
-  assert (!level);
+  Assert (!unsat);
+  Assert (!level);
   if (!opts.warmup)
     return 0;
   require_mode(WALK);
@@ -349,29 +349,29 @@ int Internal::warmup () {
   // no notification at all (not even the `backtrack ()` at the end).
   const size_t assms_contraint_level = assumptions.size () + !constraint.empty ();
   while (!res && (size_t) level < assms_contraint_level && num_assigned < (size_t) max_var) {
-    assert (num_assigned < (size_t) max_var);
+    Assert (num_assigned < (size_t) max_var);
     res = warmup_decide ();
     warmup_propagate_beyond_conflict();
   }
   const bool no_backtrack_notification = (level == 0);
 
   // now we do not need any notification and can simply propagate
-  assert (propagated == trail.size ());
-  assert (!private_steps);
+  Assert (propagated == trail.size ());
+  Assert (!private_steps);
   private_steps = true;
 
 
   LOG ("propagating beyond conflicts to warm-up walk");
   while (!res && num_assigned < (size_t) max_var) {
-    assert (propagated == trail.size ());
+    Assert (propagated == trail.size ());
     res = warmup_decide ();
     warmup_propagate_beyond_conflict();
     LOG (lrat_chain, "during warmup with lrat chain:");
   }
-  assert (res || num_assigned == (size_t) max_var);
+  Assert (res || num_assigned == (size_t) max_var);
 #ifndef QUIET
   // constrains with empty levels break this
-  // assert (res || stats.warmup.propagated - warmup_propagated == (int64_t)num_assigned);
+  // Assert (res || stats.warmup.propagated - warmup_propagated == (int64_t)num_assigned);
   VERBOSE (3, "warming-up needed %" PRIu64 " propagations including %" PRIu64 " decisions (with %" PRIu64 " dummy ones)",
 	   stats.warmup.propagated - warmup_propagated,
 	   stats.warmup.decision - decision,

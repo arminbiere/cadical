@@ -48,7 +48,7 @@ Internal::Internal ()
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
 
-  /*with C++17: static_*/assert (max_used == (1 << USED_SIZE) - 1);
+  /*with C++17: static_*/Assert (max_used == (1 << USED_SIZE) - 1);
 }
 
 Internal::~Internal () {
@@ -110,7 +110,7 @@ void Internal::enlarge_vals (size_t new_vsize) {
     vals -= vsize;
     delete[] vals;
   } else
-    assert (!vsize);
+    Assert (!vsize);
   vals = new_vals;
 }
 
@@ -159,14 +159,14 @@ void Internal::init_vars (int new_max_var) {
     enlarge (new_max_var);
 #ifndef NDEBUG
   for (int64_t i = -new_max_var; i < -max_var; i++)
-    assert (!vals[i]);
+    Assert (!vals[i]);
   for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
-    assert (!vals[i]), assert (!btab[i]), assert (!gtab[i]);
+    Assert (!vals[i]); Assert (!btab[i]); Assert (!gtab[i]);
   for (uint64_t i = 2 * ((uint64_t) max_var + 1);
        i <= 2 * (uint64_t) new_max_var + 1; i++)
-    assert (ptab[i] == -1);
+    Assert (ptab[i] == -1);
 #endif
-  assert (!btab[0]);
+  Assert (!btab[0]);
   int old_max_var = max_var;
   max_var = new_max_var;
   init_queue (old_max_var, new_max_var);
@@ -179,7 +179,7 @@ void Internal::init_vars (int new_max_var) {
 }
 
 void Internal::add_original_lit (int lit) {
-  assert (abs (lit) <= max_var);
+  Assert (abs (lit) <= max_var);
   if (lit) {
     original.push_back (lit);
   } else {
@@ -188,14 +188,14 @@ void Internal::add_original_lit (int lit) {
     if (proof) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal
-      assert (!original.size () || !external->eclause.empty ());
+      Assert (!original.size () || !external->eclause.empty ());
       proof->add_external_original_clause (id, false, external->eclause);
     }
     if (internal->opts.check &&
         (internal->opts.checkwitness || internal->opts.checkfailed)) {
       bool forgettable = from_propagator && ext_clause_forgettable;
       if (forgettable && opts.check) {
-        assert (!original.size () || !external->eclause.empty ());
+        Assert (!original.size () || !external->eclause.empty ());
 
         // First integer is the presence-flag (even if the clause is empty)
         external->forgettable_original[id] = {1};
@@ -217,7 +217,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
   if (proof) {
     // Use the external form of the clause for printing in proof
     // Externalize(internalized literal) != external literal
-    assert (!original.size () || !external->eclause.empty ());
+    Assert (!original.size () || !external->eclause.empty ());
     proof->add_external_original_clause (id, false, external->eclause,
                                          restore);
   }
@@ -230,8 +230,8 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
 void Internal::reserve_ids (int number) {
   // return;
   LOG ("reserving %d ids", number);
-  assert (number >= 0);
-  assert (!clause_id && !reserved_ids && !original_id);
+  Assert (number >= 0);
+  Assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
   if (proof)
     proof->begin_proof (reserved_ids);
@@ -346,12 +346,12 @@ int Internal::propagate_assumptions () {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
+    Assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
     if (level) {
-      assert (control.size () > 1);
+      Assert (control.size () > 1);
       stats.literalsreused += num_assigned - control[1].trail;
     }
   }
@@ -579,7 +579,7 @@ void Internal::init_search_limits () {
     init_averages ();
   } else if (opts.stabilize && opts.stabilizeonly) {
     LOG ("keeping always forced stable phase");
-    assert (stable);
+    Assert (stable);
   } else if (stable) {
     LOG ("switching back to default non-stable phase");
     stable = false;
@@ -702,7 +702,7 @@ bool Internal::preprocess_round (int round) {
   before.vars = active ();
   before.clauses = stats.current.irredundant;
   stats.preprocessings++;
-  assert (!preprocessing);
+  Assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
          "starting round %d with %" PRId64 " variables and %" PRId64
@@ -718,7 +718,7 @@ bool Internal::preprocess_round (int round) {
 
   after.vars = active ();
   after.clauses = stats.current.irredundant;
-  assert (preprocessing);
+  Assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
          "finished round %d with %" PRId64 " variables and %" PRId64
@@ -754,7 +754,7 @@ void Internal::preprocess_quickly (bool always) {
   before.clauses = stats.current.irredundant;
 #endif
   // stats.preprocessings++;
-  assert (!preprocessing);
+  Assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
@@ -778,7 +778,7 @@ void Internal::preprocess_quickly (bool always) {
   after.vars = active ();
   after.clauses = stats.current.irredundant;
 #endif
-  assert (preprocessing);
+  Assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
          "finished with %" PRId64 " variables and %" PRId64 " clauses",
@@ -806,12 +806,12 @@ int Internal::preprocess (bool always) {
 
 int Internal::try_to_satisfy_formula_by_saved_phases () {
   LOG ("satisfying formula by saved phases");
-  assert (!level);
-  assert (!force_saved_phase);
-  assert (propagated == trail.size ());
+  Assert (!level);
+  Assert (!force_saved_phase);
+  Assert (propagated == trail.size ());
   force_saved_phase = true;
   if (external_prop) {
-    assert (!level);
+    Assert (!level);
     LOG ("external notifications are turned off during preprocessing.");
     private_steps = true;
   }
@@ -825,14 +825,14 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
       res = 20;
     } else if (!propagate ()) {
       LOG ("saved phases do not satisfy redundant clauses");
-      assert (level > 0);
+      Assert (level > 0);
       backtrack ();
       conflict = 0; // ignore conflict
-      assert (!res);
+      Assert (!res);
       break;
     }
   }
-  assert (force_saved_phase);
+  Assert (force_saved_phase);
   force_saved_phase = false;
   if (external_prop) {
     private_steps = false;
@@ -850,10 +850,10 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
 
 void Internal::produce_failed_assumptions () {
   LOG ("producing failed assumptions");
-  assert (!level);
-  assert (!assumptions.empty ());
+  Assert (!level);
+  Assert (!assumptions.empty ());
   while (!unsat) {
-    assert (!satisfied ());
+    Assert (!satisfied ());
     notify_assignments ();
     if (decide ())
       break;
@@ -871,7 +871,7 @@ void Internal::produce_failed_assumptions () {
 
 int Internal::local_search_round (int round) {
 
-  assert (round > 0);
+  Assert (round > 0);
 
   if (unsat)
     return false;
@@ -879,7 +879,7 @@ int Internal::local_search_round (int round) {
     return false;
 
   START_OUTER_WALK ();
-  assert (!localsearching);
+  Assert (!localsearching);
   localsearching = true;
 
   // Determine propagation limit quadratically scaled with rounds.
@@ -897,7 +897,7 @@ int Internal::local_search_round (int round) {
   else
     res = walk_round (limit, true);
 
-  assert (localsearching);
+  Assert (localsearching);
   localsearching = false;
   STOP_OUTER_WALK ();
 
@@ -924,11 +924,11 @@ int Internal::local_search () {
 
   if (res == 10) {
     LOG ("local search determined formula to be satisfiable");
-    assert (!stats.walk.minimum);
+    Assert (!stats.walk.minimum);
     res = try_to_satisfy_formula_by_saved_phases ();
   } else if (res == 20) {
     LOG ("local search determined assumptions to be inconsistent");
-    assert (!assumptions.empty ());
+    Assert (!assumptions.empty ());
     produce_failed_assumptions ();
   }
 
@@ -941,19 +941,19 @@ int Internal::local_search () {
 // such that we do not have to backtrack to level 0.
 //
 int Internal::solve (bool preprocess_only) {
-  assert (clause.empty ());
+  Assert (clause.empty ());
   stats.searches++;
   START (solve);
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb || (size_t) level <= assumptions.size ());
+    Assert (opts.ilb || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
     if (level) {
-      assert (control.size () > 1);
+      Assert (control.size () > 1);
       stats.literalsreused += num_assigned - control[1].trail;
     }
     if (external->propagator)
@@ -1064,9 +1064,9 @@ int Internal::restore_clauses () {
 }
 
 int Internal::lookahead () {
-  assert (clause.empty ());
+  Assert (clause.empty ());
   START (lookahead);
-  assert (!lookingahead);
+  Assert (!lookingahead);
   lookingahead = true;
   if (external_prop) {
     if (level) {
@@ -1087,7 +1087,7 @@ int Internal::lookahead () {
     res = 0;
   reset_solving ();
   report_solving (tmp);
-  assert (lookingahead);
+  Assert (lookingahead);
   lookingahead = false;
   STOP (lookahead);
   if (external_prop) {
@@ -1107,7 +1107,7 @@ void Internal::finalize (int res) {
   // finalize external units
   if (frat) {
     for (const auto &evar : external->vars) {
-      assert (evar > 0);
+      Assert (evar > 0);
       const auto eidx = 2 * evar;
       int sign = 1;
       int64_t id = external->ext_units[eidx];
@@ -1126,7 +1126,7 @@ void Internal::finalize (int res) {
         const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
         const int64_t id = external->ext_units[eidx];
         if (id) {
-          assert (unit_clauses (vlit (lit)) == id);
+          Assert (unit_clauses (vlit (lit)) == id);
           continue;
         }
       }

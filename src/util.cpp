@@ -46,7 +46,7 @@ bool parse_int_str (const char *val_str, int &val) {
     } else if (ch)
       return false;
 
-    assert (exponent <= 10);
+    Assert (exponent <= 10);
     int64_t val64 = mantissa;
     for (int i = 0; i < exponent; i++)
       val64 *= 10;
@@ -60,8 +60,8 @@ bool parse_int_str (const char *val_str, int &val) {
         val64 = INT_MAX;
     }
 
-    assert (INT_MIN <= val64);
-    assert (val64 <= INT_MAX);
+    Assert (INT_MIN <= val64);
+    Assert (val64 <= INT_MAX);
 
     val = val64;
   }

@@ -147,26 +147,26 @@ struct External {
 
   /*==== end of state ====================================================*/
 
-  // These two just factor out common sanity (assertion) checking code.
+  // These two just factor out common sanity (Assertion) checking code.
 
   inline int vidx (int elit) const {
-    assert (elit);
-    assert (elit != INT_MIN);
+    Assert (elit);
+    Assert (elit != INT_MIN);
     int res = abs (elit);
-    assert (res <= max_var);
+    Assert (res <= max_var);
     return res;
   }
 
   inline int vlit (int elit) const {
-    assert (elit);
-    assert (elit != INT_MIN);
-    assert (abs (elit) <= max_var);
+    Assert (elit);
+    Assert (elit != INT_MIN);
+    Assert (abs (elit) <= max_var);
     return elit;
   }
 
   inline bool is_valid_input (int elit) {
-    assert (elit);
-    assert (elit != INT_MIN);
+    Assert (elit);
+    Assert (elit != INT_MIN);
     int eidx = abs (elit);
     return eidx > max_var || !ervars[eidx];
   }
@@ -203,10 +203,10 @@ struct External {
   // Marking external literals.
 
   unsigned elit2ulit (int elit) const {
-    assert (elit);
-    assert (elit != INT_MIN);
+    Assert (elit);
+    Assert (elit != INT_MIN);
     const int idx = abs (elit) - 1;
-    assert (idx <= max_var);
+    Assert (idx <= max_var);
     return 2u * idx + (elit < 0);
   }
 
@@ -252,8 +252,8 @@ struct External {
   void melt (int elit);
 
   bool frozen (int elit) {
-    assert (elit);
-    assert (elit != INT_MIN);
+    Assert (elit);
+    Assert (elit != INT_MIN);
     int eidx = abs (elit);
     if (eidx > max_var)
       return false;
@@ -345,7 +345,7 @@ struct External {
   // literal or its negation and thus 'ival (lit) == ival (-lit))"
 
   inline int ival (int elit) const {
-    assert (elit != INT_MIN);
+    Assert (elit != INT_MIN);
     int eidx = abs (elit);
     bool val = false;
     if (eidx <= max_var && (size_t) eidx < vals.size ())
@@ -466,8 +466,8 @@ struct External {
   // already).
   //
   inline int sol (int elit) const {
-    assert (solution);
-    assert (elit != INT_MIN);
+    Assert (solution);
+    Assert (elit != INT_MIN);
     int eidx = abs (elit);
     if (eidx > max_var)
       return 0;

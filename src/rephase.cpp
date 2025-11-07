@@ -114,7 +114,7 @@ void Internal::rephase () {
 
   stats.rephased.total++;
   last.stabilize.rephased++;
-  assert (last.stabilize.rephased <= stats.rephased.total);
+  Assert (last.stabilize.rephased <= stats.rephased.total);
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase, opts.rephase==2 ? stats.stabconflicts : stats.conflicts);
@@ -336,7 +336,7 @@ void Internal::rephase () {
         break;
       }
   } else {
-    assert (!stable && opts.walk && opts.walknonstable);
+    Assert (!stable && opts.walk && opts.walknonstable);
     // flipping,(random,best,walk,flipping,best,walk)^\omega
     if (!count)
       type = rephase_original ();
@@ -365,7 +365,7 @@ void Internal::rephase () {
         break;
       }
   }
-  assert (type);
+  Assert (type);
 
   // clear after walk such that random walk can still access the target
   // by using the saved phases
@@ -388,7 +388,7 @@ void Internal::rephase () {
   rephased = type;
 
   if (!marked_failed || unsat_constraint) {
-    assert (opts.warmup);
+    Assert (opts.warmup);
     return;
   }
   if (stable)

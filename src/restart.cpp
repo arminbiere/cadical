@@ -21,7 +21,7 @@ bool Internal::stabilizing () {
   if (stable && opts.stabilizeonly)
     return true;
   if (!inc.stabilize) {
-    assert (!stable);
+    Assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
   } else if (stats.ticks.search[stable] <= lim.stabilize)
@@ -32,10 +32,10 @@ bool Internal::stabilizing () {
   else
     STOP (unstable);
 
-  assert (last.stabilize.ticks >= 0);
-  assert (last.stabilize.conflicts >= 0 &&
+  Assert (last.stabilize.ticks >= 0);
+  Assert (last.stabilize.conflicts >= 0 &&
           last.stabilize.conflicts <= stats.conflicts);
-  assert (last.stabilize.ticks <= stats.ticks.search[stable]);
+  Assert (last.stabilize.ticks <= stats.ticks.search[stable]);
   const int64_t delta_ticks =
       stats.ticks.search[stable] - last.stabilize.ticks;
 #ifndef QUIET
@@ -131,7 +131,7 @@ int Internal::reuse_trail () {
   if (!opts.restartreusetrail)
     return trivial_decisions;
   int next_decision = next_decision_variable ();
-  assert (1 <= next_decision);
+  Assert (1 <= next_decision);
   int res = trivial_decisions;
   if (use_scores ()) {
     while (res < level) {

@@ -2286,7 +2286,7 @@ private:
   struct Segment {
     size_t lo, hi;
     Segment (size_t l, size_t h) : lo (l), hi (h) {
-      assert (0 < l), assert (l < h);
+      assert (0 < l); assert (l < h);
     }
   };
 
@@ -2465,7 +2465,7 @@ bool Trace::ignore_option (const char *name, int max_var) {
 //
 int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
                                   int64_t hi) {
-  assert (lo <= def), assert (def <= hi);
+  assert (lo <= def); assert (def <= hi);
   if (!strcmp (name, "walkmaxeff"))
     return def;
   if (!strcmp (name, "walkmineff"))
@@ -2954,12 +2954,12 @@ void Trace::generate_melt (Random &random) {
     Call *c = calls[i];
     if (c->type == Call::MELT) {
       int idx = abs (c->arg);
-      assert (idx), assert (idx <= m);
+      assert (idx); assert (idx <= m);
       assert (frozen[idx] > 0);
       frozen[idx]--;
     } else if (c->type == Call::FREEZE) {
       int idx = abs (c->arg);
-      assert (idx), assert (idx <= m);
+      assert (idx); assert (idx <= m);
       frozen[idx]++;
     }
   }
@@ -4129,7 +4129,7 @@ void Trace::map_variables (int expected) {
         mapped.push_back (c->copy ());
       else if (has_lit_arg_type (c)) {
         int new_lit = variables[abs (c->arg)];
-        assert (0 < new_lit), assert (new_lit <= max_idx);
+        assert (0 < new_lit); assert (new_lit <= max_idx);
         if (c->arg < 0)
           new_lit = -new_lit;
         Call *d = c->copy ();

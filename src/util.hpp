@@ -1,9 +1,16 @@
 #ifndef _util_hpp_INCLUDED
 #define _util_hpp_INCLUDED
 
-#include <cassert>
 #include <cstdint>
 #include <vector>
+
+#include <cassert>
+#ifdef NDEBUG
+#undef Assert
+#define Assert(cond) do {if (!(cond)) __builtin_unreachable ();} while (false)
+#else
+#define Assert(...) assert ((...))
+#endif
 
 namespace CaDiCaL {
 
@@ -47,25 +54,25 @@ inline bool contained (int64_t c, int64_t l, int64_t u) {
 }
 
 inline bool aligned (size_t n, size_t alignment) {
-  assert (is_power_of_two (alignment));
+  Assert (is_power_of_two (alignment));
   const size_t mask = alignment - 1;
   return !(n & mask);
 }
 
 inline size_t align (size_t n, size_t alignment) {
   size_t res = n;
-  assert (is_power_of_two (alignment));
+  Assert (is_power_of_two (alignment));
   const size_t mask = alignment - 1;
   if (res & mask)
     res = (res | mask) + 1;
-  assert (aligned (res, alignment));
+  Assert (aligned (res, alignment));
   return res;
 }
 
 /*------------------------------------------------------------------------*/
 
 inline bool parity (unsigned a) {
-  assert (sizeof a == 4);
+  Assert (sizeof a == 4);
   unsigned tmp = a;
   tmp ^= (tmp >> 16);
   tmp ^= (tmp >> 8);
@@ -87,7 +94,7 @@ template <class T> void erase_vector (std::vector<T> &v) {
   if (v.capacity ()) {
     std::vector<T> ().swap (v);
   }
-  assert (!v.capacity ()); // not guaranteed though
+  Assert (!v.capacity ()); // not guaranteed though
 }
 
 // The standard 'Effective STL' way (though not guaranteed) to shrink the
@@ -98,7 +105,7 @@ template <class T> void shrink_vector (std::vector<T> &v) {
   if (v.capacity () > v.size ()) {
     std::vector<T> (v).swap (v);
   }
-  assert (v.capacity () == v.size ()); // not guaranteed though
+  Assert (v.capacity () == v.size ()); // not guaranteed though
 }
 
 template <class T>

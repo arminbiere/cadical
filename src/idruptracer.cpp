@@ -21,7 +21,7 @@ IdrupTracer::IdrupTracer (Internal *i, File *f, bool b)
     uint64_t nonce = random.next ();
     if (!(nonce & 1))
       nonce++;
-    assert (nonce), assert (nonce & 1);
+    Assert (nonce); Assert (nonce & 1);
     nonces[n] = nonce;
   }
 #ifndef NDEBUG
@@ -50,7 +50,7 @@ IdrupTracer::~IdrupTracer () {
 /*------------------------------------------------------------------------*/
 
 void IdrupTracer::enlarge_clauses () {
-  assert (num_clauses == size_clauses);
+  Assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
   LOG ("IDRUP Tracer enlarging clauses of tracer from %" PRIu64
        " to %" PRIu64,
@@ -73,7 +73,7 @@ void IdrupTracer::enlarge_clauses () {
 
 IdrupClause *IdrupTracer::new_clause () {
   const size_t size = imported_clause.size ();
-  assert (size <= UINT_MAX);
+  Assert (size <= UINT_MAX);
   const int off = size ? -1 : 0;
   const size_t bytes = sizeof (IdrupClause) + (size - off) * sizeof (int);
   IdrupClause *res = (IdrupClause *) new char[bytes];
@@ -91,13 +91,13 @@ IdrupClause *IdrupTracer::new_clause () {
 }
 
 void IdrupTracer::delete_clause (IdrupClause *c) {
-  assert (c);
+  Assert (c);
   num_clauses--;
   delete[] (char *) c;
 }
 
 uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
-  assert (size > 0);
+  Assert (size > 0);
   unsigned shift = 32;
   uint64_t res = hash;
   while ((((uint64_t) 1) << shift) > size) {
@@ -105,12 +105,12 @@ uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
     shift >>= 1;
   }
   res &= size - 1;
-  assert (res < size);
+  Assert (res < size);
   return res;
 }
 
 uint64_t IdrupTracer::compute_hash (const int64_t id) {
-  assert (id > 0);
+  Assert (id > 0);
   unsigned j = id % num_nonces;
   uint64_t tmp = nonces[j] * (uint64_t) id;
   return last_hash = tmp;
@@ -131,7 +131,7 @@ bool IdrupTracer::find_and_delete (const int64_t id) {
   }
   if (!c)
     return false;
-  assert (c && res);
+  Assert (c && res);
   *res = c->next;
   int *begin = c->literals;
   for (size_t i = 0; i < c->size; i++) {
@@ -158,15 +158,15 @@ inline void IdrupTracer::flush_if_piping () {
 }
 
 inline void IdrupTracer::put_binary_zero () {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   file->put ((unsigned char) 0);
 }
 
 inline void IdrupTracer::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
+  Assert (binary);
+  Assert (file);
+  Assert (lit != INT_MIN);
   unsigned x = 2 * abs (lit) + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
@@ -179,8 +179,8 @@ inline void IdrupTracer::put_binary_lit (int lit) {
 }
 
 inline void IdrupTracer::put_binary_id (int64_t id, bool can_be_negative) {
-  assert (binary);
-  assert (file);
+  Assert (binary);
+  Assert (file);
   uint64_t x = abs (id);
   if (can_be_negative) {
     x = 2 * x + (id < 0);
@@ -251,7 +251,7 @@ void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
 void IdrupTracer::idrup_delete_clause (int64_t id,
                                        const vector<int> &clause) {
   if (find_and_delete (id)) {
-    assert (imported_clause.empty ());
+    Assert (imported_clause.empty ());
     if (binary)
       file->put ('w');
     else
@@ -392,7 +392,7 @@ void IdrupTracer::add_derived_clause (int64_t, bool, int,
                                       const vector<int64_t> &) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (clause, "IDRUP TRACER tracing addition of derived clause");
   idrup_add_derived_clause (clause);
 #ifndef QUIET
@@ -405,7 +405,7 @@ void IdrupTracer::add_assumption_clause (int64_t id,
                                          const vector<int64_t> &) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (clause, "IDRUP TRACER tracing addition of assumption clause");
   for (auto &lit : clause)
     imported_clause.push_back (lit);
@@ -418,7 +418,7 @@ void IdrupTracer::delete_clause (int64_t id, bool,
                                  const vector<int> &clause) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG ("IDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
   idrup_delete_clause (id, clause);
 }
@@ -426,7 +426,7 @@ void IdrupTracer::delete_clause (int64_t id, bool,
 void IdrupTracer::weaken_minus (int64_t id, const vector<int> &) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG ("IDRUP TRACER tracing weaken minus of clause[%" PRId64 "]", id);
   last_id = id;
   insert ();
@@ -439,7 +439,7 @@ void IdrupTracer::conclude_unsat (ConclusionType,
                                   const vector<int64_t> &conclusion) {
   if (file->closed ())
     return;
-  assert (imported_clause.empty ());
+  Assert (imported_clause.empty ());
   LOG (conclusion, "IDRUP TRACER tracing conclusion of clause(s)");
   idrup_conclude_and_delete (conclusion);
 }
@@ -456,7 +456,7 @@ void IdrupTracer::add_original_clause (int64_t id, bool,
 #endif
     return idrup_add_original_clause (clause);
   }
-  assert (restored);
+  Assert (restored);
   if (find_and_delete (id)) {
     LOG (clause,
          "IDRUP TRACER the clause was not yet weakened, so no restore");
@@ -538,7 +538,7 @@ void IdrupTracer::print_statistics () {
 #endif
 
 void IdrupTracer::close (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
@@ -551,7 +551,7 @@ void IdrupTracer::close (bool print) {
 }
 
 void IdrupTracer::flush (bool print) {
-  assert (!closed ());
+  Assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {

@@ -32,7 +32,7 @@ public:
   uint64_t next () {
     state *= 6364136223846793005ul;
     state += 1442695040888963407ul;
-    assert (state);
+    Assert (state);
     return state;
   }
 
@@ -50,7 +50,7 @@ public:
   // Generate 'int' value in the range '[l,r]'.
   //
   int pick_int (int l, int r) {
-    assert (l <= r);
+    Assert (l <= r);
     const unsigned delta = 1 + r - (unsigned) l;
     unsigned tmp = generate (), scaled;
     if (delta) {
@@ -59,13 +59,13 @@ public:
     } else
       scaled = tmp;
     const int res = scaled + l;
-    assert (l <= res);
-    assert (res <= r);
+    Assert (l <= res);
+    Assert (res <= r);
     return res;
   }
 
   int pick_log (int l, int r) {
-    assert (l <= r);
+    Assert (l <= r);
     const unsigned delta = 1 + r - (unsigned) l;
     int log_delta = delta ? 0 : 32;
     while (log_delta < 32 && (1u << log_delta) < delta)
@@ -77,18 +77,18 @@ public:
     if (delta)
       tmp %= delta;
     const int res = l + tmp;
-    assert (l <= res), assert (res <= r);
+    Assert (l <= res); Assert (res <= r);
     return res;
   }
 
   // Generate 'double' value in the range '[l,r]'.
   //
   double pick_double (double l, double r) {
-    assert (l <= r);
+    Assert (l <= r);
     double res = (r - l) * generate_double ();
     res += l;
-    assert (l <= res);
-    assert (res <= r);
+    Assert (l <= res);
+    Assert (res <= r);
     return res;
   }
 };

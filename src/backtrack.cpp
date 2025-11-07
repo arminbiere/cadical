@@ -8,7 +8,7 @@ namespace CaDiCaL {
 // specialization for 'probe' nor 'vivify' and thus it is shared.
 
 inline void Internal::unassign (int lit) {
-  assert (val (lit) > 0);
+  Assert (val (lit) > 0);
   set_val (lit, 0);
 
   int idx = vidx (lit);
@@ -77,7 +77,7 @@ void Internal::update_target_and_best () {
 /*------------------------------------------------------------------------*/
 
 void Internal::backtrack (int new_level) {
-  assert (new_level <= level);
+  Assert (new_level <= level);
   if (new_level == level)
     return;
 
@@ -87,13 +87,13 @@ void Internal::backtrack (int new_level) {
 
 void Internal::backtrack_without_updating_phases (int new_level) {
 
-  assert (new_level <= level);
+  Assert (new_level <= level);
   if (new_level == level)
     return;
 
   stats.backtracks++;
 
-  assert (num_assigned == trail.size ());
+  Assert (num_assigned == trail.size ());
 
   const size_t assigned = control[new_level + 1].trail;
 
@@ -130,7 +130,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
       // backtracking.  It is possible to just keep out-of-order assigned
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
-      assert ((in_mode(BACKBONE))|| opts.chrono || external_prop || did_external_prop);
+      Assert ((in_mode(BACKBONE))|| opts.chrono || external_prop || did_external_prop);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -157,7 +157,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
 
   propergated = 0; // Always go back to root-level.
 
-  assert (notified <= assigned + reassigned);
+  Assert (notified <= assigned + reassigned);
   if (reassigned) {
     notify_assignments ();
   }
@@ -165,12 +165,12 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   control.resize (new_level + 1);
   level = new_level;
   if (tainted_literal) {
-    assert (opts.ilb);
+    Assert (opts.ilb);
     if (!val (tainted_literal)) {
       tainted_literal = 0;
     }
   }
-  assert (num_assigned == trail.size ());
+  Assert (num_assigned == trail.size ());
 }
 
 } // namespace CaDiCaL

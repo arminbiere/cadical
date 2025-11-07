@@ -1,7 +1,6 @@
 #ifndef _watch_hpp_INCLUDED
 #define _watch_hpp_INCLUDED
 
-#include <cassert>
 #include <vector>
 
 #include "clause.hpp"
@@ -35,7 +34,7 @@ struct Watch {
   int size;
 
   Watch (int b, Clause *c) : clause (c), blit (b), size (c->size) {}
-  Watch (bool, int b, Clause *c) : clause (c), blit (b), size (2) {assert (c->size == 2);}
+  Watch (bool, int b, Clause *c) : clause (c), blit (b), size (2) {Assert (c->size == 2);}
   Watch () {}
 
   bool binary () const { return size == 2; }
@@ -54,7 +53,7 @@ inline void remove_watch (Watches &ws, Clause *clause) {
     if (w.clause == clause)
       i--;
   }
-  assert (i + 1 == end);
+  Assert (i + 1 == end);
   ws.resize (i - ws.begin ());
 }
 
@@ -65,9 +64,9 @@ inline void update_watch_size (Watches &ws, int blit, Clause *conflict) {
   for (Watch &w : ws) {
     if (w.clause == conflict)
       w.size = size, w.blit = blit, found = true;
-    assert (w.clause->garbage || w.size == 2 || w.clause->size != 2);
+    Assert (w.clause->garbage || w.size == 2 || w.clause->size != 2);
   }
-  assert (found), (void) found;
+  Assert (found); (void) found;
 }
 
 } // namespace CaDiCaL

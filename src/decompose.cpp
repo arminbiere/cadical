@@ -10,7 +10,7 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   Clause *reason = from_dfs.parent;
   if (!reason)
     return;
-  assert (reason->size == 2);
+  Assert (reason->size == 2);
   mini_chain.push_back (reason->id);
   int other = reason->literals[0];
   other = other == from ? -reason->literals[1] : -other;
@@ -30,7 +30,7 @@ vector<Clause *> Internal::decompose_analyze_binary_clauses (DFS *dfs,
   Clause *reason = from_dfs.parent;
   while (reason) {
     result.push_back (reason);
-    assert (reason->size == 2);
+    Assert (reason->size == 2);
     int other = reason->literals[0];
     other = other == from ? -reason->literals[1] : -other;
     Flags &f = flags (other);
@@ -48,8 +48,8 @@ vector<Clause *> Internal::decompose_analyze_binary_clauses (DFS *dfs,
 void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
   if (!lrat)
     return;
-  assert (lrat_chain.empty ());
-  assert (mini_chain.empty ());
+  Assert (lrat_chain.empty ());
+  Assert (mini_chain.empty ());
   for (auto &lit : scc) {
     Flags &f = flags (lit);
     if (f.seen)
@@ -67,10 +67,10 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
 
 void Internal::build_lrat_for_clause (
     const vector<vector<Clause *>> &dfs_chains, bool invert) {
-  assert (lrat);
+  Assert (lrat);
   LOG ("building chain for not subsumed clause");
-  assert (lrat_chain.empty ());
-  assert (sign_marked.empty ());
+  Assert (lrat_chain.empty ());
+  Assert (sign_marked.empty ());
   // build chain for each replaced literal
   for (const auto lit : clause) {
     auto other = lit;
@@ -82,7 +82,7 @@ void Internal::build_lrat_for_clause (
       lrat_chain.push_back (id);
       continue;
     }
-    assert (mini_chain.empty ());
+    Assert (mini_chain.empty ());
     for (auto p : dfs_chains[vlit (other)]) {
       if (marked_decomposed (other))
         continue;
@@ -116,7 +116,7 @@ void Internal::build_lrat_for_clause (
 void Internal::clear_sign_marked_literals () {
   LOG ("clearing %zd marked literals", sign_marked.size ());
   for (const auto &lit : sign_marked) {
-    // assert (marked_signed (lit));  violated on purpose in factor
+    // Assert (marked_signed (lit));  violated on purpose in factor
     unmark_decomposed (lit);
   }
   sign_marked.clear ();
@@ -136,7 +136,7 @@ bool Internal::decompose_round () {
   if (terminated_asynchronously ())
     return false;
 
-  assert (!level);
+  Assert (!level);
 
   START_SIMPLIFIER (decompose, DECOMP);
 
@@ -180,17 +180,17 @@ bool Internal::decompose_round () {
       if (dfs[vlit (root)].min == TRAVERSED)
         continue; // skip traversed
       LOG ("new dfs search starting at root %d", root);
-      assert (work.empty ());
-      assert (scc.empty ());
+      Assert (work.empty ());
+      Assert (scc.empty ());
       work.push_back (root);
       while (!unsat && !work.empty ()) {
         int parent = work.back ();
         DFS &parent_dfs = dfs[vlit (parent)];
         if (parent_dfs.min == TRAVERSED) { // skip traversed
-          assert (reprs[vlit (parent)]);
+          Assert (reprs[vlit (parent)]);
           work.pop_back ();
         } else {
-          assert (!reprs[vlit (parent)]);
+          Assert (!reprs[vlit (parent)]);
 
           // Go over all implied literals, thus need to iterate over all
           // binary watched clauses with the negation of 'parent'.
@@ -236,12 +236,12 @@ bool Internal::decompose_round () {
               // becomes unsatisfiable.
 
               if (lrat) {
-                assert (analyzed.empty ());
+                Assert (analyzed.empty ());
                 int other, first = 0;
                 bool conflicting = false;
                 size_t j = scc.size ();
                 do {
-                  assert (j > 0);
+                  Assert (j > 0);
                   other = scc[--j];
                   if (!first || vlit (other) < vlit (first))
                     first = other;
@@ -256,7 +256,7 @@ bool Internal::decompose_round () {
                   analyzed.push_back (other);
                 } while (other != parent);
 
-                assert (!conflicting || first > 0);
+                Assert (!conflicting || first > 0);
                 vector<int> to_justify;
                 if (conflicting) {
                   LOG ("conflicting scc simulating up at %d", parent);
@@ -290,10 +290,10 @@ bool Internal::decompose_round () {
 #ifndef QUIET
               int size = 0;
 #endif
-              assert (!scc.empty ());
+              Assert (!scc.empty ());
               size_t j = scc.size ();
               do {
-                assert (j > 0);
+                Assert (j > 0);
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
@@ -307,11 +307,9 @@ bool Internal::decompose_round () {
                     mini_chain.clear ();
                   }
                   assign_unit (parent);
-#ifndef NDEBUG
                   bool ok =
-#endif
                       propagate ();
-                  assert (!ok);
+                  Assert (!ok);
                   learn_empty_clause ();
                   lrat_chain.clear ();
                 } else {
@@ -329,7 +327,7 @@ bool Internal::decompose_round () {
               LOG ("SCC of representative %d of size %d", repr, size);
 #endif
               do {
-                assert (!scc.empty ());
+                Assert (!scc.empty ());
                 other = scc.back ();
                 scc.pop_back ();
                 dfs[vlit (other)].min = TRAVERSED;
@@ -344,7 +342,7 @@ bool Internal::decompose_round () {
                 LOG ("literal %d in SCC of %d", other, repr);
                 if (!lrat)
                   continue;
-                assert (mini_chain.empty ());
+                Assert (mini_chain.empty ());
                 Flags &f = flags (repr);
                 f.seen = true;
                 analyzed.push_back (repr);
@@ -372,7 +370,7 @@ bool Internal::decompose_round () {
           } else { // pre-fix
 
             dfs_idx++;
-            assert (dfs_idx < TRAVERSED);
+            Assert (dfs_idx < TRAVERSED);
             parent_dfs.idx = parent_dfs.min = dfs_idx;
             scc.push_back (parent);
 
@@ -429,17 +427,17 @@ bool Internal::decompose_round () {
     int other = reprs[vlit (idx)];
     if (other == idx)
       continue;
-    assert (!flags (other).eliminated ());
-    assert (!flags (other).substituted ());
+    Assert (!flags (other).eliminated ());
+    Assert (!flags (other).substituted ());
 
     LOG ("marking equivalence of %d and %d", idx, other);
-    assert (clause.empty ());
-    assert (lrat_chain.empty ());
+    Assert (clause.empty ());
+    Assert (lrat_chain.empty ());
     clause.push_back (other);
     clause.push_back (-idx);
     if (lrat) {
       build_lrat_for_clause (dfs_chains);
-      assert (!lrat_chain.empty ());
+      Assert (!lrat_chain.empty ());
     }
 
     const int64_t id1 = ++clause_id;
@@ -454,13 +452,13 @@ bool Internal::decompose_round () {
     lrat_chain.clear ();
     clause.clear ();
 
-    assert (clause.empty ());
-    assert (lrat_chain.empty ());
+    Assert (clause.empty ());
+    Assert (lrat_chain.empty ());
     clause.push_back (idx);
     clause.push_back (-other);
     if (lrat) {
       build_lrat_for_clause (dfs_chains);
-      assert (!lrat_chain.empty ());
+      Assert (!lrat_chain.empty ());
     }
     const int64_t id2 = ++clause_id;
     if (proof) {
@@ -512,9 +510,9 @@ bool Internal::decompose_round () {
     // literal occurs in both phases or is assigned to true the clause is
     // satisfied and can be marked as garbage.
 
-    assert (clause.empty ());
-    assert (lrat_chain.empty ());
-    assert (analyzed.empty ());
+    Assert (clause.empty ());
+    Assert (lrat_chain.empty ());
+    Assert (analyzed.empty ());
     bool satisfied = false;
 
     for (int k = 0; !satisfied && k < size; k++) {
@@ -549,7 +547,7 @@ bool Internal::decompose_round () {
           if (other == lit)
             continue;
           int64_t id = decompose_ids[vlit (-lit)];
-          assert (id);
+          Assert (id);
           lrat_chain.push_back (id);
           continue;
         } else if (tmp > 0)
@@ -567,7 +565,7 @@ bool Internal::decompose_round () {
           if (!lrat)
             continue;
           int64_t id = decompose_ids[vlit (-lit)];
-          assert (id);
+          Assert (id);
           lrat_chain.push_back (id);
         }
       }
@@ -599,7 +597,7 @@ bool Internal::decompose_round () {
         new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
       Clause *d = new_clause_as (c);
-      assert (clauses[d_clause_idx] == d);
+      Assert (clauses[d_clause_idx] == d);
       clauses[d_clause_idx] = c;
       clauses[i] = d;
       mark_garbage (c);
@@ -608,7 +606,7 @@ bool Internal::decompose_round () {
 #endif
     } else {
       LOG ("simply shrinking clause since watches did not change");
-      assert (c->size > 2);
+      Assert (c->size > 2);
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
@@ -629,11 +627,11 @@ bool Internal::decompose_round () {
         (void) shrink_clause (c, l);
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
-      // we have shrunken c->size to l so even though there is an assertion
+      // we have shrunken c->size to l so even though there is an Assertion
       // for c->size > 2 at the beginning of this else block, the new size
       // can be 2 now.
       if (c->size == 2) { // cheaper to update only new binary clauses
-        assert (new_binary_clause);
+        Assert (new_binary_clause);
         update_watch_size (watches (c->literals[0]), c->literals[1], c);
         update_watch_size (watches (c->literals[1]), c->literals[0], c);
       }
@@ -642,7 +640,7 @@ bool Internal::decompose_round () {
     while (!clause.empty ()) {
       int lit = clause.back ();
       clause.pop_back ();
-      assert (marked (lit) > 0);
+      Assert (marked (lit) > 0);
       unmark (lit);
     }
     lrat_chain.clear ();
@@ -658,9 +656,9 @@ bool Internal::decompose_round () {
       if (!id1)
         continue;
       int other = reprs[vlit (idx)];
-      assert (other != idx);
-      assert (!flags (other).eliminated ());
-      assert (!flags (other).substituted ());
+      Assert (other != idx);
+      Assert (!flags (other).eliminated ());
+      Assert (!flags (other).substituted ());
 
       clause.push_back (other);
       clause.push_back (-idx);
@@ -707,8 +705,8 @@ bool Internal::decompose_round () {
     int other = reprs[vlit (idx)];
     if (other == idx)
       continue;
-    assert (!flags (other).eliminated ());
-    assert (!flags (other).substituted ());
+    Assert (!flags (other).eliminated ());
+    Assert (!flags (other).substituted ());
     if (!flags (other).fixed ())
       mark_substituted (idx);
   }

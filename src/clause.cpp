@@ -41,7 +41,7 @@ void Internal::unmark_clause () {
 
 void Internal::mark_removed (Clause *c, int except) {
   LOG (c, "marking removed");
-  assert (!c->redundant);
+  Assert (!c->redundant);
   for (const auto &lit : *c)
     if (lit != except)
       mark_removed (lit);
@@ -68,7 +68,7 @@ inline void Internal::mark_added (int lit, int size, bool redundant) {
 
 void Internal::mark_added (Clause *c) {
   LOG (c, "marking added");
-  assert (likely_to_be_kept_clause (c));
+  Assert (likely_to_be_kept_clause (c));
   for (const auto &lit : *c)
     mark_added (lit, c->size, c->redundant);
 }
@@ -77,9 +77,9 @@ void Internal::mark_added (Clause *c) {
 
 Clause *Internal::new_clause (bool red, int glue) {
 
-  assert (clause.size () <= (size_t) INT_MAX);
+  Assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
-  assert (size >= 2);
+  Assert (size >= 2);
 
   if (glue > size)
     glue = size;
@@ -119,7 +119,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->bytes () == bytes);
+  Assert (c->bytes () == bytes);
 
   stats.current.total++;
   stats.added.total++;
@@ -146,8 +146,8 @@ Clause *Internal::new_clause (bool red, int glue) {
 /*------------------------------------------------------------------------*/
 
 void Internal::promote_clause (Clause *c, int new_glue) {
-  assert (c->redundant);
-  assert (new_glue);
+  Assert (c->redundant);
+  Assert (new_glue);
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
   if (!c->redundant)
@@ -174,8 +174,8 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 /*------------------------------------------------------------------------*/
 
 void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
-  assert (c->redundant);
-  assert (new_glue);
+  Assert (c->redundant);
+  Assert (new_glue);
   if (c->hyper)
     return;
   int old_glue = c->glue;
@@ -210,9 +210,9 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
 size_t Internal::shrink_clause (Clause *c, int new_size) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
-  assert (new_size >= 2);
+  Assert (new_size >= 2);
   int old_size = c->size;
-  assert (new_size < old_size);
+  Assert (new_size < old_size);
 #ifndef NDEBUG
   for (int i = c->size; i < new_size; i++)
     c->literals[i] = 0;
@@ -230,7 +230,7 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
     promote_clause_glue_only (c, min (c->size - 1, c->glue));
   else {
     int delta_size = old_size - new_size;
-    assert (stats.irrlits >= delta_size);
+    Assert (stats.irrlits >= delta_size);
     stats.irrlits -= delta_size;
   }
 
@@ -257,11 +257,11 @@ void Internal::delete_clause (Clause *c) {
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
-    assert (stats.garbage.bytes >= (int64_t) bytes);
+    Assert (stats.garbage.bytes >= (int64_t) bytes);
     stats.garbage.bytes -= bytes;
-    assert (stats.garbage.clauses > 0);
+    Assert (stats.garbage.clauses > 0);
     stats.garbage.clauses--;
-    assert (stats.garbage.literals >= c->size);
+    Assert (stats.garbage.literals >= c->size);
     stats.garbage.literals -= c->size;
 
     // See the discussion in 'propagate' on avoiding to eagerly trace binary
@@ -297,7 +297,7 @@ void Internal::delete_clause (Clause *c) {
 //
 void Internal::mark_garbage (Clause *c) {
 
-  assert (!c->garbage);
+  Assert (!c->garbage);
 
   // Delay tracing deletion of binary clauses.  See the discussion above in
   // 'delete_clause' and also in 'propagate'.
@@ -313,17 +313,17 @@ void Internal::mark_garbage (Clause *c) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
 
-  assert (stats.current.total > 0);
+  Assert (stats.current.total > 0);
   stats.current.total--;
 
   size_t bytes = c->bytes ();
   if (c->redundant) {
-    assert (stats.current.redundant > 0);
+    Assert (stats.current.redundant > 0);
     stats.current.redundant--;
   } else {
-    assert (stats.current.irredundant > 0);
+    Assert (stats.current.irredundant > 0);
     stats.current.irredundant--;
-    assert (stats.irrlits >= c->size);
+    Assert (stats.irrlits >= c->size);
     stats.irrlits -= c->size;
     mark_removed (c);
   }
@@ -342,11 +342,11 @@ void Internal::mark_garbage (Clause *c) {
 // to learn a new unit clause (which was confusing in log files).
 
 void Internal::assign_original_unit (int64_t id, int lit) {
-  assert (!level || opts.chrono);
-  assert (!unsat);
+  Assert (!level || opts.chrono);
+  Assert (!unsat);
   const int idx = vidx (lit);
-  assert (!vals[idx]);
-  assert (!flags (idx).eliminated ());
+  Assert (!vals[idx]);
+  Assert (!flags (idx).eliminated ());
   Var &v = var (idx);
   v.level = 0;
   v.trail = (int) trail.size ();
@@ -359,13 +359,13 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   if (lrat || frat)
     unit_clauses (uidx) = id;
   LOG ("original unit assign %d", lit);
-  assert (num_assigned == trail.size () || level);
+  Assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
   if (level)
     return;
   if (propagate ())
     return;
-  assert (conflict);
+  Assert (conflict);
   LOG ("propagation of original unit results in conflict");
   learn_empty_clause ();
 }
@@ -384,14 +384,14 @@ void Internal::add_new_original_clause (int64_t id) {
   if (!from_propagator && level && !opts.ilb) {
     backtrack ();
   } else if (tainted_literal) {
-    assert (val (tainted_literal));
+    Assert (val (tainted_literal));
     int new_level = var (tainted_literal).level - 1;
-    assert (new_level >= 0);
+    Assert (new_level >= 0);
     backtrack (new_level);
   }
-  assert (!tainted_literal);
+  Assert (!tainted_literal);
   LOG (original, "original clause");
-  assert (clause.empty ());
+  Assert (clause.empty ());
   bool skip = false;
   unordered_set<int> learned_levels;
   size_t unassigned = 0;
@@ -400,7 +400,7 @@ void Internal::add_new_original_clause (int64_t id) {
     LOG ("skipping clause since formula is already inconsistent");
     skip = true;
   } else {
-    assert (clause.empty ());
+    Assert (clause.empty ());
     for (const auto &lit : original) {
       int tmp = marked (lit);
       if (tmp > 0) {
@@ -426,7 +426,7 @@ void Internal::add_new_original_clause (int64_t id) {
           skip = true;
         } else {
           clause.push_back (lit);
-          assert (flags (lit).status != Flags::UNUSED);
+          Assert (flags (lit).status != Flags::UNUSED);
           tmp = val (lit);
           if (tmp)
             learned_levels.insert (var (lit).level);
@@ -478,7 +478,7 @@ void Internal::add_new_original_clause (int64_t id) {
     if (!size) {
       if (from_propagator)
         stats.ext_prop.elearn_conf++;
-      assert (!unsat);
+      Assert (!unsat);
       if (!original.size ())
         VERBOSE (1, "found empty original clause");
       else
@@ -489,12 +489,12 @@ void Internal::add_new_original_clause (int64_t id) {
       conclusion.push_back (new_id);
     } else if (size == 1) {
       if (force_no_backtrack) {
-        assert (level);
+        Assert (level);
         const int idx = vidx (clause[0]);
-        assert (val (clause[0]) >= 0);
-        assert (!flags (idx).eliminated ());
+        Assert (val (clause[0]) >= 0);
+        Assert (!flags (idx).eliminated ());
         Var &v = var (idx);
-        assert (val (clause[0]));
+        Assert (val (clause[0]));
         v.level = 0;
         v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
@@ -503,10 +503,10 @@ void Internal::add_new_original_clause (int64_t id) {
         mark_fixed (clause[0]);
       } else {
         const int lit = clause[0];
-        assert (!val (lit) || var (lit).level);
+        Assert (!val (lit) || var (lit).level);
         if (val (lit) < 0)
           backtrack (var (lit).level - 1);
-        assert (val (lit) >= 0);
+        Assert (val (lit) >= 0);
         handle_external_clause (0);
         assign_original_unit (new_id, lit);
       }
@@ -516,7 +516,7 @@ void Internal::add_new_original_clause (int64_t id) {
       check_watched_literal_invariants ();
 #endif
       int glue = (int) (learned_levels.size () + unassigned);
-      assert (glue <= (int) clause.size ());
+      Assert (glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
@@ -537,18 +537,18 @@ void Internal::add_new_original_clause (int64_t id) {
 // are assigned at the highest decision level.
 //
 Clause *Internal::new_learned_redundant_clause (int glue) {
-  assert (clause.size () > 1);
+  Assert (clause.size () > 1);
 #ifndef NDEBUG
   for (size_t i = 2; i < clause.size (); i++)
-    assert (var (clause[0]).level >= var (clause[i]).level),
-        assert (var (clause[1]).level >= var (clause[i]).level);
+    Assert (var (clause[0]).level >= var (clause[i]).level),
+        Assert (var (clause[1]).level >= var (clause[i]).level);
 #endif
   external->check_learned_clause ();
   Clause *res = new_clause (true, glue);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
-  assert (watching ());
+  Assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -561,7 +561,7 @@ Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
-  assert (watching ());
+  Assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -575,7 +575,7 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
-  assert (!watching ());
+  Assert (!watching ());
   return res;
 }
 
@@ -591,8 +591,8 @@ Clause *Internal::new_factor_clause (int witness) {
     else
       proof->add_derived_clause (res, lrat_chain);
   }
-  assert (!watching ());
-  assert (occurring ());
+  Assert (!watching ());
+  Assert (occurring ());
   for (const auto &lit : *res) {
     occs (lit).push_back (res);
   }
@@ -611,7 +611,7 @@ Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
     proof->add_derived_clause (res, lrat_chain);
   }
   if (full_watching) {
-    assert (watching ());
+    Assert (watching ());
     watch_clause (res);
   }
   return res;
@@ -627,7 +627,7 @@ Clause *Internal::new_clause_as (const Clause *orig) {
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
-  assert (watching ());
+  Assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -641,7 +641,7 @@ Clause *Internal::new_resolved_irredundant_clause () {
     proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
   }
   Clause *res = new_clause (false);
-  assert (!watching ());
+  Assert (!watching ());
   return res;
 }
 

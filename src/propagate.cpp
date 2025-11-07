@@ -37,7 +37,7 @@ Clause*  Internal::decision_reason = &decision_reason_clause;
 
 inline int Internal::assignment_level (int lit, Clause *reason) {
 
-  assert (opts.chrono || external_prop);
+  Assert (opts.chrono || external_prop);
   if (!reason || reason == external_reason)
     return level;
 
@@ -46,7 +46,7 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
   for (const auto &other : *reason) {
     if (other == lit)
       continue;
-    assert (val (other));
+    Assert (val (other));
     int tmp = var (other).level;
     if (tmp > res)
       res = tmp;
@@ -65,11 +65,11 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     return;
   else if (!opts.chrono && level && !forced)
     return; // not decision level 0
-  assert (lrat_chain.empty ());
+  Assert (lrat_chain.empty ());
   for (auto &reason_lit : *reason) {
     if (lit == reason_lit)
       continue;
-    assert (val (reason_lit));
+    Assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
     const int signed_reason_lit = val (reason_lit) * reason_lit;
@@ -85,12 +85,12 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
 void Internal::build_chain_for_empty () {
   if (!lrat || !lrat_chain.empty ())
     return;
-  assert (!level || in_mode (BACKBONE));
-  assert (lrat_chain.empty ());
-  assert (conflict);
+  Assert (!level || in_mode (BACKBONE));
+  Assert (lrat_chain.empty ());
+  Assert (conflict);
   LOG (conflict, "lrat for global empty clause with conflict");
   for (auto &lit : *conflict) {
-    assert (val (lit) < 0);
+    Assert (val (lit) < 0);
     int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
@@ -106,12 +106,12 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 
   const int idx = vidx (lit);
   const bool from_external = reason == external_reason;
-  assert (!val (idx));
-  assert (!flags (idx).eliminated () || reason == decision_reason ||
+  Assert (!val (idx));
+  Assert (!flags (idx).eliminated () || reason == decision_reason ||
           reason == external_reason);
   Var &v = var (idx);
   int lit_level;
-  assert (!lrat || level || reason == external_reason ||
+  Assert (!lrat || level || reason == external_reason ||
           reason == decision_reason || !lrat_chain.empty ());
   // The following cases are explained in the two comments above before
   // 'decision_reason' and 'assignment_level'.
@@ -137,16 +137,16 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   v.level = lit_level;
   v.trail = trail.size ();
   v.reason = reason;
-  assert ((int) num_assigned < max_var);
-  assert (num_assigned == trail.size ());
+  Assert ((int) num_assigned < max_var);
+  Assert (num_assigned == trail.size ());
   num_assigned++;
   if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
-  assert (lit_level || !from_external);
+  Assert (lit_level || !from_external);
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
-  assert (val (lit) > 0);  // Just a bit paranoid but useful.
-  assert (val (-lit) < 0); // Ditto.
+  Assert (val (lit) > 0);  // Just a bit paranoid but useful.
+  Assert (val (-lit) < 0); // Ditto.
   if (!searching_lucky_phases)
     phases.saved[idx] = tmp; // phase saving during search
   trail.push_back (lit);
@@ -176,7 +176,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 // which is called directly in 'propagate' below and thus is inlined.
 
 void Internal::assign_unit (int lit) {
-  assert (!level);
+  Assert (!level);
   search_assign (lit, 0);
 }
 
@@ -185,7 +185,7 @@ void Internal::assign_unit (int lit) {
 
 void Internal::search_assume_decision (int lit) {
   require_mode (SEARCH);
-  assert (propagated == trail.size ());
+  Assert (propagated == trail.size ());
   new_trail_level (lit);
   notify_decision ();
   LOG ("search decide %d", lit);
@@ -227,7 +227,7 @@ bool Internal::propagate () {
 
   if (level)
     require_mode (SEARCH);
-  assert (!unsat);
+  Assert (!unsat);
   LOG ("starting propagate");
   START (propagate);
 
@@ -259,7 +259,7 @@ bool Internal::propagate () {
 
       if (w.binary ()) {
 
-        // assert (w.clause->redundant || !w.clause->garbage);
+        // Assert (w.clause->redundant || !w.clause->garbage);
 
         // In principle we can ignore garbage binary clauses too, but that
         // would require to dereference the clause pointer all the time with
@@ -296,7 +296,7 @@ bool Internal::propagate () {
         }
 
       } else {
-        assert (w.clause->size > 2);
+        Assert (w.clause->size > 2);
 
         if (conflict)
           break; // Stop if there was a binary conflict already.
@@ -314,7 +314,7 @@ bool Internal::propagate () {
         }
 
         literal_iterator lits = w.clause->begin ();
-	assert (lits[0] == lit || lits[1] == lit);
+	Assert (lits[0] == lit || lits[1] == lit);
 
         // Simplify code by forcing 'lit' to be the second literal in the
         // clause.  This goes back to MiniSAT.  We use a branch-less version
@@ -346,7 +346,7 @@ bool Internal::propagate () {
           literal_iterator k = middle;
 
           // Find replacement watch 'r' at position 'k' with value 'v'.
-	  assert (lits + 2 <= k);
+	  Assert (lits + 2 <= k);
 	  LOG (w.clause, "search starting at %d", w.clause->pos);
           int r = 0;
           signed char v = -1;
@@ -357,14 +357,14 @@ bool Internal::propagate () {
           if (v < 0) { // need second search starting at the head?
 
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            Assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
 
           w.clause->pos = k - lits; // always save position
 
-          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
 
           if (v > 0) {
 
@@ -390,7 +390,7 @@ bool Internal::propagate () {
 
           } else if (!u) {
 
-            assert (v < 0);
+            Assert (v < 0);
 
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
@@ -416,7 +416,7 @@ bool Internal::propagate () {
                 // another literal in the clause at that higher assignment
                 // level and watch that instead of 'lit'.
 
-                assert (size > 2);
+                Assert (size > 2);
 
                 int pos, s = 0;
 
@@ -424,8 +424,8 @@ bool Internal::propagate () {
                   if (var (s = lits[pos]).level == other_level)
                     break;
 
-                assert (s);
-                assert (pos < size);
+                Assert (s);
+                Assert (pos < size);
 
                 LOG (w.clause, "unwatch %d in", lit);
                 lits[pos] = lit;
@@ -438,8 +438,8 @@ bool Internal::propagate () {
             }
           } else {
 
-            assert (u < 0);
-            assert (v < 0);
+            Assert (u < 0);
+            Assert (v < 0);
 
             // The other watch is assigned false ('u < 0') and all other
             // literals as well (still 'v < 0'), thus we found a conflict.
@@ -501,8 +501,8 @@ bool Internal::propagate () {
 
 void Internal::propergate () {
 
-  assert (!conflict);
-  assert (propagated == trail.size ());
+  Assert (!conflict);
+  Assert (propagated == trail.size ());
 
   while (propergated != trail.size ()) {
 
@@ -519,7 +519,7 @@ void Internal::propergate () {
       const Watch w = *j++ = *i++;
 
       if (w.binary ()) {
-        assert (val (w.blit) > 0);
+        Assert (val (w.blit) > 0);
         continue;
       }
       if (w.clause->garbage) {
@@ -535,7 +535,7 @@ void Internal::propergate () {
       // TODO: check if u == 0 can happen.
       if (u > 0)
         continue;
-      assert (u < 0);
+      Assert (u < 0);
 
       const int size = w.clause->size;
       const literal_iterator middle = lits + w.clause->pos;
@@ -550,15 +550,15 @@ void Internal::propergate () {
 
       if (v < 0) {
         k = lits + 2;
-        assert (w.clause->pos <= size);
+        Assert (w.clause->pos <= size);
         while (k != middle && (v = val (r = *k)) < 0)
           k++;
       }
 
-      assert (lits + 2 <= k), assert (k <= w.clause->end ());
+      Assert (lits + 2 <= k); Assert (k <= w.clause->end ());
       w.clause->pos = k - lits;
 
-      assert (v > 0);
+      Assert (v > 0);
 
       LOG (w.clause, "unwatch %d in", lit);
 

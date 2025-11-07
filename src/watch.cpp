@@ -3,7 +3,7 @@
 namespace CaDiCaL {
 
 void Internal::init_watches () {
-  assert (wtab.empty ());
+  Assert (wtab.empty ());
   if (wtab.size () < 2 * vsize)
     wtab.resize (2 * vsize, Watches ());
   LOG ("initialized watcher tables");
@@ -15,7 +15,7 @@ void Internal::clear_watches () {
 }
 
 void Internal::reset_watches () {
-  assert (!wtab.empty ());
+  Assert (!wtab.empty ());
   erase_vector (wtab);
   LOG ("reset watcher tables");
 }
@@ -25,7 +25,7 @@ void Internal::reset_watches () {
 
 void Internal::connect_watches (bool irredundant_only) {
   START (connect);
-  assert (watching ());
+  Assert (watching ());
 
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
 
@@ -81,7 +81,7 @@ void Internal::connect_watches (bool irredundant_only) {
 
 void Internal::connect_binary_watches () {
   START (connect);
-  assert (watching ());
+  Assert (watching ());
 
   LOG ("watching binary clauses");
 
@@ -97,7 +97,7 @@ void Internal::connect_binary_watches () {
 }
 
 void Internal::sort_watches () {
-  assert (watching ());
+  Assert (watching ());
   LOG ("sorting watches");
   Watches saved;
   for (auto lit : lits) {
@@ -107,7 +107,7 @@ void Internal::sort_watches () {
     watch_iterator j = ws.begin ();
     const_watch_iterator i;
 
-    assert (saved.empty ());
+    Assert (saved.empty ());
 
     for (i = j; i != end; i++) {
       const Watch w = *i;
