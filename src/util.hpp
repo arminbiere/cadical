@@ -120,7 +120,7 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 // that will allocate exactly the size requested, meaning that the
 // amortized complexity is lost.
 template <class T> static void reserve_at_least (vector<T> &v, size_t N) {
-  if (N < v.size ())
+  if (N < v.capacity ())
     return;
   size_t new_size = v.size ();
   if (!new_size)
