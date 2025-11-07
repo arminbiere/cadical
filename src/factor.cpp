@@ -930,6 +930,19 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
+
+  int v_active = active ();
+  size_t log_active = log10 (v_active);
+  size_t eliminations = stats.elimrounds;
+  size_t delay = opts.factordelay;
+  size_t delay_limit = eliminations + delay;
+  if (log_active > delay_limit) {
+    VERBOSE (3,
+             "factorization delayed as %zu = log10 (%u)"
+             "> eliminations + delay = %zu + %zu = %zu",
+             log_active, v_active, eliminations, delay, delay_limit);
+    return false;
+  }
   // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
   // assert (stats.mark.factor || clauses.empty ());
