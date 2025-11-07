@@ -215,7 +215,8 @@ int Internal::backward_false_satisfiable () {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
-  for (int idx = max_var; idx > 0; idx--) {
+  for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
+    int idx = *it;
   START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -242,7 +243,8 @@ int Internal::backward_true_satisfiable () {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
-  for (int idx = max_var; idx > 0; idx--) {
+  for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
+    int idx = *it;
   START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
