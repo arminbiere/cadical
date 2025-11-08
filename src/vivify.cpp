@@ -982,12 +982,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   }
 
   sort (sorted.begin (), sorted.end (), vivify_more_noccs_kissat (this));
-  for (int i = 0, j = 1; j < sorted.size (); ++i, ++j) {
-    int a = sorted[i], b = sorted[j];
-    const unsigned s = noccs (a), t = noccs (b);
-    LOG ("%s - %s: %d %d comp: %d -- %zd comp: %zd", LOGLIT (a), LOGLIT (b), s, t, s > t ? 1 : 0, t - s, ((t - s) | ((b - a) & ~(s - t))) >> 31);
-
-  }
   assert (std::is_sorted(sorted.begin (), sorted.end (), vivify_more_noccs (this)));
 
   // The actual vivification checking is performed here, by assuming the
