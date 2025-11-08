@@ -444,8 +444,8 @@ struct vivify_flush_smaller {
     for (; i != eoa && j != eob; i++, j++)
       if (*i != *j)
         return *i < *j;
-
-    return j == eob && i != eoa;
+    const bool smaller = j == eob && i != eoa;
+    return smaller;
   }
 };
 
@@ -454,7 +454,6 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
   ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
   // we cannot use msort here, as we cannot calculate a score
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
-
   const auto end = schedule.end ();
   auto j = schedule.begin (), i = j;
 
@@ -983,6 +982,13 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   }
 
   sort (sorted.begin (), sorted.end (), vivify_more_noccs_kissat (this));
+  for (int i = 0, j = 1; j < sorted.size (); ++i, ++j) {
+    int a = sorted[i], b = sorted[j];
+    const unsigned s = noccs (a), t = noccs (b);
+    LOG ("%s - %s: %d %d comp: %d -- %zd comp: %zd", LOGLIT (a), LOGLIT (b), s, t, s > t ? 1 : 0, t - s, ((t - s) | ((b - a) & ~(s - t))) >> 31);
+
+  }
+  assert (std::is_sorted(sorted.begin (), sorted.end (), vivify_more_noccs (this)));
 
   // The actual vivification checking is performed here, by assuming the
   // negation of each of the remaining literals of the clause in turn and
@@ -1360,8 +1366,8 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
     assert (best_count);
     assert (best_count < UINT32_MAX);
     ref.count[i] =
-        ((uint64_t) best_count << 32) + (uint64_t) internal->vlit (best);
-    LOG ("final count at position %d is %d - %d: %" PRIu64, i, best, best_count,
+      (((uint64_t) best_count) << 32) + (uint64_t) internal->vlit (best);
+    LOG ("final count at position %d is %s - %u: %" PRIu64, i, LOGLIT (best), best_count,
          ref.count[i]);
     lits[i] = best;
   }
