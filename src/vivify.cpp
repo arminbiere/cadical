@@ -325,9 +325,9 @@ struct vivify_more_noccs_kissat {
   vivify_more_noccs_kissat (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    unsigned t = internal->noccs (a);
-    unsigned s = internal->noccs (b);
-    return ((t - s) | ((b - a) & ~(s - t))) >> 31;
+    unsigned s = internal->noccs (a);
+    unsigned t = internal->noccs (b);
+    return (((t - s) | ((internal->vlit (a) - internal->vlit (b)) & ~(s - t))) >> 31);
   }
 };
 
@@ -1175,7 +1175,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     }
     vivify_subsume_clause (subsuming, c);
     res = false;
-    // stats.vivifysubs++;  // already done in vivify_subsume_clause
   } else if (vivify_shrinkable (sorted, conflict)) {
     vivify_increment_stats (vivifier);
     LOG ("vivify succeeded, learning new clause");
@@ -1384,7 +1383,8 @@ Internal::vivify_prioritize_leftovers ([[maybe_unused]] char tag,
   const size_t max = opts.vivifyschedmax;
   if (schedule.size () > max) {
     if (prioritized) {
-      std::partition (begin (schedule), end (schedule),
+      // put the left-overs first to be kept
+      std::stable_partition (begin (schedule), end (schedule),
                       [] (Clause *c) { return c->vivify; });
     }
     schedule.resize (max);
@@ -1470,18 +1470,17 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
         // below.
         //
         sort (c->begin (), c->end (), vivify_more_noccs (this));
+//        ++ticks;
       }
       // Flush clauses subsumed by another clause with the same prefix,
       // which also includes flushing syntactically identical clauses.
       //
       flush_vivification_schedule (sched, ticks);
     }
+    // approximation for schedule
+//    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
     connect_watches (); // watch all relevant clauses
   }
-#if 0
-  connect_watches (); // watch all relevant clauses
-  vivify_propagate (ticks);
-#endif
   vivify_propagate (ticks);
 
   PHASE ("vivify", stats.vivifications,
@@ -1585,7 +1584,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     //
 
     // first build the schedule with vivifier_refs
-    auto end_schedule = end (schedule);
+    const auto end_schedule = end (schedule);
     refs_schedule.resize (schedule.size ());
     std::transform (begin (schedule), end_schedule, begin (refs_schedule),
                     [&] (Clause *c) { return create_ref (this, c); });
