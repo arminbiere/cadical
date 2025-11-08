@@ -452,6 +452,7 @@ struct vivify_flush_smaller {
 void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
                                             int64_t &ticks) {
   ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
+  // we cannot use msort here, as we cannot calculate a score
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
 
   const auto end = schedule.end ();
@@ -1605,7 +1606,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
                     begin (schedule),
                     [] (vivify_ref c) { return c.clause; });
     refs_schedule.clear ();
-    LOG ("clause after sorting final:");
   } else {
     // skip sorting but still put clauses with the vivify tag at the end to
     // be done first Kissat does this implicitely by going twice over all
@@ -1855,9 +1855,9 @@ bool Internal::vivify () {
   }
 
   if (!unsat && tier2effort) {
-    erase_vector (
-        vivifier.schedule_tier1); // save memory (well, not really as we
-                                  // already reached the peak memory)
+    // save memory (well, not really as we
+    // already reached the peak memory)
+    erase_vector (vivifier.schedule_tier1);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
     const double effort = (total * tier2effort) / sumeffort;
