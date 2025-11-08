@@ -490,6 +490,7 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
            "flushed %" PRId64 " subsumed scheduled clauses", subsumed);
 
   stats.vivifysubs += subsumed;
+  stats.vivifyflushed += subsumed;
 
   if (subsumed) {
     schedule.resize (j - schedule.begin ());
@@ -1462,6 +1463,8 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   if (opts.vivifyflush) {
     clear_watches ();
     for (auto &sched : vivifier.schedules) {
+      // approximation for schedule
+      ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
       for (const auto &c : sched) {
         // Literals in scheduled clauses are sorted with their highest score
         // literals first (as explained above in the example at '@2').  This
