@@ -9,7 +9,7 @@
 #undef Assert
 #define Assert(cond) do {if (!(cond)) __builtin_unreachable ();} while (false)
 #else
-#define Assert(...) assert ((...))
+#define Assert(...) __attribute__ (assume ((...)))
 #endif
 
 namespace CaDiCaL {
