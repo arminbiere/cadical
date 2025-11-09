@@ -161,7 +161,7 @@ void Internal::init_vars (int new_max_var) {
   for (int64_t i = -new_max_var; i < -max_var; i++)
     Assert (!vals[i]);
   for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
-    Assert (!vals[i]); Assert (!btab[i]); Assert (!gtab[i]);
+    {Assert (!vals[i]); Assert (!btab[i]); Assert (!gtab[i]);}
   for (uint64_t i = 2 * ((uint64_t) max_var + 1);
        i <= 2 * (uint64_t) new_max_var + 1; i++)
     Assert (ptab[i] == -1);
