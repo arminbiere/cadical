@@ -26,8 +26,10 @@ struct TaggedBinary {
         d (c)
 #endif
   {
+#if defined(LOGGING)
     Assert (c->literals[0] == lit || c->literals[1] == lit);
     Assert (c->literals[0] == other || c->literals[1] == other);
+#endif
 #ifndef LOGGING
     (void) c;
 #endif
