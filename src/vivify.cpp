@@ -325,9 +325,9 @@ struct vivify_more_noccs_kissat {
   vivify_more_noccs_kissat (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    unsigned t = internal->noccs (a);
-    unsigned s = internal->noccs (b);
-    return ((t - s) | ((b - a) & ~(s - t))) >> 31;
+    unsigned s = internal->noccs (a);
+    unsigned t = internal->noccs (b);
+    return (((t - s) | ((internal->vlit (a) - internal->vlit (b)) & ~(s - t))) >> 31);
   }
 };
 
@@ -444,16 +444,16 @@ struct vivify_flush_smaller {
     for (; i != eoa && j != eob; i++, j++)
       if (*i != *j)
         return *i < *j;
-
-    return j == eob && i != eoa;
+    const bool smaller = j == eob && i != eoa;
+    return smaller;
   }
 };
 
 void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
                                             int64_t &ticks) {
   ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
+  // we cannot use msort here, as we cannot calculate a score
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
-
   const auto end = schedule.end ();
   auto j = schedule.begin (), i = j;
 
@@ -489,6 +489,7 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
            "flushed %" PRId64 " subsumed scheduled clauses", subsumed);
 
   stats.vivifysubs += subsumed;
+  stats.vivifyflushed += subsumed;
 
   if (subsumed) {
     schedule.resize (j - schedule.begin ());
@@ -981,6 +982,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   }
 
   sort (sorted.begin (), sorted.end (), vivify_more_noccs_kissat (this));
+  assert (std::is_sorted(sorted.begin (), sorted.end (), vivify_more_noccs (this)));
 
   // The actual vivification checking is performed here, by assuming the
   // negation of each of the remaining literals of the clause in turn and
@@ -1174,7 +1176,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     }
     vivify_subsume_clause (subsuming, c);
     res = false;
-    // stats.vivifysubs++;  // already done in vivify_subsume_clause
   } else if (vivify_shrinkable (sorted, conflict)) {
     vivify_increment_stats (vivifier);
     LOG ("vivify succeeded, learning new clause");
@@ -1359,8 +1360,8 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
     Assert (best_count);
     Assert (best_count < UINT32_MAX);
     ref.count[i] =
-        ((uint64_t) best_count << 32) + (uint64_t) internal->vlit (best);
-    LOG ("final count at position %d is %d - %d: %" PRIu64, i, best, best_count,
+      (((uint64_t) best_count) << 32) + (uint64_t) internal->vlit (best);
+    LOG ("final count at position %d is %s - %u: %" PRIu64, i, LOGLIT (best), best_count,
          ref.count[i]);
     lits[i] = best;
   }
@@ -1383,7 +1384,8 @@ Internal::vivify_prioritize_leftovers ([[maybe_unused]] char tag,
   const size_t max = opts.vivifyschedmax;
   if (schedule.size () > max) {
     if (prioritized) {
-      std::partition (begin (schedule), end (schedule),
+      // put the left-overs first to be kept
+      std::stable_partition (begin (schedule), end (schedule),
                       [] (Clause *c) { return c->vivify; });
     }
     schedule.resize (max);
@@ -1461,6 +1463,8 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   if (opts.vivifyflush) {
     clear_watches ();
     for (auto &sched : vivifier.schedules) {
+      // approximation for schedule
+      ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
       for (const auto &c : sched) {
         // Literals in scheduled clauses are sorted with their highest score
         // literals first (as explained above in the example at '@2').  This
@@ -1469,18 +1473,17 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
         // below.
         //
         sort (c->begin (), c->end (), vivify_more_noccs (this));
+//        ++ticks;
       }
       // Flush clauses subsumed by another clause with the same prefix,
       // which also includes flushing syntactically identical clauses.
       //
       flush_vivification_schedule (sched, ticks);
     }
+    // approximation for schedule
+//    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
     connect_watches (); // watch all relevant clauses
   }
-#if 0
-  connect_watches (); // watch all relevant clauses
-  vivify_propagate (ticks);
-#endif
   vivify_propagate (ticks);
 
   PHASE ("vivify", stats.vivifications,
@@ -1584,7 +1587,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     //
 
     // first build the schedule with vivifier_refs
-    auto end_schedule = end (schedule);
+    const auto end_schedule = end (schedule);
     refs_schedule.resize (schedule.size ());
     std::transform (begin (schedule), end_schedule, begin (refs_schedule),
                     [&] (Clause *c) { return create_ref (this, c); });
@@ -1605,7 +1608,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
                     begin (schedule),
                     [] (vivify_ref c) { return c.clause; });
     refs_schedule.clear ();
-    LOG ("clause after sorting final:");
   } else {
     // skip sorting but still put clauses with the vivify tag at the end to
     // be done first Kissat does this implicitely by going twice over all
@@ -1855,9 +1857,9 @@ bool Internal::vivify () {
   }
 
   if (!unsat && tier2effort) {
-    erase_vector (
-        vivifier.schedule_tier1); // save memory (well, not really as we
-                                  // already reached the peak memory)
+    // save memory (well, not really as we
+    // already reached the peak memory)
+    erase_vector (vivifier.schedule_tier1);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
     const double effort = (total * tier2effort) / sumeffort;

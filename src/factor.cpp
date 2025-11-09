@@ -930,7 +930,20 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
-  // The following Assertion fails if there are *only* user propagator
+
+  int v_active = active ();
+  size_t log_active = log10 (v_active);
+  size_t eliminations = stats.elimrounds;
+  size_t delay = opts.factordelay;
+  size_t delay_limit = eliminations + delay;
+  if (log_active > delay_limit) {
+    VERBOSE (3,
+             "factorization delayed as %zu = log10 (%u)"
+             "> eliminations + delay = %zu + %zu = %zu",
+             log_active, v_active, eliminations, delay, delay_limit);
+    return false;
+  }
+  // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
   // Assert (stats.mark.factor || clauses.empty ());
   if (last.factor.marked >= stats.mark.factor) {

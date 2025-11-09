@@ -116,6 +116,7 @@ OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons re
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
+OPTION( factordelay,       4,  0, 12,0,0,1, "delay bounded variable addition between eliminations") \
 OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
@@ -256,17 +257,17 @@ OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete direct
 OPTION( vivifyeffort,     50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
-OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification of irredundant clauses") \
+OPTION( vivifyirred,       1,  0,  1,0,0,1, "vivification of irredundant clauses") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyretry,       0,  0,  5,0,0,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifyschedmax,  5e3, 10,2e9,0,0,1, "maximum schedule size") \
 OPTION( vivifythresh,     20,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
+OPTION( vivifytier1,       1,  0,  1,0,0,1, "vivification tier1") \
 OPTION( vivifytier1eff,    4,  0,100,1,0,1, "relative tier1 effort") \
-OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \
+OPTION( vivifytier2,       1,  0,  1,0,0,1, "vivification tier2") \
 OPTION( vivifytier2eff,    2,  1,100,1,0,1, "relative tier2 effort") \
-OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
+OPTION( vivifytier3,       1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
 OPTION( walkeffort,       80,  1,1e5,1,0,1, "relative efficiency per mille") \

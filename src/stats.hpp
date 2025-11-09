@@ -246,6 +246,7 @@ struct Stats {
   int64_t vivifications = 0;  // number of vivifications
   int64_t vivifychecks = 0;   // checked clauses during vivification
   int64_t vivifydecs = 0;     // vivification decisions
+  int64_t vivifyflushed = 0;     // subsumed clauses during sorting in vivification
   int64_t vivifyreused = 0;   // reused vivification decisions
   int64_t vivifysched = 0;    // scheduled clauses for vivification
   int64_t vivifysubs = 0;     // subsumed clauses during vivification
