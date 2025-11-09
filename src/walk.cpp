@@ -283,7 +283,9 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     }
 
     Clause *c = w.clause;
+#ifdef LOGGING
     assert (c != dummy_binary);
+#endif
     ++ticks;
 
     assert (lit == c->literals[0]);
@@ -536,7 +538,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         const int clit = b.lit;
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
-#if defined(LOGGING) || !defined(NDEBUG)
+#if defined(LOGGING)
         assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
         assert (b.d->literals[0] == other || b.d->literals[1] == other);
 #endif
@@ -652,7 +654,9 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
           continue;
         }
         LOG (d, "broken");
+#ifndef NDEBUG
         assert (d != dummy_binary);
+#endif
         walker.broken.push_back (TaggedBinary (d, -lit, other));
         ++walker.ticks;
 #ifdef LOGGING
@@ -669,6 +673,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       assert (d->size != 2);
       ++walker.ticks;
       int *literals = d->literals, replacement = 0, prev = -lit;
+      assert (d->size == w.size);
       const int size = d->size;
       assert (literals[0] == -lit);
 
