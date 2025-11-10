@@ -6344,8 +6344,8 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   else
     g->degenerated_gate = Special_Gate::NORMAL;
 
-  if (g->lhs == -removed_lit &&
-      internal->val (-removed_lit)) { // 3 = 5 ? 1 : 3 where 3@0 = -1
+  if (g->lhs == -removed_lit && internal->val (-removed_lit)) {
+    // 3 = 5 ? 1 : 3 where 3@0 = -1
     g->degenerated_gate = Special_Gate::DEGENERATED_AND_LHS_FALSE;
     size_t new_idx1 = idx1;
     size_t new_idx2 = idx2;
@@ -6403,11 +6403,16 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
     // if it is cheap as we have just written the proof out
     assert (-g->lhs == d->literals[0] || -g->lhs == d->literals[1]);
     int lit = d->literals[0] ^ d->literals[1] ^ -g->lhs;
+    LOG ("%d -> %d", g->lhs, find_eager_representative (g->lhs));
+    LOG ("%d -> %d", d->literals[0], find_eager_representative (d->literals[0]));
+    LOG ("%d -> %d", d->literals[1], find_eager_representative (d->literals[1]));
     LOG (d, "with reference %s at position %zd", LOGLIT (lit), new_idx1);
     assert (d->size == 2);
     g->pos_lhs_ids.clear ();
     g->pos_lhs_ids.push_back ({lit, d});
     g->neg_lhs_ids.reset ();
+    // TODO should be before lrat test
+    g->lhs = find_eager_representative (g->lhs);
     return false;
   }
   assert (new_idx1 < g->pos_lhs_ids.size ());
