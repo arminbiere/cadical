@@ -192,17 +192,18 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
 
   // First flush garbage clauses and check limits.
 
+  const int64_t occ_bound = opts.fastelimocclim;
   int64_t bound = opts.fastelimbound;
 
   int64_t pos = flush_elimfast_occs (pivot);
-  if (pos > bound) {
+  int64_t neg = flush_elimfast_occs (-pivot);
+  if (neg && pos > occ_bound) {
     LOG ("too many occurrences thus not eliminated %d", pivot);
     assert (!eliminator.schedule.contains (abs (pivot)));
     return;
   }
 
-  int64_t neg = flush_elimfast_occs (-pivot);
-  if (neg > bound) {
+  if (pos && neg > occ_bound) {
     LOG ("too many occurrences thus not eliminated %d", -pivot);
     assert (!eliminator.schedule.contains (abs (pivot)));
     return;
