@@ -18,7 +18,6 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 
 // do full occurence list as in elim.cpp but filter out useless clauses
 void Internal::factor_mode () {
-  mark_duplicated_binary_clauses_as_garbage();
   reset_watches ();
 
   assert (!watching ());
@@ -959,6 +958,8 @@ bool Internal::factor () {
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
   if (!stats.factor)
     limit += opts.factoriniticks * 1e6;
+
+  mark_duplicated_binary_clauses_as_garbage();
 
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
