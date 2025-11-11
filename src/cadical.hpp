@@ -1254,6 +1254,7 @@ public:
   // decision are kept.  The number will always be lower than the
   // number of decisions on the trail, so backtracking will always
   // have an effect.
+  //
   virtual void notify_new_decision_level () = 0;
   virtual void notify_backtrack (size_t new_level) = 0;
 
