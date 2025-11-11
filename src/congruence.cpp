@@ -7776,6 +7776,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     // over all clauses once more.
     mark_satisfied_clauses_as_garbage (); // breaks watch lists but we
                                           // unwatch anyway afterwards
+    report ('.');
   }
   ++stats.congruence.rounds;
   clear_watches ();

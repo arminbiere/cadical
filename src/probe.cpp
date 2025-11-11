@@ -943,6 +943,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     if (extract_gates (preprocessing))
       decompose ();
     binary_clauses_backbone ();
+    mark_duplicated_binary_clauses_as_garbage ();
     if (sweep ())     // full occurrence list
       decompose ();   // ... and (ELS) afterwards.
     (void) vivify (); // resets watches
