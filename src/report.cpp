@@ -274,12 +274,23 @@ void Internal::report (char type, int verbose) {
     tout.bold ();
     tout.underline ();
     break;
+  case '(':
+  case ')':
+    tout.bold ();
+    tout.yellow ();
+    break;
+  case '{':
+  case '}':
+    tout.normal ();
+    break;
   default:
     break;
   }
   fputc (type, stdout);
   if (stable || type == ']')
     tout.magenta ();
+  else if (preprocessing || type == ')')
+    tout.bold (), tout.yellow();
   else if (type != 'L' && type != 'P')
     tout.normal ();
   for (int i = 0; i < n; i++) {

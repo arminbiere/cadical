@@ -756,6 +756,7 @@ void Internal::preprocess_quickly (bool always) {
   // stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
+  report ('(');
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
@@ -797,6 +798,7 @@ int Internal::preprocess (bool always) {
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
+  report (')');
   if (unsat)
     return 20;
   return 0;
