@@ -1240,6 +1240,20 @@ public:
   //
   // virtual void notify_assignment (int lit, bool is_fixed) = 0;
   virtual void notify_assignment (const std::vector<int> &lits) = 0;
+
+
+  // The notification for the assignement follow the standard trail
+  // used in SAT solvers. The assignment is a stack with (possibly
+  // empty) decisions. New assignments are pushed at the end of the
+  // stack. When backtracking, you get the information on how many
+  // decision (called levels in SAT solvers) you have to keep:
+  // new_level mean that all decision and decision and assignments
+  // before decision number new_level are kept, all other (at the end
+  // of stack) are removed. In particular, when backtracking to level
+  // 0, no decision is left and all assignment done before the first
+  // decision are kept.  The number will always be lower than the
+  // number of decisions on the trail, so backtracking will always
+  // have an effect.
   virtual void notify_new_decision_level () = 0;
   virtual void notify_backtrack (size_t new_level) = 0;
 
