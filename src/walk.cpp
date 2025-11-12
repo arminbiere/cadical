@@ -654,7 +654,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
           continue;
         }
         LOG (d, "broken");
-#ifndef NDEBUG
+#ifdef LOGGING
         assert (d != dummy_binary);
 #endif
         walker.broken.push_back (TaggedBinary (d, -lit, other));
