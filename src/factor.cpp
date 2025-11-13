@@ -43,7 +43,7 @@ void Internal::factor_mode () {
     ticks++;
     if (c->garbage)
       continue;
-    if (c->redundant && c->size > 2)
+    if (!opts.factorredundant && c->redundant && c->size > 2)
       continue;
     if (c->size > size_limit)
       continue;
@@ -120,7 +120,9 @@ Factoring::Factoring (Internal *i, int64_t l)
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound = internal->lim.elimbound;
+  bound = internal->opts.factorbound - 1;
+  if (internal->opts.factorboundelim)
+    bound += internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = quotients.xorites = 0;
 }
@@ -226,7 +228,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
                                      size_t *num_clause_matches) {
   // fast skip if the maximum number of matched clauses is 4.
   LOG ("xorite for %d", first_factor);
-  if (occs (first_factor).size () < 5 || occs (-first_factor).size () < 5)
+  if ((int) occs (first_factor).size () < (4 + factoring.bound) ||
+      (int) occs (-first_factor).size () < (4 + factoring.bound))
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
@@ -310,7 +313,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       const auto &lit = *q++ = *p++;
       const auto tmp = noccs (lit);
       noccs (lit) = 0;
-      if (tmp < 2) {
+      if (tmp < 4) {
         q--;
         LOG ("dropping candidate third %d with %" PRId64 " matches", lit,
              tmp);
@@ -326,7 +329,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   int best_third = 0;
   for (auto &third : thirds) {
     // need at least 10 matched clauses. TODO: dynamic?
-    if (res->qlauses.size () < 10)
+    if ((int) res->qlauses.size () < 2 * (4 + factoring.bound))
       break;
     ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
     for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
@@ -1274,7 +1277,8 @@ bool Internal::run_factorization (int64_t limit) {
         Quotient *p = xorite_quotient (factoring, first, &xorite_clauses);
         LOG ("best xorite quotient with %zd clauses", xorite_clauses);
         // need 4 clauses for xor or ite definition.
-        if (p && xorite_clauses > 4 && (xorite_clauses - 4) > reduction) {
+        // prefer xor over and gates.
+        if (p && xorite_clauses > 4 && (xorite_clauses - 4) >= reduction) {
           q = p;
           reduction = xorite_clauses - 4;
         }

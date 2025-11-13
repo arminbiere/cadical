@@ -720,7 +720,7 @@ bool Internal::preprocess_round (int round) {
   report ('P');
   if (unsat)
     return false;
-  if (after.vars < before.vars)
+  if (after.vars != before.vars)
     return true;
   if (old_elimbound < lim.elimbound)
     return true;
