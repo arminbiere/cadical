@@ -111,7 +111,7 @@ OPTION( exteagerreasons,   1,  0,  1,0,0,1, "eagerly ask for all reasons (0: onl
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
-OPTION( factorbound,       1, -5, 10,0,0,1, "required reduction of clauses (negative means increase of clauses)") \
+OPTION( factorbound,       1, -1, 10,0,0,1, "required reduction of clauses (negative means increase of clauses)") \
 OPTION( factorboundelim,   1,  0,  1,0,0,1, "add current elimbound to factorbound") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delaying factor") \

@@ -19,6 +19,7 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 
 // do full occurence list as in elim.cpp but filter out useless clauses
 void Internal::factor_mode () {
+  mark_duplicated_binary_clauses_as_garbage ();
   reset_watches ();
 
   assert (!watching ());
@@ -225,7 +226,7 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 // Compute an xor or ite quotient. Use noccs to count the number of matches
 // for each second potential literal. Reset by using a vector.
 Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
-                                     size_t *num_clause_matches) {
+                                     int *reduction_ptr) {
   // fast skip if the maximum number of matched clauses is 4.
   LOG ("xorite for %d", first_factor);
   if ((int) occs (first_factor).size () < (4 + factoring.bound) ||
@@ -417,14 +418,14 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     c->swept = false;
   }
   assert (res->qlauses.size () == 2 * matches);
-  *num_clause_matches = matches;
+  *reduction_ptr = matches - 4;
   assert (!factoring.quotients.xorites);
   factoring.quotients.xorites = res;
   return res;
 }
 
 Quotient *Internal::best_quotient (Factoring &factoring,
-                                   size_t *best_reduction_ptr) {
+                                   int *best_reduction_ptr) {
   size_t factors = 1, best_reduction = 0;
   Quotient *best = 0;
   for (Quotient *q = factoring.quotients.first; q; q = q->next) {
@@ -1267,23 +1268,23 @@ bool Internal::run_factorization (int64_t limit) {
         factorize_next (factoring, next, next_count);
       }
       // only initialize to remove non-initialized warning later.
-      size_t reduction = 0;
+      int reduction = 0;
       // This is the best and-gate factor (classical BVA).
       Quotient *q = best_quotient (factoring, &reduction);
       if (opts.factorxor && opts.factorsize > 2) {
         // Get an xor quotient which is better then the best
         // classical quotient (or 0).
-        size_t xorite_clauses = 0;
-        Quotient *p = xorite_quotient (factoring, first, &xorite_clauses);
+        int xorite_reduction = 0;
+        Quotient *p = xorite_quotient (factoring, first, &xorite_reduction);
         LOG ("best xorite quotient with %zd clauses", xorite_clauses);
         // need 4 clauses for xor or ite definition.
         // prefer xor over and gates.
-        if (p && xorite_clauses > 4 && (xorite_clauses - 4) >= reduction) {
+        if (p && xorite_reduction >= reduction) {
           q = p;
-          reduction = xorite_clauses - 4;
+          reduction = xorite_reduction;
         }
       }
-      if (q && (int) reduction > factoring.bound) {
+      if (q && reduction > factoring.bound) {
         // q->second tells us wether we are doing xor or and factors.
         if (!q->second && apply_factoring (factoring, q)) {
 #ifndef QUIET
