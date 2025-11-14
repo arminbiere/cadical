@@ -44,7 +44,9 @@ void Internal::factor_mode () {
     ticks++;
     if (c->garbage)
       continue;
-    if (!opts.factorredundant && c->redundant && c->size > 2)
+    if (!opts.factorredundant && c->redundant)
+      continue;
+    if (opts.factorredundant == 1 && c->redundant && c->size > 2)
       continue;
     if (c->size > size_limit)
       continue;
@@ -1055,6 +1057,8 @@ void Internal::delete_unfactored (Quotient *q) {
     mark_garbage (c);
     stats.literals_unfactored += c->size;
     stats.clauses_unfactored++;
+    if (c->redundant)
+      stats.clauses_unfactored_redundant++;
   }
 }
 

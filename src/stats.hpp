@@ -192,6 +192,7 @@ struct Stats {
   int64_t variables_original = 0;
   int64_t literals_factored = 0;
   int64_t clauses_unfactored = 0;
+  int64_t clauses_unfactored_redundant = 0;
   int64_t literals_unfactored = 0;
 
   int64_t elimotfstr =

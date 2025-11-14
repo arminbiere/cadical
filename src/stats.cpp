@@ -261,6 +261,10 @@ void Stats::print (Internal *internal) {
     PRT ("  cls unfactored:%15" PRId64 "   %10.2f    per factored",
          stats.clauses_unfactored,
          relative (stats.clauses_unfactored, factored));
+    PRT ("  cls redundant: %15" PRId64 "   %10.2f %%  of unfactored",
+         stats.clauses_unfactored_redundant,
+         percent (stats.clauses_unfactored_redundant,
+                  stats.clauses_unfactored));
     PRT ("  lits unfactored:%14" PRId64 "   %10.2f    per factored",
          stats.literals_unfactored,
          relative (stats.literals_unfactored, factored));
