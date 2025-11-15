@@ -6601,7 +6601,8 @@ void Closure::simplify_ite_gate (Gate *g) {
       simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
       learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
-      if (internal->lrat)
+      // if the gate is a = a ? true : false, there is nothing to do and the lrat generation fails
+      if (internal->lrat && find_eager_representative(lhs) != find_eager_representative(cond))
         simplify_ite_gate_then_else_set (g, extra_reasons,
                                          extra_reasons_back, 1, 2);
       if (merge_literals (lhs, cond, extra_reasons, extra_reasons_back)) {
@@ -6609,7 +6610,8 @@ void Closure::simplify_ite_gate (Gate *g) {
         ++internal->stats.congruence.unaries;
       }
     } else if (v_then < 0 && v_else > 0) {
-      if (internal->lrat)
+      // if the gate is a = -a ? false : true, there is nothing to do and the lrat generation fails
+      if (internal->lrat && find_eager_representative(lhs) != find_eager_representative(-cond))
         simplify_ite_gate_then_else_set (g, extra_reasons,
                                          extra_reasons_back, 0, 3);
       if (merge_literals (lhs, -cond, extra_reasons_back, extra_reasons)) {
