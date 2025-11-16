@@ -55,7 +55,7 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = sweep = factored_but_on_reconstruction_stack = backbone1 = backbone0 = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = backbone1 = backbone0 = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = factor = 0;
@@ -78,6 +78,12 @@ struct Flags { // Variable flags.
     dst.subsume = subsume;
     dst.ternary = ternary;
     dst.block = block;
+    dst.sweep = sweep;
+    dst.backbone0 = backbone0;
+    dst.backbone1 = backbone1;
+    dst.added = added;
+    dst.factor = factor;
+    // seen, keep, poison, removable, shrinkable are unused
   }
 };
 

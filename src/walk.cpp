@@ -290,7 +290,6 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
 
     assert (lit == c->literals[0]);
 
-#if 1
     // Now try to find a second satisfied literal starting at 'literals[1]'
     // shifting all the traversed literals to right by one position in order
     // to move such a second satisfying literal to 'literals[1]'.  This move
@@ -326,32 +325,6 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
       *i = prev;
       prev = other;
     }
-#else
- // do not check the first, we are looking for another literal
-    const auto begin = c->begin () + 1;
-    const auto end = c->end ();
-    const auto middle = c->begin () + c->pos;
-    auto k = middle;
-    signed char v = -1;
-    int r = 0;
-    while (k != end && (v = val (r = *k)) < 0)
-      ++k;
-
-    if (v < 0) {
-      k = begin;
-      while (k != middle && (v = val (r = *k)) < 0)
-        ++k;
-    }
-    c->pos = k - c->begin ();
-    if (c->pos <= 2) // propagates requires this
-      c->pos = 2;
-    assert (c->pos);
-    if (v > 0) {
-      w.blit = *k;
-      LOG (w.clause, "changing blit to %s", LOGLIT(w.blit));
-      continue; // double satisfied!
-    }
-#endif
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
   stats.ticks.walkbreak += (ticks - oldticks);

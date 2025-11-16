@@ -112,7 +112,9 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
 }
 
 // demoting a clause (opposite is promote from subsume.cpp)
-
+//
+// This turned out to not be useful, but we kept it for the API call in the
+// proof tracers.
 inline void Internal::demote_clause (Clause *c) {
   stats.subsumed++;
   stats.vivifydemote++;

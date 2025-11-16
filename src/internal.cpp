@@ -34,8 +34,10 @@ Internal::Internal ()
   control.push_back (Level (0, 0));
 
   // The 'dummy_binary' is used in 'try_to_subsume_clause' to fake a real
-  // clause, which then can be used to subsume or strengthen the given
-  // clause in one routine for both binary and non binary clauses.  This
+  // clause (which then can be used to subsume or strengthen the given
+  // clause in one routine for both binary and non binary clauses) and
+  // in walk (which is only used as a placeholder in the watch lists
+  // when logging is off, since the clause is not accessed).  This
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
