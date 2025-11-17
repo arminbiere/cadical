@@ -108,7 +108,7 @@ run unit
 run morenmore
 run ctest
 run example
-run example_declare_more_variable
+run example_declare_one_more_variable
 run example_constraint
 run example_tracer
 run terminate

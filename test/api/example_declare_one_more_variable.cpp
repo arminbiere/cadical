@@ -14,8 +14,8 @@ int main () {
   // Encode Problem and check without assumptions.
 
 
-  const int TIE = solver->declare_more_variable ();
-  const int SHIRT = solver->declare_more_variable ();
+  const int TIE = solver->declare_one_more_variable ();
+  const int SHIRT = solver->declare_one_more_variable ();
   assert (solver->vars () >= 2);
 
   solver->add (-TIE), solver->add (SHIRT), solver->add (0);

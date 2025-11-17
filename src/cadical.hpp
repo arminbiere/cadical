@@ -42,8 +42,8 @@ enum Status {
 //   // ------------------------------------------------------------------
 //   // Encode Problem and check without assumptions.
 //
-//   int TIE = declare_more_variable ();
-//   int SHIRT = declare_more_variable ();
+//   int TIE = declare_one_more_variable ();
+//   int SHIRT = declare_one_more_variable ();
 //   assert (vars () >= 2);
 //
 //   solver->add (-TIE), solver->add (SHIRT),  solver->add (0);
@@ -620,7 +620,8 @@ public:
 
   // Increase the maximum variable index by one. This is a specialized
   // version of declare_more_variables.
-  int declare_more_variable ();
+
+  int declare_one_more_variable ();
 
   // Get the value of some statistics or -1 if the statistics does not
   // exist or is not support. Only requires the state to be initialized.

@@ -53,7 +53,7 @@ void ccadical_melt (CCaDiCaL *, int lit);
 int ccadical_simplify (CCaDiCaL *);
 int ccadical_vars (CCaDiCaL *);
 int ccadical_declare_more_variables (CCaDiCaL *, int number_of_vars);
-int ccadical_declare_more_variable (CCaDiCaL *);
+int ccadical_declare_one_more_variable (CCaDiCaL *);
 void ccadical_phase (CCaDiCaL *wrapper, int lit);
 void ccadical_unphase (CCaDiCaL *wrapper, int lit);
 

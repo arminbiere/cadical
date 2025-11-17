@@ -1515,12 +1515,12 @@ struct DeclareMoreVariablesCall : public Call {
 struct DeclareMoreVariableCall : public Call {
   DeclareMoreVariableCall () : Call (RESIZE) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
-    s->declare_more_variable ();
+    s->declare_one_more_variable ();
     (void) extendmap;
   }
-  void print (ostream &o) { o << "declare_more_variable" << endl; }
+  void print (ostream &o) { o << "declare_one_more_variable" << endl; }
   Call *copy () { return new DeclareMoreVariableCall (); }
-  const char *keyword () { return "declare_more_variable"; }
+  const char *keyword () { return "declare_one_more_variable"; }
 };
 
 struct PhaseCall : public Call {
@@ -2327,7 +2327,7 @@ private:
   void generate_options (Random &, Size);
   void generate_queries (Random &);
   void generate_resize (Random &, int vars);
-  void generate_declare_more_variable (Random &);
+  void generate_declare_one_more_variable (Random &);
   void generate_declare_more_variables (Random &);
   void generate_clause (Random &, int minvars, int maxvars, int uniform);
   void generate_constraint (Random &, int minvars, int maxvars,
@@ -2650,7 +2650,7 @@ void Trace::generate_declare_more_variables (Random &random) {
   push_back (new DeclareMoreVariablesCall (new_max_var));
 }
 
-void Trace::generate_declare_more_variable (Random &random) {
+void Trace::generate_declare_one_more_variable (Random &random) {
   if (random.generate_double () > 0.01)
     return;
   push_back (new DeclareMoreVariableCall ());
@@ -3139,7 +3139,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     for (int j = 0; j < clauses; j++)
       generate_queries (random), generate_resize (random, maxvars),
           generate_declare_more_variables (random),
-          generate_declare_more_variable (random),
+          generate_declare_one_more_variable (random),
 	  generate_implied(random), generate_propagate(random),
           generate_clause (random, minvars, maxvars, uniform);
 

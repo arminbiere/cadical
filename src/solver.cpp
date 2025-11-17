@@ -488,14 +488,14 @@ int Solver::declare_more_variables (int number_of_vars) {
   return new_max_var;
 }
 
-int Solver::declare_more_variable () {
-  TRACE ("declare_more_variable");
+int Solver::declare_one_more_variable () {
+  TRACE ("declare_one_more_variable");
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_extended ();
   int new_max_var = external->max_var + 1;
   external->init (new_max_var);
-  LOG_API_CALL_END ("declare_more_variable");
+  LOG_API_CALL_END ("declare_one_more_variable");
   return new_max_var;
 }
 
