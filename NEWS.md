@@ -2,7 +2,8 @@ Version 2.2.0
 -------------
 
 - Renamed `get_entrailed_literals` by `implied`. The call is now also
-  allowed in the state SATISFIED state.
+  allowed in the state SATISFIED state. The old name is still available
+  in this release but deprecated.
 
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.
@@ -15,7 +16,7 @@ Version 2.2.0
 
   + breaking change to incremental usage. To incrementally add new
     variables to the solver, either use `vars ()`, `declare_more_variables ()`,
-	see specification in `cadical.hpp`.
+    see specification in `cadical.hpp`.
     As a hot-fix, disable with `set ('factor', 0)`
 
   + Warning: Factor is currenly on in the development branch, but we
@@ -69,7 +70,8 @@ Version 2.2.0
   replacement `resize` instead.
 
 - `val` now has a Boolean as second argument that checks that the
-  variables was declared. The default value is the old behavior.
+  variables was declared. The default value is the old behavior, 
+  but this can be useful for debugging applications.
 
 Version 2.1.3
 -------------

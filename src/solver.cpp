@@ -855,7 +855,7 @@ int Solver::simplify (int rounds) {
 /*------------------------------------------------------------------------*/
 
 int Solver::val (int lit, bool use_default_value_for_declared_but_not_used_variable) {
-  TRACE ("val", lit, (int)use_default_value_for_declared_but_not_used_variable);
+  LOG_API_CALL_BEGIN ("val", lit, (int)use_default_value_for_declared_but_not_used_variable);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
