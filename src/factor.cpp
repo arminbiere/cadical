@@ -768,8 +768,10 @@ void Internal::schedule_factorization (Factoring &factoring) {
 
 void Internal::adjust_scores_and_phases_of_fresh_variables (
     Factoring &factoring) {
-  if (!opts.factorunbump)
+  if (!opts.factorunbump) {
+    factoring.fresh.clear ();
     return;
+  }
   if (factoring.fresh.empty ())
     return;
 
