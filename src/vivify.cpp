@@ -48,6 +48,7 @@ namespace CaDiCaL {
 
 inline void Internal::vivify_subsume_clause (Clause *subsuming,
                                              Clause *subsumed) {
+  assert (subsumed != subsuming);
   stats.subsumed++;
   stats.vivifysubs++;
 #ifndef NDEBUG
@@ -71,7 +72,11 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   }
   assert (real_size_subsuming <= real_size_subsumed);
 #endif
-  LOG (subsumed, "subsumed");
+  LOG (subsumed, "subsumed to be deleted");
+  LOG (subsuming, "subsuming to be (un)deleted");
+  if (subsumed->redundant && subsuming->redundant && subsuming->glue < subsumed->glue) {
+    promote_clause (subsuming, subsumed->glue);
+  }
   if (subsumed->redundant) {
     stats.subred++;
     ++stats.vivifysubred;
@@ -1094,10 +1099,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   // of CaDiCaL)
   if (subsuming) {
     assert (c != subsuming);
-    LOG (c, "deleting subsumed clause");
-    if (c->redundant && subsuming->redundant && subsuming->glue < c->glue) {
-      promote_clause (subsuming, c->glue);
-    }
     vivify_subsume_clause (subsuming, c);
     res = false;
   } else if (vivify_shrinkable (sorted, conflict)) {
@@ -1158,6 +1159,24 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   lrat_chain.clear ();
   conflict = nullptr;
   ignore = nullptr;
+
+  if (res) {
+    switch (vivifier.tier) {
+    case Vivify_Mode::IRREDUNDANT:
+      ++stats.vivifiedirred;
+      break;
+    case Vivify_Mode::TIER1:
+      ++stats.vivifiedtier1;
+      break;
+    case Vivify_Mode::TIER2:
+      ++stats.vivifiedtier2;
+      break;
+    default:
+      assert (vivifier.tier == Vivify_Mode::TIER3);
+      ++stats.vivifiedtier3;
+      break;
+    }
+  }
   return res;
 }
 

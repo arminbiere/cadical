@@ -682,6 +682,18 @@ void Stats::print (Internal *internal) {
          relative (stats.conflicts, stats.vivifications));
     PRT ("  vivifychecks:  %15" PRId64 "   %10.2f %%  per conflict",
          stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
+    const int64_t vivified = stats.vivifiedtier1 + stats.vivifiedtier2 +
+                             stats.vivifiedtier3 + stats.vivifiedirred;
+    PRT ("  vivified:      %15" PRId64 "   %10.2f %%  per check",
+         vivified, percent (vivified, stats.vivifychecks));
+    PRT ("  vified-irred:  %15" PRId64 "   %10.2f %%  per vivified",
+         stats.vivifiedirred, percent (stats.vivifiedirred, vivified));
+    PRT ("  vified-tier1:  %15" PRId64 "   %10.2f %%  per vivified",
+         stats.vivifiedtier1, percent (stats.vivifiedtier1, vivified));
+    PRT ("  vified-tier2:  %15" PRId64 "   %10.2f %%  per vivified",
+         stats.vivifiedtier2, percent (stats.vivifiedtier2, vivified));
+    PRT ("  vified-tier3:  %15" PRId64 "   %10.2f %%  per vivified",
+         stats.vivifiedtier3, percent (stats.vivifiedtier3, vivified));
     PRT ("  vivifysched:   %15" PRId64 "   %10.2f %%  checks per scheduled",
          stats.vivifysched,
          percent (stats.vivifychecks, stats.vivifysched));
@@ -693,7 +705,8 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifysubs:    %15" PRId64 "   %10.2f %%  per subsumed",
          stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
     PRT ("  vivifyflushed: %15" PRId64 "   %10.2f %%  per subsumed",
-         stats.vivifyflushed, percent (stats.vivifyflushed, stats.subsumed));
+         stats.vivifyflushed,
+         percent (stats.vivifyflushed, stats.subsumed));
     PRT ("  vivifysubred:  %15" PRId64 "   %10.2f %%  per subs",
          stats.vivifysubred,
          percent (stats.vivifysubred, stats.vivifysubs));
@@ -794,9 +807,10 @@ void Stats::print (Internal *internal) {
     PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
          stats.congruence.unaries,
          relative (stats.congruence.rounds, stats.congruence.unaries));
-    int64_t rewritten = stats.congruence.rewritten_ands + stats.congruence.rewritten_xors + stats.congruence.rewritten_ites;
-    PRT ("   rewritten:    %15" PRId64 "   %10.2f    per round",
-         rewritten,
+    int64_t rewritten = stats.congruence.rewritten_ands +
+                        stats.congruence.rewritten_xors +
+                        stats.congruence.rewritten_ites;
+    PRT ("   rewritten:    %15" PRId64 "   %10.2f    per round", rewritten,
          percent (rewritten, stats.congruence.rounds));
     PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per rewritten",
          stats.congruence.rewritten_ands,

@@ -245,6 +245,10 @@ struct Stats {
   int64_t decompositions = 0; // number of SCC + ELS
   int64_t vivifications = 0;  // number of vivifications
   int64_t vivifychecks = 0;   // checked clauses during vivification
+  int64_t vivifiedirred = 0;   // irredundant vivified clauses during vivification
+  int64_t vivifiedtier1 = 0;   // tier-1 vivified clauses during vivification
+  int64_t vivifiedtier2 = 0;   // tier-2 vivified clauses during vivification
+  int64_t vivifiedtier3 = 0;   // tier-3 vivified clauses during vivification
   int64_t vivifydecs = 0;     // vivification decisions
   int64_t vivifyflushed = 0;     // subsumed clauses during sorting in vivification
   int64_t vivifyreused = 0;   // reused vivification decisions
