@@ -1,9 +1,45 @@
 Version 2.2.0
 -------------
 
+User facing changes:
+
 - Renamed `get_entrailed_literals` by `implied`. The call is now also
   allowed in the state SATISFIED state. The old name is still available
   in this release but deprecated.
+
+- ILB interface simplified: instead of having ilbassumptions and ilb,
+  there is now only ilb with values 0, 1 (= only assumptions), and 2
+  (= full reuse).
+
+- The tracer now allows to get equivalent literals during solving
+
+- Support for compilation of shared library via `./configure -shared`.
+
+- add `get_statistic_value` to be able to extract some information
+  about the current run.
+
+- `reserve` is deprecated due to the misleading name. Use the drop-in
+  replacement `resize` instead.
+
+- lucky is now able to handle assumptions (but not the external
+  propagator). Set `luckyassumptions` to false if you do not want
+  that.
+
+- `val` now has a Boolean as second argument that checks that the
+  variables was declared. The default value is the old behavior,
+  but this can be useful for debugging applications.
+
+- Fixed VeriPB compatibility issues.
+
+- Bounded value addition (see below) requires a change in the
+  incremental usage.
+
+  + breaking change to incremental usage. To incrementally add new
+    variables to the solver, either use `vars ()`, `declare_more_variables ()`,
+    see specification in `cadical.hpp`.
+    As a hot-fix, disable with `set ('factor', 0)`
+
+New or improved techniques:
 
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.
@@ -13,11 +49,6 @@ Version 2.2.0
   + reverse of BVE, searches for clause sets with a certain structure,
     factors out common variables and uses extended resolution with a
     new variable to derive equisatisfiable clauses which replace the old ones.
-
-  + breaking change to incremental usage. To incrementally add new
-    variables to the solver, either use `vars ()`, `declare_more_variables ()`,
-    see specification in `cadical.hpp`.
-    As a hot-fix, disable with `set ('factor', 0)`
 
   + Warning: Factor is currenly on in the development branch, but we
     expect to have factor off in the 2.2 release and plan to activate
@@ -33,11 +64,10 @@ Version 2.2.0
   + you can also use ticks to limit the runtime like the
     conflict/decision limit before.
 
+- Improved vivify with a new tier-based scheduling.
+
 - Improved lucky, by allowing it to do several conflicts and finding
   new units.
-
-  + lucky is now able to handle assumptions. Set `luckyassumptions` to
-  false if you do not want that.
 
 - New light preprocessing round on with lucky, congruence, factor, and
   a new (very limited) BVE (fast elim). Fast elimination is never run
@@ -47,31 +77,11 @@ Version 2.2.0
 - Small extension to gate extraction in BVE, now able to extract
   semantic definitions using 'kitten'
   (off by default `set ('elimdef', 1)` to enable).
-
-- ILB interface simplified: instead of having ilbassumptions and ilb,
-  there is now only ilb with values 0, 1 (= only assumptions), and 2
-  (= full reuse).
-
-- The tracer now allows to get equivalent literals during solving
-
-- Support for compilation of shared library via `./configure -shared`.
-
-- Fixed VeriPB compatibility issues.
-
-- add `get_statistic_value` to be able to extract some information
-  about the current run.
-
 - Improved walk algorithm. We have also ported the version from Kissat
   (relying on full-occurrence list), deactivated by default.
 
 - Binary backone similarly to kissat.
 
-- `reserve` is deprecated due to the misleading name. Use the drop-in
-  replacement `resize` instead.
-
-- `val` now has a Boolean as second argument that checks that the
-  variables was declared. The default value is the old behavior, 
-  but this can be useful for debugging applications.
 
 Version 2.1.3
 -------------
