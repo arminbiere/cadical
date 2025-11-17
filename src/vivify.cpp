@@ -333,106 +333,14 @@ struct vivify_more_noccs_kissat {
   }
 };
 
-// Sort candidate clauses by the number of occurrences (actually by their
-// score) of their literals, with clauses to be vivified first last.   We
-// assume that clauses are sorted w.r.t. more occurring (higher score)
-// literals first (with respect to 'vivify_more_noccs').
-//
-// For example if there are the following (long irredundant) clauses
-//
-//   1 -3 -4      (A)
-//  -1 -2  3 4    (B)
-//   2 -3  4      (C)
-//
-// then we have the following literal scores using Jeroslow Wang scores and
-// normalizing it with 2^12 (which is the same as 1<<12):
-//
-//  nocc ( 1) = 2^12 * (2^-3       ) =  512  3.
-//  nocc (-1) = 2^12 * (2^-4       ) =  256  6.
-//  nocc ( 2) = 2^12 * (2^-3       ) =  512  4.
-//  nocc (-2) = 2^12 * (2^-4       ) =  256  7.                 @1
-//  nocc ( 3) = 2^12 * (2^-4       ) =  256  8.
-//  nocc (-3) = 2^12 * (2^-3 + 2^-3) = 1024  1.
-//  nocc ( 4) = 2^12 * (2^-3 + 2^-4) =  768  2.
-//  nocc (-4) = 2^12 * (2^-3       ) =  512  5.
-//
-// which gives the literal order (according to 'vivify_more_noccs')
-//
-//  -3, 4, 1, 2, -4, -1, -2, 3
-//
-// Then sorting the literals in each clause gives
-//
-//  -3  1 -4     (A')
-//   4 -1 -2  3  (B')                                           @2
-//  -3  4  2     (C')
-//
-// and finally sorting those clauses lexicographically w.r.t. scores is
-//
-//  -3  4  2     (C')
-//  -3  1 -4     (A')                                           @3
-//   4 -1 -2  3  (B')
-//
-// This order is defined by 'vivify_clause_later' which returns 'true' if
-// the first clause should be vivified later than the second.
-
-struct vivify_clause_later {
-
-  Internal *internal;
-
-  vivify_clause_later (Internal *i) : internal (i) {}
-
-  bool operator() (Clause *a, Clause *b) const {
-
-    if (a == b)
-      return false;
-
-    // First focus on clauses scheduled in the last vivify round but not
-    // checked yet since then.
-    //
-    if (!a->vivify && b->vivify)
-      return true;
-    if (a->vivify && !b->vivify)
-      return false;
-
-    // Among redundant clauses (in redundant mode) prefer small glue.
-    //
-    if (a->redundant) {
-      assert (b->redundant);
-      if (a->glue > b->glue)
-        return true;
-      if (a->glue < b->glue)
-        return false;
-    }
-
-    // Then prefer shorter size.
-    //
-    if (a->size > b->size)
-      return true;
-    if (a->size < b->size)
-      return false;
-
-    // Now compare literals in the clauses lexicographically with respect to
-    // the literal order 'vivify_more_noccs' assuming literals are sorted
-    // decreasingly with respect to that order.
-    //
-    const auto eoa = a->end (), eob = b->end ();
-    auto j = b->begin ();
-    for (auto i = a->begin (); i != eoa && j != eob; i++, j++)
-      if (*i != *j)
-        return vivify_more_noccs (internal) (*j, *i);
-
-    return j == eob; // Prefer shorter clauses to be vivified first.
-  }
-};
-
 /*------------------------------------------------------------------------*/
 
-// Attempting on-the-fly subsumption during sorting when the last line is
-// reached in 'vivify_clause_later' above turned out to be trouble some for
-// identical clauses.  This is the single point where 'vivify_clause_later'
-// is not asymmetric and would require 'stable' sorting for determinism.  It
-// can also not be made 'complete' on-the-fly.  Instead of on-the-fly
-// subsumption we thus go over the sorted scheduled in a linear scan
+// Attempting on-the-fly subsumption during sorting when the last line
+// is turned out to be trouble some for identical clauses.  This is
+// the single point where sorting is not asymmetric and would require
+// 'stable' sorting for determinism.  It can also not be made
+// 'complete' on-the-fly.  Instead of on-the-fly subsumption, we
+// (optionnaly) thus go over the sorted scheduled in a linear scan
 // again and remove certain subsumed clauses (the subsuming clause is
 // syntactically a prefix of the subsumed clause), which includes
 // those troublesome syntactically identical clauses.
@@ -506,7 +414,6 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
 // we schedule a clause to be vivified.  For redundant clauses we initially
 // only try to vivify them if they are likely to survive the next 'reduce'
 // operation, but this left the last schedule empty most of the time.
-
 bool Internal::consider_to_vivify_clause (Clause *c) {
   if (c->garbage)
     return false;
@@ -612,6 +519,8 @@ void Internal::vivify_strengthen (Clause *c, int64_t &ticks) {
   ++stats.vivifystrs;
 }
 
+// When shortening clauses, we have to update the watched literals.
+// Actually we don't do it, and instead simply backtrack back enough.
 void Internal::vivify_sort_watched (Clause *c) {
 
   sort (c->begin (), c->end (), vivify_better_watch (this));
@@ -642,12 +551,14 @@ void Internal::vivify_sort_watched (Clause *c) {
   assert (val (lit1) >= 0 || (val (lit0) > 0 && val (lit1) < 0 &&
                               var (lit0).level <= var (lit1).level));
 }
+
+/*------------------------------------------------------------------------*/
+
 // Conflict analysis from 'start' which learns a decision only clause.
 //
 // We cannot use the stack-based implementation of Kissat, because we need
 // to iterate over the conflict in topological ordering to produce a valid
 // LRAT proof
-
 void Internal::vivify_analyze (Clause *start, bool &subsumes,
                                Clause **subsuming,
                                const Clause *const candidate, int implied,
@@ -739,6 +650,9 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
   (void) candidate;
 }
 
+/*------------------------------------------------------------------------*/
+// First decide which clause (candidate or conflict) to analyze and
+// how to do it. We also prepare the clause by removing units.
 void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
                               int implied, Clause **subsuming,
                               bool &redundant) {
@@ -836,8 +750,11 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       lrat_chain.clear ();
   }
 }
+
+
 /*------------------------------------------------------------------------*/
 
+// checks whether the clause can be strengthen or not.
 bool Internal::vivify_shrinkable (const std::vector<int> &sorted,
                                   Clause *conflict) {
 
@@ -874,6 +791,7 @@ bool Internal::vivify_shrinkable (const std::vector<int> &sorted,
   }
   return false;
 }
+
 /*------------------------------------------------------------------------*/
 
 inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
@@ -893,10 +811,11 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
     break;
   }
 }
+
 /*------------------------------------------------------------------------*/
-// instantiate last literal (see the description of the hack track 2023),
-// fix the watches and
-//  backtrack two level back
+// instantiate last literal (see the description of the hack track
+// 2023), fix the watches and backtrack two level back to make sure
+// the watches are correct.
 bool Internal::vivify_instantiate (
     const std::vector<int> &sorted, Clause *c,
     std::vector<std::tuple<int, Clause *, bool>> &lrat_stack,
@@ -1170,6 +1089,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     reverse (lrat_chain.begin (), lrat_chain.end ());
   }
 
+  // For an explanation of the code, see our POS'25 paper ``Revisiting Clause
+  // Vivification'' (although for the experiments we focused on Kissat instead
+  // of CaDiCaL)
   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
@@ -1193,8 +1115,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     ++stats.vivifyimplied;
     res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
-    LOG ("demote clause from irredundant to redundant");
     if (opts.vivifydemote) {
+      LOG ("demote clause from irredundant to redundant");
       demote_clause (c);
       const int new_glue = recompute_glue (c);
       promote_clause (c, new_glue);
@@ -1252,9 +1174,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 // its own but this is not actually necessary.
 //
 
-// Non-recursive version, as some bugs have been found.  DFS over the
-// reasons with preordering (aka we explore the entire reason before
-// exploring deeper)
+// Non-recursive version, as some bugs have been found by Dominik Schreiber
+// during his very large experiments. DFS over the reasons with preordering (aka
+// we explore the entire reason before exploring deeper)
 void Internal::vivify_build_lrat (
     int lit, Clause *reason,
     std::vector<std::tuple<int, Clause *, bool>> &stack) {
@@ -1310,8 +1232,6 @@ void Internal::vivify_build_lrat (
 inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
   if (!lrat)
     return;
-  // LOG ("building chain for units");        bad line for debugging
-  // equivalence if (opts.chrono && assignment_level (lit, reason)) return;
   if (level)
     return; // not decision level 0
   assert (lrat_chain.empty ());
@@ -1831,8 +1751,14 @@ bool Internal::vivify () {
   }
   int64_t init_ticks = 0;
 
-  // Refill the schedule every time.  Unchecked clauses are 'saved' by
-  // setting their 'vivify' bit, such that they can be tried next time.
+  // Refill the schedule every time. Unchecked clauses are 'saved' by setting
+  // their 'vivify' bit, such that they can be tried next time. There are two
+  // things to denote: the option 'vivifyonce' does what it is supposed to do,
+  // and it works because the ticks are kept for the next schedule.
+  // Also, we limit the size of the schedule to limit the cost of sorting.
+  //
+  // TODO: After limiting, the cost we fixed some heuristics bug, so maybe we
+  // could increase the limit.
   //
   // TODO: count against ticks.vivify directly instead of this unholy
   // shifting.
