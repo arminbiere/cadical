@@ -89,6 +89,18 @@ static void log_api_call (Internal *internal, const char *name, int arg,
                name, arg, tout.log_code (), suffix);
 }
 
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, const char *suffix) {
+  Logger::log (internal, "API call %s'%s (%d, %d)'%s %s", tout.api_code (),
+               name, arg, b, tout.log_code (), suffix);
+}
+
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, int c) {
+  Logger::log (internal, "API call %s'%s (%d, %d)'%s %d", tout.api_code (),
+               name, arg, b, tout.log_code (), c);
+}
+
 static void log_api_call (Internal *internal, const char *name,
                           const char *arg, const char *suffix) {
   Logger::log (internal, "API call %s'%s (\"%s\")'%s %s", tout.api_code (),
@@ -114,6 +126,12 @@ static void log_api_call_begin (Internal *internal, const char *name,
                                 int arg) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, "started");
+}
+
+static void log_api_call_begin (Internal *internal, const char *name,
+                                int arg, int b) {
+  Logger::log_empty_line (internal);
+  log_api_call (internal, name, arg, b, "started");
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
@@ -191,6 +209,11 @@ static void log_api_call_returns (Internal *internal, const char *name,
                                   int lit, bool res) {
   log_api_call (internal, name, lit,
                 res ? "returns 'true'" : "returns 'false'");
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, int b, int res) {
+  log_api_call (internal, name, lit, b, res);
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
@@ -275,6 +298,13 @@ void Solver::trace_api_call (const char *s0, int i1) const {
   assert (trace_api_file);
   LOG ("TRACE %s %d", s0, i1);
   fprintf (trace_api_file, "%s %d\n", s0, i1);
+  fflush (trace_api_file);
+}
+
+void Solver::trace_api_call (const char *s0, int i1, int b) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d %d", s0, i1, b);
+  fprintf (trace_api_file, "%s %d %d\n", s0, i1, b);
   fflush (trace_api_file);
 }
 
@@ -447,14 +477,25 @@ void Solver::reserve (int min_max_var) {
   resize (min_max_var);
 }
 
-int Solver::resize_difference (int number_of_vars) {
-  TRACE ("resize_difference", number_of_vars);
+int Solver::declare_more_variables (int number_of_vars) {
+  TRACE ("declare_more_variables", number_of_vars);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_extended ();
   int new_max_var = external->max_var + number_of_vars;
   external->init (new_max_var);
-  LOG_API_CALL_END ("resize_difference", number_of_vars);
+  LOG_API_CALL_END ("declare_more_variables", number_of_vars);
+  return new_max_var;
+}
+
+int Solver::declare_more_variable () {
+  TRACE ("declare_more_variable");
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  external->reset_extended ();
+  int new_max_var = external->max_var + 1;
+  external->init (new_max_var);
+  LOG_API_CALL_END ("declare_more_variable");
   return new_max_var;
 }
 
@@ -813,16 +854,18 @@ int Solver::simplify (int rounds) {
 
 /*------------------------------------------------------------------------*/
 
-int Solver::val (int lit) {
-  TRACE ("val", lit);
+int Solver::val (int lit, bool use_default_value_for_declared_but_not_used_variable) {
+  TRACE ("val", lit, (int)use_default_value_for_declared_but_not_used_variable);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
+  if (!use_default_value_for_declared_but_not_used_variable)
+    REQUIRE (lit < external->max_var, "lit of undeclare variable");
   if (!external->extended)
     external->extend ();
   external->conclude_sat ();
   int res = external->ival (lit);
-  LOG_API_CALL_RETURNS ("val", lit, res);
+  LOG_API_CALL_RETURNS ("val", lit, use_default_value_for_declared_but_not_used_variable, res);
   assert (state () == SATISFIED);
   assert (res == lit || res == -lit);
   return res;

@@ -42,7 +42,9 @@ enum Status {
 //   // ------------------------------------------------------------------
 //   // Encode Problem and check without assumptions.
 //
-//   enum { TIE = 1, SHIRT = 2 };
+//   int TIE = declare_more_variable ();
+//   int SHIRT = declare_more_variable ();
+//   assert (vars () >= 2);
 //
 //   solver->add (-TIE), solver->add (SHIRT),  solver->add (0);
 //   solver->add (TIE),  solver->add (SHIRT),  solver->add (0);
@@ -307,7 +309,7 @@ public:
   //   require (SATISFIED)
   //   ensure (SATISFIED)
   //
-  int val (int lit);
+  int val (int lit, bool use_default_value_for_declared_but_not_used_variable = true);
 
   // Try to flip the value of the given literal without falsifying the
   // formula.  Returns 'true' if this was successful. Otherwise the model is
@@ -582,7 +584,7 @@ public:
   // the user is required to use this to check which variables are currently
   // free before adding new variables of their own.
   // The alternative is to reserve variables in batches with
-  // 'resize_difference'. Using 'resize' in combination with any technique
+  // 'declare_more_variables'. Using 'resize' in combination with any technique
   // that could add variables (currently only factor) is not advised.
   // After each application of `add`, `vars ()` will return an updated
   // value, even if you did not import the entire clause yet.
@@ -614,7 +616,11 @@ public:
   //   require (READY)
   //   ensure (STEADY)
   //
-  int resize_difference (int number_of_vars);
+  int declare_more_variables (int number_of_additional_new_vars);
+
+  // Increase the maximum variable index by one. This is a specialized
+  // version of declare_more_variables.
+  int declare_more_variable ();
 
   // Get the value of some statistics or -1 if the statistics does not
   // exist or is not support. Only requires the state to be initialized.
@@ -1075,6 +1081,7 @@ private:
 
   void trace_api_call (const char *) const;
   void trace_api_call (const char *, int) const;
+  void trace_api_call (const char *, int, int) const;
   void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
 #endif

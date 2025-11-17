@@ -1502,14 +1502,25 @@ struct ResizeCall : public Call {
   const char *keyword () { return "resize"; }
 };
 
-struct ResizeDifferenceCall : public Call {
-  ResizeDifferenceCall (int max_var) : Call (RESIZE, max_var) {}
+struct DeclareMoreVariablesCall : public Call {
+  DeclareMoreVariablesCall (int max_var) : Call (RESIZE, max_var) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
-    s->resize (map_arg (s, extendmap));
+    s->declare_more_variables (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "resize_difference " << arg << endl; }
-  Call *copy () { return new ResizeDifferenceCall (arg); }
-  const char *keyword () { return "resize_difference"; }
+  void print (ostream &o) { o << "declare_more_variables " << arg << endl; }
+  Call *copy () { return new DeclareMoreVariablesCall (arg); }
+  const char *keyword () { return "declare_more_variables"; }
+};
+
+struct DeclareMoreVariableCall : public Call {
+  DeclareMoreVariableCall () : Call (RESIZE) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->declare_more_variable ();
+    (void) extendmap;
+  }
+  void print (ostream &o) { o << "declare_more_variable" << endl; }
+  Call *copy () { return new DeclareMoreVariableCall (); }
+  const char *keyword () { return "declare_more_variable"; }
 };
 
 struct PhaseCall : public Call {
@@ -2316,7 +2327,8 @@ private:
   void generate_options (Random &, Size);
   void generate_queries (Random &);
   void generate_resize (Random &, int vars);
-  void generate_resize_difference (Random &);
+  void generate_declare_more_variable (Random &);
+  void generate_declare_more_variables (Random &);
   void generate_clause (Random &, int minvars, int maxvars, int uniform);
   void generate_constraint (Random &, int minvars, int maxvars,
                             int uniform);
@@ -2631,11 +2643,17 @@ void Trace::generate_resize (Random &random, int max_var) {
 
 /*------------------------------------------------------------------------*/
 
-void Trace::generate_resize_difference (Random &random) {
+void Trace::generate_declare_more_variables (Random &random) {
   if (random.generate_double () > 0.01)
     return;
   int new_max_var = random.pick_int (0, 100);
-  push_back (new ResizeDifferenceCall (new_max_var));
+  push_back (new DeclareMoreVariablesCall (new_max_var));
+}
+
+void Trace::generate_declare_more_variable (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new DeclareMoreVariableCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -2869,12 +2887,13 @@ void Trace::generate_values (Random &random, int vars) {
     if (fraction < random.generate_double ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ValCall (lit));
+    bool strict = random.generate_bool ();
+    push_back (new ValCall (lit, strict));
   }
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ValCall (lit));
+    push_back (new ValCall (lit, true));
   }
 }
 
@@ -3119,7 +3138,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
 
     for (int j = 0; j < clauses; j++)
       generate_queries (random), generate_resize (random, maxvars),
-          generate_resize_difference (random),
+          generate_declare_more_variables (random),
+          generate_declare_more_variable (random),
 	  generate_implied(random), generate_propagate(random),
           generate_clause (random, minvars, maxvars, uniform);
 
@@ -4422,10 +4442,10 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'resize'", second);
       c = new ResizeCall (lit);
-    } else if (!strcmp (keyword, "resize_difference")) {
+    } else if (!strcmp (keyword, "declare_more_variables")) {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'resize'", first);
-      c = new ResizeDifferenceCall (lit);
+      c = new DeclareMoreVariablesCall (lit);
     } else if (!strcmp (keyword, "phase")) {
       if (!first)
         error ("argument to 'phase' missing");

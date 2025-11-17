@@ -14,7 +14,7 @@ Version 2.2.0
     new variable to derive equisatisfiable clauses which replace the old ones.
 
   + breaking change to incremental usage. To incrementally add new
-    variables to the solver, either use `vars ()`, `resize_difference ()`,
+    variables to the solver, either use `vars ()`, `declare_more_variables ()`,
 	see specification in `cadical.hpp`.
     As a hot-fix, disable with `set ('factor', 0)`
 
@@ -67,6 +67,9 @@ Version 2.2.0
 
 - `reserve` is deprecated due to the misleading name. Use the drop-in
   replacement `resize` instead.
+
+- `val` now has a Boolean as second argument that checks that the
+  variables was declared. The default value is the old behavior.
 
 Version 2.1.3
 -------------
