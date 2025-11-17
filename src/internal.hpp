@@ -1287,7 +1287,7 @@ struct Internal {
   void flush_unmatched_clauses (Quotient *);
   void add_self_subsuming_factor (Quotient *, Quotient *);
   bool self_subsuming_factor (Quotient *);
-  void add_factored_divider (Quotient *, int);
+  void add_factored_divider (Factoring &, Quotient *, int);
   void blocked_clause (Quotient *q, int);
   void add_factored_quotient (Quotient *, int not_fresh);
   void add_factor_xorite (Quotient *, int);

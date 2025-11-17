@@ -1,3 +1,4 @@
+#include "cover.hpp"
 #include "internal.hpp"
 #include "message.hpp"
 
@@ -810,11 +811,13 @@ bool Internal::self_subsuming_factor (Quotient *q) {
 
 // this is a pure binary clauses containing fresh and one other literal
 // it is added for all applicable quotients.
-void Internal::add_factored_divider (Quotient *q, int fresh) {
+void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
+                                     int fresh) {
   const int factor = q->factor;
   LOG ("factored %d divider %d", factor, fresh);
   clause.push_back (fresh);
   clause.push_back (factor);
+  factoring.fresh.back ().push_back (abs (factor));
   new_factor_clause ();
   clause.clear ();
   if (lrat)
@@ -1092,9 +1095,10 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
     return false;
   stats.factored++;
   stats.factored_and++;
-  factoring.fresh.push_back (fresh);
+  factoring.fresh.emplace_back ();
+  factoring.fresh.back ().push_back (fresh);
   for (Quotient *p = q; p; p = p->prev)
-    add_factored_divider (p, fresh);
+    add_factored_divider (factoring, p, fresh);
   const int not_fresh = -fresh;
   blocked_clause (q, not_fresh);
   add_factored_quotient (q, not_fresh);
@@ -1112,12 +1116,16 @@ bool Internal::apply_xorite_factoring (Factoring &factoring, Quotient *q) {
   const int fresh = get_new_extension_variable ();
   if (!fresh)
     return false;
+  factoring.fresh.emplace_back ();
+  factoring.fresh.back ().push_back (fresh);
+  factoring.fresh.back ().push_back (abs (q->second));
   stats.factored++;
   if (q->second == -q->third)
     stats.factored_xor++;
-  else
+  else {
     stats.factored_ite++;
-  factoring.fresh.push_back (fresh);
+    factoring.fresh.back ().push_back (abs (q->third));
+  }
   add_factor_xorite (q, fresh);
   delete_unfactored (q);
   update_factored (factoring, q);
@@ -1158,72 +1166,152 @@ void Internal::schedule_factorization (Factoring &factoring) {
 
 void Internal::adjust_scores_and_phases_of_fresh_variables (
     Factoring &factoring) {
-  if (!opts.factorunbump)
-    return;
   if (factoring.fresh.empty ())
     return;
 
-#if 0 // the scores are very low anyway
-  for (auto lit : factoring.fresh) {
-    assert (lit > 0 && internal->max_var);
-    const double old_score = internal->stab[lit];
-    // make the scores a little different from each other with the newest having the highest score
-    const double new_score = 1.0 / (double)(internal->max_var - lit);
-    if (old_score == new_score)
-      continue;
-    if (!scores.contains (lit))
-      continue;
-    LOG ("unbumping %s", LOGLIT(lit));
-    internal->stab[lit] = new_score;
-    scores.update (lit);
-  }
-#endif
-
-  for (auto lit : factoring.fresh) {
-    LOG ("dequeuing %s", LOGLIT (lit));
-    queue.dequeue (links, lit);
-  }
-
-  for (auto lit : factoring.fresh) {
-    LOG ("dequeuing %s", LOGLIT (lit));
-    queue.bury (links, lit);
+  if (opts.factorbumpheap) {
+    const double delta = 1.0 / (double) (internal->max_var);
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      assert (lit > 0 && internal->max_var);
+      double old_score = internal->stab[lit];
+      COVER (!scores.contains (lit));
+      COVER (old_score < 0);
+      if (!scores.contains (lit))
+        continue;
+      double new_score = old_score;
+      for (const auto &other : def) {
+        if (other == lit)
+          continue;
+        if (btab[other] > new_score)
+          new_score = btab[other];
+      }
+      new_score += delta;
+      LOG ("bumping %s=%lf", LOGLIT (lit), new_score);
+      internal->stab[lit] = new_score;
+      scores.update (lit);
+    }
   }
 
-  // fix the scores with negative numbers
-  int lit = queue.first;
-  queue.bumped = 0;
-  while (lit) {
-    btab[lit] = ++queue.bumped;
-    lit = links[lit].next;
-  }
-  stats.bumped = queue.bumped;
-  update_queue_unassigned (queue.last);
+  if (opts.factorbumpqueue == 0) {
+    for (auto def : factoring.fresh) {
+      const auto lit = def[0];
+      LOG ("dequeuing %s", LOGLIT (lit));
+      queue.dequeue (links, lit);
+    }
 
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      LOG ("enqueuing %s at bottom", LOGLIT (lit));
+      queue.bury (links, lit);
+    }
+
+    // fix the scores with negative numbers
+    int lit = queue.first;
+    queue.bumped = 0;
+    while (lit) {
+      btab[lit] = ++queue.bumped;
+      lit = links[lit].next;
+    }
+    stats.bumped = queue.bumped;
+    update_queue_unassigned (queue.last);
 #ifndef NDEBUG
-  for (auto v : vars)
-    assert (val (v) || scores.contains (v));
-  lit = queue.first;
-  int next_lit = links[lit].next;
-  while (next_lit) {
-    assert (btab[lit] < btab[next_lit]);
-    const int tmp = links[next_lit].next;
-    assert (!tmp || links[tmp].prev == next_lit);
-    lit = next_lit;
-    next_lit = tmp;
+    for (auto v : vars)
+      assert (val (v) || scores.contains (v));
+    lit = queue.first;
+    int next_lit = links[lit].next;
+    while (next_lit) {
+      assert (btab[lit] < btab[next_lit]);
+      const int tmp = links[next_lit].next;
+      assert (!tmp || links[tmp].prev == next_lit);
+      lit = next_lit;
+      next_lit = tmp;
+    }
+
+    lit = queue.last;
+    next_lit = links[lit].prev;
+    while (next_lit) {
+      assert (btab[lit] > btab[next_lit]);
+      const int tmp = links[next_lit].prev;
+      assert (!tmp || links[tmp].next == next_lit);
+      lit = next_lit;
+      next_lit = tmp;
+    }
+    assert (queue.first);
+    assert (queue.last);
+#endif
+
+  } else if (opts.factorbumpqueue == 1) {
+    vector<int> replace;
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      LOG ("dequeuing %s", LOGLIT (lit));
+      queue.dequeue (links, lit);
+      int after = 0;
+      int64_t score = 0;
+      for (const auto &other : def) {
+        if (other == lit)
+          continue;
+        // opts.reverse can lead to negative scores.
+        if (!after || btab[other] > score) {
+          after = other;
+          score = btab[other];
+        }
+      }
+      replace.push_back (after);
+    }
+    size_t i = 0;
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      const auto &other = replace[i++];
+      if (!other) {
+        COVER (true);
+        LOG ("enqueuing %s at bottom", LOGLIT (lit));
+        queue.bury (links, lit);
+      } else {
+        LOG ("enqueuing %s after %s", LOGLIT (lit), LOGLIT (other));
+        queue.insert_after (links, lit, other);
+      }
+    }
+
+    // fix the scores with negative numbers
+    int lit = queue.first;
+    queue.bumped = 0;
+    while (lit) {
+      btab[lit] = ++queue.bumped;
+      lit = links[lit].next;
+    }
+    stats.bumped = queue.bumped;
+    update_queue_unassigned (queue.last);
+#ifndef NDEBUG
+    for (auto v : vars)
+      assert (val (v) || scores.contains (v));
+    lit = queue.first;
+    int next_lit = links[lit].next;
+    while (next_lit) {
+      assert (btab[lit] < btab[next_lit]);
+      const int tmp = links[next_lit].next;
+      assert (!tmp || links[tmp].prev == next_lit);
+      lit = next_lit;
+      next_lit = tmp;
+    }
+
+    lit = queue.last;
+    next_lit = links[lit].prev;
+    while (next_lit) {
+      assert (btab[lit] > btab[next_lit]);
+      const int tmp = links[next_lit].prev;
+      assert (!tmp || links[tmp].next == next_lit);
+      lit = next_lit;
+      next_lit = tmp;
+    }
+    assert (queue.first);
+    assert (queue.last);
+#endif
+
+  } else {
   }
 
-  lit = queue.last;
-  next_lit = links[lit].prev;
-  while (next_lit) {
-    assert (btab[lit] > btab[next_lit]);
-    const int tmp = links[next_lit].prev;
-    assert (!tmp || links[tmp].next == next_lit);
-    lit = next_lit;
-    next_lit = tmp;
-  }
-  assert (queue.first);
-  assert (queue.last);
-#endif
   factoring.fresh.clear ();
 }
 

@@ -67,6 +67,17 @@ struct Queue {
     first = idx;
     l.prev = 0;
   }
+
+  inline void insert_after (Links &links, int idx, int other_idx) {
+    Link &l = links[idx];
+    Link &k = links[other_idx];
+    if ((l.next = k.next))
+      links[l.next].prev = idx;
+    else
+      first = idx;
+    k.next = idx;
+    l.prev = other_idx;
+  }
 };
 
 } // namespace CaDiCaL

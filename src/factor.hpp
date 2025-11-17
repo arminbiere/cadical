@@ -43,7 +43,7 @@ struct Factoring {
   int bound;
   bool redundant;
   vector<unsigned> count;
-  vector<int> fresh;
+  vector<vector<int>> fresh;
   vector<int> counted;
   vector<int> nounted;
   vector<Clause *> flauses;
