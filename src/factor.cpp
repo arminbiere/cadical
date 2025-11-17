@@ -19,7 +19,6 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 
 // do full occurence list as in elim.cpp but filter out useless clauses
 void Internal::factor_mode () {
-  mark_duplicated_binary_clauses_as_garbage ();
   reset_watches ();
 
   assert (!watching ());
@@ -1280,7 +1279,8 @@ bool Internal::run_factorization (int64_t limit) {
         // classical quotient (or 0).
         int xorite_reduction = 0;
         Quotient *p = xorite_quotient (factoring, first, &xorite_reduction);
-        LOG ("best xorite quotient with %zd clauses", xorite_clauses);
+        LOG ("best xorite quotient with %d reduction in clauses",
+             xorite_reduction);
         // need 4 clauses for xor or ite definition.
         // prefer xor over and gates.
         if (p && xorite_reduction >= reduction) {
@@ -1319,6 +1319,8 @@ bool Internal::run_factorization (int64_t limit) {
   return completed;
 }
 
+// TODO: bump variable based on what definition is introduced.
+// i.e., use the variables...
 int Internal::get_new_extension_variable () {
   const int current_max_external = external->max_var;
   const int new_external = current_max_external + 1;
@@ -1336,6 +1338,7 @@ int Internal::get_new_extension_variable () {
   return new_internal;
 }
 
+// TODO: redundant mode (+ flag for elim).
 bool Internal::factor () {
   if (unsat)
     return false;

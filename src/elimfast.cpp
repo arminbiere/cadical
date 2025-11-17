@@ -439,6 +439,8 @@ int Internal::elimfast_round (bool &completed,
 
 void Internal::elimfast () {
 
+  if (!opts.fastelim)
+    return;
   if (unsat)
     return;
   if (level)

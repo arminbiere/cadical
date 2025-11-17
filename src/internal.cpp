@@ -758,11 +758,11 @@ void Internal::preprocess_quickly (bool always) {
   if (sweep ())
     decompose ();
 
-  if (opts.factor)
-    factor ();
+  mark_duplicated_binary_clauses_as_garbage ();
 
-  if (opts.fastelim)
-    elimfast ();
+  factor ();
+
+  elimfast ();
 
   // if (opts.condition)
   // condition (false);
