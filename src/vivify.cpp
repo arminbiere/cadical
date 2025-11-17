@@ -1095,8 +1095,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
-    if (c->redundant && subsuming->redundant && c->glue < subsuming->glue) {
-      promote_clause (c, c->glue);
+    if (c->redundant && subsuming->redundant && subsuming->glue < c->glue) {
+      promote_clause (subsuming, c->glue);
     }
     vivify_subsume_clause (subsuming, c);
     res = false;
