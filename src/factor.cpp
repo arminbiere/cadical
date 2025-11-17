@@ -333,7 +333,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   int best_second = 0;
   int best_third = 0;
   for (auto &third : thirds) {
-    // need at least 10 matched clauses. TODO: dynamic?
+    // need at least 10 matched clauses (with factoring.bound = 1).
     if ((int) res->qlauses.size () < 2 * (4 + factoring.bound))
       break;
     ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
@@ -1119,7 +1119,6 @@ bool Internal::apply_xorite_factoring (Factoring &factoring, Quotient *q) {
     stats.factored_ite++;
   factoring.fresh.push_back (fresh);
   add_factor_xorite (q, fresh);
-  // TODO: check that these really do what they should.
   delete_unfactored (q);
   update_factored (factoring, q);
   assert (fresh > 0);
