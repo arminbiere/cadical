@@ -646,10 +646,10 @@ void Stats::print (Internal *internal) {
        stats.ticks.walk, percent (stats.ticks.walk, searchticks));
   PRT ("   walkflipticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflip, percent (stats.ticks.walkflip, searchticks));
-  PRT ("   walkflipticksbrk:%15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkflipbrk:  %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflipbroken,
        percent (stats.ticks.walkflipbroken, searchticks));
-  PRT ("   walkflipticksWL:%15" PRId64 "   %10.2f %%  searchticks",
+  PRT ("   walkflipWL:   %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.walkflipWL,
        percent (stats.ticks.walkflipWL, searchticks));
   PRT ("   walkpickticks:%15" PRId64 "   %10.2f %%  searchticks",
@@ -748,7 +748,7 @@ void Stats::print (Internal *internal) {
       PRT ("  dummydec-w:    %15" PRId64 "   %10.2f    per warmup",
            stats.warmup.dummydecision,
            relative (stats.warmup.dummydecision, stats.warmup.count));
-      PRT ("  conflicts:    %15" PRId64 "   %10.2f    per warmup",
+      PRT ("  conflicts:     %15" PRId64 "   %10.2f    per warmup",
            stats.warmup.conflicts,
            relative (stats.warmup.conflicts, stats.warmup.count));
       PRT ("  warmup:        %15" PRId64 "   %10.2f    per walk",
