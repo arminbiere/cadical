@@ -972,7 +972,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         const int decision = control[l].decision;
         if (-lit == decision) {
           LOG ("reusing decision %d at decision level %d", decision, l);
-          stats.vivifyreused++;
+          ++stats.vivifyreused;
           if (++l > level)
             break;
         } else {

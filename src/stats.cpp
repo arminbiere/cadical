@@ -732,9 +732,8 @@ void Stats::print (Internal *internal) {
          percent (stats.vivifydemote, stats.vivifystrs));
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
          stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
-    PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision",
-         stats.vivifyreused,
-         percent (stats.vivifyreused, stats.vivifydecs));
+    PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per non-reused decision",
+         stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
   }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",
