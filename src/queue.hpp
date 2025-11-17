@@ -69,6 +69,10 @@ struct Queue {
   }
 
   inline void insert_after (Links &links, int idx, int other_idx) {
+    if (!first) {
+      enqueue (links, idx);
+      return;
+    }
     Link &l = links[idx];
     Link &k = links[other_idx];
     if ((l.next = k.next))

@@ -15,6 +15,7 @@ Profiles::Profiles (Internal *s)
 }
 
 void Internal::start_profiling (Profile &profile, double s) {
+  LOG ("START PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (!profile.active);
   profile.started = s;
@@ -22,6 +23,7 @@ void Internal::start_profiling (Profile &profile, double s) {
 }
 
 void Internal::stop_profiling (Profile &profile, double s) {
+  LOG ("STOP PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (profile.active);
   profile.value += s - profile.started;

@@ -817,7 +817,7 @@ void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
   LOG ("factored %d divider %d", factor, fresh);
   clause.push_back (fresh);
   clause.push_back (factor);
-  factoring.fresh.back ().push_back (abs (factor));
+  factoring.fresh.back ().push_back (vidx (factor));
   new_factor_clause ();
   clause.clear ();
   if (lrat)
@@ -1118,13 +1118,13 @@ bool Internal::apply_xorite_factoring (Factoring &factoring, Quotient *q) {
     return false;
   factoring.fresh.emplace_back ();
   factoring.fresh.back ().push_back (fresh);
-  factoring.fresh.back ().push_back (abs (q->second));
+  factoring.fresh.back ().push_back (vidx (q->second));
   stats.factored++;
   if (q->second == -q->third)
     stats.factored_xor++;
   else {
     stats.factored_ite++;
-    factoring.fresh.back ().push_back (abs (q->third));
+    factoring.fresh.back ().push_back (vidx (q->third));
   }
   add_factor_xorite (q, fresh);
   delete_unfactored (q);
@@ -1183,12 +1183,13 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       for (const auto &other : def) {
         if (other == lit)
           continue;
-        if (btab[other] > new_score)
-          new_score = btab[other];
+        if (bumped (other) > new_score)
+          new_score = bumped (other);
       }
       new_score += delta;
-      LOG ("bumping %s=%lf", LOGLIT (lit), new_score);
-      internal->stab[lit] = new_score;
+      LOG ("factor heap bumping %s=%lf (old=%lf)", LOGLIT (lit), new_score,
+           old_score);
+      score (lit) = new_score;
       scores.update (lit);
     }
   }
@@ -1210,7 +1211,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     int lit = queue.first;
     queue.bumped = 0;
     while (lit) {
-      btab[lit] = ++queue.bumped;
+      bumped (lit) = ++queue.bumped;
       lit = links[lit].next;
     }
     stats.bumped = queue.bumped;
@@ -1221,7 +1222,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     lit = queue.first;
     int next_lit = links[lit].next;
     while (next_lit) {
-      assert (btab[lit] < btab[next_lit]);
+      assert (bumped (lit) < bumped (next_lit));
       const int tmp = links[next_lit].next;
       assert (!tmp || links[tmp].prev == next_lit);
       lit = next_lit;
@@ -1231,7 +1232,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     lit = queue.last;
     next_lit = links[lit].prev;
     while (next_lit) {
-      assert (btab[lit] > btab[next_lit]);
+      assert (bumped (lit) > bumped (next_lit));
       const int tmp = links[next_lit].prev;
       assert (!tmp || links[tmp].next == next_lit);
       lit = next_lit;
@@ -1253,9 +1254,9 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
         if (other == lit)
           continue;
         // opts.reverse can lead to negative scores.
-        if (!after || btab[other] > score) {
+        if (!after || bumped (other) > score) {
           after = other;
-          score = btab[other];
+          score = bumped (other);
         }
       }
       replace.push_back (after);
@@ -1269,8 +1270,10 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
         LOG ("enqueuing %s at bottom", LOGLIT (lit));
         queue.bury (links, lit);
       } else {
+        // TODO: broken.
         LOG ("enqueuing %s after %s", LOGLIT (lit), LOGLIT (other));
-        queue.insert_after (links, lit, other);
+        queue.bury (links, lit);
+        // queue.insert_after (links, lit, other);
       }
     }
 
@@ -1278,7 +1281,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     int lit = queue.first;
     queue.bumped = 0;
     while (lit) {
-      btab[lit] = ++queue.bumped;
+      bumped (lit) = ++queue.bumped;
       lit = links[lit].next;
     }
     stats.bumped = queue.bumped;
@@ -1289,7 +1292,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     lit = queue.first;
     int next_lit = links[lit].next;
     while (next_lit) {
-      assert (btab[lit] < btab[next_lit]);
+      assert (bumped (lit) < bumped (next_lit));
       const int tmp = links[next_lit].next;
       assert (!tmp || links[tmp].prev == next_lit);
       lit = next_lit;
@@ -1299,7 +1302,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     lit = queue.last;
     next_lit = links[lit].prev;
     while (next_lit) {
-      assert (btab[lit] > btab[next_lit]);
+      assert (bumped (lit) > bumped (next_lit));
       const int tmp = links[next_lit].prev;
       assert (!tmp || links[tmp].next == next_lit);
       lit = next_lit;
@@ -1309,8 +1312,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     assert (queue.last);
 #endif
 
-  } else {
-  }
+  } // else (opts.factorbumpqueue == 2)
 
   factoring.fresh.clear ();
 }
@@ -1462,7 +1464,7 @@ bool Internal::factor () {
     return false;
   }
   assert (!level);
-  const bool preprocessing = !stats.factor;
+  const bool is_preprocessing = !stats.factor;
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
   if (preprocessing)
@@ -1481,7 +1483,7 @@ bool Internal::factor () {
 #endif
 
   // TODO: redundant mode sometimes?
-  factor_mode (!preprocessing && opts.factorredundant == 3);
+  factor_mode (!is_preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
