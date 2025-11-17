@@ -18,7 +18,7 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 }
 
 // do full occurence list as in elim.cpp but filter out useless clauses
-void Internal::factor_mode () {
+void Internal::factor_mode (bool redundant_only) {
   reset_watches ();
 
   assert (!watching ());
@@ -43,9 +43,12 @@ void Internal::factor_mode () {
     ticks++;
     if (c->garbage)
       continue;
-    if (!opts.factorredundant && c->redundant)
+    if (redundant_only && !c->redundant)
       continue;
-    if (opts.factorredundant == 1 && c->redundant && c->size > 2)
+    if (!redundant_only && !opts.factorredundant && c->redundant)
+      continue;
+    if (!redundant_only && opts.factorredundant == 1 && c->redundant &&
+        c->size > 2)
       continue;
     if (c->size > size_limit)
       continue;
@@ -1372,9 +1375,10 @@ bool Internal::factor () {
     return false;
   }
   assert (!level);
+  const bool preprocessing = !stats.factor;
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
-  if (!stats.factor)
+  if (preprocessing)
     limit += opts.factoriniticks * 1e6;
 
   START_SIMPLIFIER (factor, FACTOR);
@@ -1389,7 +1393,8 @@ bool Internal::factor () {
   before.clauses = stats.current.irredundant;
 #endif
 
-  factor_mode ();
+  // TODO: redundant mode sometimes?
+  factor_mode (!preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 

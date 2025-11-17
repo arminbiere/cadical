@@ -41,6 +41,7 @@ struct Factoring {
 
   int initial;
   int bound;
+  bool redundant;
   vector<unsigned> count;
   vector<int> fresh;
   vector<int> counted;
