@@ -283,7 +283,6 @@ int Internal::elimfast_round (bool &completed,
       delta = opts.elimmineff;
     if (delta > opts.elimmaxeff)
       delta = opts.elimmaxeff;
-    delta = max (delta, (int64_t) 2l * active ());
 
     PHASE ("fastelim-round", stats.elimfastrounds,
            "limit of %" PRId64 " resolutions", delta);
