@@ -907,6 +907,8 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
+  if (!res && timesup)
+    fputs ("c Timeout reached! 😅 This instance is a real thinker. 🚧 🚧 🚧 Please consider contributing it to improve automated reasoning at https://mysolvertimesout.org/#sat 🚧 🚧 🚧", write_result_file);
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
