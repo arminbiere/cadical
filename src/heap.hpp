@@ -102,9 +102,11 @@ template <class C> class heap {
 #warning "expensive checking in heap enabled"
     assert (array.size () <= invalid_heap_position);
     for (size_t i = 0; i < array.size (); i++) {
-      size_t l = 2*i + 1, r = 2*i + 2;
-      if (l < array.size ()) assert (!less (array[i], array[l]));
-      if (r < array.size ()) assert (!less (array[i], array[r]));
+      size_t l = 2 * i + 1, r = 2 * i + 2;
+      if (l < array.size ())
+        assert (!less (array[i], array[l]));
+      if (r < array.size ())
+        assert (!less (array[i], array[r]));
       assert (array[i] >= 0);
       {
         assert ((size_t) array[i] < pos.size ());
@@ -112,7 +114,8 @@ template <class C> class heap {
       }
     }
     for (size_t i = 0; i < pos.size (); i++) {
-      if (pos[i] == invalid_heap_position) continue;
+      if (pos[i] == invalid_heap_position)
+        continue;
       assert (pos[i] < array.size ());
       assert (array[pos[i]] == (unsigned) i);
     }

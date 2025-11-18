@@ -75,12 +75,12 @@ struct Queue {
     }
     Link &l = links[idx];
     Link &k = links[other_idx];
-    if ((l.next = k.next))
-      links[l.next].prev = idx;
+    if ((l.prev = k.prev))
+      links[l.prev].next = idx;
     else
       first = idx;
-    k.next = idx;
-    l.prev = other_idx;
+    k.prev = idx;
+    l.next = other_idx;
   }
 };
 

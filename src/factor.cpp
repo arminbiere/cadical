@@ -1068,6 +1068,7 @@ void Internal::delete_unfactored (Quotient *q) {
 }
 
 // update the priority queue for scheduling
+// NOTE: this temporarily breaks the heap invariant.
 void Internal::update_factored (Factoring &factoring, Quotient *q) {
   const int factor = q->factor;
   update_factor_candidate (factoring, factor);
@@ -1169,12 +1170,12 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   if (factoring.fresh.empty ())
     return;
 
-  if (opts.factorbumpheap) {
+  if (opts.factorbumpheap == 1) {
     const double delta = 1.0 / (double) (internal->max_var);
     for (auto def : factoring.fresh) {
       const auto &lit = def[0];
       assert (lit > 0 && internal->max_var);
-      double old_score = internal->stab[lit];
+      const double old_score = score (lit);
       COVER (!scores.contains (lit));
       COVER (old_score < 0);
       if (!scores.contains (lit))
@@ -1183,8 +1184,8 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       for (const auto &other : def) {
         if (other == lit)
           continue;
-        if (bumped (other) > new_score)
-          new_score = bumped (other);
+        if (score (other) > new_score)
+          new_score = score (other);
       }
       new_score += delta;
       LOG ("factor heap bumping %s=%lf (old=%lf)", LOGLIT (lit), new_score,
@@ -1192,7 +1193,24 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       score (lit) = new_score;
       scores.update (lit);
     }
-  }
+  } else if (opts.factorbumpheap == 2) {
+    double new_score = score_inc;
+    for (auto idx : vars) {
+      const double tmp = stab[idx];
+      if (tmp > new_score)
+        new_score = tmp;
+    }
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      const double delta = 1.0 / (double) (internal->max_var - lit);
+      assert (lit > 0 && internal->max_var);
+      COVER (!scores.contains (lit));
+      if (!scores.contains (lit))
+        continue;
+      score (lit) = new_score + delta;
+      scores.update (lit);
+    }
+  } // else (opts.factorbumpheap == 0)
 
   if (opts.factorbumpqueue == 0) {
     for (auto def : factoring.fresh) {
@@ -1216,31 +1234,6 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     }
     stats.bumped = queue.bumped;
     update_queue_unassigned (queue.last);
-#ifndef NDEBUG
-    for (auto v : vars)
-      assert (val (v) || scores.contains (v));
-    lit = queue.first;
-    int next_lit = links[lit].next;
-    while (next_lit) {
-      assert (bumped (lit) < bumped (next_lit));
-      const int tmp = links[next_lit].next;
-      assert (!tmp || links[tmp].prev == next_lit);
-      lit = next_lit;
-      next_lit = tmp;
-    }
-
-    lit = queue.last;
-    next_lit = links[lit].prev;
-    while (next_lit) {
-      assert (bumped (lit) > bumped (next_lit));
-      const int tmp = links[next_lit].prev;
-      assert (!tmp || links[tmp].next == next_lit);
-      lit = next_lit;
-      next_lit = tmp;
-    }
-    assert (queue.first);
-    assert (queue.last);
-#endif
 
   } else if (opts.factorbumpqueue == 1) {
     vector<int> replace;
@@ -1271,9 +1264,9 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
         queue.bury (links, lit);
       } else {
         // TODO: broken.
+        COVER (!scores.contains (other));
         LOG ("enqueuing %s after %s", LOGLIT (lit), LOGLIT (other));
-        queue.bury (links, lit);
-        // queue.insert_after (links, lit, other);
+        queue.insert_after (links, lit, other);
       }
     }
 
@@ -1286,33 +1279,33 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     }
     stats.bumped = queue.bumped;
     update_queue_unassigned (queue.last);
-#ifndef NDEBUG
-    for (auto v : vars)
-      assert (val (v) || scores.contains (v));
-    lit = queue.first;
-    int next_lit = links[lit].next;
-    while (next_lit) {
-      assert (bumped (lit) < bumped (next_lit));
-      const int tmp = links[next_lit].next;
-      assert (!tmp || links[tmp].prev == next_lit);
-      lit = next_lit;
-      next_lit = tmp;
-    }
-
-    lit = queue.last;
-    next_lit = links[lit].prev;
-    while (next_lit) {
-      assert (bumped (lit) > bumped (next_lit));
-      const int tmp = links[next_lit].prev;
-      assert (!tmp || links[tmp].next == next_lit);
-      lit = next_lit;
-      next_lit = tmp;
-    }
-    assert (queue.first);
-    assert (queue.last);
-#endif
 
   } // else (opts.factorbumpqueue == 2)
+#ifndef NDEBUG
+  for (auto v : vars)
+    assert (val (v) || scores.contains (v));
+  int lit = queue.first;
+  int next_lit = links[lit].next;
+  while (next_lit) {
+    assert (bumped (lit) < bumped (next_lit));
+    const int tmp = links[next_lit].next;
+    assert (!tmp || links[tmp].prev == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+
+  lit = queue.last;
+  next_lit = links[lit].prev;
+  while (next_lit) {
+    assert (bumped (lit) > bumped (next_lit));
+    const int tmp = links[next_lit].prev;
+    assert (!tmp || links[tmp].next == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+  assert (queue.first);
+  assert (queue.last);
+#endif
 
   factoring.fresh.clear ();
 }
