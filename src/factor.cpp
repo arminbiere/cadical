@@ -1202,12 +1202,11 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     }
     for (auto def : factoring.fresh) {
       const auto &lit = def[0];
-      const double delta = 1.0 / (double) (internal->max_var - lit);
       assert (lit > 0 && internal->max_var);
       COVER (!scores.contains (lit));
       if (!scores.contains (lit))
         continue;
-      score (lit) = new_score + delta;
+      score (lit) = new_score;
       scores.update (lit);
     }
   } // else (opts.factorbumpheap == 0)
