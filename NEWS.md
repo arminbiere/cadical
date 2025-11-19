@@ -1,3 +1,32 @@
+Version 3.0.0
+-------------
+
+Breaking Changes:
+
+- Renamed `get_entrailed_literals` to `implied`. The call is now also
+  allowed in the 'SATISFIED' state.  Due to removing the former
+  function from the interface it is a breaking change, but the
+  function has the same (slightly extended) semantics since 2.2.0,
+  where `get_entrailed_literals` became deprecated.
+
+- Renamed `reserve` to `resize` due to its misleading name (compared to
+  the semantics `reserve` and `resize` for `std::vector).  Users can
+  replace in their code simply replace `reserve` by `resize` though
+  as semantics of the function did not change.  This change was announced
+  with release 2.2.0 where `reserve` became deprecated.
+
+- Bounded value addition (see below) requires a change in the
+  incremental usage (**breaking change**):
+
+  This is a *breaking change* for incremental usage when `factor` aka
+  BVA is enabled (which it is by default). To now incrementally add new
+  variables either use `vars ()` or `declare_more_variables ()`.  For more
+  details see their specification in the `cadical.hpp` header file.  As a
+  hot-fix, you can disable `factor` aka BVA with `set ('factor', 0)` though,
+  i.e., the solver checks this API contract only in a lazy way, by making
+  sure that the client code does not use internally added extension variables.
+
+
 Version 2.2.0
 -------------
 
