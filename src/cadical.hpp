@@ -524,17 +524,20 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
-#if 0
   // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
   // and MacOS in particular).  The feature check for this warning is
   // cumbersome to implement and conflicts with other checks for 'C++11'.
-  // After moving to 'C++14' or better 'C++17' we can add this check back.
+  // After moving to 'C++14' or better 'C++17' we can add this check back
+  // but by then will probably have removed 'get_entrailed_literals' anyhow
+  // (in version '3.0.0').
+  //
+#if 0
   [[deprecated ("use the function implied instead with the same semantics "
                 "and arguments")]]
+#endif
   void get_entrailed_literals (std::vector<int> &implicants) {
     implied (implicants);
   }
-#endif
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
@@ -624,15 +627,17 @@ public:
   //
   void resize (int min_max_var);
 
-#if 0
   // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
   // and MacOS in particular).  The feature check for this warning is
   // cumbersome to implement and conflicts with other checks for 'C++11'.
-  // After moving to 'C++14' or better 'C++17' we can add this check back.
+  // After moving to 'C++14' or better 'C++17' we can add this check back
+  // but by then will have removed 'reserve' probably anyhow (in '3.0.0').
+  //
+#if 0
   [[deprecated ("use the function resize instead with the same semantics "
                 "and arguments.")]]
-  void reserve (int min_max_var) { resize (min_max_var); }
 #endif
+  void reserve (int min_max_var) { resize (min_max_var); }
 
   // Increase the maximum variable index by a number of new variables.
   // initializes 'number_of_vars' new variables and protects them from

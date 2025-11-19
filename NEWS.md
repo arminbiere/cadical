@@ -48,11 +48,18 @@ New and Improved Techniques:
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.
 
-- Bounded Variable Addition.
+- Bounded Variable Addition (BVA) or also called `factor`.
 
   + Reverse of BVE, searches for clause sets with a certain structure,
-    factors out common variables and uses extended resolution with a
-    new variable to derive equisatisfiable clauses which replace the old ones.
+    and factors out common variables using extended resolution and new
+    variables to derive equisatisfiable clauses which replace the old ones.
+
+  + Warning:  We have `factor` off in the 2.2 release (to avoid breaking API
+    changes) but enabling it will break API usage as extension variables can
+    not occur in input clauses. The user will need to use `var ()` or
+    `declare_more_variables ()` when `factor` is enabled for incremental
+    solving to make sure that this does not happen.  We plan to activate
+    `factor` by default with the next major release (3.0.0).
 
 - Clausal Sweeping.
 
