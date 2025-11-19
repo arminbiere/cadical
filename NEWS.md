@@ -30,7 +30,7 @@ User Facing Changes:
 
 - The `reserve` function became **deprecated** and is going to be replaced 
   by the new `resize`  function due to its misleading name (compared to
-  `stl::vector`).  Users can in their code simply replace `reserve` by
+  `std::vector`).  Users can in their code simply replace `reserve` by
   `resize`.  The next major release will remove `reserve`.
 
 - Bounded variable addition aka `factor` (see below) remains disabled by
