@@ -1,8 +1,96 @@
+Version 2.2.0
+-------------
+
+User Facing Changes:
+
+- ILB interface simplified: instead of having `ilbassumptions` and `ilb`,
+  there is now only `ilb` with values `0`, `1` (= only assumptions), and `2`
+  (= full reuse).
+
+- The tracer now allows to get equivalent literals during solving
+
+- Support for compilation of shared library via `./configure -shared`.
+
+- Added `get_statistic_value` to be able to extract some information
+  about the current run.
+
+- The `lucky` procedure can now handle assumptions (but not the external
+  propagator). Set `luckyassumptions` to false if you do not want that.
+
+- `val` now has a Boolean as second argument that checks that the
+  variables was declared. The default value is the old behavior,
+  but this can be useful for debugging applications.
+
+- Fixed `VeriPB' compatibility issues.
+
+- The `get_entrailed_literals` function became **deprecated** and is going to be
+  replaced by the new `implied` function, with the same sematics, except
+  that is now also allowed in the state 'SATISFIED' state. The next
+  major release will remove `get_entrailed_literals`.
+
+- The `reserve` function became **deprecated** and is going to be replaced 
+  by the new `resize`  function due to its misleading name (compared to
+  `std::vector`).  Users can in their code simply replace `reserve` by
+  `resize`.  The next major release will remove `reserve`.
+
+- Bounded variable addition aka `factor` (see below) remains disabled by
+  default as it requires a change in incremental usage when enabled.  The
+  next major release will (A) enable `factor` by default and accordingly
+  (B) require the usage of `var` resp. `declare_more_variables` for adding
+  new variables in incremental solving (and keeping `factor` enabled).
+  This **breaking-change** is post-poned until the next major release.
+
+New and Improved Techniques:
+
+- Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
+  the formula and merges equivalent outputs.
+
+- Bounded Variable Addition (BVA) or also called `factor`.
+
+  + Reverse of BVE, searches for clause sets with a certain structure,
+    and factors out common variables using extended resolution and new
+    variables to derive equisatisfiable clauses which replace the old ones.
+
+  + Warning:  We have `factor` off in the 2.2 release (to avoid breaking API
+    changes) but enabling it will break API usage as extension variables can
+    not occur in input clauses. The user will need to use `var ()` or
+    `declare_more_variables ()` when `factor` is enabled for incremental
+    solving to make sure that this does not happen.  We plan to activate
+    `factor` by default with the next major release (3.0.0).
+
+- Clausal Sweeping.
+
+  + Introducing the 'kitten' solver to cadical. Enables semantic search
+    for equivalences in sub-parts of the formula.
+
+- Ticks for improved scheduling
+
+  + You can now also use ticks to limit the runtime like the
+    conflict/decision limit before.
+
+- Improved vivify with a new tier-based scheduling.
+
+- Improved the lucky procedure, by allowing it to do several conflicts and
+  finding new units.
+
+- New light-way preprocessing round with lucky, congruence, factor, and
+  a new (very limited) BVE (fast elim). Fast elimination is never run
+  again and normal BVE is used instead. Lucky is run before and after
+  preprocessing.
+
+- Small extension to gate extraction in BVE, now able to extract
+  semantic definitions using 'kitten' (use `set ('elimdef', 1)` to enable).
+
+- Improved locals search walk algorithm. We have also ported the version
+  from Kissat (relying on full-occurrence list), deactivated by default.
+
+- Binary backone similarly to `Kissat`.
+
 Version 2.1.3
 -------------
 
 - New interface to support propagation of assumptions. The following functions
-are available now:
+  are available now:
 
   + `propagate ()`: Applies unit propagation on the assumptions given to the
     solver previously (supposed to be called instead of `solve ()`).
@@ -211,12 +299,14 @@ Version 1.7.3
 - Reworked options for proof tracing to be less confusing.  Support for
   DRAT, LRAT, FRAT and VeriPB (with or without antecedents).
 
-Version 1.7.2 -------------
+Version 1.7.2
+-------------
 
 - Configuration option `--safe` disables writing to a file through `popen`
   which makes library usage safer.
 
-Version 1.7.1 -------------
+Version 1.7.1
+-------------
 
 - Added support for VeriPB proofs (--lrat --lratveripb).
 
@@ -227,7 +317,8 @@ Version 1.7.1 -------------
 
 - Added support for LRAT + external propagator in combination.
 
-Version 1.7.0 -------------
+Version 1.7.0
+-------------
 
 - Added native LRAT support.
 
@@ -243,7 +334,8 @@ Version 1.6.0 -------------
 - During decisions the phase set by `void phase (int lit)` has now higher
   precedence than the initial phase set by options `phase` and `forcephase`.
 
-Version 1.5.6 -------------
+Version 1.5.6
+-------------
 
 - Clang formatted all source code (and fixed one failing regression test by
   disabling `otfs` for it).
@@ -255,7 +347,8 @@ Version 1.5.6 -------------
 - More accurate tracking of binary clauses in watch lists by updating the
   size in watch lists.
 
-Version 1.5.4 -------------
+Version 1.5.4
+-------------
 
 - Picking highest score literal in assumed clause (`constrain`) and caching
   of satisfied literal by moving them to the front.
@@ -291,21 +384,25 @@ Version 1.5.4 -------------
   `mobical` which produces segmentation faults (thanks to Sam Bayless for
   pointing this out).
 
-Version 1.5.2 -------------
+Version 1.5.2
+-------------
 
 - Updates to documentation and copyright.
 
-Version 1.5.2 -------------
+Version 1.5.2
+-------------
 
 - More copyright updates in banner.
 
 - Fixed MinGW cross-compilation (see `BUILD.md`).
 
-Version 1.5.1 -------------
+Version 1.5.1
+-------------
 
 - Fixed copyright and added two regression traces.
 
-Version 1.5.0 -------------
+Version 1.5.0
+-------------
 
 - Added `constrain` API call described in our FMCAD'21 paper.
 

@@ -32,6 +32,8 @@ bool Internal::minimize_literal (int lit, int depth) {
     return false;
   bool res = true;
   assert (v.reason);
+  if (opts.minimizeticks)
+    stats.ticks.search[stable]++;
   if (v.reason == external_reason) {
     assert (!opts.exteagerreasons);
     v.reason = learn_external_reason_clause (lit, 0, true);
@@ -175,9 +177,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       f.seen = true;
       unit_analyzed.push_back (idx);
       const int lit = val (idx) > 0 ? idx : -idx;
-      const unsigned uidx = vlit (lit); // I didn't clean added flag
-      uint64_t id = unit_clauses (uidx);
-      assert (id);
+      int64_t id = unit_id (lit);
       unit_chain.push_back (id);
       continue;
     }

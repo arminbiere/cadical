@@ -9,7 +9,7 @@ using namespace std;
 
 struct Bin {
   int lit;
-  uint64_t id;
+  int64_t id;
 };
 
 typedef vector<Bin> Bins;

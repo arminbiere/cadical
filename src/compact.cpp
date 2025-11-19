@@ -215,12 +215,12 @@ void Internal::compact () {
     if (lrat || frat) {
       assert (eidx > 0);
       assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
-      uint64_t id1 = external->ext_units[2 * eidx];
-      uint64_t id2 = external->ext_units[2 * eidx + 1];
+      int64_t id1 = external->ext_units[2 * eidx];
+      int64_t id2 = external->ext_units[2 * eidx + 1];
       assert (!id1 || !id2);
       if (!id1 && !id2) {
-        uint64_t new_id1 = unit_clauses (2 * src);
-        uint64_t new_id2 = unit_clauses (2 * src + 1);
+        int64_t new_id1 = unit_clauses (2 * src);
+        int64_t new_id2 = unit_clauses (2 * src + 1);
         external->ext_units[2 * eidx] = new_id1;
         external->ext_units[2 * eidx + 1] = new_id2;
       }
@@ -255,7 +255,7 @@ void Internal::compact () {
         unit_clauses (2 * src + 1) = 0;
         continue;
       }
-      uint64_t id = unit_clauses (2 * src);
+      int64_t id = unit_clauses (2 * src);
       int lit = src;
       if (!id) {
         id = unit_clauses (2 * src + 1);
@@ -332,6 +332,9 @@ void Internal::compact () {
   if (!probes.empty ())
     mapper.map_flush_and_shrink_lits (probes);
 
+  if (!sweep_schedule.empty ())
+    mapper.map_flush_and_shrink_lits (sweep_schedule);
+
   /*======================================================================*/
   // In the third part we map stuff and also reallocate memory.
   /*======================================================================*/
@@ -347,7 +350,6 @@ void Internal::compact () {
   mapper.map_vector (phases.target);
   mapper.map_vector (phases.best);
   mapper.map_vector (phases.prev);
-  mapper.map_vector (phases.min);
 
   // Special code for 'frozentab'.
   //
@@ -456,6 +458,8 @@ void Internal::compact () {
     mapper.map2_vector (wtab);
   if (!otab.empty ())
     mapper.map2_vector (otab);
+  if (!rtab.empty ())
+    mapper.map2_vector (rtab);
   if (!big.empty ())
     mapper.map2_vector (big);
 

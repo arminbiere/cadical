@@ -1,6 +1,9 @@
 #ifndef _lrattracer_h_INCLUDED
 #define _lrattracer_h_INCLUDED
 
+#include "file.hpp"
+#include "tracer.hpp"
+
 namespace CaDiCaL {
 
 class LratTracer : public FileTracer {
@@ -12,17 +15,17 @@ class LratTracer : public FileTracer {
 #ifndef QUIET
   int64_t added, deleted;
 #endif
-  uint64_t latest_id;
-  vector<uint64_t> delete_ids;
+  int64_t latest_id;
+  std::vector<int64_t> delete_ids;
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (int64_t id);
 
   // support LRAT
-  void lrat_add_clause (uint64_t, const vector<int> &,
-                        const vector<uint64_t> &);
-  void lrat_delete_clause (uint64_t);
+  void lrat_add_clause (int64_t, const std::vector<int> &,
+                        const std::vector<int64_t> &);
+  void lrat_delete_clause (int64_t);
 
 public:
   // own and delete 'file'
@@ -30,19 +33,20 @@ public:
   ~LratTracer ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override;
+  void begin_proof (int64_t) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override {} // skip
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
+                           const std::vector<int64_t> &) override;
 
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void delete_clause (int64_t, bool, const std::vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
+  void finalize_clause (int64_t, const std::vector<int> &) override {
+  } // skip
 
-  void report_status (int, uint64_t) override {} // skip
+  void report_status (int, int64_t) override {} // skip
 
 #ifndef QUIET
   void print_statistics ();

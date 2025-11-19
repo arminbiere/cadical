@@ -49,7 +49,7 @@ struct WitnessChecker : WitnessIterator {
   }
 
 public:
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t) {
     for (const auto &lit : w)
       cout << lit << ' ';
     cout << "0 ";
@@ -88,6 +88,7 @@ struct ClauseChecker : ClauseIterator {
 int main () {
 
   Solver cadical;
+  cadical.set ("lucky", 0);
 
   // And gate 3 = 1 & 2>
 

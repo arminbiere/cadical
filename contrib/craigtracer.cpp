@@ -393,7 +393,7 @@ void CraigTracer::label_constraint (CraigClauseType clause_type) {
   craig_constraint_label = clause_type;
 }
 
-void CraigTracer::add_original_clause (uint64_t id, bool redundant,
+void CraigTracer::add_original_clause (int64_t id, bool redundant,
                                        const std::vector<int> &c,
                                        bool restore) {
   assert (id > 0);
@@ -416,14 +416,15 @@ void CraigTracer::add_original_clause (uint64_t id, bool redundant,
   auto clause_label = craig_clause_labels.find (original_id)->second;
   auto *interpolant = create_interpolant_for_clause (c, clause_label);
 
-  assert (craig_clauses.size () == id - 1);
+  assert ((int64_t) craig_clauses.size () == id - 1);
   craig_clauses.push_back (c);
   craig_interpolants.push_back (interpolant);
 }
 
+// TODO: print fatal error if witness (3rd argument) is true.
 void CraigTracer::add_derived_clause (
-    uint64_t id, bool redundant, const std::vector<int> &c,
-    const std::vector<uint64_t> &proof_chain) {
+    int64_t id, bool redundant, int, const std::vector<int> &c,
+    const std::vector<int64_t> &proof_chain) {
   assert (proof_chain.size () >= 1);
   (void) redundant;
 #ifndef NDEBUG
@@ -452,7 +453,7 @@ void CraigTracer::add_derived_clause (
   }
   unmark_all ();
 #ifndef NDEBUG
-  assert (craig_clauses.size () == id - 1);
+  assert ((int64_t) craig_clauses.size () == id - 1);
 #else
   (void) id;
 #endif
@@ -461,14 +462,14 @@ void CraigTracer::add_derived_clause (
 }
 
 void CraigTracer::add_assumption_clause (
-    uint64_t id, const std::vector<int> &c,
-    const std::vector<uint64_t> &proof_chain) {
+    int64_t id, const std::vector<int> &c,
+    const std::vector<int64_t> &proof_chain) {
   CraigData *interpolant = 0;
 
   if (proof_chain.size () > 0) {
     // We have a resolution of multiple clauses and therefore reuse
     // the existing code to build our Craig interpolant.
-    add_derived_clause (id, true, c, proof_chain);
+    add_derived_clause (id, true, 0, c, proof_chain);
     interpolant = craig_interpolants[id - 1];
   } else {
     assert (c.size () == 2);
@@ -479,7 +480,7 @@ void CraigTracer::add_assumption_clause (
 
     if (!c0_is_assumption || !c1_is_assumption) {
       int l = c0_is_assumption ? -c[1] : -c[0];
-      assert (craig_clauses.size () == id - 1);
+      assert ((int64_t) craig_clauses.size () == id - 1);
       craig_clauses.push_back ({l});
       craig_interpolants.push_back (create_interpolant_for_assumption (-l));
       assumption_clauses.push_back (id);
@@ -503,19 +504,19 @@ void CraigTracer::add_assumption_clause (
   }
 
   if (proof_chain.size () == 0) {
-    assert (craig_clauses.size () == id - 1);
+    assert ((int64_t) craig_clauses.size () == id - 1);
     craig_clauses.push_back (c);
     craig_interpolants.push_back (interpolant);
   }
   assumption_clauses.push_back (id);
 }
 
-void CraigTracer::delete_clause (uint64_t id, bool redundant,
+void CraigTracer::delete_clause (int64_t id, bool redundant,
                                  const std::vector<int> &c) {
   (void) redundant;
   (void) c;
 
-  assert (craig_clauses.size () >= id - 1);
+  assert ((int64_t) craig_clauses.size () >= id - 1);
   craig_clauses[id - 1].resize (0);
 }
 
@@ -534,9 +535,8 @@ void CraigTracer::reset_assumptions () {
   assumption_clauses.clear ();
 }
 
-void CraigTracer::conclude_unsat (
-    CaDiCaL::ConclusionType conclusion,
-    const std::vector<uint64_t> &proof_chain) {
+void CraigTracer::conclude_unsat (CaDiCaL::ConclusionType conclusion,
+                                  const std::vector<int64_t> &proof_chain) {
   if (craig_interpolant) {
     delete craig_interpolant;
     craig_interpolant = 0;

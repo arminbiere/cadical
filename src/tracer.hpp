@@ -30,33 +30,40 @@ public:
   // Includes ID and whether the clause is redundant or irredundant
   // Arguments: ID, redundant, clause, restored
   //
-  virtual void add_original_clause (uint64_t, bool,
-                                    const std::vector<int> &,
+  virtual void add_original_clause (int64_t, bool, const std::vector<int> &,
                                     bool = false) {}
 
   // Notify the observer that a new clause has been derived.
   // Includes ID and whether the clause is redundant or irredundant
   // If antecedents are derived they will be included here.
-  // Arguments: ID, redundant, clause, antecedents
+  // If witness != 0 it is a RAT clause.
+  // Arguments: ID, redundant, clause, witness, antecedents
   //
-  virtual void add_derived_clause (uint64_t, bool, const std::vector<int> &,
-                                   const std::vector<uint64_t> &) {}
+  virtual void add_derived_clause (int64_t, bool, int,
+                                   const std::vector<int> &,
+                                   const std::vector<int64_t> &) {}
 
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant
   // Arguments: ID, redundant, clause
   //
-  virtual void delete_clause (uint64_t, bool, const std::vector<int> &) {}
+  virtual void delete_clause (int64_t, bool, const std::vector<int> &) {}
+
+  // Notify the observer that a clause is deleted.
+  // Includes ID and redundant/irredundant
+  // Arguments: ID, redundant, clause
+  //
+  virtual void demote_clause (uint64_t, const std::vector<int> &) {}
 
   // Notify the observer to remember that the clause might be restored later
   // Arguments: ID, clause
   //
-  virtual void weaken_minus (uint64_t, const std::vector<int> &) {}
+  virtual void weaken_minus (int64_t, const std::vector<int> &) {}
 
   // Notify the observer that a clause is strengthened
   // Arguments: ID
   //
-  virtual void strengthen (uint64_t) {}
+  virtual void strengthen (int64_t) {}
 
   // Notify the observer that the solve call ends with status StatusType
   // If the status is UNSAT and an empty clause has been derived, the second
@@ -65,7 +72,7 @@ public:
   // and finalized with finalize_clause
   // Arguments: int, ID
   //
-  virtual void report_status (int, uint64_t) {}
+  virtual void report_status (int, int64_t) {}
 
   /*------------------------------------------------------------------------*/
   /*                                                                        */
@@ -76,13 +83,13 @@ public:
   // Notify the observer that a clause is finalized.
   // Arguments: ID, clause
   //
-  virtual void finalize_clause (uint64_t, const std::vector<int> &) {}
+  virtual void finalize_clause (int64_t, const std::vector<int> &) {}
 
   // Notify the observer that the proof begins with a set of reserved ids
   // for original clauses. Given ID is the first derived clause ID.
   // Arguments: ID
   //
-  virtual void begin_proof (uint64_t) {}
+  virtual void begin_proof (int64_t) {}
 
   /*------------------------------------------------------------------------*/
   /*                                                                        */
@@ -114,8 +121,8 @@ public:
   // If antecedents are derived they will be included here.
   // Arguments: ID, clause, antecedents
   //
-  virtual void add_assumption_clause (uint64_t, const std::vector<int> &,
-                                      const std::vector<uint64_t> &) {}
+  virtual void add_assumption_clause (int64_t, const std::vector<int> &,
+                                      const std::vector<int64_t> &) {}
 
   // Notify the observer that conclude unsat was requested.
   // will give either the id of the empty clause, the id of a failing
@@ -123,7 +130,7 @@ public:
   // Arguments: conclusion_type, clause_ids
   //
   virtual void conclude_unsat (ConclusionType,
-                               const std::vector<uint64_t> &) {}
+                               const std::vector<int64_t> &) {}
 
   // Notify the observer that conclude sat was requested.
   // will give the complete model as a vector.
@@ -134,13 +141,20 @@ public:
   // will give the current trail as a vector.
   //
   virtual void conclude_unknown (const std::vector<int> &) {}
+
+  // Notify the observer that two literals are equivalent
+  //
+  // You receive literals, not variables. You can also get notified
+  // multiple times. You can also get notified of BVA variables, aka
+  // variables you did not declare.
+  virtual void notify_equivalence (int, int) {}
 };
 
 /*--------------------------------------------------------------------------*/
 
 // Following tracers for internal use.
 
-class InternalTracer : public Tracer {
+struct InternalTracer : public Tracer {
 public:
   InternalTracer () {}
   virtual ~InternalTracer () {}

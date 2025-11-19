@@ -34,6 +34,8 @@ quiet=no
 m32=no
 contrib=yes
 ipasir=yes
+shared=no
+pic=no
 
 #--------------------------------------------------------------------------#
 
@@ -114,10 +116,11 @@ where '<option>' is one of the following
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
 -static...         pass '-static...' option to makefile
+-shared            add '-fpic' compilation flag and produce shared library
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
-compilation options by setting CXXFLAGS.  For example
+compilation options by setting CXXFLAGS and CFLAGS.  For example
 
   CXX=clang++ CXXFLAGS=-fPIC ./configure
 
@@ -176,9 +179,11 @@ do
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
+    -fpic|-fPIC) options="$options $1"; pic=yes;;
     -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
     -s|--symbols) options="$options -ggdb3";;
     -static*) options="$options $1";;
+    -shared|--shared) shared=yes;;
 
     CXX=*)
       CXX="`expr \"$1\" : 'CXX=\(.*\)'`"
@@ -186,6 +191,10 @@ do
 
     CXXFLAGS=*)
       CXXFLAGS="`expr \"$1\" : 'CXXFLAGS=\(.*\)'`"
+      ;;
+
+    CFLAGS=*)
+      CFLAGS="`expr \"$1\" : 'CFLAGS=\(.*\)'`"
       ;;
 
     *) die "invalid option '$1' (try '-h')";;
@@ -276,17 +285,18 @@ fi
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
 
 case x"$CXX" in
-  x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra";;
-  *) CXXFLAGS="${CXXFLAGS}-W";;
+  x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra"; CFLAGS="${CFLAGS}-Wall -Wextra";;
+  *) CXXFLAGS="${CXXFLAGS}-W"; CFLAGS="${CFLAGS}-W";;
 esac
 
 if [ $debug = yes ]
 then
   CXXFLAGS="$CXXFLAGS -g"
+  CFLAGS="$CFLAGS -g"
 else
   case x"$CXX" in
-    x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3";;
-    *) CXXFLAGS="$CXXFLAGS -O";;
+    x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3"; CFLAGS="$CFLAGS -O3";;
+    *) CXXFLAGS="$CXXFLAGS -O"; CFLAGS="$CFLAGS -O";;
   esac
 fi
 
@@ -313,12 +323,20 @@ fi
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+[ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
+[ $logging = yes ] && CFLAGS="$CFLAGS -DLOGGING"
+[ $quiet = yes ] && CFLAGS="$CFLAGS -DQUIET"
+[ $profile = yes ] && CFLAGS="$CFLAGS -pg"
+[ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
+
 if [ $pedantic = yes ]
 then
   CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
+  CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+    CFLAGS="${CFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
   esac
 fi
@@ -326,8 +344,14 @@ fi
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 [ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"
+[ $shared = yes -a $pic = no ] && CXXFLAGS="$CXXFLAGS -fpic"
+
+[ $contracts = no ] && CFLAGS="$CFLAGS -DNCONTRACTS"
+[ $tracing = no ] && CFLAGS="$CFLAGS -DNTRACING"
+[ $contrib = no ] && CFLAGS="$CFLAGS -DNCONTRIB"
 
 CXXFLAGS="$CXXFLAGS$options"
+CFLAGS="$CFLAGS$options"
 
 #--------------------------------------------------------------------------#
 
@@ -355,17 +379,15 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Since C99/C++11 is becoming the standard newer versions of 'g++' (7.3 for
+# Since C++11 is becoming the standard newer versions of 'g++' (7.3 for
 # instance) discourage certain GCC extensions, particularly the GCC version
 # of variadic macros, if the same concept exists in the standard.  This
 # forced us to replace all GCC style 'ARGS...' macros with '...' and
 # '__VA_ARGS__'.  Otherwise compiling the library with '--pedantic -Werror'
 # would fail (configuration flag '-p').  However, older versions of 'gcc'
 # (such as 4.8) would disallow these new forms of macros unless we
-# explicitly enforce the new standard with '-std=c++11'.  Here we try to
-# figure out whether we need that flag.  In earlier versions we used
-# '-std=c++0x' but due to issues with older MacOS builds we switched to
-# '-std=c++11' instead.
+# explicitly enforce the new standard with '-std=c++17'.  Here we try to
+# figure out whether we need that flag. 
 
 feature=./configure-requires-c++11
 cat <<EOF > $feature.cpp
@@ -537,6 +559,24 @@ fi
 [ $closefrom = no ] && CXXFLAGS="$CXXFLAGS -DNCLOSEFROM"
 
 #--------------------------------------------------------------------------#
+# Preparing make goals (@GOALS@)
+goals="libcadical.a cadical mobical"
+sharedlibrary="libcadical.so"
+if [ $shared = yes ]
+then
+  msg "adding '$sharedlibrary' shared library to default makefile goal, too"
+  goals="$goals $sharedlibrary"
+else
+  if [ -f $sharedlibrary ]
+  then
+    msg "removing stale dynamic library '$sharedlibrary' (without '-shared')"
+    rm -f $sharedlibrary || exit 1
+  fi
+  msg "no '$sharedlibrary' shared library generated (without '-shared')"
+fi
+
+
+#--------------------------------------------------------------------------#
 
 # Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
@@ -548,10 +588,12 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
+-e "s#@CFLAGS@#$CFLAGS#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \
 -e "s#@ROOT@#$root#" \
+-e "s#@GOALS@#$goals#" \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

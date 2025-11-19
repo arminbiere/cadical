@@ -456,6 +456,45 @@ bool Checker::check () {
   return res;
 }
 
+bool Checker::check_blocked () {
+  for (const auto &lit : unsimplified) {
+    mark (-lit) = true;
+  }
+  vector<int> not_blocked;
+  for (size_t i = 0; i < size_clauses; i++) {
+    for (CheckerClause *c = clauses[i], *next; c; c = next) {
+      next = c->next;
+      unsigned count = 0;
+      int first;
+      for (int *i = c->literals; i < c->literals + c->size; i++) {
+        const int lit = *i;
+        if (val (lit) > 0) {
+          LOG (c->literals, c->size, "satisfied clause");
+          count = 2;
+          break;
+        }
+        if (mark (lit)) {
+          count++;
+          LOG (c->literals, c->size, "clause");
+          first = lit;
+        }
+      }
+      if (count == 1)
+        not_blocked.push_back (first);
+    }
+  }
+  for (const auto &lit : not_blocked) {
+    mark (lit) = false;
+  }
+  bool blocked = false;
+  for (const auto &lit : unsimplified) {
+    if (mark (-lit))
+      blocked = true;
+    mark (-lit) = false;
+  }
+  return blocked;
+}
+
 /*------------------------------------------------------------------------*/
 
 void Checker::add_clause (const char *type) {
@@ -499,7 +538,7 @@ void Checker::add_clause (const char *type) {
     insert ();
 }
 
-void Checker::add_original_clause (uint64_t id, bool, const vector<int> &c,
+void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
                                    bool) {
   if (inconsistent)
     return;
@@ -518,8 +557,9 @@ void Checker::add_original_clause (uint64_t id, bool, const vector<int> &c,
   STOP (checking);
 }
 
-void Checker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
-                                  const vector<uint64_t> &) {
+void Checker::add_derived_clause (int64_t id, bool, int,
+                                  const vector<int> &c,
+                                  const vector<int64_t> &) {
   if (inconsistent)
     return;
   START (checking);
@@ -530,7 +570,7 @@ void Checker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
   last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
-  else if (!check ()) {
+  else if (!check () && !check_blocked ()) { // needed for ER proof support
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -546,7 +586,7 @@ void Checker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
+void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   if (inconsistent)
     return;
   START (checking);
@@ -582,9 +622,9 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   STOP (checking);
 }
 
-void Checker::add_assumption_clause (uint64_t id, const vector<int> &c,
-                                     const vector<uint64_t> &chain) {
-  add_derived_clause (id, true, c, chain);
+void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
+                                     const vector<int64_t> &chain) {
+  add_derived_clause (id, true, 0, c, chain);
   delete_clause (id, true, c);
 }
 

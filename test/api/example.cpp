@@ -9,6 +9,7 @@
 int main () {
 
   CaDiCaL::Solver *solver = new CaDiCaL::Solver;
+  solver->set ("factor", 0);
 
   // ------------------------------------------------------------------
   // Encode Problem and check without assumptions.

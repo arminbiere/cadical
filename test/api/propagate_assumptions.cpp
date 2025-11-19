@@ -71,7 +71,7 @@ void check_test_case (const std::vector<int> &constrain,
   } else if (res == 0) {
     std::cout << " (implicants: [";
     std::vector<int> implicants;
-    solver->get_entrailed_literals (implicants);
+    solver->implied (implicants);
     // Check that every propagation holds
     for (auto const &lit : implicants) {
       std::cout << " " << lit;

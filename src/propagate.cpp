@@ -20,7 +20,7 @@ namespace CaDiCaL {
 // relevant in conflict analysis or in root-level fixing steps.
 
 static Clause decision_reason_clause;
-static Clause *decision_reason = &decision_reason_clause;
+Clause *Internal::decision_reason = &decision_reason_clause;
 
 // If chronological backtracking is used the actual assignment level might
 // be lower than the current decision level. In this case the assignment
@@ -72,8 +72,8 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses (uidx);
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -85,14 +85,13 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
 void Internal::build_chain_for_empty () {
   if (!lrat || !lrat_chain.empty ())
     return;
-  assert (!level);
+  assert (!level || in_mode (BACKBONE));
   assert (lrat_chain.empty ());
   assert (conflict);
   LOG (conflict, "lrat for global empty clause with conflict");
   for (auto &lit : *conflict) {
     assert (val (lit) < 0);
-    const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses (uidx);
+    int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (conflict->id);
@@ -229,13 +228,14 @@ bool Internal::propagate () {
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
-
+  LOG ("starting propagate");
   START (propagate);
 
   // Updating statistics counter in the propagation loops is costly so we
   // delay until propagation ran to completion.
   //
   int64_t before = propagated;
+  int64_t ticks = 0;
 
   while (!conflict && propagated != trail.size ()) {
 
@@ -246,11 +246,13 @@ bool Internal::propagate () {
     const const_watch_iterator eow = ws.end ();
     watch_iterator j = ws.begin ();
     const_watch_iterator i = j;
+    ticks += 1 + cache_lines (ws.size (), sizeof *i);
 
     while (i != eow) {
 
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
+      LOG (w.clause, "checking");
 
       if (b > 0)
         continue; // blocking literal satisfied
@@ -290,6 +292,7 @@ bool Internal::propagate () {
           build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
+          ticks++;
         }
 
       } else {
@@ -303,12 +306,15 @@ bool Internal::propagate () {
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
 
+        ticks++;
+
         if (w.clause->garbage) {
           j--;
           continue;
         }
 
         literal_iterator lits = w.clause->begin ();
+        assert (lits[0] == lit || lits[1] == lit);
 
         // Simplify code by forcing 'lit' to be the second literal in the
         // clause.  This goes back to MiniSAT.  We use a branch-less version
@@ -340,7 +346,8 @@ bool Internal::propagate () {
           literal_iterator k = middle;
 
           // Find replacement watch 'r' at position 'k' with value 'v'.
-
+          assert (lits + 2 <= k);
+          LOG (w.clause, "search starting at %d", w.clause->pos);
           int r = 0;
           signed char v = -1;
 
@@ -379,6 +386,8 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
+            ticks++;
+
           } else if (!u) {
 
             assert (v < 0);
@@ -389,6 +398,7 @@ bool Internal::propagate () {
             build_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
+            ticks++;
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code
@@ -421,7 +431,7 @@ bool Internal::propagate () {
                 lits[pos] = lit;
                 lits[0] = other;
                 lits[1] = s;
-                watch_literal (s, other, w.clause);
+                watch_literal (s, lit, w.clause);
 
                 j--; // Drop this watch from the watch list of 'lit'.
               }
@@ -460,6 +470,7 @@ bool Internal::propagate () {
     // Avoid updating stats eagerly in the hot-spot of the solver.
     //
     stats.propagations.search += propagated - before;
+    stats.ticks.search[stable] += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;
@@ -477,6 +488,10 @@ bool Internal::propagate () {
     }
   }
 
+  if (conflict && randomized_deciding) {
+    if (!--randomized_deciding)
+      VERBOSE (3, "last random decision conflict");
+  }
   STOP (propagate);
 
   return !conflict;

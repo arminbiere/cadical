@@ -20,66 +20,107 @@ bool Internal::stabilizing () {
     return false;
   if (stable && opts.stabilizeonly)
     return true;
-  if (stats.conflicts >= lim.stabilize) {
-    report (stable ? ']' : '}');
-    if (stable)
-      STOP (stable);
-    else
-      STOP (unstable);
-    stable = !stable;
-    if (stable)
-      stats.stabphases++;
-    PHASE ("stabilizing", stats.stabphases,
-           "reached stabilization limit %" PRId64 " after %" PRId64
-           " conflicts",
-           lim.stabilize, stats.conflicts);
-    inc.stabilize *= opts.stabilizefactor * 1e-2;
-    if (inc.stabilize > opts.stabilizemaxint)
-      inc.stabilize = opts.stabilizemaxint;
-    lim.stabilize = stats.conflicts + inc.stabilize;
-    if (lim.stabilize <= stats.conflicts)
-      lim.stabilize = stats.conflicts + 1;
-    swap_averages ();
-    PHASE ("stabilizing", stats.stabphases,
-           "new stabilization limit %" PRId64
-           " at conflicts interval %" PRId64 "",
-           lim.stabilize, inc.stabilize);
-    report (stable ? '[' : '{');
-    if (stable)
-      START (stable);
-    else
-      START (unstable);
-  }
+  if (!inc.stabilize) {
+    assert (!stable);
+    if (stats.conflicts <= lim.stabilize)
+      return false;
+  } else if (stats.ticks.search[stable] <= lim.stabilize)
+    return stable;
+  report (stable ? ']' : '}');
+  if (stable)
+    STOP (stable);
+  else
+    STOP (unstable);
+
+  assert (last.stabilize.ticks >= 0);
+  assert (last.stabilize.conflicts >= 0 &&
+          last.stabilize.conflicts <= stats.conflicts);
+  assert (last.stabilize.ticks <= stats.ticks.search[stable]);
+  const int64_t delta_ticks =
+      stats.ticks.search[stable] - last.stabilize.ticks;
+#ifndef QUIET
+  const int64_t delta_conflicts =
+      stats.conflicts - last.stabilize.conflicts;
+  const char *current_mode = stable ? "stable" : "unstable";
+  const char *next_mode = stable ? "unstable" : "stable";
+#endif
+  PHASE ("stabilizing", stats.stabphases,
+         "reached %s stabilization limit %" PRId64 " after %" PRId64
+         " conflicts and %" PRId64 " ticks at %" PRId64
+         " conflicts and %" PRId64 " ticks",
+         current_mode, lim.stabilize, delta_conflicts, delta_ticks,
+         stats.conflicts, stats.ticks.search[stable]);
+  if (!inc.stabilize)
+    inc.stabilize = delta_ticks;
+  if (!inc.stabilize) // rare occurence in incremental calls requiring no
+                      // ticks
+    inc.stabilize = 1;
+
+  int64_t next_delta_ticks = inc.stabilize;
+  int64_t stabphases = stats.stabphases + 1;
+  next_delta_ticks *= stabphases * stabphases;
+
+  const bool next_stable = !stable;
+  lim.stabilize = stats.ticks.search[next_stable] + next_delta_ticks;
+  last.stabilize.ticks = stats.ticks.search[next_stable];
+  if (lim.stabilize <= stats.ticks.search[next_stable])
+    lim.stabilize = stats.ticks.search[next_stable] + 1;
+  PHASE ("stabilizing", stats.stabphases,
+         "next %s stabilization limit %" PRId64
+         " at ticks interval %" PRId64,
+         next_mode, lim.stabilize, next_delta_ticks);
+
+  stable = !stable; // Switch!!!!!
+
+  if (stable)
+    stats.stabphases++;
+
+  swap_averages ();
+  report (stable ? '[' : '{');
+  if (stable)
+    START (stable);
+  else
+    START (unstable);
   return stable;
 }
 
-// Restarts are scheduled by a variant of the Glucose scheme as presented in
-// our POS'15 paper using exponential moving averages.  There is a slow
-// moving average of the average recent glucose level of learned clauses as
-// well as a fast moving average of those glues.  If the end of a base
-// restart conflict interval has passed and the fast moving average is above
-// a certain margin over the slow moving average then we restart.
+// Restarts are scheduled by a variant of the Glucose scheme as presented
+// in our POS'15 paper using exponential moving averages.  There is a slow
+// moving average of the average recent glucose level of learned clauses
+// as well as a fast moving average of those glues.  If the end of a base
+// restart conflict interval has passed and the fast moving average is
+// above a certain margin over the slow moving average then we restart.
 
 bool Internal::restarting () {
   if (!opts.restart)
     return false;
   if ((size_t) level < assumptions.size () + 2)
     return false;
-  if (stabilizing ())
+  if (stabilizing () && opts.reluctant)
     return reluctant;
   if (stats.conflicts <= lim.restart)
     return false;
   double f = averages.current.glue.fast;
-  double margin = (100.0 + opts.restartmargin) / 100.0;
-  double s = averages.current.glue.slow, l = margin * s;
-  LOG ("EMA glue slow %.2f fast %.2f limit %.2f", s, f, l);
+  int p = stable ? opts.restartmarginstable : opts.restartmarginfocused;
+  double m = (100.0 + p) / 100.0;
+  double s = averages.current.glue.slow;
+  double l = m * s;
+
+#ifndef QUIET
+  char c = l > f ? '>' : l < f ? '<' : '=';
+  VERBOSE (3,
+           "restart glue limit "
+           "%g = %.2f * %g (slow glue) %c %g (fast glue)",
+           l, m, s, c, f);
+#endif
+
   return l <= f;
 }
 
-// This is Marijn's reuse trail idea.  Instead of always backtracking to the
-// top we figure out which decisions will be made again anyhow and only
-// backtrack to the level of the last such decision or to the top if no such
-// decision exists top (in which case we do not reuse any level).
+// This is Marijn's reuse trail idea.  Instead of always backtracking to
+// the top we figure out which decisions will be made again anyhow and
+// only backtrack to the level of the last such decision or to the top if
+// no such decision exists top (in which case we do not reuse any level).
 
 int Internal::reuse_trail () {
   const int trivial_decisions =

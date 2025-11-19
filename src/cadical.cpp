@@ -25,7 +25,7 @@ class App : public Handler, public Terminator {
 
   Solver *solver; // Global solver.
 
-#ifndef __WIN32
+#ifndef _WIN32
   // Command line options.
   //
   int time_limit; // '-t <sec>'
@@ -92,168 +92,176 @@ public:
 
 /*------------------------------------------------------------------------*/
 
+// clang-format off
+
 void App::print_usage (bool all) {
-  printf ("usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
-          "\n"
-          "where '<option>' is one of the following common options:\n"
-          "\n");
+  printf (
+
+"usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
+"\n"
+"where '<option>' is one of the following common options:\n"
+"\n"
+         );
 
   if (!all) { // Print only a short list of common options.
-    printf ("  -h             print this short list of common options\n"
-            "  --help         print complete list of all options\n"
-            "  --version      print version\n"
-            "\n"
-            "  -n             do not print witness\n"
+    printf (
+
+"  -h             print this short list of common options\n"
+"  --help         print complete list of all options\n"
+"  --version      print version\n"
+"\n"
+"  -n             do not print witness\n"
 #ifndef QUIET
-            "  -v             increase verbosity\n"
-            "  -q             be quiet\n"
+"  -v             increase verbosity\n"
+"  -q             be quiet\n"
 #endif
-            "\n"
-#ifndef __WIN32
-            "  -t <sec>       set wall clock time limit\n"
+"\n"
+#ifndef _WIN32
+"  -t <sec>       set wall clock time limit\n"
 #endif
-    );
+
+           );
   } else { // Print complete list of all options.
     printf (
-        "  -h             print alternatively only a list of common "
-        "options\n"
-        "  --help         print this complete list of all options\n"
-        "  --version      print version\n"
-        "\n"
-        "  -n             do not print witness (same as '--no-witness')\n"
-#ifndef QUIET
-        "  -v             increase verbosity (see also '--verbose' below)\n"
-        "  -q             be quiet (same as '--quiet')\n"
-#endif
-#ifndef __WIN32
-        "  -t <sec>       set wall clock time limit\n"
-#endif
-        "\n"
-        "Or '<option>' is one of the less common options\n"
-        "\n"
-        "  -L<rounds>     run local search initially (default '0' rounds)\n"
-        "  -O<level>      increase limits by '2^<level>' or '10^<level>'\n"
-        "  -P<rounds>     initial preprocessing (default '0' rounds)\n"
-        "\n"
-        "Note there is no separating space for the options above while "
-        "the\n"
-        "following options require a space after the option name:\n"
-        "\n"
-        "  -c <limit>     limit the number of conflicts (default "
-        "unlimited)\n"
-        "  -d <limit>     limit the number of decisions (default "
-        "unlimited)\n"
-        "\n"
-        "  -o <output>    write simplified CNF in DIMACS format to file\n"
-        "  -e <extend>    write reconstruction/extension stack to file\n"
-#ifdef LOGGING
-        "  -l             enable logging messages (same as '--log')\n"
-#endif
-        "\n"
-        "  --force | -f   parsing broken DIMACS header and writing proofs\n"
-        "  --strict       strict parsing (no white space in header)\n"
-        "\n"
-        "  -r <sol>       read solution in competition output format\n"
-        "                 to check consistency of learned clauses\n"
-        "                 during testing and debugging\n"
-        "\n"
-        "  -w <sol>       write result including a potential witness\n"
-        "                 solution in competition format to the given "
-        "file\n"
-        "\n"
-        "  --colors       force colored output\n"
-        "  --no-colors    disable colored output to terminal\n"
-        "  --no-witness   do not print witness (see also '-n' above)\n"
-        "\n"
-        "  --build        print build configuration\n"
-        "  --copyright    print copyright information\n");
 
-    printf ("\n"
-            "There are pre-defined configurations of advanced internal "
-            "options:\n"
-            "\n");
+"  -h             print alternatively only a list of common options\n"
+"  --help         print this complete list of all options\n"
+"  --version      print version\n"
+"\n"
+"  -n             do not print witness (same as '--no-witness')\n"
+#ifndef QUIET
+"  -v             increase verbosity (see also '--verbose' below)\n"
+"  -q             be quiet (same as '--quiet')\n"
+#endif
+#ifndef _WIN32
+"  -t <sec>       set wall clock time limit\n"
+#endif
+"\n"
+"Or '<option>' is one of the less common options\n"
+"\n"
+"  -L<rounds>     run local search initially (default '0' rounds)\n"
+"  -O<level>      increase limits by '2^<level>' or '10^<level>'\n"
+"  -P<rounds>     initial preprocessing (default '0' rounds)\n"
+"\n"
+"Note there is no separating space for the options above while the\n"
+"following options require a space after the option name:\n"
+"\n"
+"  -c <limit>     limit the number of conflicts (default unlimited)\n"
+"  -d <limit>     limit the number of decisions (default unlimited)\n"
+"\n"
+"  -o <output>    write simplified CNF in DIMACS format to file\n"
+"  -e <extend>    write reconstruction/extension stack to file\n"
+#ifdef LOGGING
+"  -l             enable logging messages (same as '--log')\n"
+#endif
+"\n"
+"  --force | -f   parsing broken DIMACS header and writing proofs\n"
+"  --strict       strict parsing (no white space in header)\n"
+"\n"
+"  -r <sol>       read solution in competition output format\n"
+"                 to check consistency of learned clauses\n"
+"                 during testing and debugging\n"
+"\n"
+"  -w <sol>       write result including a potential witness\n"
+"                 solution in competition format to the given "
+"file\n"
+"\n"
+"  --colors       force colored output\n"
+"  --no-colors    disable colored output to terminal\n"
+"  --no-witness   do not print witness (see also '-n' above)\n"
+"\n"
+"  --build        print build configuration\n"
+"  --copyright    print copyright information\n");
+
+    printf (
+
+"\n"
+"There are pre-defined configurations of advanced internal options:\n"
+"\n"
+
+	    );
 
     solver->configurations ();
 
     printf (
-        "\n"
-        "Or '<option>' is one of the following advanced internal options:\n"
-        "\n");
+"\n"
+"Or '<option>' is one of the following advanced internal options:\n"
+"\n"
+	);
+
     solver->usage ();
 
-    fputs (
-        "\n"
-        "The internal options have their default value printed in "
-        "brackets\n"
-        "after their description.  They can also be used in the form\n"
-        "'--<name>' which is equivalent to '--<name>=1' and in the form\n"
-        "'--no-<name>' which is equivalent to '--<name>=0'.  One can also\n"
-        "use 'true' instead of '1', 'false' instead of '0', as well as\n"
-        "numbers with positive exponent such as '1e3' instead of '1000'.\n"
-        "\n"
-        "Alternatively option values can also be specified in the header\n"
-        "of the DIMACS file, e.g., 'c --elim=false', or through "
-        "environment\n"
-        "variables, such as 'CADICAL_ELIM=false'.  The embedded options "
-        "in\n"
-        "the DIMACS file have highest priority, followed by command line\n"
-        "options and then values specified through environment "
-        "variables.\n",
-        stdout);
+    printf (
+
+"\n"
+"The internal options have their default value printed in brackets\n"
+"after their description.  They can also be used in the form\n"
+"'--<name>' which is equivalent to '--<name>=1' and in the form\n"
+"'--no-<name>' which is equivalent to '--<name>=0'.  One can also\n"
+"use 'true' instead of '1', 'false' instead of '0', as well as\n"
+"numbers with positive exponent such as '1e3' instead of '1000'.\n"
+"\n"
+"Alternatively option values can also be specified in the header\n"
+"of the DIMACS file, e.g., 'c --elim=false', or through environment\n"
+"variables, such as 'CADICAL_ELIM=false'.  The embedded options in\n"
+"the DIMACS file have highest priority, followed by command line\n"
+"options and then values specified through environment variables.\n"
+
+           );
   }
 
   //------------------------------------------------------------------------
   // Common to both complete and common option usage.
 
-  fputs (
-      "\n"
-      "The input is read from '<input>' assumed to be in DIMACS format.\n"
-      "Incremental 'p inccnf' files are supported too with cubes at the "
-      "end.\n"
-      "If '<proof>' is given then a DRAT proof is written to that file.\n",
-      stdout);
+  printf (
+
+"\n"
+"The input is read from '<input>' assumed to be in DIMACS format.\n"
+"Incremental 'p inccnf' files are supported too with cubes at the end.\n"
+"If '<proof>' is given then a DRAT proof is written to that file.\n"
+
+         );
 
   //------------------------------------------------------------------------
   // More explanations for complete option usage.
 
   if (all) {
-    fputs (
-        "\n"
-        "If '<input>' is missing then the solver reads from '<stdin>',\n"
-        "also if '-' is used as input path name '<input>'.  Similarly,\n"
-        "\n"
-        "For incremental files each cube is solved in turn. The solver\n"
-        "stops at the first satisfied cube if there is one and uses that\n"
-        "one for the witness to print.  Conflict and decision limits are\n"
-        "applied to each individual cube solving call while '-P', '-L'"
-#ifdef __WIN32
-        "\n"
+    printf (
+
+"\n"
+"If '<input>' is missing then the solver reads from '<stdin>',\n"
+"also if '-' is used as input path name '<input>'.  Similarly,\n"
+"\n"
+"For incremental files each cube is solved in turn. The solver\n"
+"stops at the first satisfied cube if there is one and uses that\n"
+"one for the witness to print.  Conflict and decision limits are\n"
+"applied to each individual cube solving call while '-P', '-L'"
+#ifdef _WIN32
+"\n"
 #else
-        " and\n"
-        "'-t' "
+" and\n"
+"'-t' "
 #endif
-        "remain global.  Only if all cubes were unsatisfiable the solver\n"
-        "prints the standard unsatisfiable solution line ('s "
-        "UNSATISFIABLE').\n"
-        "\n"
-        "By default the proof is stored in the binary DRAT format unless\n"
-        "the option '--no-binary' is specified or the proof is written\n"
-        "to  '<stdout>' and '<stdout>' is connected to a terminal.\n"
-        "\n"
-        "The input is assumed to be compressed if it is given explicitly\n"
-        "and has a '.gz', '.bz2', '.xz' or '.7z' suffix.  The same "
-        "applies\n"
-        "to the output file.  In order to use compression and "
-        "decompression\n"
-        "the corresponding utilities 'gzip', 'bzip', 'xz', and '7z' "
-        "(depending\n"
-        "on the format) are required and need to be installed on the "
-        "system.\n"
-        "The solver checks file type signatures though and falls back to\n"
-        "non-compressed file reading if the signature does not match.\n",
-        stdout);
+"remain global.  Only if all cubes were unsatisfiable the solver\n"
+"prints the standard unsatisfiable solution line ('s UNSATISFIABLE').\n"
+"\n"
+"By default the proof is stored in the binary DRAT format unless\n"
+"the option '--no-binary' is specified or the proof is written\n"
+"to '<stdout>' and '<stdout>' is connected to a terminal.\n"
+"\n"
+"The input is assumed to be compressed if it is given explicitly\n"
+"and has a '.gz', '.bz2', '.xz' or '.7z' suffix.  The same applies\n"
+"to the output file.  In order to use compression and decompression\n"
+"the corresponding utilities 'gzip', 'bzip', 'xz', and '7z' (depending\n"
+"on the format) are required and need to be installed on the system.\n"
+"The solver checks file type signatures though and falls back to\n"
+"non-compressed file reading if the signature does not match.\n"
+
+           );
   }
 }
+
+// clang-format on
 
 /*------------------------------------------------------------------------*/
 
@@ -266,6 +274,8 @@ void App::print_witness (FILE *file) {
       fputc ('v', file), c = 1;
     if (i++ == max_var)
       tmp = 0;
+    else if (solver->external->ervars[i])
+      continue;
     else
       tmp = solver->val (i) < 0 ? -i : i;
     char str[32];
@@ -491,7 +501,7 @@ int App::main (int argc, char **argv) {
       else
         decision_limit_specified = argv[i];
     }
-#ifndef __WIN32
+#ifndef _WIN32
     else if (!strcmp (argv[i], "-t")) {
       if (++i == argc)
         APPERR ("argument to '-t' missing");
@@ -624,7 +634,7 @@ int App::main (int argc, char **argv) {
   }
 #endif
   if (preprocessing > 0 || localsearch > 0 ||
-#ifndef __WIN32
+#ifndef _WIN32
       time_limit >= 0 ||
 #endif
       conflict_limit >= 0 || decision_limit >= 0) {
@@ -641,7 +651,7 @@ int App::main (int argc, char **argv) {
           localsearch, localsearch_specified);
       solver->limit ("localsearch", localsearch);
     }
-#ifndef __WIN32
+#ifndef _WIN32
     if (time_limit >= 0) {
       solver->message (
           "setting time limit to %d seconds real time (due to '-t %s')",
@@ -905,11 +915,17 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
+  if (!res && timesup)
+    fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
+           "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
+           "c https://mysolvertimesout.org/#sat in order to improve\n"
+           "c automated reasoning. 🚧 🚧 🚧\n",
+           write_result_file);
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
   }
-#ifndef __WIN32
+#ifndef _WIN32
   if (time_limit > 0)
     alarm (0);
 #endif
@@ -925,7 +941,7 @@ void App::init () {
 
   assert (!solver);
 
-#ifndef __WIN32
+#ifndef _WIN32
   time_limit = -1;
 #endif
   force_strict_parsing = 1;

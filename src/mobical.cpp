@@ -5,8 +5,8 @@
 /* Copyright (C) 2022-2024 Katalin Fazekas, Technical University of Vienna*/
 /* Copyright (C) 2021-2024 Armin Biere, University of Freiburg            */
 /* Copyright (C) 2021-2023 Mathias Fleury, University of Freiburg         */
-/* Copyright (C) 2023-2024 Florian Pollitt, University of Freiburg        */
-/* Copyright (C) 2024-2024 Tobias Faller Fleury, University of Freiburg   */
+/* Copyright (C) 2023-2024 Florian Pollitt, University of Freiburg */
+/* Copyright (C) 2024-2024 Tobias Faller, University of Freiburg   */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -50,7 +50,7 @@ static const char *USAGE =
 "  <input> <output>  read trace, shrink and write it to output file\n"
 "  <input>           read and replay the specified input trace\n"
 "\n"
-"In order to let the test exectue '<r>' runs (starting from '<seed>') use:\n"
+"In order to let the test execute '<r>' runs (starting from '<seed>') use:\n"
 "\n"
 "  -L[ ]<r>          execute '<r>' runs\n"
 "\n"
@@ -219,6 +219,7 @@ struct DoNot {
     bool atall = false;    // do not shrink anything              's'
     bool phases = false;   // shrink complete incremental solving 'p'
     bool clauses = false;  // shrink full clauses                 'c'
+    bool lemmas = false;   // shrink external lemmas              'u'
     bool literals = false; // shrink literals which shrinks       'l'
     bool basic = false;    // shrink other basic calls            'b'
     bool options = false;  // shrink option calls                 'o'
@@ -267,12 +268,17 @@ struct Shared {
 #endif
 };
 
+struct ExtendMap {
+  vector<int> map;
+};
+
 /*------------------------------------------------------------------------*/
 
 class MockPropagator : public ExternalPropagator,
                        public FixedAssignmentListener {
 private:
   Solver *s = 0;
+  ExtendMap *extendmap = 0;
 
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
@@ -284,6 +290,7 @@ private:
     size_t size;
     size_t next;
 
+    bool mapped;
     bool forgettable;
     bool tainting;
     bool propagation_reason;
@@ -366,6 +373,34 @@ private:
     return lemma->id;
   }
 
+  void extend_map (int arg) {
+    vector<int> &map = extendmap->map;
+    if (map.empty ())
+      map.push_back (0); // 0 is always mapped to 0
+    if (!arg)
+      return;
+    const unsigned abs_arg = abs (arg);
+    if (abs_arg < map.size ())
+      return; // arg is already mapped
+    const int diff = abs_arg - map.size () + 1;
+    const int max_var = s->vars ();
+    map.reserve (max_var + diff);
+    for (int i = 1; i <= diff; i++)
+      map.push_back (max_var + i);
+  }
+
+  int map_arg (int arg) {
+    vector<int> &map = extendmap->map;
+    const int abs_arg = abs (arg);
+    const int sign = arg > 0 ? 1 : -1;
+    const int map_size = map.size ();
+    if (abs_arg < map_size)
+      return map[abs_arg] * sign;
+    const int max_var = s->vars ();
+    const int diff = abs_arg - map_size + 1;
+    return sign * (max_var + diff);
+  }
+
   // Helper to print very verbose log during debugging
 
 #ifdef LOGGING
@@ -392,9 +427,11 @@ public:
   // It is public, so it can be shared easily between different propagators
   std::vector<int> observed_fixed;
 
-  MockPropagator (Solver *solver, bool with_logging = false) {
+  MockPropagator (Solver *solver, ExtendMap *map,
+                  bool with_logging = false) {
     observed_trail.push_back (std::vector<int> ());
     s = solver;
+    extendmap = map;
     logging = logging || with_logging;
   }
 
@@ -442,9 +479,11 @@ public:
     }
 
     if (!new_ovars) {
-      if (!s->is_witness (abs (lit))) {
-        s->add_observed_var (abs (lit));
-        observed_variables.insert (abs (lit));
+      const int abs_lit = abs (lit);
+      if (!s->is_witness (map_arg (abs_lit))) { // does not extend map
+        extend_map (abs_lit);                   // now we have to extend map
+        s->add_observed_var (map_arg (abs_lit)); // might be different
+        observed_variables.insert (map_arg (abs_lit));
       }
     } else {
       new_observed_variables.push_back (abs (lit));
@@ -455,13 +494,15 @@ public:
     for (std::vector<int>::iterator it = new_observed_variables.begin ();
          it != new_observed_variables.end (); ++it) {
       int lit = *it;
-      if (s->is_witness (lit))
+      if (s->is_witness (map_arg (lit)))
         continue;
       new_observed_variables.erase (it);
-      observed_variables.insert (lit);
 
-      s->add_observed_var (lit);
-      return lit;
+      extend_map (lit);
+      s->add_observed_var (map_arg (lit));
+      observed_variables.insert (map_arg (lit));
+
+      return map_arg (lit);
     }
     return 0;
   }
@@ -967,6 +1008,7 @@ class Mobical : public Handler {
   friend class Trace;
   friend struct ValCall;
   friend struct FlipCall;
+  friend struct ImpliedCall;
   friend struct FlippableCall;
   friend struct MeltCall;
   friend class MockPropagator;
@@ -1191,9 +1233,9 @@ void Mobical::warning (const char *fmt, ...) {
 // '--do-not-enforce-contracts'.
 //
 // Note that our model based tester is actually more restrictive and does
-// produce all these possible call sequences.  For instance it first adds
-// all clauses before making assumptions and also does not mix in these
-// 'ALWAYS' calls in all possible ways.
+// not produce all these possible call sequences. For instance it first
+// adds all clauses before making assumptions and also does not mix in
+// these 'ALWAYS' calls in all possible ways.
 
 constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
 
@@ -1211,10 +1253,10 @@ struct Call {
     ACTIVE          = shift (  4 ),
     REDUNDANT       = shift (  5 ),
     IRREDUNDANT     = shift (  6 ),
-    RESERVE         = shift (  7 ),
-                              
+    RESIZE          = shift (  7 ),
+
     PHASE           = shift (  8 ),
-                              
+
     ADD             = shift (  9 ),
     ASSUME          = shift ( 10 ),
 
@@ -1259,12 +1301,17 @@ struct Call {
     MAXALLOC        = shift ( 38 ),
     LEAKALLOC       = shift ( 39 ),
 #endif
+    PROPAGATE_ASSUMPTIONS = shift (40),
+    IMPLIED_LITERALS = shift (41),
+    RESET_ASSUMPTIONS = shift (42),
+
+    RESIZE_DIFFERENCE = shift (  43 ),
 
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
-             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED |
-             PHASE
+             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
+             PHASE | RESIZE_DIFFERENCE
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1273,9 +1320,12 @@ struct Call {
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA, // | CONTINUE,
+    DURING = LEMMA,
+    LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
+              FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
+    EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE,
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
   };
 
   Type type; // Explicit typing.
@@ -1293,7 +1343,44 @@ struct Call {
       free (name);
   }
 
-  virtual void execute (Solver *&) = 0;
+  virtual bool lit_type () {
+    return (((uint64_t) type & (uint64_t) Call::LITTYPE)) != 0;
+  }
+  virtual bool extendmap_type () {
+    return (((int) type & (int) Call::EXTENDMAP)) != 0;
+  }
+
+  virtual void extend_map (Solver *&s, ExtendMap &extendmap) {
+    vector<int> &map = extendmap.map;
+    if (map.empty ())
+      map.push_back (0); // 0 is always mapped to 0
+    if (!arg)
+      return;
+    const unsigned abs_arg = abs (arg);
+    if (abs_arg < map.size ())
+      return; // arg is already mapped
+    const int diff = abs_arg - map.size () + 1;
+    const int max_var = s->vars ();
+    map.reserve (max_var + diff);
+    for (int i = 1; i <= diff; i++)
+      map.push_back (max_var + i);
+  }
+  virtual int map_arg (Solver *&s, ExtendMap &extendmap) {
+    vector<int> &map = extendmap.map;
+    if (!lit_type ())
+      return arg;
+    if (extendmap_type ())
+      extend_map (s, extendmap);
+    const int abs_arg = abs (arg);
+    const int sign = arg > 0 ? 1 : -1;
+    const int map_size = map.size ();
+    if (abs_arg < map_size)
+      return map[abs_arg] * sign;
+    const int max_var = s->vars ();
+    const int diff = abs_arg - map_size + 1;
+    return sign * (max_var + diff);
+  }
+  virtual void execute (Solver *&, ExtendMap &extendmap) = 0;
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
   virtual Call *copy () = 0;
@@ -1302,23 +1389,19 @@ struct Call {
 /*------------------------------------------------------------------------*/
 
 static bool config_type (Call::Type t) {
-  return (((int) t & (int) Call::CONFIG)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::CONFIG)) != 0;
 }
 
 static bool before_type (Call::Type t) {
-  return (((int) t & (int) Call::BEFORE)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::BEFORE)) != 0;
 }
 
 static bool process_type (Call::Type t) {
-  return (((int) t & (int) Call::PROCESS)) != 0;
-}
-
-static bool during_type (Call::Type t) {
-  return (((int) t & (int) Call::DURING)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::PROCESS)) != 0;
 }
 
 static bool after_type (Call::Type t) {
-  return (((int) t & (int) Call::AFTER)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::AFTER)) != 0;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1332,7 +1415,11 @@ static bool after_type (Call::Type t) {
 
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
-  void execute (Solver *&s) { s = new Solver (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s = new Solver ();
+    assert (extendmap.map.empty ());
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "init" << endl; }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
@@ -1341,14 +1428,20 @@ struct InitCall : public Call {
 #ifdef MOBICAL_MEMORY
 struct MaxAllocCall : public Call {
   MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
-  void execute (Solver *&s) { (void) s; }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) s;
+    (void) extendmap;
+  }
   void print (ostream &o) { o << "max_alloc " << val << endl; }
   Call *copy () { return new MaxAllocCall (val); }
   const char *keyword () { return "max_alloc"; }
 };
 struct LeakAllocCall : public Call {
   LeakAllocCall () : Call (LEAKALLOC) {}
-  void execute (Solver *&s) { (void) s; }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) s;
+    (void) extendmap;
+  }
   void print (ostream &o) { o << "leak_alloc" << endl; }
   Call *copy () { return new LeakAllocCall (); }
   const char *keyword () { return "leak_alloc"; }
@@ -1357,7 +1450,10 @@ struct LeakAllocCall : public Call {
 
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
-  void execute (Solver *&s) { res = s->vars (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->vars ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "vars" << endl; }
   Call *copy () { return new VarsCall (); }
   const char *keyword () { return "vars"; }
@@ -1365,7 +1461,10 @@ struct VarsCall : public Call {
 
 struct ActiveCall : public Call {
   ActiveCall () : Call (ACTIVE) {}
-  void execute (Solver *&s) { res = s->active (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->active ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "active" << endl; }
   Call *copy () { return new ActiveCall (); }
   const char *keyword () { return "active"; }
@@ -1373,7 +1472,10 @@ struct ActiveCall : public Call {
 
 struct RedundantCall : public Call {
   RedundantCall () : Call (REDUNDANT) {}
-  void execute (Solver *&s) { res = s->redundant (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->redundant ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "redundant" << endl; }
   Call *copy () { return new RedundantCall (); }
   const char *keyword () { return "redundant"; }
@@ -1381,23 +1483,51 @@ struct RedundantCall : public Call {
 
 struct IrredundantCall : public Call {
   IrredundantCall () : Call (IRREDUNDANT) {}
-  void execute (Solver *&s) { res = s->irredundant (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->irredundant ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "irredundant" << endl; }
   Call *copy () { return new IrredundantCall (); }
   const char *keyword () { return "irredundant"; }
 };
 
-struct ReserveCall : public Call {
-  ReserveCall (int max_var) : Call (RESERVE, max_var) {}
-  void execute (Solver *&s) { s->reserve (arg); }
-  void print (ostream &o) { o << "reserve " << arg << endl; }
-  Call *copy () { return new ReserveCall (arg); }
-  const char *keyword () { return "reserve"; }
+struct ResizeCall : public Call {
+  ResizeCall (int max_var) : Call (RESIZE, max_var) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->resize (map_arg (s, extendmap));
+  }
+  void print (ostream &o) { o << "resize " << arg << endl; }
+  Call *copy () { return new ResizeCall (arg); }
+  const char *keyword () { return "resize"; }
+};
+
+struct DeclareMoreVariablesCall : public Call {
+  DeclareMoreVariablesCall (int max_var) : Call (RESIZE, max_var) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->declare_more_variables (map_arg (s, extendmap));
+  }
+  void print (ostream &o) { o << "declare_more_variables " << arg << endl; }
+  Call *copy () { return new DeclareMoreVariablesCall (arg); }
+  const char *keyword () { return "declare_more_variables"; }
+};
+
+struct DeclareMoreVariableCall : public Call {
+  DeclareMoreVariableCall () : Call (RESIZE) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->declare_one_more_variable ();
+    (void) extendmap;
+  }
+  void print (ostream &o) { o << "declare_one_more_variable" << endl; }
+  Call *copy () { return new DeclareMoreVariableCall (); }
+  const char *keyword () { return "declare_one_more_variable"; }
 };
 
 struct PhaseCall : public Call {
   PhaseCall (int max_var) : Call (PHASE, max_var) {}
-  void execute (Solver *&s) { s->phase (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->phase (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "phase " << arg << endl; }
   Call *copy () { return new PhaseCall (arg); }
   const char *keyword () { return "phase"; }
@@ -1405,7 +1535,10 @@ struct PhaseCall : public Call {
 
 struct SetCall : public Call {
   SetCall (const char *o, int v) : Call (SET, 0, 0, o, v) {}
-  void execute (Solver *&s) { s->set (name, val); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->set (name, val);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "set " << name << ' ' << val << endl; }
   Call *copy () { return new SetCall (name, val); }
   const char *keyword () { return "set"; }
@@ -1413,7 +1546,10 @@ struct SetCall : public Call {
 
 struct ConfigureCall : public Call {
   ConfigureCall (const char *o) : Call (CONFIGURE, 0, 0, o) {}
-  void execute (Solver *&s) { s->configure (name); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->configure (name);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "configure " << name << endl; }
   Call *copy () { return new ConfigureCall (name); }
   const char *keyword () { return "configure"; }
@@ -1421,7 +1557,10 @@ struct ConfigureCall : public Call {
 
 struct LimitCall : public Call {
   LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
-  void execute (Solver *&s) { s->limit (name, val); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->limit (name, val);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "limit " << name << ' ' << val << endl; }
   Call *copy () { return new LimitCall (name, val); }
   const char *keyword () { return "limit"; }
@@ -1429,7 +1568,10 @@ struct LimitCall : public Call {
 
 struct OptimizeCall : public Call {
   OptimizeCall (int v) : Call (OPTIMIZE, 0, 0, 0, v) {}
-  void execute (Solver *&s) { s->optimize (val); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->optimize (val);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "optimize " << val << endl; }
   Call *copy () { return new OptimizeCall (val); }
   const char *keyword () { return "optimize"; }
@@ -1437,7 +1579,8 @@ struct OptimizeCall : public Call {
 
 struct ResetCall : public Call {
   ResetCall () : Call (RESET) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    extendmap.map.clear ();
     delete s;
     s = 0;
   }
@@ -1448,7 +1591,9 @@ struct ResetCall : public Call {
 
 struct AddCall : public Call {
   AddCall (int l) : Call (ADD, l) {}
-  void execute (Solver *&s) { s->add (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->add (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "add " << arg << endl; }
   Call *copy () { return new AddCall (arg); }
   const char *keyword () { return "add"; }
@@ -1456,7 +1601,9 @@ struct AddCall : public Call {
 
 struct ConstrainCall : public Call {
   ConstrainCall (int l) : Call (CONSTRAIN, l) {}
-  void execute (Solver *&s) { s->constrain (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->constrain (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "constrain " << arg << endl; }
   Call *copy () { return new ConstrainCall (arg); }
   const char *keyword () { return "constrain"; }
@@ -1464,16 +1611,16 @@ struct ConstrainCall : public Call {
 
 struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     // clean up if there was already one mock propagator
     MockPropagator *prev_pointer = 0;
     if (mobical.mock_pointer)
       prev_pointer = mobical.mock_pointer;
 #ifdef LOGGING
     mobical.mock_pointer =
-        new MockPropagator (s, mobical.add_set_log_to_true);
+        new MockPropagator (s, &extendmap, mobical.add_set_log_to_true);
 #else
-    mobical.mock_pointer = new MockPropagator (s);
+    mobical.mock_pointer = new MockPropagator (s, &extendmap);
 #endif
     s->connect_external_propagator (mobical.mock_pointer);
     s->connect_fixed_listener (mobical.mock_pointer);
@@ -1497,12 +1644,13 @@ struct ConnectCall : public Call {
 
 struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     if (mp) {
       mp->add_observed_lit (arg);
     }
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "observe " << arg << endl; }
   Call *copy () { return new ObserveCall (arg); }
@@ -1511,12 +1659,13 @@ struct ObserveCall : public Call {
 
 struct LemmaCall : public Call {
   LemmaCall (int l) : Call (LEMMA, l) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
 
-    if (mp && (!arg || s->observed (arg))) { // || mobical.donot.enforce
-      mp->push_lemma_lit (arg);
+    if (mp && (!arg || s->observed (map_arg (
+                           s, extendmap)))) { // || mobical.donot.enforce
+      mp->push_lemma_lit (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << "lemma " << arg << endl; }
@@ -1526,7 +1675,7 @@ struct LemmaCall : public Call {
 
 struct DisconnectCall : public Call {
   DisconnectCall () : Call (DISCONNECT) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     if (mp)
@@ -1537,6 +1686,7 @@ struct DisconnectCall : public Call {
       delete mp;
       mobical.mock_pointer = 0;
     }
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "disconnect mock-propagator" << endl; }
   Call *copy () { return new DisconnectCall (); }
@@ -1545,7 +1695,9 @@ struct DisconnectCall : public Call {
 
 struct AssumeCall : public Call {
   AssumeCall (int l) : Call (ASSUME, l) {}
-  void execute (Solver *&s) { s->assume (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->assume (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "assume " << arg << endl; }
   Call *copy () { return new AssumeCall (arg); }
   const char *keyword () { return "assume"; }
@@ -1553,7 +1705,10 @@ struct AssumeCall : public Call {
 
 struct SolveCall : public Call {
   SolveCall (int r = 0) : Call (SOLVE, 0, r) {}
-  void execute (Solver *&s) { res = s->solve (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->solve ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "solve " << res << endl; }
   Call *copy () { return new SolveCall (res); }
   const char *keyword () { return "solve"; }
@@ -1561,15 +1716,60 @@ struct SolveCall : public Call {
 
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
-  void execute (Solver *&s) { res = s->simplify (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->simplify (arg);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "simplify " << arg << " " << res << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
 };
 
+struct PropagateAssumptionsCall : public Call {
+  PropagateAssumptionsCall (int r = 0)
+      : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->propagate ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) {
+    o << "propagate_assumptions " << arg << " " << res << endl;
+  }
+  Call *copy () { return new PropagateAssumptionsCall (arg); }
+  const char *keyword () { return "propagate_assumptions"; }
+};
+
+struct ImpliedCall : public Call {
+  ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    std::vector<int> entrailed;
+    if (mobical.donot.enforce || s->state () == State::SATISFIED ||
+        s->state () == State::INCONCLUSIVE)
+      s->implied (entrailed);
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "implied" << endl; }
+  Call *copy () { return new ImpliedCall (arg); }
+  const char *keyword () { return "implied"; }
+};
+
+struct ResetAssumptionsCall : public Call {
+  ResetAssumptionsCall (int r = 0) : Call (RESET_ASSUMPTIONS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->reset_assumptions ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "reset_assumptions" << endl; }
+  Call *copy () { return new ResetAssumptionsCall (arg); }
+  const char *keyword () { return "reset_assumptions"; }
+};
+
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
-  void execute (Solver *&s) { res = s->lookahead (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->lookahead ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "lookahead " << res << endl; }
   Call *copy () { return new LookaheadCall (res); }
   const char *keyword () { return "lookahead"; }
@@ -1577,7 +1777,10 @@ struct LookaheadCall : public Call {
 
 struct CubingCall : public Call {
   CubingCall (int r = 1) : Call (CUBING, 0, r) {}
-  void execute (Solver *&s) { (void) s->generate_cubes (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) s->generate_cubes (arg);
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "cubing " << res << endl; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
@@ -1585,11 +1788,12 @@ struct CubingCall : public Call {
 
 struct PropagateCall : public Call {
   PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) extendmap;
     int res = s->propagate ();
     if (!res) {
       std::vector<int> implicants;
-      s->get_entrailed_literals (implicants);
+      s->implied (implicants);
     }
   }
   void print (ostream &o) { o << "propagate " << res << endl; }
@@ -1599,11 +1803,11 @@ struct PropagateCall : public Call {
 
 struct ValCall : public Call {
   ValCall (int l, int r = 0) : Call (VAL, l, r) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->val (arg);
+      res = s->val (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->val (arg);
+      res = s->val (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1614,11 +1818,11 @@ struct ValCall : public Call {
 
 struct FlipCall : public Call {
   FlipCall (int l, int r = 0) : Call (FLIP, l, r) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->flip (arg);
+      res = s->flip (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->flip (arg);
+      res = s->flip (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1629,11 +1833,11 @@ struct FlipCall : public Call {
 
 struct FlippableCall : public Call {
   FlippableCall (int l, int r = 0) : Call (FLIPPABLE, l, r) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->flippable (arg);
+      res = s->flippable (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->flippable (arg);
+      res = s->flippable (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1646,7 +1850,9 @@ struct FlippableCall : public Call {
 
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) {}
-  void execute (Solver *&s) { res = s->fixed (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->fixed (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "fixed " << arg << ' ' << res << endl; }
   Call *copy () { return new FixedCall (arg, res); }
   const char *keyword () { return "fixed"; }
@@ -1654,11 +1860,11 @@ struct FixedCall : public Call {
 
 struct FailedCall : public Call {
   FailedCall (int l, int r = 0) : Call (FAILED, l, r) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->failed (arg);
+      res = s->failed (map_arg (s, extendmap));
     else if (s->state () == UNSATISFIED)
-      res = s->failed (arg);
+      res = s->failed (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1669,12 +1875,12 @@ struct FailedCall : public Call {
 
 struct ConcludeCall : public Call {
   ConcludeCall () : Call (CONCLUDE) {}
-  void execute (Solver *&s) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
       s->conclude ();
     else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
       s->conclude ();
-    res = 0;
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "conclude" << endl; }
   Call *copy () { return new ConcludeCall (); }
@@ -1683,7 +1889,9 @@ struct ConcludeCall : public Call {
 
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
-  void execute (Solver *&s) { s->freeze (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->freeze (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "freeze " << arg << endl; }
   Call *copy () { return new FreezeCall (arg); }
   const char *keyword () { return "freeze"; }
@@ -1691,9 +1899,9 @@ struct FreezeCall : public Call {
 
 struct MeltCall : public Call {
   MeltCall (int l) : Call (MELT, l) {}
-  void execute (Solver *&s) {
-    if (mobical.donot.enforce || s->frozen (arg))
-      s->melt (arg);
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
+      s->melt (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "melt " << arg << endl; }
   Call *copy () { return new MeltCall (arg); }
@@ -1702,7 +1910,9 @@ struct MeltCall : public Call {
 
 struct FrozenCall : public Call {
   FrozenCall (int l, int r = 0) : Call (FROZEN, l, r) {}
-  void execute (Solver *&s) { res = s->frozen (arg); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    res = s->frozen (map_arg (s, extendmap));
+  }
   void print (ostream &o) { o << "frozen " << arg << ' ' << res << endl; }
   Call *copy () { return new FrozenCall (arg, res); }
   const char *keyword () { return "frozen"; }
@@ -1710,7 +1920,10 @@ struct FrozenCall : public Call {
 
 struct DumpCall : public Call {
   DumpCall () : Call (DUMP) {}
-  void execute (Solver *&s) { s->dump_cnf (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->dump_cnf ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "dump" << endl; }
   Call *copy () { return new DumpCall (); }
   const char *keyword () { return "dump"; }
@@ -1718,7 +1931,10 @@ struct DumpCall : public Call {
 
 struct StatsCall : public Call {
   StatsCall () : Call (STATS) {}
-  void execute (Solver *&s) { s->statistics (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->statistics ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "stats" << endl; }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
@@ -1727,7 +1943,10 @@ struct StatsCall : public Call {
 struct TraceProofCall : public Call {
   std::string path;
   TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
-  void execute (Solver *&s) { s->trace_proof (path.c_str ()); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->trace_proof (path.c_str ());
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "trace_proof" << ' ' << path << endl; }
   Call *copy () { return new TraceProofCall (path); }
   const char *keyword () { return "trace_proof"; }
@@ -1735,7 +1954,10 @@ struct TraceProofCall : public Call {
 
 struct FlushProofTraceCall : public Call {
   FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
-  void execute (Solver *&s) { s->flush_proof_trace (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->flush_proof_trace ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "flush_proof_trace" << endl; }
   Call *copy () { return new FlushProofTraceCall (); }
   const char *keyword () { return "flush_proof_trace"; }
@@ -1743,7 +1965,10 @@ struct FlushProofTraceCall : public Call {
 
 struct CloseProofTraceCall : public Call {
   CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
-  void execute (Solver *&s) { s->close_proof_trace (); }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->close_proof_trace ();
+    (void) (extendmap);
+  }
   void print (ostream &o) { o << "close_proof_trace" << endl; }
   Call *copy () { return new CloseProofTraceCall (); }
   const char *keyword () { return "close_proof_trace"; }
@@ -1758,6 +1983,10 @@ class Trace {
 
   Solver *solver;
   vector<Call *> calls;
+  // map from mobical vars to solver vars (skipping extension variables)
+  // the map is strictly increasing and gets updated whenever a call with an
+  // argument gets executed.
+  ExtendMap extendmap;
 
   friend class Reader;
 
@@ -1921,8 +2150,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -1943,7 +2172,7 @@ public:
           for (size_t j = i + 1; j < calls.size (); j++) {
             Call *next_c = calls[j];
             if (next_c->type == Call::LEMMA)
-              next_c->execute (solver);
+              next_c->execute (solver, extendmap);
             else
               break;
           }
@@ -1954,36 +2183,50 @@ public:
             first = false;
           else
             mobical.shared->incremental++;
-          c->execute (solver);
+          c->execute (solver, extendmap);
           if (c->res == 10)
             mobical.shared->sat++;
           if (c->res == 20)
             mobical.shared->unsat++;
         } else
-          c->execute (solver);
+          c->execute (solver, extendmap);
       } catch (const std::bad_alloc &e) {
         // Ignore out-of-memory errors and assume solver state is
         // consistent.
         mobical.shared->oom++;
       }
-    }
 #ifdef MOBICAL_MEMORY
-    if (deallocated && mobical.mock_pointer) {
-      delete mobical.mock_pointer;
-      mobical.mock_pointer = nullptr;
-    }
-    hooks_uninstall ();
-    // Note: Do not force-deallocate here as otherwise the shrink procedure
-    // will remove the RESET call.
-    if (deallocated) {
-      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
-        if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
-          reset_child_signal_handlers ();
-          raise (SIGUSR2);
+      if (deallocated && mobical.mock_pointer) {
+        delete mobical.mock_pointer;
+        mobical.mock_pointer = nullptr;
+      }
+      hooks_uninstall ();
+      // Note: Do not force-deallocate here as otherwise the shrink
+      // procedure will remove the RESET call.
+      if (deallocated) {
+        for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+          if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+            reset_child_signal_handlers ();
+            raise (SIGUSR2);
+          }
+        }
+        if (mobical.shared && process_type (c->type)) {
+          mobical.shared->solved++;
+          if (first)
+            first = false;
+          else
+            mobical.shared->incremental++;
+          c->execute (solver, extendmap);
+          if (c->res == 10)
+            mobical.shared->sat++;
+          if (c->res == 20)
+            mobical.shared->unsat++;
+        } else {
+          c->execute (solver, extendmap);
         }
       }
-    }
 #endif
+    }
   }
 
   int vars () {
@@ -2068,7 +2311,6 @@ private:
   void add_options (int expected);
   bool shrink_phases (int expected);
   bool shrink_clauses (int expected);
-  bool shrink_userphases (int expected);
   bool shrink_lemmas (int expected);
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
@@ -2085,7 +2327,9 @@ private:
 
   void generate_options (Random &, Size);
   void generate_queries (Random &);
-  void generate_reserve (Random &, int vars);
+  void generate_resize (Random &, int vars);
+  void generate_declare_one_more_variable (Random &);
+  void generate_declare_more_variables (Random &);
   void generate_clause (Random &, int minvars, int maxvars, int uniform);
   void generate_constraint (Random &, int minvars, int maxvars,
                             int uniform);
@@ -2101,6 +2345,9 @@ private:
 
   void generate_propagator (Random &, int minvars, int maxvars);
   void generate_lemmas (Random &);
+
+  void generate_propagate (Random &);
+  void generate_implied (Random &);
 
   void generate_limits (Random &);
 };
@@ -2248,6 +2495,13 @@ int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
 
 void Trace::generate_options (Random &random, Size size) {
 
+#ifdef LOGGING
+  if (mobical.add_set_log_to_true)
+    push_back (new SetCall ("log", 1));
+#else
+  if (mobical.add_set_log_to_true)
+    mobical.warning ("ignoring log option");
+#endif
   // In 10% of the cases do not change any options.
   //
   if (random.generate_double () < 0.1)
@@ -2364,13 +2618,6 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (logsort_option->name, should_logsort));
 #endif
   }
-#ifdef LOGGING
-  if (mobical.add_set_log_to_true)
-    push_back (new SetCall ("log", 1));
-#else
-  if (mobical.add_set_log_to_true)
-    mobical.warning ("ignoring log option");
-#endif
 }
 
 /*------------------------------------------------------------------------*/
@@ -2388,11 +2635,42 @@ void Trace::generate_queries (Random &random) {
 
 /*------------------------------------------------------------------------*/
 
-void Trace::generate_reserve (Random &random, int max_var) {
+void Trace::generate_resize (Random &random, int max_var) {
   if (random.generate_double () > 0.01)
     return;
   int new_max_var = random.pick_int (0, 1.1 * max_var);
-  push_back (new ReserveCall (new_max_var));
+  push_back (new ResizeCall (new_max_var));
+}
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_declare_more_variables (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  int new_max_var = random.pick_int (0, 100);
+  push_back (new DeclareMoreVariablesCall (new_max_var));
+}
+
+void Trace::generate_declare_one_more_variable (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new DeclareMoreVariableCall ());
+}
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_implied (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new ImpliedCall ());
+}
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_propagate (Random &random) {
+  if (random.generate_double () > 0.01)
+    return;
+  push_back (new PropagateCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -2404,6 +2682,8 @@ void Trace::generate_limits (Random &random) {
     push_back (new LimitCall ("conflicts", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
+  if (random.generate_double () < 0.05)
+    push_back (new LimitCall ("ticks", random.pick_log (0, 1e9)));
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
@@ -2608,12 +2888,13 @@ void Trace::generate_values (Random &random, int vars) {
     if (fraction < random.generate_double ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ValCall (lit));
+    bool strict = random.generate_bool ();
+    push_back (new ValCall (lit, strict));
   }
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ValCall (lit));
+    push_back (new ValCall (lit, true));
   }
 }
 
@@ -2857,7 +3138,10 @@ void Trace::generate (uint64_t i, uint64_t s) {
     maxvars = minvars + range;
 
     for (int j = 0; j < clauses; j++)
-      generate_queries (random), generate_reserve (random, maxvars),
+      generate_queries (random), generate_resize (random, maxvars),
+          generate_declare_more_variables (random),
+          generate_declare_one_more_variable (random),
+          generate_implied (random), generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
     if (in_connection && random.generate_bool ()) {
@@ -3293,7 +3577,6 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
   for (size_t i = 0; i < n; i++)
     removed[i] = false;
   bool res = false;
-  Trace shrunken;
   for (;;) {
     for (size_t l = 0, r; l < n; l = r) {
       r = l + granularity;
@@ -3326,17 +3609,12 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         for (size_t i = l; i < r; i++)
           removed[i] = saved[i];
       } else {
-        shrunken.clear ();
-        for (size_t i = 0; i < tmp.size (); i++)
-          shrunken.push_back (tmp[i]->copy ());
         res = true; // succeeded to shrink
       }
     }
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
-    if (shrunken.size ())
-      shrunken.clear ();
   }
   if (res) {
     for (size_t i = 0; i < size (); i++)
@@ -3464,7 +3742,7 @@ bool Trace::shrink_phases (int expected) {
       ;
     if (r < size () && process_type (calls[r]->type))
       r++;
-    for (; r < size () && during_type (calls[r]->type); r++)
+    for (; r < size () && calls[r]->type == Call::LEMMA; r++)
       ;
     for (; r < size () && after_type (calls[r]->type); r++)
       ;
@@ -3472,8 +3750,10 @@ bool Trace::shrink_phases (int expected) {
       segments.push_back (Segment (l, r));
     else {
       assert (l == r);
-      if (!config_type (calls[r]->type))
+      if (!config_type (calls[r]->type)) {
+        assert (calls[r]->type != Call::LEMMA);
         segments.push_back (Segment (r, r + 1));
+      }
       ++r;
     }
   }
@@ -3501,33 +3781,9 @@ bool Trace::shrink_clauses (int expected) {
   return shrink_segments (segments, expected);
 }
 
-bool Trace::shrink_userphases (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
-  notify ('a');
-  Segments segments;
-  size_t r;
-  size_t l = 1;
-  for (; l < size () && !during_type (calls[l]->type); l++)
-    ;
-  for (; l < size (); l++) {
-    if (!during_type (calls[l]->type))
-      continue;
-    r = l;
-    while (r < size () && calls[r]->type == Call::LEMMA)
-      r++;
-    // assert (calls[r]->type == Call::CONTINUE);
-    // if (r < size () && calls[r]->type == Call::CONTINUE) {
-    //   segments.push_back (Segment (l, r + 1));
-    //   l = r;
-    // }
-  }
-  return shrink_segments (segments, expected);
-}
-
 bool Trace::shrink_lemmas (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
+  if (mobical.donot.shrink.lemmas)
+    return false;
   notify ('u');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
@@ -3573,7 +3829,8 @@ static bool is_basic (Call *c) {
   case Call::ACTIVE:
   case Call::REDUNDANT:
   case Call::IRREDUNDANT:
-  case Call::RESERVE:
+  case Call::RESIZE:
+  case Call::RESIZE_DIFFERENCE:
   case Call::VAL:
   case Call::FLIP:
   case Call::FLIPPABLE:
@@ -3840,7 +4097,7 @@ static bool has_lit_arg_type (Call *c) {
   case Call::FLIPPABLE:
   case Call::FIXED:
   case Call::FAILED:
-  case Call::RESERVE:
+  case Call::RESIZE:
   case Call::LEMMA:
   case Call::OBSERVE:
     return true;
@@ -3961,8 +4218,6 @@ void Trace::shrink (int expected) {
       s = true, l = PHASES;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != UPHASES && shrink_userphases (expected))
-      s = true, l = UPHASES;
     if (l != LEMMAS && shrink_lemmas (expected))
       s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
@@ -4178,14 +4433,18 @@ void Reader::parse () {
       if (first)
         error ("unexpected argument '%s' after 'irredundant'", first);
       c = new IrredundantCall ();
-    } else if (!strcmp (keyword, "reserve")) {
+    } else if (!strcmp (keyword, "resize")) {
       if (!first)
-        error ("argument to 'reserve' missing");
+        error ("argument to 'resize' missing");
       if (!parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'reserve'", first);
+        error ("invalid argument '%s' to 'resize'", first);
       if (second)
-        error ("additional argument '%s' to 'reserve'", second);
-      c = new ReserveCall (lit);
+        error ("additional argument '%s' to 'resize'", second);
+      c = new ResizeCall (lit);
+    } else if (!strcmp (keyword, "declare_more_variables")) {
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'resize'", first);
+      c = new DeclareMoreVariablesCall (lit);
     } else if (!strcmp (keyword, "phase")) {
       if (!first)
         error ("argument to 'phase' missing");
@@ -4235,6 +4494,8 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'lemma'", first);
       if (second)
         error ("additional argument '%s' to 'lemma'", second);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'lemma'", lit);
       // if (!lemma_adding && !lit) error ("empty lemma is learned.");
       lemma_adding = lit;
       c = new LemmaCall (lit);
@@ -4453,6 +4714,12 @@ void Reader::parse () {
             "option --leak-alloc has to be anabled for leak_alloc calls");
       c = new LeakAllocCall ();
 #endif
+    } else if (!strcmp (keyword, "propagate_assumptions")) {
+      c = new PropagateAssumptionsCall ();
+    } else if (!strcmp (keyword, "implied")) {
+      c = new ImpliedCall ();
+    } else if (!strcmp (keyword, "reset_assumptions")) {
+      c = new ResetAssumptionsCall ();
     } else
       error ("invalid keyword '%s'", keyword);
 
@@ -4541,7 +4808,6 @@ void Reader::parse () {
       case Call::RESET:
       case Call::CONNECT:
       case Call::LEMMA:
-      // case Call::CONTINUE:
       case Call::DISCONNECT:
         new_state = c->type;
         break;
@@ -4568,6 +4834,12 @@ void Reader::parse () {
 
     lineno++;
   }
+  if (adding)
+    error ("EOF after 'add %d' without 'add 0'", adding);
+  if (lemma_adding)
+    error ("EOF after 'lemma %d' without 'lemma 0'", lemma_adding);
+  if (constraining)
+    error ("EOF after 'constrain %d' without 'constrain 0'", constraining);
 }
 
 /*------------------------------------------------------------------------*/
@@ -4621,6 +4893,8 @@ extern "C" {
 // The usage of MAP_ANONYMOUS vs MAP_ANON depends on the actual system
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
 #define MAP_ANONYMOUS MAP_ANON
+#elif !defined(MAP_ANONYMOUS)
+#error "System does not support mapping anonymous pages?"
 #endif
 
 Mobical::Mobical () {
@@ -4703,6 +4977,8 @@ int Mobical::main (int argc, char **argv) {
       donot.shrink.phases = true;
     else if (!strcmp (argv[i], "--do-not-shrink-clauses"))
       donot.shrink.clauses = true;
+    else if (!strcmp (argv[i], "--do-not-shrink-lemmas"))
+      donot.shrink.lemmas = true;
     else if (!strcmp (argv[i], "--do-not-shrink-literals"))
       donot.shrink.literals = true;
     else if (!strcmp (argv[i], "--do-not-shrink-basic") ||
@@ -4920,9 +5196,10 @@ int Mobical::main (int argc, char **argv) {
     cerr << "explicitly using no space limit";
   cerr << endl << flush;
 
-  prefix ();
-  if (mobical.add_plain_after_options)
+  if (mobical.add_plain_after_options) {
+    prefix ();
     cerr << "generating only plain instances (--plain)" << endl << flush;
+  }
 
   /*----------------------------------------------------------------------*/
 
@@ -5025,14 +5302,17 @@ int Mobical::main (int argc, char **argv) {
 
         if (res) {
 
-          terminal.cursor (false);
+          if (!donot.shrink.atall) {
 
-          Trace::failed++;
-          trace.shrink (res); // shrink
-          if (!verbose && !terminal)
-            cerr << endl;
-          else
-            terminal.erase_line_if_connected_otherwise_new_line ();
+            terminal.cursor (false);
+
+            Trace::failed++;
+            trace.shrink (res); // shrink
+            if (!verbose && !terminal)
+              cerr << endl;
+            else
+              terminal.erase_line_if_connected_otherwise_new_line ();
+          }
 
         } else
           Trace::ok++;
@@ -5138,8 +5418,10 @@ int Mobical::main (int argc, char **argv) {
       else
         Trace::ok++;
 
-      if (!donot.seeds)
+      if (!donot.seeds && limit != traces)
         terminal.erase_line_if_connected_otherwise_new_line ();
+      else if (!donot.seeds && limit == traces)
+        cerr << endl << flush;
 
       if (res) { // failed
 

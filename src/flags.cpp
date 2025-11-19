@@ -6,7 +6,9 @@ void Internal::mark_fixed (int lit) {
   if (external->fixed_listener) {
     int elit = externalize (lit);
     assert (elit);
-    external->fixed_listener->notify_fixed_assignment (elit);
+    const int eidx = abs (elit);
+    if (!external->ervars[eidx])
+      external->fixed_listener->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
@@ -25,7 +27,7 @@ void Internal::mark_fixed (int lit) {
     // to know about it.
     // But at that point it is not guaranteed to be already on the trail, so
     // notification will happen only later.
-    assert (!level);
+    assert (!level || in_mode (BACKBONE));
   }
 }
 
@@ -122,6 +124,7 @@ void Internal::reactivate (int lit) {
   LOG ("reactivate previously %s %d", msg, abs (lit));
 #endif
   f.status = Flags::ACTIVE;
+  f.sweep = false;
   assert (active (lit));
   stats.reactivated++;
   assert (stats.inactive > 0);

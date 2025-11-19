@@ -1,3 +1,4 @@
+#include "cadical.hpp"
 #include "internal.hpp"
 
 /*------------------------------------------------------------------------*/
@@ -56,6 +57,10 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+  } else if (state () == INCONCLUSIVE) {
+    external->reset_assumptions ();
+    external->reset_concluded ();
+    external->reset_constraint ();
   }
   if (state () != STEADY)
     STATE (STEADY);
@@ -84,6 +89,18 @@ static void log_api_call (Internal *internal, const char *name, int arg,
                name, arg, tout.log_code (), suffix);
 }
 
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, const char *suffix) {
+  Logger::log (internal, "API call %s'%s (%d, %d)'%s %s", tout.api_code (),
+               name, arg, b, tout.log_code (), suffix);
+}
+
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, int c) {
+  Logger::log (internal, "API call %s'%s (%d, %d)'%s %d", tout.api_code (),
+               name, arg, b, tout.log_code (), c);
+}
+
 static void log_api_call (Internal *internal, const char *name,
                           const char *arg, const char *suffix) {
   Logger::log (internal, "API call %s'%s (\"%s\")'%s %s", tout.api_code (),
@@ -109,6 +126,12 @@ static void log_api_call_begin (Internal *internal, const char *name,
                                 int arg) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, "started");
+}
+
+static void log_api_call_begin (Internal *internal, const char *name,
+                                int arg, int b) {
+  Logger::log_empty_line (internal);
+  log_api_call (internal, name, arg, b, "started");
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
@@ -186,6 +209,11 @@ static void log_api_call_returns (Internal *internal, const char *name,
                                   int lit, bool res) {
   log_api_call (internal, name, lit,
                 res ? "returns 'true'" : "returns 'false'");
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, int b, int res) {
+  log_api_call (internal, name, lit, b, res);
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
@@ -270,6 +298,13 @@ void Solver::trace_api_call (const char *s0, int i1) const {
   assert (trace_api_file);
   LOG ("TRACE %s %d", s0, i1);
   fprintf (trace_api_file, "%s %d\n", s0, i1);
+  fflush (trace_api_file);
+}
+
+void Solver::trace_api_call (const char *s0, int i1, int b) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d %d", s0, i1, b);
+  fprintf (trace_api_file, "%s %d %d\n", s0, i1, b);
   fflush (trace_api_file);
 }
 
@@ -429,13 +464,35 @@ int Solver::vars () {
   return res;
 }
 
-void Solver::reserve (int min_max_var) {
-  TRACE ("reserve", min_max_var);
+void Solver::resize (int min_max_var) {
+  TRACE ("resize", min_max_var);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_extended ();
   external->init (min_max_var);
-  LOG_API_CALL_END ("reserve", min_max_var);
+  LOG_API_CALL_END ("resize", min_max_var);
+}
+
+int Solver::declare_more_variables (int number_of_vars) {
+  TRACE ("declare_more_variables", number_of_vars);
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  external->reset_extended ();
+  int new_max_var = external->max_var + number_of_vars;
+  external->init (new_max_var);
+  LOG_API_CALL_END ("declare_more_variables", number_of_vars);
+  return new_max_var;
+}
+
+int Solver::declare_one_more_variable () {
+  TRACE ("declare_one_more_variable");
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  external->reset_extended ();
+  int new_max_var = external->max_var + 1;
+  external->init (new_max_var);
+  LOG_API_CALL_END ("declare_one_more_variable");
+  return new_max_var;
 }
 
 /*------------------------------------------------------------------------*/
@@ -654,8 +711,9 @@ void Solver::assume (int lit) {
 int Solver::lookahead () {
   TRACE ("lookahead");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  transition_to_steady_state ();
   int lit = external->lookahead ();
-  TRACE ("lookahead");
+  LOG_API_CALL_END ("lookahead", lit);
   return lit;
 }
 
@@ -704,18 +762,21 @@ int Solver::propagate () {
   else if (res == 20)
     STATE (UNSATISFIED);
   else
-    STATE (STEADY);
+    STATE (INCONCLUSIVE);
   return res;
 }
 
-void Solver::get_entrailed_literals (std::vector<int> &entrailed) {
-  TRACE ("get_entrailed_literals");
-  REQUIRE_STEADY_STATE ();
+void Solver::implied (std::vector<int> &entrailed) {
+  TRACE ("implied");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (
+      state () == INCONCLUSIVE || state () == SATISFIED,
+      "can only get implied literals only in unknown or satisfied state");
   external->conclude_unknown ();
-  external->get_entrailed_literals (entrailed);
+  external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("get_entrailed_literals", (int) entrailed.size ());
+  LOG_API_CALL_RETURNS ("implied", (int) entrailed.size ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -730,7 +791,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   else if (res == 20)
     STATE (UNSATISFIED);
   else
-    STATE (STEADY);
+    STATE (INCONCLUSIVE);
 #if 0 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
   // This checks that the set of failed assumptions form a core using the
   // external 'copy (...)' function to copy the solver, which can be trusted
@@ -743,7 +804,6 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     Solver checker;
     // checking restored clauses does not work (because the clauses are not added)
     checker.set("checkproof", 1);
-    checker.set("lratexternal", 0);
     checker.set("lrat", 0);
     checker.prefix ("checker ");
     copy (checker);
@@ -755,11 +815,13 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
       FATAL ("copying assumption checker failed");
   }
 #endif
+#if 0 // was necessary when INCONCLUSIVE state did not exist
   if (!res) {
     external->reset_assumptions ();
     external->reset_constraint ();
     external->reset_concluded ();
   }
+#endif
   return res;
 }
 
@@ -779,23 +841,33 @@ int Solver::simplify (int rounds) {
   REQUIRE (rounds >= 0, "negative number of simplification rounds '%d'",
            rounds);
   internal->limit ("preprocessing", rounds);
+  const int lucky = internal->opts.lucky;
+  internal->opts.lucky = 0;
   const int res = call_external_solve_and_check_results (true);
+  internal->opts.lucky = lucky;
   LOG_API_CALL_RETURNS ("simplify", rounds, res);
   return res;
 }
 
 /*------------------------------------------------------------------------*/
 
-int Solver::val (int lit) {
-  TRACE ("val", lit);
+int Solver::val (
+    int lit, bool use_default_value_for_declared_but_not_used_variable) {
+  LOG_API_CALL_BEGIN (
+      "val", lit,
+      (int) use_default_value_for_declared_but_not_used_variable);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
+  if (!use_default_value_for_declared_but_not_used_variable)
+    REQUIRE (lit < external->max_var, "lit of undeclare variable");
   if (!external->extended)
     external->extend ();
   external->conclude_sat ();
   int res = external->ival (lit);
-  LOG_API_CALL_RETURNS ("val", lit, res);
+  LOG_API_CALL_RETURNS (
+      "val", lit, use_default_value_for_declared_but_not_used_variable,
+      res);
   assert (state () == SATISFIED);
   assert (res == lit || res == -lit);
   return res;
@@ -1227,17 +1299,18 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 void Solver::conclude () {
   TRACE ("conclude");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == UNSATISFIED || state () == SATISFIED ||
-               state () == STEADY,
-           "can only conclude in satisfied, unsatisfied or STEADY state");
+  REQUIRE (
+      state () == UNSATISFIED || state () == SATISFIED ||
+          state () == INCONCLUSIVE,
+      "can only conclude in satisfied, unsatisfied or inconclusive state");
   if (state () == UNSATISFIED)
     internal->conclude_unsat ();
   else if (state () == SATISFIED)
     external->conclude_sat ();
-  else if (state () == STEADY)
+  else if (state () == INCONCLUSIVE)
     external->conclude_unknown ();
   assert (state () == UNSATISFIED || state () == SATISFIED ||
-          state () == STEADY);
+          state () == INCONCLUSIVE);
   LOG_API_CALL_END ("conclude");
 }
 
@@ -1599,7 +1672,7 @@ struct WitnessWriter : public WitnessIterator {
     }
     return file->put ('0');
   }
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t) {
     if (!write (c))
       return false;
     if (!file->put (' '))
@@ -1662,7 +1735,7 @@ struct WitnessCopier : public WitnessIterator {
 
 public:
   WitnessCopier (External *d) : dst (d) {}
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t id) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t id) {
     dst->push_external_clause_and_witness_on_extension_stack (c, w, id);
     return true;
   }
@@ -1739,4 +1812,30 @@ void Solver::error (const char *fmt, ...) {
   va_end (ap);
 }
 
+int64_t Solver::get_statistic_value (const char *opt) const {
+  REQUIRE_INITIALIZED ();
+  if (!strcmp (opt, "conflicts"))
+    return internal->stats.conflicts;
+  if (!strcmp (opt, "decisions"))
+    return internal->stats.decisions;
+  if (!strcmp (opt, "ticks"))
+    return internal->stats.ticks.search[0] +
+           internal->stats.ticks.search[1];
+  if (!strcmp (opt, "propagations"))
+    return internal->stats.propagations.search;
+  if (!strcmp (opt, "clauses"))
+    return internal->stats.current.total;
+  if (!strcmp (opt, "redundant"))
+    return internal->stats.current.redundant;
+  if (!strcmp (opt, "irredundant"))
+    return internal->stats.current.irredundant;
+  if (!strcmp (opt, "fixed"))
+    return internal->stats.all.fixed;
+  if (!strcmp (opt, "eliminated"))
+    return internal->stats.all.eliminated +
+           internal->stats.all.fasteliminated;
+  if (!strcmp (opt, "subsitutued"))
+    return internal->stats.all.substituted;
+  return -1;
+}
 } // namespace CaDiCaL

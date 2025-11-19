@@ -44,15 +44,15 @@ coresolver="$CADICALBUILD/cadical"
 simpsolver="$CADICALBUILD/../scripts/run-simplifier-and-extend-solution.sh"
 dratchecker=$CADICALBUILD/drat-trim
 lratchecker=$CADICALBUILD/lrat-trim
-solutionchecker=$CADICALBUILD/precochk
+solutionchecker=$CADICALBUILD/dimocheck
 makefile=$CADICALBUILD/makefile
 
 if [ ! -f $solutionchecker -o ! -f $dratchecker -o ! -f $lratchecker ]
 then
 
-  if [ ! -f $solutionchecker -o ../test/cnf/precochk.c -nt $solutionchecker ]
+  if [ ! -f $solutionchecker -o ../test/cnf/dimocheck.c -nt $solutionchecker ]
   then
-    cmd="cc -O -o $solutionchecker ../test/cnf/precochk.c -lz"
+    cmd="cc -O -o $solutionchecker ../test/cnf/dimocheck.c -lz"
     cecho "$cmd"
     if $cmd 2>/dev/null
     then

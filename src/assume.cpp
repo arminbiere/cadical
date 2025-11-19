@@ -7,7 +7,7 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (level && !opts.ilbassumptions)
+  if (level && !opts.ilb)
     backtrack ();
   else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
@@ -23,9 +23,8 @@ void Internal::assume (int lit) {
   freeze (lit);
 }
 
-// for LRAT we actually need to implement recursive dfs
-// I don't know how to do this non-recursively...
-// for non-lrat use bfs
+// for LRAT we actually need to implement recursive DFS
+// for non-lrat use BFS. TODO: maybe derecursify to avoid stack overflow
 //
 void Internal::assume_analyze_literal (int lit) {
   assert (lit);
@@ -42,9 +41,7 @@ void Internal::assume_analyze_literal (int lit) {
   }
   assert (v.reason != external_reason);
   if (!v.level) {
-    const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses (uidx);
-    assert (id);
+    int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
     return;
   }
@@ -184,13 +181,11 @@ void Internal::failing () {
         if (lrat) {
           unsigned eidx = (efailed > 0) + 2u * (unsigned) abs (efailed);
           assert ((size_t) eidx < external->ext_units.size ());
-          const uint64_t id = external->ext_units[eidx];
+          const int64_t id = external->ext_units[eidx];
           if (id) {
             lrat_chain.push_back (id);
           } else {
-            const unsigned uidx = vlit (-failed_unit);
-            uint64_t id = unit_clauses (uidx);
-            assert (id);
+            int64_t id = unit_id (-failed_unit);
             lrat_chain.push_back (id);
           }
         }
@@ -252,7 +247,7 @@ void Internal::failing () {
 
   {
     // used for unsat_constraint lrat
-    vector<vector<uint64_t>> constraint_chains;
+    vector<vector<int64_t>> constraint_chains;
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
     vector<int> econstraints;
@@ -322,9 +317,7 @@ void Internal::failing () {
       if (v.reason)
         assume_analyze_reason (lit, v.reason);
       else {
-        const unsigned uidx = vlit (lit);
-        uint64_t id = unit_clauses (uidx);
-        assert (id);
+        int64_t id = unit_id (lit);
         lrat_chain.push_back (id);
       }
       for (auto &lit : clause) {
@@ -343,7 +336,7 @@ void Internal::failing () {
         // lrat_chain is empty because clause is tautological
         assert (lit != INT_MIN);
         assume_analyze_literal (lit);
-        vector<uint64_t> empty;
+        vector<int64_t> empty;
         vector<int> empty2;
         constraint_chains.push_back (empty);
         constraint_clauses.push_back (empty2);
@@ -369,7 +362,9 @@ void Internal::failing () {
     }
     clear_analyzed_literals ();
 
-    // TODO: We can not do clause minimization here, right?
+    // Doing clause minimization here does not do anything because
+    // the clause already contains only one literal of each level
+    // and minimization can never reduce the number of levels
 
     VERBOSE (1, "found %zd failed assumptions %.0f%%", clause.size (),
              percent (clause.size (), assumptions.size ()));
@@ -425,16 +420,14 @@ void Internal::failing () {
           if (lrat) {
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             assert ((size_t) eidx < external->ext_units.size ());
-            const uint64_t id = external->ext_units[eidx];
+            const int64_t id = external->ext_units[eidx];
             if (id) {
               lrat_chain.push_back (id);
             } else {
               int lit = external->e2i[abs (elit)];
               if (elit < 0)
                 lit = -lit;
-              const unsigned uidx = vlit (-lit);
-              uint64_t id = unit_clauses (uidx);
-              assert (id);
+              int64_t id = unit_id (-lit);
               lrat_chain.push_back (id);
             }
           }
@@ -555,9 +548,16 @@ struct sort_assumptions_smaller {
 // to the first place where the assumptions and the current trail differ.
 
 void Internal::sort_and_reuse_assumptions () {
-  assert (opts.ilbassumptions);
-  if (assumptions.empty ())
-    return;
+  assert (opts.ilb >= 1);
+  if (assumptions.empty ()) {
+    if (opts.ilb == 1) {
+      LOG ("no assumptions, reusing nothing (ilb == 1)");
+      backtrack (0);
+    } else { // reuse full trail
+      LOG ("no assumptions, reusing everything (ilb == 2)");
+      return;
+    }
+  }
   MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
          sort_assumptions_positive_rank (this),
          sort_assumptions_smaller (this));
@@ -581,7 +581,7 @@ void Internal::sort_and_reuse_assumptions () {
     const int alit = assumptions[j];
     const int lev = i;
     target = lev;
-    if (val (alit) &&
+    if (val (alit) > 0 &&
         var (alit).level < lev) { // we can ignore propagated assumptions
       LOG ("ILB skipping propagation %d", alit);
       ++j;
@@ -602,10 +602,12 @@ void Internal::sort_and_reuse_assumptions () {
          lit, alit);
     break;
   }
+  if (opts.ilb == 1 &&
+      (size_t) target > assumptions.size ()) // reusing only assumptions
+    target = assumptions.size ();
   if (target < level)
-    backtrack (target);
+    backtrack_without_updating_phases (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
-  //  COVER (target > 1);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else

@@ -1,15 +1,16 @@
 #ifndef _lidruptracer_h_INCLUDED
 #define _lidruptracer_h_INCLUDED
 
-class FileTracer;
+#include "file.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
 struct LidrupClause {
   LidrupClause *next; // collision chain link for hash table
   uint64_t hash;      // previously computed full 64-bit hash
-  uint64_t id;        // id of clause
-  std::vector<uint64_t> chain;
+  int64_t id;         // id of clause
+  std::vector<int64_t> chain;
   std::vector<int> literals;
 };
 
@@ -25,20 +26,20 @@ class LidrupTracer : public FileTracer {
   uint64_t num_clauses;   // number of clauses in hash table
   uint64_t size_clauses;  // size of clause hash table
   LidrupClause **clauses; // hash table of clauses
-  vector<int> imported_clause;
-  vector<int> assumptions;
-  vector<uint64_t> imported_chain;
-  vector<uint64_t> batch_weaken;
-  vector<uint64_t> batch_delete;
-  vector<uint64_t> batch_restore;
+  std::vector<int> imported_clause;
+  std::vector<int> assumptions;
+  std::vector<int64_t> imported_chain;
+  std::vector<int64_t> batch_weaken;
+  std::vector<int64_t> batch_delete;
+  std::vector<int64_t> batch_restore;
 
   static const unsigned num_nonces = 4;
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  uint64_t last_id;            // id of the last added clause
+  int64_t last_id;             // id of the last added clause
   LidrupClause *last_clause;
-  uint64_t compute_hash (uint64_t); // compute and save hash value of clause
+  uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   LidrupClause *new_clause ();
   void delete_clause (LidrupClause *);
@@ -48,7 +49,7 @@ class LidrupTracer : public FileTracer {
   void enlarge_clauses (); // enlarge hash table for clauses
   void insert ();          // insert clause in hash table
   bool
-  find_and_delete (const uint64_t); // find clause position in hash table
+  find_and_delete (const int64_t); // find clause position in hash table
 
 #ifndef QUIET
   int64_t added, deleted, weakened, restore, original, solved, batched;
@@ -58,18 +59,21 @@ class LidrupTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (uint64_t id);
+  void put_binary_id (int64_t id, bool = true);
 
-  void lidrup_add_derived_clause (uint64_t id, const vector<int> &clause,
-                                  const vector<uint64_t> &chain);
-  void lidrup_delete_clause (uint64_t id); //, const vector<int> &clause);
+  void lidrup_add_derived_clause (int64_t id,
+                                  const std::vector<int> &clause,
+                                  const std::vector<int64_t> &chain);
   void
-  lidrup_add_restored_clause (uint64_t id); //, const vector<int> &clause);
-  void lidrup_add_original_clause (uint64_t id, const vector<int> &clause);
-  void lidrup_conclude_and_delete (const vector<uint64_t> &conclusion);
+  lidrup_delete_clause (int64_t id); //, const std::vector<int> &clause);
+  void lidrup_add_restored_clause (
+      int64_t id); //, const std::vector<int> &clause);
+  void lidrup_add_original_clause (int64_t id,
+                                   const std::vector<int> &clause);
+  void lidrup_conclude_and_delete (const std::vector<int64_t> &conclusion);
   void lidrup_report_status (int status);
-  void lidrup_conclude_sat (const vector<int> &model);
-  void lidrup_conclude_unknown (const vector<int> &trail);
+  void lidrup_conclude_sat (const std::vector<int> &model);
+  void lidrup_conclude_unknown (const std::vector<int> &trail);
   void lidrup_solve_query ();
   void lidrup_batch_weaken_restore_and_delete ();
 
@@ -78,28 +82,29 @@ public:
   ~LidrupTracer ();
 
   // proof section:
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
-  void add_assumption_clause (uint64_t, const vector<int> &,
-                              const vector<uint64_t> &) override;
-  void weaken_minus (uint64_t, const vector<int> &) override;
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
+                           const std::vector<int64_t> &) override;
+  void add_assumption_clause (int64_t, const std::vector<int> &,
+                              const std::vector<int64_t> &) override;
+  void weaken_minus (int64_t, const std::vector<int> &) override;
+  void delete_clause (int64_t, bool, const std::vector<int> &) override;
+  void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override;
-  void report_status (int, uint64_t) override;
-  void conclude_sat (const vector<int> &) override;
-  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
-  void conclude_unknown (const vector<int> &) override;
+  void report_status (int, int64_t) override;
+  void conclude_sat (const std::vector<int> &) override;
+  void conclude_unsat (ConclusionType,
+                       const std::vector<int64_t> &) override;
+  void conclude_unknown (const std::vector<int> &) override;
 
   void solve_query () override;
   void add_assumption (int) override;
   void reset_assumptions () override;
 
   // skip
-  void begin_proof (uint64_t) override {}
-  void finalize_clause (uint64_t, const vector<int> &) override {}
-  void strengthen (uint64_t) override {}
-  void add_constraint (const vector<int> &) override {}
+  void begin_proof (int64_t) override {}
+  void finalize_clause (int64_t, const std::vector<int> &) override {}
+  void strengthen (int64_t) override {}
+  void add_constraint (const std::vector<int> &) override {}
 
   // logging and file io
   void connect_internal (Internal *i) override;

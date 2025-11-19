@@ -23,29 +23,47 @@ static int ph (int p, int h) {
 
 // Construct a pigeon hole formula for 'n+1' pigeons in 'n' holes.
 //
-static void formula (void *solver) {
-  for (int h = 0; h < n; h++)
-    for (int p1 = 0; p1 < n + 1; p1++)
-      for (int p2 = p1 + 1; p2 < n + 1; p2++)
+static int formula (void *solver) {
+  int max = 0;
+  for (int h = 0; h < n; h++) {
+    for (int p1 = 0; p1 < n + 1; p1++) {
+      for (int p2 = p1 + 1; p2 < n + 1; p2++) {
         ipasir_add (solver, -ph (p1, h)), ipasir_add (solver, -ph (p2, h)),
             ipasir_add (solver, 0);
+        if (max < ph (p1, h))
+          max = ph (p1, h);
+        if (max < ph (p2, h))
+          max = ph (p2, h);
+      }
+    }
+  }
 
   for (int p = 0; p < n + 1; p++) {
     for (int h = 0; h < n; h++)
       ipasir_add (solver, ph (p, h));
     ipasir_add (solver, 0);
   }
+  return max;
 }
 
 typedef struct learner learner;
 
 struct learner {
   void *solver;
+  int max_var;
   unsigned learned;
+  unsigned aborted;
 };
 
 static void learn (void *ptr, int *clause) {
   learner *learner = ptr;
+  int max = learner->max_var;
+  for (const int *p = clause; *p; p++) {
+    if (*p > max || -*p > max) {
+      learner->aborted++;
+      return;
+    }
+  }
   for (const int *p = clause; *p; p++)
     ipasir_add (learner->solver, *p);
   ipasir_add (learner->solver, 0);
@@ -72,14 +90,14 @@ int main (void) {
   for (int i = 0; i < 2; i++) {
     learners[i].solver = solvers[i] = ipasir_init ();
     ipasir_set_learn (solvers[i], learners + !i, 3, learn);
-    formula (solvers[i]);
+    learners[i].max_var = formula (solvers[i]);
   }
   unsigned round = 0;
   int active = 0;
   int res = 0;
   for (;;) {
-    printf ("round %d active %d imported %u\n", ++round, active,
-            learners[active].learned);
+    printf ("round %d active %d imported %u aborted %u\n", ++round, active,
+            learners[active].learned, learners[active].aborted);
     fflush (stdout);
     saved = signal (SIGALRM, handler);
 #if __GNUC__ > 4 || defined(__llvm__)
@@ -107,7 +125,9 @@ int main (void) {
   }
   for (int i = 0; i < 2; i++)
     ipasir_release (solvers[i]);
-  for (int i = 0; i < 2; i++)
-    printf ("solver[%d] imported %u clauses\n", i, learners[i].learned);
+  for (int i = 0; i < 2; i++) {
+    printf ("solver[%d] imported %u, aborted %u clauses\n", i,
+            learners[i].learned, learners[i].aborted);
+  }
   return 0;
 }

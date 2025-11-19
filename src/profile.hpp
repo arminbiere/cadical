@@ -37,8 +37,17 @@ struct Internal;
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+#define MROFILE PROFILE
+#else
+#define MROFILE(...) /**/
+#endif
+
 #define PROFILES \
   PROFILE (analyze, 3) \
+  MROFILE (analyzestable, 4) \
+  MROFILE (analyzeunstable, 4) \
+  PROFILE (backbone, 2) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \
@@ -47,29 +56,47 @@ struct Internal;
   PROFILE (collect, 3) \
   PROFILE (compact, 3) \
   PROFILE (condition, 2) \
+  PROFILE (congruence, 2) \
+  PROFILE (congruencemerge, 4) \
+  PROFILE (congruencematching, 4) \
   PROFILE (connect, 3) \
   PROFILE (copy, 4) \
   PROFILE (cover, 2) \
   PROFILE (decide, 3) \
   PROFILE (decompose, 3) \
+  PROFILE (definition, 2) \
   PROFILE (elim, 2) \
+  PROFILE (factor, 2) \
+  PROFILE (fastelim, 2) \
   PROFILE (extend, 3) \
+  PROFILE (extract, 3) \
+  PROFILE (extractands, 4) \
+  PROFILE (extractbinaries, 4) \
+  PROFILE (extractites, 4) \
+  PROFILE (extractxors, 4) \
   PROFILE (instantiate, 2) \
   PROFILE (lucky, 2) \
   PROFILE (lookahead, 2) \
   PROFILE (minimize, 4) \
   PROFILE (shrink, 4) \
-  PROFILE (parse, \
-           0) /*Set to '0' as 'opts.profile' might change in parsing*/ \
+  PROFILE (parse, 0) /* As 'opts.profile' might change in parsing*/ \
   PROFILE (probe, 2) \
   PROFILE (deduplicate, 3) \
   PROFILE (propagate, 4) \
+  MROFILE (propstable, 4) \
+  MROFILE (propunstable, 4) \
   PROFILE (reduce, 3) \
   PROFILE (restart, 3) \
   PROFILE (restore, 2) \
   PROFILE (search, 1) \
   PROFILE (solve, 0) \
   PROFILE (stable, 2) \
+  PROFILE (sweep, 2) \
+  PROFILE (sweepbackbone, 3) \
+  PROFILE (sweepequivalences, 3) \
+  PROFILE (sweepflip, 4) \
+  PROFILE (sweepimplicant, 4) \
+  PROFILE (sweepsolve, 4) \
   PROFILE (preprocess, 2) \
   PROFILE (simplify, 1) \
   PROFILE (subsume, 2) \
@@ -77,7 +104,13 @@ struct Internal;
   PROFILE (transred, 3) \
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \
-  PROFILE (walk, 2)
+  PROFILE (walk, 2) \
+  PROFILE (walkpick, 3) \
+  PROFILE (walkbreak, 4) \
+  PROFILE (walkflip, 3) \
+  PROFILE (walkflipbroken, 4) \
+  PROFILE (walkflipWL, 4) \
+  PROFILE (warmup, 3)
 
 /*------------------------------------------------------------------------*/
 
@@ -143,11 +176,11 @@ struct Profiles {
   do { \
     NON_QUIET_PROFILE_CODE (const double N = time (); \
                             const int L = internal->opts.profile;) \
-    if (!preprocessing && !lookingahead) { \
+    if (!internal->preprocessing && !internal->lookingahead) { \
       NON_QUIET_PROFILE_CODE ( \
-          if (stable && internal->profiles.stable.level <= L) \
+          if (internal->stable && internal->profiles.stable.level <= L) \
               internal->stop_profiling (internal->profiles.stable, N); \
-          if (!stable && internal->profiles.unstable.level <= L) \
+          if (!internal->stable && internal->profiles.unstable.level <= L) \
               internal->stop_profiling (internal->profiles.unstable, N); \
           if (internal->profiles.search.level <= L) \
               internal->stop_profiling (internal->profiles.search, N);) \
@@ -167,20 +200,21 @@ struct Profiles {
 #define STOP_SIMPLIFIER(S, M) \
   do { \
     NON_QUIET_PROFILE_CODE ( \
-        const double N = time (); const int L = internal->opts.profile; \
+        const double N = internal->time (); \
+        const int L = internal->opts.profile; \
         if (internal->profiles.S.level <= L) \
             internal->stop_profiling (internal->profiles.S, N); \
         if (internal->profiles.simplify.level <= L) \
             internal->stop_profiling (internal->profiles.simplify, N);) \
     reset_mode (M); \
     reset_mode (SIMPLIFY); \
-    if (!preprocessing && !lookingahead) { \
+    if (!internal->preprocessing && !internal->lookingahead) { \
       NON_QUIET_PROFILE_CODE ( \
           if (internal->profiles.search.level <= L) \
               internal->start_profiling (internal->profiles.search, N); \
-          if (stable && internal->profiles.stable.level <= L) \
+          if (internal->stable && internal->profiles.stable.level <= L) \
               internal->start_profiling (internal->profiles.stable, N); \
-          if (!stable && internal->profiles.unstable.level <= L) \
+          if (!internal->stable && internal->profiles.unstable.level <= L) \
               internal->start_profiling (internal->profiles.unstable, N);) \
       set_mode (SEARCH); \
     } \
@@ -191,17 +225,18 @@ struct Profiles {
 
 #define START_INNER_WALK() \
   do { \
-    require_mode (SEARCH); \
-    assert (!preprocessing); \
+    require_mode (Mode::SEARCH); \
+    assert (!internal->preprocessing); \
     NON_QUIET_PROFILE_CODE ( \
-        const double N = time (); const int L = internal->opts.profile; \
-        if (stable && internal->profiles.stable.level <= L) \
+        const double N = internal->time (); \
+        const int L = internal->opts.profile; \
+        if (internal->stable && internal->profiles.stable.level <= L) \
             internal->stop_profiling (internal->profiles.stable, N); \
-        if (!stable && internal->profiles.unstable.level <= L) \
+        if (!internal->stable && internal->profiles.unstable.level <= L) \
             internal->stop_profiling (internal->profiles.unstable, N); \
         if (internal->profiles.walk.level <= L) \
             internal->start_profiling (internal->profiles.walk, N);) \
-    set_mode (WALK); \
+    set_mode (Mode::WALK); \
   } while (0)
 
 /*------------------------------------------------------------------------*/
@@ -209,16 +244,16 @@ struct Profiles {
 
 #define STOP_INNER_WALK() \
   do { \
-    require_mode (SEARCH); \
-    assert (!preprocessing); \
+    require_mode (Mode::SEARCH); \
+    assert (!internal->preprocessing); \
     reset_mode (WALK); \
     NON_QUIET_PROFILE_CODE ( \
         const double N = time (); const int L = internal->opts.profile; \
         if (internal->profiles.walk.level <= L) \
             internal->stop_profiling (internal->profiles.walk, N); \
-        if (stable && internal->profiles.stable.level <= L) \
+        if (internal->stable && internal->profiles.stable.level <= L) \
             internal->start_profiling (internal->profiles.stable, N); \
-        if (!stable && internal->profiles.unstable.level <= L) \
+        if (!internal->stable && internal->profiles.unstable.level <= L) \
             internal->start_profiling (internal->profiles.unstable, N); \
         internal->profiles.walk.started = (N);) \
   } while (0)
@@ -228,10 +263,10 @@ struct Profiles {
 
 #define START_OUTER_WALK() \
   do { \
-    require_mode (SEARCH); \
-    assert (!preprocessing); \
+    require_mode (Mode::SEARCH); \
+    assert (!internal->preprocessing); \
     NON_QUIET_PROFILE_CODE (START (walk);) \
-    set_mode (WALK); \
+    set_mode (Mode::WALK); \
   } while (0)
 
 /*------------------------------------------------------------------------*/
@@ -239,8 +274,8 @@ struct Profiles {
 
 #define STOP_OUTER_WALK() \
   do { \
-    require_mode (SEARCH); \
-    assert (!preprocessing); \
+    require_mode (Mode::SEARCH); \
+    assert (!internal->preprocessing); \
     reset_mode (WALK); \
     NON_QUIET_PROFILE_CODE (STOP (walk);) \
   } while (0)

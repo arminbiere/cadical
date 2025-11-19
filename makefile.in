@@ -9,6 +9,7 @@
 
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
+CFLAGS=@CFLAGS@
 
 LIBS=@LIBS@
 CONTRIB=@CONTRIB@
@@ -23,26 +24,34 @@ SRC_APP=cadical.cpp mobical.cpp
 SRC_IPASIR=src/ipasir.cpp
 SRC_SOLVER=$(subst ../src/,,$(sort $(wildcard ../src/*.cpp)))
 SRC_CONTRIB=$(subst ../contrib/,,$(sort $(wildcard ../contrib/*.cpp)))
+SRC_C=$(subst ../src/,,$(sort $(wildcard ../src/*.c)))
 
 FILT_SOLVER=$(filter-out $(SRC_APP),$(SRC_SOLVER))
 FILT_SOLVER:=$(if $(filter-out no,$(IPASIR)),$(FILT_SOLVER),$(filter-out $(SRC_IPASIR), $(FILT_SOLVER)))
 FILT_CONTRIB=$(if $(filter-out no,$(CONTRIB)),$(SRC_CONTRIB),)
 OBJ_SOLVER=$(FILT_SOLVER:.cpp=.o)
 OBJ_CONTRIB=$(FILT_CONTRIB:.cpp=.o)
+OBJ_C=$(SRC_C:.c=.o)
 
 # Include for the current build directory is required for including the
 # generated build header 'build.hpp'.
 
 DIR=../$(shell pwd|sed -e 's,.*/,,')
 COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR) -I../src
+COMPILEC=$(CXX) $(CFLAGS) -I$(DIR) -I../src
 
 #--------------------------------------------------------------------------#
 
-all: libcadical.a cadical mobical
+all: @GOALS@
 
 #--------------------------------------------------------------------------#
 
-.SUFFIXES: .cpp .o
+.SUFFIXES: .cpp .o .c
+
+
+%.o: ../*/%.c ../src/*.h makefile
+	$(COMPILEC) -x c -c $< -o $@
+
 
 %.o: ../*/%.cpp ../src/*.hpp makefile
 	$(COMPILE) -c $<
@@ -53,13 +62,16 @@ all: libcadical.a cadical mobical
 # tester 'mobical') and the library are the main build targets.
 
 cadical: cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
+	$(COMPILE) -o $@ $< -L. libcadical.a $(LIBS)
 
 mobical: mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -o $@ $< -L. -lcadical
+	$(COMPILE) -o $@ $< -L. libcadical.a
 
-libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
-	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
+libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C) makefile
+	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C)
+
+libcadical.so: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS) makefile
+	$(COMPILE) -shared -o $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS)
 
 #--------------------------------------------------------------------------#
 
@@ -80,6 +92,7 @@ update:
 
 ccadical.o: ../src/ccadical.h
 ipasir.o: ../src/ipasir.h ../src/ccadical.h
+
 
 #--------------------------------------------------------------------------#
 

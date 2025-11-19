@@ -101,6 +101,35 @@ template <class T> void shrink_vector (std::vector<T> &v) {
   assert (v.capacity () == v.size ()); // not guaranteed though
 }
 
+template <class T>
+static void enlarge_init (vector<T> &v, size_t N, const T &i) {
+  if (v.size () < N)
+    v.resize (N, i);
+}
+
+template <class T> static void enlarge_only (vector<T> &v, size_t N) {
+  if (v.size () < N)
+    v.resize (N, T ());
+}
+
+template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
+  enlarge_init (v, N, (const T &) 0);
+}
+
+// double the capacity until it fits. This is different from reserve
+// that will allocate exactly the size requested, meaning that the
+// amortized complexity is lost.
+template <class T> static void reserve_at_least (vector<T> &v, size_t N) {
+  if (N < v.capacity ())
+    return;
+  size_t new_size = v.size ();
+  if (!new_size)
+    new_size = N;
+  while (new_size < N)
+    new_size *= 2;
+  v.reserve (new_size);
+}
+
 // Clean-up class for bad_alloc error safety.
 
 template <typename T> struct DeferDeleteArray {

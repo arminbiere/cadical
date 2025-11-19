@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include <algorithm>
+
 namespace CaDiCaL {
 
 /*----------------------------------------------------------------------------*/
@@ -95,6 +97,7 @@ void Internal::set_tainted_literal () {
 }
 
 void Internal::renotify_trail_after_ilb () {
+  assert (opts.ilb);
   if (!external_prop || external_prop_is_lazy || !trail.size () ||
       !opts.ilb) {
     return;
@@ -120,9 +123,57 @@ void Internal::renotify_trail_after_local_search () {
   renotify_full_trail ();
 }
 
+void Internal::renotify_full_trail_between_trail_pos (
+    int start_level, int end_level, int propagator_level,
+    std::vector<int> &assigned, bool start_new_level) {
+  assert (assigned.empty ());
+  int j = start_level;
+#ifdef LOGGING
+  LOG ("starting notification of level %d from trail %d .. %d",
+       propagator_level, start_level, end_level);
+#else
+  (void) propagator_level;
+#endif
+  if (start_new_level) {
+    if (assigned.size ())
+      external->propagator->notify_assignment (assigned);
+    assigned.clear ();
+    external->propagator->notify_new_decision_level ();
+  }
+  for (; j < end_level; ++j) {
+    int ilit = trail[j];
+    // In theory, 0 ilit can happen due to pseudo-decision levels
+    if (!ilit)
+      continue;
+
+    if (!observed (ilit))
+      continue;
+
+    int elit = externalize (ilit); // TODO: double-check tainting
+
+    LOG ("notifying elit %d @ %d aka %s", propagator_level, elit,
+         LOGLIT (ilit));
+    assert (elit);
+    // Fixed variables might get mapped (during compact) to another
+    // non-observed but fixed variable.
+    // This happens on root level, so notification about their assignment
+    // is already done.
+    assert (external->observed (elit) || fixed (ilit));
+    if (!external->ervars[abs (elit)])
+      assigned.push_back (elit);
+  }
+
+  if (assigned.size ())
+    external->propagator->notify_assignment (assigned);
+  assigned.clear ();
+}
+
 // It repeats ALL assignments of the trail, so the already notified
 // root-level assignments will be notified multiple times.
-
+//
+// As CaDiCaL is missing some '0' seperators, it is important to go
+// over slices from the control stack instead of going over the trail
+// directly.
 void Internal::renotify_full_trail () {
   const size_t end_of_trail = trail.size ();
   if (level) {
@@ -132,54 +183,37 @@ void Internal::renotify_full_trail () {
   }
   std::vector<int> assigned;
 
-  int prev_max_level = 0;
-  int current_level = 0;
   int propagator_level = 0;
 
-  while (notified < end_of_trail) {
-    int ilit = trail[notified++];
-    // In theory, 0 ilit can happen due to pseudo-decision levels
-    if (!ilit)
-      current_level = prev_max_level + 1;
-    else
-      current_level = var (ilit).level;
-
-    if (current_level > propagator_level) {
-      if (assigned.size ())
-        external->propagator->notify_assignment (assigned);
-      while (current_level > propagator_level) {
-        external->propagator->notify_new_decision_level ();
-        propagator_level++;
-      }
-      assigned.clear ();
-    }
-    // Current level can be smaller than prev_max_level due to chrono
-    if (current_level > prev_max_level)
-      prev_max_level = current_level;
-
-    if (!observed (ilit))
-      continue;
-
-    int elit = externalize (ilit); // TODO: double-check tainting
-    assert (elit);
-    // Fixed variables might get mapped (during compact) to another
-    // non-observed but fixed variable.
-    // This happens on root level, so notification about their assignment is
-    // already done.
-    assert (external->observed (elit) || fixed (ilit));
-    assigned.push_back (elit);
+  const int c_size = control.size ();
+  { // first all root-level literals
+    const int start_level = 0;
+    const int end_level =
+        (control.size () > 1 ? control[1].trail : end_of_trail);
+    renotify_full_trail_between_trail_pos (
+        start_level, end_level, propagator_level, assigned, false);
   }
-  if (assigned.size ())
-    external->propagator->notify_assignment (assigned);
-  assigned.clear ();
 
-  // In case there are some left over empty levels on the top of the trail,
-  // the external propagtor must be notified about them so the levels are
-  // synced
-  while (level > propagator_level) {
-    external->propagator->notify_new_decision_level ();
+  // notify all intermediate levels
+  for (int i = 2; i < c_size; ++i) {
+    const int start_level = control[i - 1].trail;
+    const int end_level = control[i].trail;
     propagator_level++;
+    LOG ("notification of %d", propagator_level);
+
+    renotify_full_trail_between_trail_pos (
+        start_level, end_level, propagator_level, assigned, true);
   }
+
+  // and the current level if there is non-root level one
+  if (level) {
+    const int start_level = control.back ().trail;
+    propagator_level++;
+    renotify_full_trail_between_trail_pos (
+        start_level, end_of_trail, propagator_level, assigned, true);
+  }
+  assert (propagator_level == level);
+  notified = trail.size ();
 
   return;
 }
@@ -491,7 +525,7 @@ void Internal::add_external_clause (int propagated_elit,
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
   LOG (lrat_chain, "lrat chain before");
-  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  std::vector<int64_t> lrat_chain_ext = std::move (lrat_chain);
   lrat_chain.clear ();
   clause.clear ();
 
@@ -643,7 +677,7 @@ void Internal::explain_external_propagations () {
     f.seen = false;
   }
 
-#ifndef NDEBUG
+#if 0 // has been fuzzed extensively
   for (auto idx : vars) {
     assert (!flags (idx).seen);
   }
@@ -709,7 +743,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
-  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  std::vector<int64_t> chain_tmp{std::move (lrat_chain)};
   lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);
@@ -773,8 +807,7 @@ void Internal::handle_external_clause (Clause *res) {
     if (val (pos0) < 0) {
       conflict = res;
       if (!from_propagator) {
-        // analyze (); // TODO: is it good to do conflict analysis?
-        // apparently its better to backtrack :(
+        // its better to backtrack instead of analyze
         backtrack (l1 - 1);
         conflict = 0;
         assert (!val (pos0) && !val (pos1));
@@ -845,7 +878,10 @@ bool Internal::external_check_solution () {
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
     // anymore.
-    for (int idx = 1; idx <= external->max_var; idx++) {
+    for (int idx = 1;
+         idx <= std::min ((int) external->is_observed.size () - 1,
+                          external->max_var);
+         idx++) {
       if (!external->is_observed[idx])
         continue;
       const int lit = external->ival (idx);
@@ -944,11 +980,14 @@ void Internal::notify_assignments () {
 
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
+    if (external->ervars[abs (elit)])
+      continue;
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
     // This happens on root level, so notification about their assignment is
     // already done.
-    assert (external->observed (elit) || fixed (ilit));
+    assert (external->observed (elit) ||
+            (fixed (ilit) && !external->ervars[abs (elit)]));
     assigned.push_back (elit);
   }
 
@@ -1210,7 +1249,7 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   int ilit;
   for (int eidx = 1; eidx < e2i_size; eidx++) {
     ilit = external->e2i[eidx];
-    if (ilit) {
+    if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {
         fixed_lits.push_back (vals[abs (ilit)] * eidx);

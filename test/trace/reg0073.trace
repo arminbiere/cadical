@@ -6,7 +6,6 @@
 5 set elimprod 0
 6 set elimsum 0
 7 set probehbr 0
-8 set probemaxeff 0
 9 set vivify 0
 10 add -10
 11 add -8

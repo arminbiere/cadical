@@ -17,6 +17,7 @@ configured before any clauses are added to the solver.
 
 ```cpp
 CaDiCaL::Solver solver;
+solver.set ("factor", 0); // important: deactivate BVA
 CaDiCraig::CraigTracer tracer;
 solver.connect_proof_tracer (&tracer, true);
 tracer.set_craig_construction (CaDiCraig::CraigConstruction::ASYMMETRIC);
@@ -44,6 +45,7 @@ Label clauses via `label_clause` and the following types:
 
 ```cpp
 CaDiCaL::Solver solver;
+solver.set ("factor", 0); // important: deactivate BVA
 CaDiCraig::CraigTracer tracer;
 solver.connect_proof_tracer (&tracer, true);
 tracer.set_craig_construction (CaDiCraig::CraigConstruction::ASYMMETRIC);
@@ -99,6 +101,7 @@ or when the required partial interpolants are not enabled.
 
 ```cpp
 CaDiCaL::Solver solver;
+solver.set ("factor", 0); // important: deactivate BVA
 CaDiCraig::CraigTracer tracer;
 solver.connect_proof_tracer (&tracer, true);
 tracer.set_craig_construction (CaDiCraig::CraigConstruction::ASYMMETRIC);
@@ -145,6 +148,7 @@ the present use-case.
 
 ```cpp
 CaDiCaL::Solver solver;
+solver.set ("factor", 0); // important: deactivate BVA
 CaDiCraig::CraigTracer tracer;
 solver.connect_proof_tracer (&tracer, true);
 tracer.set_craig_construction (
@@ -192,6 +196,7 @@ It has to be explicitly labeled by calling `label_constraint`.
 
 ```cpp
 CaDiCaL::Solver solver;
+solver.set ("factor", 0); // important: deactivate BVA
 CaDiCraig::CraigTracer tracer;
 solver.connect_proof_tracer (&tracer, true);
 tracer.set_craig_construction (...);

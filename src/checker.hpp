@@ -43,7 +43,7 @@ struct CheckerWatch {
       : blit (b), size (c->size), clause (c) {}
 };
 
-typedef vector<CheckerWatch> CheckerWatcher;
+typedef std::vector<CheckerWatch> CheckerWatcher;
 
 /*------------------------------------------------------------------------*/
 
@@ -65,8 +65,8 @@ class Checker : public StatTracer {
   // and thus we access them by first mapping a literal to 'unsigned'.
   //
   static unsigned l2u (int lit);
-  vector<CheckerWatcher> watchers; // watchers of literals
-  vector<signed char> marks;       // mark bits of literals
+  std::vector<CheckerWatcher> watchers; // watchers of literals
+  std::vector<signed char> marks;       // mark bits of literals
 
   signed char &mark (int lit);
   CheckerWatcher &watcher (int lit);
@@ -79,23 +79,23 @@ class Checker : public StatTracer {
   CheckerClause **clauses; // hash table of clauses
   CheckerClause *garbage;  // linked list of garbage clauses
 
-  vector<int> unsimplified; // original clause for reporting
-  vector<int> simplified;   // clause for sorting
+  std::vector<int> unsimplified; // original clause for reporting
+  std::vector<int> simplified;   // clause for sorting
 
-  vector<int> trail; // for propagation
+  std::vector<int> trail; // for propagation
 
   unsigned next_to_propagate; // next to propagate on trail
 
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
-  void import_clause (const vector<int> &);
+  void import_clause (const std::vector<int> &);
   bool tautological ();
 
   static const unsigned num_nonces = 4;
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  uint64_t last_id;
+  int64_t last_id;
   uint64_t compute_hash (); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
@@ -122,6 +122,7 @@ class Checker : public StatTracer {
   bool propagate ();         // propagate and check for conflicts
   void backtrack (unsigned); // prepare for next clause
   bool check ();             // check simplified clause is implied
+  bool check_blocked ();     // check if clause is blocked
 
   struct {
 
@@ -151,17 +152,18 @@ public:
 
   void connect_internal (Internal *i) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override;
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
+                           const std::vector<int64_t> &) override;
+  void delete_clause (int64_t, bool, const std::vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
-  void report_status (int, uint64_t) override {}                   // skip
-  void begin_proof (uint64_t) override {}                          // skip
-  void add_assumption_clause (uint64_t, const vector<int> &,
-                              const vector<uint64_t> &) override;
+  void finalize_clause (int64_t, const std::vector<int> &) override {
+  } // skip
+  void report_status (int, int64_t) override {} // skip
+  void begin_proof (int64_t) override {}        // skip
+  void add_assumption_clause (int64_t, const std::vector<int> &,
+                              const std::vector<int64_t> &) override;
   void print_stats () override;
   void dump (); // for debugging purposes only
 };
