@@ -1170,6 +1170,14 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   if (factoring.fresh.empty ())
     return;
 
+  // mark variables as elim candidates.
+  if (opts.factorelim == 1) {
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      mark_elim (lit);
+    }
+  } // else if (opts.factorelim == 0)
+
   if (opts.factorbumpheap == 1) {
     const double delta = 1.0 / (double) (internal->max_var);
     for (auto def : factoring.fresh) {
@@ -1209,7 +1217,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       score (lit) = new_score;
       scores.update (lit);
     }
-  } // else (opts.factorbumpheap == 0)
+  } // else if (opts.factorbumpheap == 0)
 
   if (opts.factorbumpqueue == 0) {
     for (auto def : factoring.fresh) {
@@ -1279,7 +1287,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     stats.bumped = queue.bumped;
     update_queue_unassigned (queue.last);
 
-  } // else (opts.factorbumpqueue == 2)
+  } // else if (opts.factorbumpqueue == 2)
 #ifndef NDEBUG
   for (auto v : vars)
     assert (val (v) || scores.contains (v));

@@ -154,6 +154,10 @@ int External::internalize (int elit, bool extension) {
       internal->mark_active (ilit);
     else if (f.status != Flags::ACTIVE && f.status != Flags::FIXED)
       internal->reactivate (ilit);
+    f.factored = extension;
+    assert (!extension || f.elim);
+    if (extension)
+      f.elim = false;
     if (!marked (tainted, elit) && marked (witness, -elit)) {
       assert (!internal->opts.checkfrozen);
       LOG ("marking tainted %d", elit);

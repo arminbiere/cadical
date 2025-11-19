@@ -342,7 +342,7 @@ int Internal::elimfast_round (bool &completed,
       continue;
     if (!flags (idx).elim)
       continue;
-    if (!opts.fastelimfactor && external->ervars[externalize (idx)])
+    if (!opts.fastelimfactor && flags (idx).factored)
       continue;
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);

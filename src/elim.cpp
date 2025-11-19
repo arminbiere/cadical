@@ -110,7 +110,7 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
     return;
   if (frozen (lit))
     return;
-  if (!opts.elimfactor && external->ervars[abs (externalize (lit))])
+  if (!opts.elimfactor && flags (lit).factored)
     return;
   int64_t &score = noccs (lit);
   assert (score > 0);
@@ -617,10 +617,8 @@ void Internal::mark_eliminated_clauses_as_garbage (
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
-  const int elit = internal->externalize (pivot);
-  const int eidx = abs (elit);
   const bool is_extension_var =
-      opts.factornoreconstr && external->ervars[eidx] &&
+      opts.factornoreconstr && flags (pivot).factored &&
       !flags (pivot).factored_but_on_reconstruction_stack;
   const int64_t substitute = eliminator.gates.size ();
   if (substitute)
@@ -854,7 +852,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
       continue;
     if (!flags (idx).elim)
       continue;
-    if (!opts.elimfactor && external->ervars[externalize (idx)])
+    if (!opts.elimfactor && flags (idx).factored)
       continue;
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);

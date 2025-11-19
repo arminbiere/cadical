@@ -118,6 +118,7 @@ OPTION( factorbumpqueue,   0,  0,  2,0,0,1, "score extension variables in queue 
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delaying factor") \
 OPTION( factoreffort,     75,  0,1e6,0,0,1, "relative effort per mille") \
+OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
 OPTION( factorredundant,   1,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \

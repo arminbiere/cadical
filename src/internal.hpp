@@ -1077,6 +1077,7 @@ struct Internal {
     stats.mark.elim++;
     f.elim = true;
   }
+
   void mark_block (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);

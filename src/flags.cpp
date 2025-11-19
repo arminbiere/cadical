@@ -36,6 +36,8 @@ void Internal::mark_eliminated (int lit) {
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::ELIMINATED;
   LOG ("eliminated %d", abs (lit));
+  if (f.factored)
+    stats.factored_eliminated++;
   stats.all.eliminated++;
   stats.now.eliminated++;
   stats.inactive++;
