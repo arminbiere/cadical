@@ -473,8 +473,6 @@ void Solver::resize (int min_max_var) {
   LOG_API_CALL_END ("resize", min_max_var);
 }
 
-void Solver::reserve (int min_max_var) { resize (min_max_var); }
-
 int Solver::declare_more_variables (int number_of_vars) {
   TRACE ("declare_more_variables", number_of_vars);
   REQUIRE_VALID_STATE ();

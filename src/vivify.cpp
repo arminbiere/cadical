@@ -1314,8 +1314,7 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
 }
 /*------------------------------------------------------------------------*/
 inline void
-Internal::vivify_prioritize_leftovers (char tag,
-                                       size_t prioritized,
+Internal::vivify_prioritize_leftovers (char tag, size_t prioritized,
                                        std::vector<Clause *> &schedule) {
   if (prioritized) {
     PHASE ("vivify", stats.vivifications,

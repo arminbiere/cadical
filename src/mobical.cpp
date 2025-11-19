@@ -4433,11 +4433,7 @@ void Reader::parse () {
       if (first)
         error ("unexpected argument '%s' after 'irredundant'", first);
       c = new IrredundantCall ();
-    } else if (!strcmp (keyword, "resize") ||
-               !strcmp (keyword, "reserve")) {
-      if (!strcmp (keyword, "reserve"))
-        printf (
-            "WARNING use of deprecated 'reserve'. Use 'resize' instead.\n");
+    } else if (!strcmp (keyword, "resize")) {
       if (!first)
         error ("argument to 'resize' missing");
       if (!parse_int_str (first, lit))
@@ -4720,8 +4716,7 @@ void Reader::parse () {
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
       c = new PropagateAssumptionsCall ();
-    } else if (!strcmp (keyword, "get_entrailed_literals") ||
-               !strcmp (keyword, "implied")) {
+    } else if (!strcmp (keyword, "implied")) {
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       c = new ResetAssumptionsCall ();

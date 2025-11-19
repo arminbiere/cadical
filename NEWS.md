@@ -1,11 +1,27 @@
 Version 2.2.0
 -------------
 
-User facing changes:
+Breaking Changes:
 
-- Renamed `get_entrailed_literals` by `implied`. The call is now also
-  allowed in the state 'SATISFIED' state. The old name is still available
-  in this release but deprecated.
+- Renamed `get_entrailed_literals` to `implied`. The call is now also
+  allowed in the state 'SATISFIED' state (**breaking change**).
+
+- Renamed `reserve` to `resize` due to its misleading name.  Users should
+  in their code simply replace `reserve` by `resize`
+  (**breaking change**).
+
+- Bounded value addition (see below) requires a change in the
+  incremental usage (**breaking change**):
+
+  This is a *breaking change* for incremental usage when `factor` aka
+  BVA is enabled (which it is by default). To now incrementally add new
+  variables either use `vars ()` or `declare_more_variables ()`.  For more
+  details see their specification in the `cadical.hpp` header file.  As a
+  hot-fix, you can disable `factor` aka BVA with `set ('factor', 0)` though,
+  i.e., the solver checks this API contract only in a lazy way, by making
+  sure that the client code does not use internally added extension variables.
+
+Further User Facing Changes:
 
 - ILB interface simplified: instead of having `ilbassumptions` and `ilb`,
   there is now only `ilb` with values `0`, `1` (= only assumptions), and `2`
@@ -18,9 +34,6 @@ User facing changes:
 - Added `get_statistic_value` to be able to extract some information
   about the current run.
 
-- We made `reserve` deprecated due to its misleading name. Use the drop-in
-  replacement `resize` instead.
-
 - The `lucky` procedure can now handle assumptions (but not the external
   propagator). Set `luckyassumptions` to false if you do not want that.
 
@@ -30,15 +43,7 @@ User facing changes:
 
 - Fixed `VeriPB' compatibility issues.
 
-- Bounded value addition (see below) requires a change in the
-  incremental usage.
-
-  + The is a *breaking change* to incremental usage. To incrementally add new
-    variables to the solver, either use `vars ()`, `declare_more_variables ()`.
-    For more details see the specification in the `cadical.hpp` header file.
-    As a hot-fix, you disable `factor` aka BVA with `set ('factor', 0)`.
-
-New or improved techniques:
+New and Improved Techniques:
 
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.

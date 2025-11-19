@@ -514,17 +514,17 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
+#if 0
   // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
   // and MacOS in particular).  The feature check for this warning is
   // cumbersome to implement and conflicts with other checks for 'C++11'.
   // After moving to 'C++14' or better 'C++17' we can add this check back.
-#if 0 
   [[deprecated ("use the function implied instead with the same semantics "
                 "and arguments")]]
-#endif
   void get_entrailed_literals (std::vector<int> &implicants) {
     implied (implicants);
   }
+#endif
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
@@ -593,7 +593,7 @@ public:
   // With factor (BVA) the solver might also add new variables. In that case
   // the user is required to use this to check which variables are currently
   // free before adding new variables of their own.  The alternative is to
-  // reserve variables in batches with 'declare_more_variables'. Using
+  // declare more variables in batches with 'declare_more_variables'. Using
   // 'resize' in combination with any technique that could add variables
   // (currently only factor) is not advised. After each application of
   // `add`, `vars ()` will return an updated value, even if you did not
@@ -614,23 +614,23 @@ public:
   //
   void resize (int min_max_var);
 
+#if 0
   // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
   // and MacOS in particular).  The feature check for this warning is
   // cumbersome to implement and conflicts with other checks for 'C++11'.
   // After moving to 'C++14' or better 'C++17' we can add this check back.
-#if 0
   [[deprecated ("use the function resize instead with the same semantics "
                 "and arguments.")]]
+  void reserve (int min_max_var) { resize (min_max_var); }
 #endif
-  void reserve (int min_max_var);
 
   // Increase the maximum variable index by a number of new variables.
   // initializes 'number_of_vars' new variables and protects them from
   // being used by the solver as extension variables (BVA).
   //
   // It returns the new maximum variable index which is the highest
-  // variable name of the consecutive range of newly reserved variables.
-  // It has the same state transition and conditions as 'reserve' above.
+  // variable name of the consecutive range of newly delcared variables.
+  // It has the same state transition and conditions as 'resize' above.
   //
   //   require (READY)
   //   ensure (STEADY)
