@@ -1,27 +1,7 @@
 Version 2.2.0
 -------------
 
-Breaking Changes:
-
-- Renamed `get_entrailed_literals` to `implied`. The call is now also
-  allowed in the state 'SATISFIED' state (**breaking change**).
-
-- Renamed `reserve` to `resize` due to its misleading name.  Users should
-  in their code simply replace `reserve` by `resize`
-  (**breaking change**).
-
-- Bounded value addition (see below) requires a change in the
-  incremental usage (**breaking change**):
-
-  This is a *breaking change* for incremental usage when `factor` aka
-  BVA is enabled (which it is by default). To now incrementally add new
-  variables either use `vars ()` or `declare_more_variables ()`.  For more
-  details see their specification in the `cadical.hpp` header file.  As a
-  hot-fix, you can disable `factor` aka BVA with `set ('factor', 0)` though,
-  i.e., the solver checks this API contract only in a lazy way, by making
-  sure that the client code does not use internally added extension variables.
-
-Further User Facing Changes:
+User Facing Changes:
 
 - ILB interface simplified: instead of having `ilbassumptions` and `ilb`,
   there is now only `ilb` with values `0`, `1` (= only assumptions), and `2`
@@ -42,6 +22,23 @@ Further User Facing Changes:
   but this can be useful for debugging applications.
 
 - Fixed `VeriPB' compatibility issues.
+
+- The `get_entrailed_literals` function became **deprecated** and is going to be
+  replaced by the new `implied` function, with the same sematics, except
+  that is now also allowed in the state 'SATISFIED' state. The next
+  major release will remove `get_entrailed_literals`.
+
+- The `reserve` function became **deprecated** and is going to be replaced 
+  by the new `resize`  function due to its misleading name (compared to
+  `stl::vector`).  Users can in their code simply replace `reserve` by
+  `resize`.  The next major release will remove `reserve`.
+
+- Bounded variable addition aka `factor` (see below) remains disabled by
+  default as it requires a change in incremental usage when enabled.  The
+  next major release will (A) enable `factor` by default and accordingly
+  (B) require the usage of `var` resp. `declare_more_variables` for adding
+  new variables in incremental solving (and keeping `factor` enabled).
+  This **breaking-change** is post-poned until the next major release.
 
 New and Improved Techniques:
 
