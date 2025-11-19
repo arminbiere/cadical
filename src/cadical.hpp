@@ -514,9 +514,11 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
-#if defined(__APPLE__) || defined(__MACH__)
-  // TODO
-#else
+  // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
+  // and MacOS in particular).  The feature check for this warning is
+  // cumbersome to implement and conflicts with other checks for 'C++11'.
+  // After moving to 'C++14' or better 'C++17' we can add this check back.
+#if 0 
   [[deprecated ("use the function implied instead with the same semantics "
                 "and arguments")]]
 #endif
@@ -612,9 +614,11 @@ public:
   //
   void resize (int min_max_var);
 
-#if defined(__APPLE__) || defined(__MACH__)
-  // TODO
-#else
+  // We are not enforcing 'C++14' yet on all compilers/platforms (clang++
+  // and MacOS in particular).  The feature check for this warning is
+  // cumbersome to implement and conflicts with other checks for 'C++11'.
+  // After moving to 'C++14' or better 'C++17' we can add this check back.
+#if 0
   [[deprecated ("use the function resize instead with the same semantics "
                 "and arguments.")]]
 #endif
@@ -1238,7 +1242,8 @@ public:
 };
 
 // Connected listener gets notified whenever the truth value of a variable
-// is fixed (for example during inprocessing or due to derived unit clauses).
+// is fixed (for example during inprocessing or due to derived unit
+// clauses).
 
 class FixedAssignmentListener {
 public:
