@@ -4,40 +4,39 @@ Version 2.2.0
 User facing changes:
 
 - Renamed `get_entrailed_literals` by `implied`. The call is now also
-  allowed in the state SATISFIED state. The old name is still available
+  allowed in the state 'SATISFIED' state. The old name is still available
   in this release but deprecated.
 
-- ILB interface simplified: instead of having ilbassumptions and ilb,
-  there is now only ilb with values 0, 1 (= only assumptions), and 2
+- ILB interface simplified: instead of having `ilbassumptions` and `ilb`,
+  there is now only `ilb` with values `0`, `1` (= only assumptions), and `2`
   (= full reuse).
 
 - The tracer now allows to get equivalent literals during solving
 
 - Support for compilation of shared library via `./configure -shared`.
 
-- add `get_statistic_value` to be able to extract some information
+- Added `get_statistic_value` to be able to extract some information
   about the current run.
 
-- `reserve` is deprecated due to the misleading name. Use the drop-in
+- We made `reserve` deprecated due to its misleading name. Use the drop-in
   replacement `resize` instead.
 
-- lucky is now able to handle assumptions (but not the external
-  propagator). Set `luckyassumptions` to false if you do not want
-  that.
+- The `lucky` procedure can now handle assumptions (but not the external
+  propagator). Set `luckyassumptions` to false if you do not want that.
 
 - `val` now has a Boolean as second argument that checks that the
   variables was declared. The default value is the old behavior,
   but this can be useful for debugging applications.
 
-- Fixed VeriPB compatibility issues.
+- Fixed `VeriPB' compatibility issues.
 
 - Bounded value addition (see below) requires a change in the
   incremental usage.
 
-  + breaking change to incremental usage. To incrementally add new
-    variables to the solver, either use `vars ()`, `declare_more_variables ()`,
-    see specification in `cadical.hpp`.
-    As a hot-fix, disable with `set ('factor', 0)`
+  + The is a *breaking change* to incremental usage. To incrementally add new
+    variables to the solver, either use `vars ()`, `declare_more_variables ()`.
+    For more details see the specification in the `cadical.hpp` header file.
+    As a hot-fix, you disable `factor` aka BVA with `set ('factor', 0)`.
 
 New or improved techniques:
 
@@ -46,7 +45,7 @@ New or improved techniques:
 
 - Bounded Variable Addition.
 
-  + reverse of BVE, searches for clause sets with a certain structure,
+  + Reverse of BVE, searches for clause sets with a certain structure,
     factors out common variables and uses extended resolution with a
     new variable to derive equisatisfiable clauses which replace the old ones.
 
@@ -56,32 +55,31 @@ New or improved techniques:
 
 - Clausal Sweeping.
 
-  + introducing the 'kitten' solver to cadical. Enables semantic search
+  + Introducing the 'kitten' solver to cadical. Enables semantic search
     for equivalences in sub-parts of the formula.
 
 - Ticks for improved scheduling
 
-  + you can also use ticks to limit the runtime like the
+  + You can now also use ticks to limit the runtime like the
     conflict/decision limit before.
 
 - Improved vivify with a new tier-based scheduling.
 
-- Improved lucky, by allowing it to do several conflicts and finding
-  new units.
+- Improved the lucky procedure, by allowing it to do several conflicts and
+  finding new units.
 
-- New light preprocessing round on with lucky, congruence, factor, and
+- New light-way preprocessing round with lucky, congruence, factor, and
   a new (very limited) BVE (fast elim). Fast elimination is never run
   again and normal BVE is used instead. Lucky is run before and after
   preprocessing.
 
 - Small extension to gate extraction in BVE, now able to extract
-  semantic definitions using 'kitten'
-  (off by default `set ('elimdef', 1)` to enable).
-- Improved walk algorithm. We have also ported the version from Kissat
-  (relying on full-occurrence list), deactivated by default.
+  semantic definitions using 'kitten' (use `set ('elimdef', 1)` to enable).
 
-- Binary backone similarly to kissat.
+- Improved locals search walk algorithm. We have also ported the version
+  from Kissat (relying on full-occurrence list), deactivated by default.
 
+- Binary backone similarly to `Kissat`.
 
 Version 2.1.3
 -------------
