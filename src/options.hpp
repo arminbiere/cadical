@@ -113,15 +113,15 @@ OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,       1, -1, 10,0,0,1, "required reduction of clauses (negative means increase of clauses)") \
 OPTION( factorboundelim,   1,  0,  1,0,0,1, "add current elimbound to factorbound") \
-OPTION( factorbumpheap,    0,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
-OPTION( factorbumpqueue,   0,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
+OPTION( factorbumpheap,    1,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
+OPTION( factorbumpqueue,   1,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delaying factor") \
-OPTION( factoreffort,     75,  0,1e6,0,0,1, "relative effort per mille") \
+OPTION( factoreffort,    100,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
-OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
+OPTION( factoriniticks,  500,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
-OPTION( factorredundant,   1,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
+OPTION( factorredundant,   2,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
 OPTION( factorsize,       20,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( factorxor,         1,  0,  1,0,0,1, "factor eliminated xor gates (needs factorsize > 2)") \
