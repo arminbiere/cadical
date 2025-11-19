@@ -2394,7 +2394,7 @@ void Closure::update_and_gate_build_lrat_chain (
 
   const bool produce_unit_due_to_both_degenerated =
       (g_tautology && internal->val (h->lhs) < 0 &&
-       g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) ||
+       h->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) ||
       (h_tautology && internal->val (g->lhs) < 0 &&
        g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE);
 
