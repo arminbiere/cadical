@@ -961,7 +961,7 @@ bool Internal::factor () {
   if (!stats.factor)
     limit += opts.factoriniticks * 1e6;
 
-  mark_duplicated_binary_clauses_as_garbage();
+  mark_duplicated_binary_clauses_as_garbage ();
 
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;

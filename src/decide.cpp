@@ -37,7 +37,6 @@ int Internal::next_decision_variable_with_best_score () {
   return res;
 }
 
-
 void Internal::start_random_sequence () {
   if (!opts.randec)
     return;
@@ -82,7 +81,7 @@ int Internal::next_random_decision () {
       LOG ("random decision delayed because too deep");
       return 0;
     }
-    start_random_sequence();
+    start_random_sequence ();
   }
   LOG ("searching for random decision");
   Random random (internal->opts.seed);
@@ -135,7 +134,7 @@ int Internal::decide_phase (int idx, bool target) {
     phase = phases.forced[idx]; // swapped with opts.forcephase case!
     LOG ("trying forced phase, i.e., %d", phase);
   }
-  if (!phase && opts.forcephase){
+  if (!phase && opts.forcephase) {
     phase = initial_phase;
     LOG ("trying initial phase, i.e., %d", phase);
   }

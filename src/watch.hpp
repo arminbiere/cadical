@@ -35,7 +35,9 @@ struct Watch {
   int size;
 
   Watch (int b, Clause *c) : clause (c), blit (b), size (c->size) {}
-  Watch (bool, int b, Clause *c) : clause (c), blit (b), size (2) {assert (c->size == 2);}
+  Watch (bool, int b, Clause *c) : clause (c), blit (b), size (2) {
+    assert (c->size == 2);
+  }
   Watch () {}
 
   bool binary () const { return size == 2; }

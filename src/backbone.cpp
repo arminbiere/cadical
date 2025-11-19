@@ -25,7 +25,7 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
   lrat_chain.push_back (reason->id);
 }
 
-inline bool Internal::backbone_propagate (int64_t& ticks) {
+inline bool Internal::backbone_propagate (int64_t &ticks) {
   require_mode (BACKBONE);
   assert (!unsat);
   START (propagate);
@@ -137,7 +137,7 @@ inline bool Internal::backbone_propagate (int64_t& ticks) {
   return !conflict;
 }
 
-inline void Internal::backbone_propagate2 (int64_t& ticks) {
+inline void Internal::backbone_propagate2 (int64_t &ticks) {
   require_mode (BACKBONE);
   assert (propagated2 <= trail.size ());
   int64_t before = propagated2;
@@ -156,8 +156,7 @@ inline void Internal::backbone_propagate2 (int64_t& ticks) {
       if (b < 0) {
         conflict = w.clause; // no need to continue
         break;
-      }
-      else {
+      } else {
         assert (lrat_chain.empty ());
         backbone_lrat_for_units (w.blit, w.clause);
         backbone_assign (w.blit, w.clause);
@@ -179,12 +178,12 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       continue;
     if (f.backbone0) {
       LOG ("scheduling backbone literal candidate %s", LOGLIT (v));
-      candidates.push_back(v);
+      candidates.push_back (v);
     } else
       ++not_rescheduled;
-    if (f.backbone1){
+    if (f.backbone1) {
       LOG ("scheduling backbone literal candidate %s", LOGLIT (-v));
-      candidates.push_back(-v);
+      candidates.push_back (-v);
     } else
       ++not_rescheduled;
   }
@@ -204,11 +203,14 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       }
     }
   }
-  assert (candidates.size () <= 2*(size_t)max_var);
+  assert (candidates.size () <= 2 * (size_t) max_var);
 
-  VERBOSE (3, "backbone schedule %zu backbone candidates in total %f (rescheduled: %f%%)", candidates.size (), percent (candidates.size (), 2*max_var), percent (not_rescheduled, 2*max_var));
+  VERBOSE (3,
+           "backbone schedule %zu backbone candidates in total %f "
+           "(rescheduled: %f%%)",
+           candidates.size (), percent (candidates.size (), 2 * max_var),
+           percent (not_rescheduled, 2 * max_var));
 }
-
 
 int Internal::backbone_analyze (Clause *, int64_t &ticks) {
   assert (conflict);
@@ -245,7 +247,7 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
         flags (lit).seen = false;
       analyzed.clear ();
       if (lrat)
-	reverse (begin (lrat_chain), end (lrat_chain));
+        reverse (begin (lrat_chain), end (lrat_chain));
       return other;
     }
   }
@@ -268,7 +270,7 @@ inline void Internal::backbone_unit_assign (int lit) {
   const int idx = vidx (lit);
   assert (!vals[idx]);
   Var &v = var (idx);
-  v.level = 0;               // required to reuse decisions
+  v.level = 0;                   // required to reuse decisions
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
   assert ((int) num_assigned < max_var);
   num_assigned++;
@@ -352,7 +354,8 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   ++stats.backbone.rounds;
 
   LOG (candidates, "candidates: ");
-  ticks += 1 + cache_lines (candidates.size (), sizeof (std::vector<int>::iterator*));
+  ticks += 1 + cache_lines (candidates.size (),
+                            sizeof (std::vector<int>::iterator *));
   while (p != end) {
     assert (p < end);
     assert (q <= p);
@@ -387,7 +390,9 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     backbone_decision (probe);
     backbone_propagate2 (ticks);
     if (!conflict) {
-      LOG (candidates, "propagating backbone probe %s successful; candidates:", LOGLIT (probe));
+      LOG (candidates,
+           "propagating backbone probe %s successful; candidates:",
+           LOGLIT (probe));
       continue;
     }
 
@@ -459,7 +464,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     }
   } else {
     if (!backbone_propagate (ticks)) {
-      learn_empty_clause();
+      learn_empty_clause ();
     }
   }
   LOG (candidates, "candidates end of loop: ");
@@ -485,13 +490,13 @@ void Internal::keep_backbone_candidates (
   assert (prioritized <= remain);
   if (!remain) {
 #ifndef NDEBUG
-  for (auto v : candidates) {
-    const Flags &f = flags (v);
-    if (!f.active ())
-      continue;
-    assert (!f.backbone0);
-    assert (!f.backbone1);
-  }
+    for (auto v : candidates) {
+      const Flags &f = flags (v);
+      if (!f.active ())
+        continue;
+      assert (!f.backbone0);
+      assert (!f.backbone1);
+    }
 #endif
     return;
   }
@@ -607,14 +612,15 @@ void Internal::binary_clauses_backbone () {
 
   for (auto lit : lits) {
     Watches &w = watches (lit);
-    std::stable_partition (begin (w), end (w), [] (Watch w) {return w.binary();});
+    std::stable_partition (begin (w), end (w),
+                           [] (Watch w) { return w.binary (); });
   }
-  assert (propagated2 <= trail.size());
+  assert (propagated2 <= trail.size ());
   private_steps = true;
 
   assert (watching ());
   START_SIMPLIFIER (backbone, BACKBONE);
-  int failed = compute_backbone();
+  int failed = compute_backbone ();
   assert (!level);
   private_steps = false;
 
@@ -622,4 +628,4 @@ void Internal::binary_clauses_backbone () {
   STOP_SIMPLIFIER (backbone, BACKBONE);
 }
 
-}
+} // namespace CaDiCaL

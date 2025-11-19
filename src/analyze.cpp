@@ -1143,16 +1143,15 @@ void Internal::analyze () {
     uip = 0;
     while (!uip) {
       if (!i) {
-	lazy_external_propagator_out_of_order_clause (uip);
-	if (unsat)
-	  return;
-	else if (uip){
-	  open = 1;
-	  break;
-	}
-	else {
+        lazy_external_propagator_out_of_order_clause (uip);
+        if (unsat)
+          return;
+        else if (uip) {
+          open = 1;
+          break;
+        } else {
           LOG (reason, "restarting the analysis on the new conflict");
-	  ++stats.conflicts;
+          ++stats.conflicts;
           reason = conflict;
           resolvent_size = 0;
           antecedent_size = 1;
@@ -1288,13 +1287,16 @@ void Internal::analyze () {
     recompute_tier ();
 }
 
-// In the special case where the external propagator is lazy, the same invariants as OTFS break
-// (but even more complicated). There are three possible cases:
+// In the special case where the external propagator is lazy, the same
+// invariants as OTFS break (but even more complicated). There are three
+// possible cases:
 //   - the clause becomes empty (unsat must be answered)
 //   - the clause is a unit (backtrack and set the clause)
-//   - the clause is a new conflict on lower level and we restart the analysis
+//   - the clause is a new conflict on lower level and we restart the
+//   analysis
 //
-// TODO: we do not really need to keep the clause longer than the conflict analysis.
+// TODO: we do not really need to keep the clause longer than the conflict
+// analysis.
 void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
   assert (!opts.exteagerreasons);
   assert (external_prop);
@@ -1322,8 +1324,7 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
     backtrack (var (uip).level);
     assert (val (uip) > 0);
     clause.clear ();
-  }
-  else {
+  } else {
     int jump;
     const int glue = clause.size () - 1;
     conflict = new_driving_clause (glue, jump);

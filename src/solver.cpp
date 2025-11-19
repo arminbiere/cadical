@@ -473,9 +473,7 @@ void Solver::resize (int min_max_var) {
   LOG_API_CALL_END ("resize", min_max_var);
 }
 
-void Solver::reserve (int min_max_var) {
-  resize (min_max_var);
-}
+void Solver::reserve (int min_max_var) { resize (min_max_var); }
 
 int Solver::declare_more_variables (int number_of_vars) {
   TRACE ("declare_more_variables", number_of_vars);
@@ -773,8 +771,9 @@ int Solver::propagate () {
 void Solver::implied (std::vector<int> &entrailed) {
   TRACE ("implied");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == INCONCLUSIVE || state () == SATISFIED,
-           "can only get implied literals only in unknown or satisfied state");
+  REQUIRE (
+      state () == INCONCLUSIVE || state () == SATISFIED,
+      "can only get implied literals only in unknown or satisfied state");
   external->conclude_unknown ();
   external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
@@ -854,8 +853,11 @@ int Solver::simplify (int rounds) {
 
 /*------------------------------------------------------------------------*/
 
-int Solver::val (int lit, bool use_default_value_for_declared_but_not_used_variable) {
-  LOG_API_CALL_BEGIN ("val", lit, (int)use_default_value_for_declared_but_not_used_variable);
+int Solver::val (
+    int lit, bool use_default_value_for_declared_but_not_used_variable) {
+  LOG_API_CALL_BEGIN (
+      "val", lit,
+      (int) use_default_value_for_declared_but_not_used_variable);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
@@ -865,7 +867,9 @@ int Solver::val (int lit, bool use_default_value_for_declared_but_not_used_varia
     external->extend ();
   external->conclude_sat ();
   int res = external->ival (lit);
-  LOG_API_CALL_RETURNS ("val", lit, use_default_value_for_declared_but_not_used_variable, res);
+  LOG_API_CALL_RETURNS (
+      "val", lit, use_default_value_for_declared_but_not_used_variable,
+      res);
   assert (state () == SATISFIED);
   assert (res == lit || res == -lit);
   return res;
@@ -1817,7 +1821,8 @@ int64_t Solver::get_statistic_value (const char *opt) const {
   if (!strcmp (opt, "decisions"))
     return internal->stats.decisions;
   if (!strcmp (opt, "ticks"))
-    return internal->stats.ticks.search[0] + internal->stats.ticks.search[1];
+    return internal->stats.ticks.search[0] +
+           internal->stats.ticks.search[1];
   if (!strcmp (opt, "propagations"))
     return internal->stats.propagations.search;
   if (!strcmp (opt, "clauses"))
@@ -1829,7 +1834,8 @@ int64_t Solver::get_statistic_value (const char *opt) const {
   if (!strcmp (opt, "fixed"))
     return internal->stats.all.fixed;
   if (!strcmp (opt, "eliminated"))
-    return internal->stats.all.eliminated + internal->stats.all.fasteliminated;
+    return internal->stats.all.eliminated +
+           internal->stats.all.fasteliminated;
   if (!strcmp (opt, "subsitutued"))
     return internal->stats.all.substituted;
   return -1;

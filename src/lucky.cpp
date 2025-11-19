@@ -337,7 +337,7 @@ int Internal::lucky_decide_assumptions () {
   assert (!level);
   assert (!constraint.size ());
   int res = 0;
-  while ((size_t)level < assumptions.size ()) {
+  while ((size_t) level < assumptions.size ()) {
     res = decide ();
     if (res == 20) {
       marked_failed = false;
@@ -356,13 +356,13 @@ int Internal::lucky_decide_assumptions () {
     assert (!conflict);
     int res = 0;
     while (!res) {
-      assert ((size_t)level <= assumptions.size ());
+      assert ((size_t) level <= assumptions.size ());
       if (unsat)
         res = 20;
       else if (!propagate ()) {
-	analyze_wrapper ();
+        analyze_wrapper ();
       } else {
-	res = decide_wrapper ();
+        res = decide_wrapper ();
       }
     }
     assert (res == 20);
@@ -449,8 +449,8 @@ int Internal::lucky_phases () {
   // External propagator assumes a CDCL loop, so lucky is not tried here.
   if (!constraint.empty () || external_prop)
     return 0;
-  if (!propagate()) {
-    learn_empty_clause();
+  if (!propagate ()) {
+    learn_empty_clause ();
     return 20;
   }
 

@@ -200,7 +200,8 @@ struct Profiles {
 #define STOP_SIMPLIFIER(S, M) \
   do { \
     NON_QUIET_PROFILE_CODE ( \
-        const double N = internal->time (); const int L = internal->opts.profile; \
+        const double N = internal->time (); \
+        const int L = internal->opts.profile; \
         if (internal->profiles.S.level <= L) \
             internal->stop_profiling (internal->profiles.S, N); \
         if (internal->profiles.simplify.level <= L) \
@@ -227,7 +228,8 @@ struct Profiles {
     require_mode (Mode::SEARCH); \
     assert (!internal->preprocessing); \
     NON_QUIET_PROFILE_CODE ( \
-        const double N = internal->time (); const int L = internal->opts.profile; \
+        const double N = internal->time (); \
+        const int L = internal->opts.profile; \
         if (internal->stable && internal->profiles.stable.level <= L) \
             internal->stop_profiling (internal->profiles.stable, N); \
         if (!internal->stable && internal->profiles.unstable.level <= L) \

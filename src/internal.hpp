@@ -1919,7 +1919,8 @@ inline bool Internal::search_limits_hit () {
     return true;
   }
 
-  if (lim.ticks >= 0 && stats.ticks.search[0] + stats.ticks.search[1] >= lim.ticks) {
+  if (lim.ticks >= 0 &&
+      stats.ticks.search[0] + stats.ticks.search[1] >= lim.ticks) {
     LOG ("ticks limit %" PRId64 " reached", lim.ticks);
     return true;
   }

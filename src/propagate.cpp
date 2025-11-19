@@ -20,7 +20,7 @@ namespace CaDiCaL {
 // relevant in conflict analysis or in root-level fixing steps.
 
 static Clause decision_reason_clause;
-Clause*  Internal::decision_reason = &decision_reason_clause;
+Clause *Internal::decision_reason = &decision_reason_clause;
 
 // If chronological backtracking is used the actual assignment level might
 // be lower than the current decision level. In this case the assignment
@@ -314,7 +314,7 @@ bool Internal::propagate () {
         }
 
         literal_iterator lits = w.clause->begin ();
-	assert (lits[0] == lit || lits[1] == lit);
+        assert (lits[0] == lit || lits[1] == lit);
 
         // Simplify code by forcing 'lit' to be the second literal in the
         // clause.  This goes back to MiniSAT.  We use a branch-less version
@@ -346,8 +346,8 @@ bool Internal::propagate () {
           literal_iterator k = middle;
 
           // Find replacement watch 'r' at position 'k' with value 'v'.
-	  assert (lits + 2 <= k);
-	  LOG (w.clause, "search starting at %d", w.clause->pos);
+          assert (lits + 2 <= k);
+          LOG (w.clause, "search starting at %d", w.clause->pos);
           int r = 0;
           signed char v = -1;
 
@@ -579,8 +579,6 @@ void Internal::propergate () {
       ws.resize (j - ws.begin ());
     }
   }
-
-
 }
 
 } // namespace CaDiCaL

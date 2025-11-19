@@ -49,7 +49,7 @@ inline const char *Parser::parse_positive_int (int &ch, int &res,
 }
 
 inline const char *Parser::parse_positive_uint64_t (int &ch, uint64_t &res,
-                                               const char *name) {
+                                                    const char *name) {
   assert (isdigit (ch));
   res = ch - '0';
   while (isdigit (ch = parse_char ())) {
@@ -175,7 +175,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
       if (err)
         return err;
       if (ch != '\n')
-        PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars, clauses);
+        PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars,
+             clauses);
     } else {
       if (parse_char () != 'n')
         PER ("expected 'n' after 'p c'");
@@ -204,13 +205,14 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         return err;
       while (ch != '\n') {
         if (ch != '\r' && !isspace (ch))
-          PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars, clauses);
+          PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars,
+               clauses);
         ch = parse_char ();
       }
     }
 
-    MSG ("found %s'p cnf %d %" PRIu64 "'%s header", tout.green_code (), vars,
-         clauses, tout.normal_code ());
+    MSG ("found %s'p cnf %d %" PRIu64 "'%s header", tout.green_code (),
+         vars, clauses, tout.normal_code ());
 
     if (strict != FORCED)
       solver->resize (vars);
@@ -246,7 +248,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
   // Now read body of DIMACS part.
   //
-  int lit = 0; uint64_t parsed = 0;
+  int lit = 0;
+  uint64_t parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
       continue;
@@ -281,8 +284,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
 #ifndef QUIET
   double end = internal->time ();
-  MSG ("parsed %" PRIu64 " clauses in %.2f seconds %s time", parsed, end - start,
-       internal->opts.realtime ? "real" : "process");
+  MSG ("parsed %" PRIu64 " clauses in %.2f seconds %s time", parsed,
+       end - start, internal->opts.realtime ? "real" : "process");
 #endif
 
 #ifndef QUIET

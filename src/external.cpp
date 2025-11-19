@@ -41,11 +41,11 @@ void External::init (int new_max_var, bool extension) {
   if ((size_t) new_max_var >= vsize)
     enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);
-  reserve_at_least (ext_units, 2*new_max_var+2);
-  reserve_at_least (e2i, new_max_var+1);
-  reserve_at_least (ervars, new_max_var+1);
-  reserve_at_least (ext_flags, new_max_var+1);
-  reserve_at_least (internal->i2e, new_max_var+1);
+  reserve_at_least (ext_units, 2 * new_max_var + 2);
+  reserve_at_least (e2i, new_max_var + 1);
+  reserve_at_least (ervars, new_max_var + 1);
+  reserve_at_least (ext_flags, new_max_var + 1);
+  reserve_at_least (internal->i2e, new_max_var + 1);
   if (!max_var) {
     assert (e2i.empty ());
     e2i.push_back (0);
@@ -416,7 +416,7 @@ void External::remove_observed_var (int elit) {
   if (eidx > max_var)
     return;
 
-  if ((size_t)eidx <= is_observed.size ())
+  if ((size_t) eidx <= is_observed.size ())
     return;
   if (is_observed[eidx]) {
     // Follow opposite order of add_observed_var, first remove internal
@@ -444,7 +444,7 @@ void External::reset_observed_vars () {
   for (auto elit : vars) {
     int eidx = abs (elit);
     assert (eidx <= max_var);
-    if ((size_t)eidx >= is_observed.size ())
+    if ((size_t) eidx >= is_observed.size ())
       break;
     if (is_observed[eidx]) {
       int ilit = internalize (elit);
@@ -517,7 +517,7 @@ void External::implied (std::vector<int> &trailed) {
   // (Internal does not see these marks, so no earlier filter is
   // possible.)
 
-  trailed.clear();
+  trailed.clear ();
 
   for (const auto &ilit : ilit_implicants) {
     assert (ilit);

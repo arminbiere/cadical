@@ -684,8 +684,8 @@ void Stats::print (Internal *internal) {
          stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
     const int64_t vivified = stats.vivifiedtier1 + stats.vivifiedtier2 +
                              stats.vivifiedtier3 + stats.vivifiedirred;
-    PRT ("  vivified:      %15" PRId64 "   %10.2f %%  per check",
-         vivified, percent (vivified, stats.vivifychecks));
+    PRT ("  vivified:      %15" PRId64 "   %10.2f %%  per check", vivified,
+         percent (vivified, stats.vivifychecks));
     PRT ("  vified-irred:  %15" PRId64 "   %10.2f %%  per vivified",
          stats.vivifiedirred, percent (stats.vivifiedirred, vivified));
     PRT ("  vified-tier1:  %15" PRId64 "   %10.2f %%  per vivified",
@@ -732,8 +732,10 @@ void Stats::print (Internal *internal) {
          percent (stats.vivifydemote, stats.vivifystrs));
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
          stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
-    PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per non-reused decision",
-         stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
+    PRT ("  vivifyreused:  %15" PRId64
+         "   %10.2f %%  per non-reused decision",
+         stats.vivifyreused,
+         percent (stats.vivifyreused, stats.vivifydecs));
   }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",

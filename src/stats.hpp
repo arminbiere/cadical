@@ -38,11 +38,11 @@ struct Stats {
     int64_t ternary = 0;
     int64_t vivify = 0;
     int64_t walk = 0;
-    int64_t walkflip = 0; // ticks added to approximate walk
+    int64_t walkflip = 0;       // ticks added to approximate walk
     int64_t walkflipbroken = 0; // ticks added to approximate walk
-    int64_t walkflipWL = 0; // ticks added to approximate walk
-    int64_t walkbreak = 0; // ticks added to approximate walk
-    int64_t walkpick = 0; // ticks added to approximate walk
+    int64_t walkflipWL = 0;     // ticks added to approximate walk
+    int64_t walkbreak = 0;      // ticks added to approximate walk
+    int64_t walkpick = 0;       // ticks added to approximate walk
   } ticks;
 
   struct {
@@ -245,26 +245,28 @@ struct Stats {
   int64_t decompositions = 0; // number of SCC + ELS
   int64_t vivifications = 0;  // number of vivifications
   int64_t vivifychecks = 0;   // checked clauses during vivification
-  int64_t vivifiedirred = 0;   // irredundant vivified clauses during vivification
-  int64_t vivifiedtier1 = 0;   // tier-1 vivified clauses during vivification
-  int64_t vivifiedtier2 = 0;   // tier-2 vivified clauses during vivification
-  int64_t vivifiedtier3 = 0;   // tier-3 vivified clauses during vivification
-  int64_t vivifydecs = 0;     // vivification decisions
-  int64_t vivifyflushed = 0;     // subsumed clauses during sorting in vivification
-  int64_t vivifyreused = 0;   // reused vivification decisions
-  int64_t vivifysched = 0;    // scheduled clauses for vivification
-  int64_t vivifysubs = 0;     // subsumed clauses during vivification
-  int64_t vivifysubred = 0;   // subsumed clauses during vivification
-  int64_t vivifysubirr = 0;   // subsumed clauses during vivification
-  int64_t vivifystrs = 0;     // strengthened clauses during vivification
-  int64_t vivifystrirr = 0;   // strengthened irredundant clause
-  int64_t vivifystred1 = 0;   // strengthened redundant clause (1)
-  int64_t vivifystred2 = 0;   // strengthened redundant clause (2)
-  int64_t vivifystred3 = 0;   // strengthened redundant clause (3)
-  int64_t vivifyunits = 0;    // units during vivification
-  int64_t vivifyimplied = 0;  // implied during vivification
-  int64_t vivifyinst = 0;     // instantiation during vivification
-  int64_t vivifydemote = 0;   // demoting during vivification
+  int64_t vivifiedirred =
+      0; // irredundant vivified clauses during vivification
+  int64_t vivifiedtier1 = 0; // tier-1 vivified clauses during vivification
+  int64_t vivifiedtier2 = 0; // tier-2 vivified clauses during vivification
+  int64_t vivifiedtier3 = 0; // tier-3 vivified clauses during vivification
+  int64_t vivifydecs = 0;    // vivification decisions
+  int64_t vivifyflushed =
+      0; // subsumed clauses during sorting in vivification
+  int64_t vivifyreused = 0;  // reused vivification decisions
+  int64_t vivifysched = 0;   // scheduled clauses for vivification
+  int64_t vivifysubs = 0;    // subsumed clauses during vivification
+  int64_t vivifysubred = 0;  // subsumed clauses during vivification
+  int64_t vivifysubirr = 0;  // subsumed clauses during vivification
+  int64_t vivifystrs = 0;    // strengthened clauses during vivification
+  int64_t vivifystrirr = 0;  // strengthened irredundant clause
+  int64_t vivifystred1 = 0;  // strengthened redundant clause (1)
+  int64_t vivifystred2 = 0;  // strengthened redundant clause (2)
+  int64_t vivifystred3 = 0;  // strengthened redundant clause (3)
+  int64_t vivifyunits = 0;   // units during vivification
+  int64_t vivifyimplied = 0; // implied during vivification
+  int64_t vivifyinst = 0;    // instantiation during vivification
+  int64_t vivifydemote = 0;  // demoting during vivification
   int64_t transreds = 0;
   int64_t transitive = 0;
   struct {
@@ -361,7 +363,8 @@ struct Stats {
   int64_t incremental_decay = 0;
   struct {
     int64_t random_decisions = 0; // number of random decisions
-    int64_t random_decision_phases = 0; // number of phases of random decision
+    int64_t random_decision_phases =
+        0; // number of phases of random decision
   } randec;
 
   std::vector<uint64_t> bump_used = {0, 0};

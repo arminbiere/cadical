@@ -16,20 +16,21 @@ struct Limit {
   int64_t decisions;     // decision limit if non-negative
   int64_t preprocessing; // limit on preprocessing rounds
   int64_t localsearch;   // limit on local search rounds
-  int64_t ticks;        // ticks limit if non-negative
+  int64_t ticks;         // ticks limit if non-negative
 
-  int64_t compact;   // conflict limit for next 'compact'
-  int64_t condition; // conflict limit for next 'condition'
-  int64_t elim;      // conflict limit for next 'elim'
-  int64_t flush;     // conflict limit for next 'flush'
-  int64_t inprobe;   // conflict limit for next 'inprobe'
-  int64_t reduce;    // conflict limit for next 'reduce'
-  int64_t rephase;   // conflict limit for next 'rephase'
-  int64_t report;    // report limit for header
-  int64_t restart;   // conflict limit for next 'restart'
-  int64_t stabilize; // conflict/ticks limit for next 'stabilize'
-  int64_t incremental_decay; // conflict/ticks limit for next clause 'decay' for incremental clauses
-  int64_t random_decision; // randomized decision limit for conflicts
+  int64_t compact;           // conflict limit for next 'compact'
+  int64_t condition;         // conflict limit for next 'condition'
+  int64_t elim;              // conflict limit for next 'elim'
+  int64_t flush;             // conflict limit for next 'flush'
+  int64_t inprobe;           // conflict limit for next 'inprobe'
+  int64_t reduce;            // conflict limit for next 'reduce'
+  int64_t rephase;           // conflict limit for next 'rephase'
+  int64_t report;            // report limit for header
+  int64_t restart;           // conflict limit for next 'restart'
+  int64_t stabilize;         // conflict/ticks limit for next 'stabilize'
+  int64_t incremental_decay; // conflict/ticks limit for next clause 'decay'
+                             // for incremental clauses
+  int64_t random_decision;   // randomized decision limit for conflicts
 
   int keptsize;           // maximum kept size in 'reduce'
   int keptglue;           // maximum kept glue in 'reduce'
@@ -117,7 +118,7 @@ struct Last {
   } stabilize;
   struct {
     int64_t last_id;
-  }  incremental_decay;
+  } incremental_decay;
   Last ();
 };
 
@@ -157,8 +158,9 @@ struct Inc {
     last.NAME.ticks = TICKS; \
     const int64_t NEW_LIMIT = OLD_LIMIT + DELTA; \
     LIMIT = NEW_LIMIT; \
-  VERBOSE (2, "new ticks limit %" PRId64 "= %" PRId64 " + %f * %" PRId64, \
-    NEW_LIMIT, OLD_LIMIT, EFFORT, REFERENCE); \
+    VERBOSE (2, \
+             "new ticks limit %" PRId64 "= %" PRId64 " + %f * %" PRId64, \
+             NEW_LIMIT, OLD_LIMIT, EFFORT, REFERENCE); \
   } while (0)
 
 } // namespace CaDiCaL

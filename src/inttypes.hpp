@@ -27,6 +27,8 @@
 
 #ifdef NDEBUG
 #undef assert
-#define assert(...) if (!(...)) __builtin_unreachable ();
+#define assert(...) \
+  if (!(...)) \
+    __builtin_unreachable ();
 #endif
 #endif

@@ -7,14 +7,12 @@ namespace CaDiCaL {
 
 // Random walk local search based on 'ProbSAT' ideas.
 struct Tagged {
-  bool binary: 1;
+  bool binary : 1;
   unsigned counter_pos : 31;
 #ifndef NDEBUG
   Clause *c;
 #endif
-  explicit Tagged () {
-    assert (false);
-  }
+  explicit Tagged () { assert (false); }
   explicit Tagged (Clause *d, unsigned pos)
       : binary (d->size == 2), counter_pos (pos) {
     assert ((pos & (1 << 31)) == 0);
@@ -24,15 +22,14 @@ struct Tagged {
   }
 };
 
-
 struct Counter {
   unsigned count; // number of false literals
-  unsigned pos; // pos in the broken clauses
+  unsigned pos;   // pos in the broken clauses
   Clause *clause; // pointer to the clause itself
   explicit Counter (unsigned c, unsigned p, Clause *d)
       : count (c), pos (p), clause (d) {}
   explicit Counter (unsigned c, Clause *d)
-  : count (c), pos (UINT32_MAX), clause (d) {}
+      : count (c), pos (UINT32_MAX), clause (d) {}
 };
 
 struct WalkerFO {
@@ -42,38 +39,40 @@ struct WalkerFO {
   // for efficiency, storing the model each time an improvement is
   // found is too costly. Instead we store some of the flips since
   // last time and the position of the best model found so far.
-  Random random;           // local random number generator
-  int64_t ticks;	         // ticks to approximate run time
-  int64_t limit;           // limit on number of propagations
+  Random random;         // local random number generator
+  int64_t ticks;         // ticks to approximate run time
+  int64_t limit;         // limit on number of propagations
   vector<Tagged> broken; // currently unsatisfied clauses
-  double epsilon;          // smallest considered score
-  vector<double> table;    // break value to score table
-  vector<double> scores;   // scores of candidate literals
-  std::vector<int> flips; // remember the flips compared to the last best saved model
+  double epsilon;        // smallest considered score
+  vector<double> table;  // break value to score table
+  vector<double> scores; // scores of candidate literals
+  std::vector<int>
+      flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
   std::vector<signed char> best_values; // best model found so far
-  double score (unsigned); // compute score from break count
+  double score (unsigned);              // compute score from break count
 
   std::vector<Counter> tclauses;
   std::vector<std::vector<Tagged>> tcounters;
 
   using TOccs = std::vector<Tagged>;
-  TOccs & occs (int lit) {
-    const int idx = internal->vlit(lit);
-    assert ((size_t)idx < tcounters.size());
+  TOccs &occs (int lit) {
+    const int idx = internal->vlit (lit);
+    assert ((size_t) idx < tcounters.size ());
     return tcounters[idx];
   }
-  const TOccs & occs (int lit) const {
-    const int idx = internal->vlit(lit);
-    assert ((size_t)idx < tcounters.size());
+  const TOccs &occs (int lit) const {
+    const int idx = internal->vlit (lit);
+    assert ((size_t) idx < tcounters.size ());
     return tcounters[idx];
   }
-  void connect_clause (int lit, Clause * clause, unsigned pos) {
+  void connect_clause (int lit, Clause *clause, unsigned pos) {
     assert (pos < tclauses.size ());
     assert (tclauses[pos].clause == clause);
-    LOG (clause, "connecting clause on %d with already in occurrences %zu", lit, occs(lit).size ());
-    occs(lit).push_back(Tagged (clause, pos));
+    LOG (clause, "connecting clause on %d with already in occurrences %zu",
+         lit, occs (lit).size ());
+    occs (lit).push_back (Tagged (clause, pos));
   }
   void connect_clause (Clause *clause, unsigned pos) {
     assert (pos < tclauses.size ());
@@ -107,40 +106,38 @@ struct WalkerFO {
   }
   void check_broken () const {
 #ifndef NDEBUG
-    for (size_t i = 0; i < broken.size(); ++i) {
+    for (size_t i = 0; i < broken.size (); ++i) {
       const Tagged t = broken[i];
       assert (t.c);
-      assert (t.counter_pos < tclauses.size());
+      assert (t.counter_pos < tclauses.size ());
       assert (tclauses[t.counter_pos].clause == t.c);
       for (auto lit : *t.c) {
-	assert (internal->val (lit) < 0);
+        assert (internal->val (lit) < 0);
       }
     }
 #endif
   }
 
   void check_all () const {
-    check_broken();
-    check_occs();
+    check_broken ();
+    check_occs ();
   }
 
   static const uint32_t invalid_position = UINT32_MAX;
-  void make_clause(Tagged t);
-
+  void make_clause (Tagged t);
 
   WalkerFO (Internal *, double size, int64_t limit);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
   void save_final_minimum (int64_t old_minimum);
-  void make_clauses_along_occurrences(int lit);
-  void make_clauses_along_unsatisfied(int lit);
+  void make_clauses_along_occurrences (int lit);
+  void make_clauses_along_unsatisfied (int lit);
   void make_clauses (int lit);
   void break_clauses (int lit);
   unsigned walk_full_occs_pick_clause ();
   void walk_full_occs_flip_lit (int lit);
   int walk_full_occs_pick_lit (Clause *);
   unsigned walk_full_occs_break_value (int lit);
-
 };
 
 // These are in essence the CB values from Adrian Balint's thesis.  They
@@ -182,11 +179,11 @@ inline static double fitcbval (double size) {
 
 WalkerFO::WalkerFO (Internal *i, double size, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
-      ticks (0), limit (l), best_trail_pos(-1) {
+      ticks (0), limit (l), best_trail_pos (-1) {
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
-  tcounters.resize(i->max_var*2+2);
+  tcounters.resize (i->max_var * 2 + 2);
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
@@ -206,11 +203,10 @@ WalkerFO::WalkerFO (Internal *i, double size, int64_t l)
          table.size ());
 }
 
-
 // Add the literal to flip to the queue
 
-void WalkerFO::push_flipped(int flipped) {
-  LOG ("push literal %s on the flips", LOGLIT(flipped));
+void WalkerFO::push_flipped (int flipped) {
+  LOG ("push literal %s on the flips", LOGLIT (flipped));
   assert (flipped);
   if (best_trail_pos < 0) {
     LOG ("not pushing flipped %s to already invalid trail",
@@ -228,36 +224,35 @@ void WalkerFO::push_flipped(int flipped) {
   }
 
   if (best_trail_pos) {
-      LOG ("trail reached limit %zd but has best position %d", limit,
-           best_trail_pos);
-      save_walker_trail (true);
-      flips.push_back(flipped);
-      LOG ("pushed flipped %s to trail which now has size %zu",
-           LOGLIT (flipped), flips.size());
-      return;
-  }else {
-      LOG ("trail reached limit %zd without best position", limit);
-      flips.clear ();
-      LOG ("not pushing %s to invalidated trail", LOGLIT (flipped));
-      best_trail_pos = -1;
-      LOG ("best trail position becomes invalid");
-    }
+    LOG ("trail reached limit %zd but has best position %d", limit,
+         best_trail_pos);
+    save_walker_trail (true);
+    flips.push_back (flipped);
+    LOG ("pushed flipped %s to trail which now has size %zu",
+         LOGLIT (flipped), flips.size ());
+    return;
+  } else {
+    LOG ("trail reached limit %zd without best position", limit);
+    flips.clear ();
+    LOG ("not pushing %s to invalidated trail", LOGLIT (flipped));
+    best_trail_pos = -1;
+    LOG ("best trail position becomes invalid");
+  }
 }
-
 
 void WalkerFO::save_walker_trail (bool keep) {
   assert (best_trail_pos != -1);
-  assert ((size_t)best_trail_pos <= flips.size ());
+  assert ((size_t) best_trail_pos <= flips.size ());
 #ifdef LOGGING
   const size_t size_trail = flips.size ();
 #endif
-  const int kept = flips.size() - best_trail_pos;
+  const int kept = flips.size () - best_trail_pos;
   LOG ("saving %d values of flipped literals on trail of size %zd",
        best_trail_pos, size_trail);
 
   const auto begin = flips.begin ();
   const auto best = flips.begin () + best_trail_pos;
-  const auto end = flips.end();
+  const auto end = flips.end ();
 
   auto it = begin;
   for (; it != best; ++it) {
@@ -274,7 +269,7 @@ void WalkerFO::save_walker_trail (bool keep) {
 
 #ifndef NDEBUG
   for (auto v : internal->vars) {
-    if (internal->active(v))
+    if (internal->active (v))
       assert (best_values[v] == internal->phases.saved[v]);
   }
 #endif
@@ -290,7 +285,7 @@ void WalkerFO::save_walker_trail (bool keep) {
 
   assert ((int) (end - jt) == best_trail_pos);
   assert ((int) (jt - begin) == kept);
-  flips.resize(kept);
+  flips.resize (kept);
   LOG ("keeping %u literals %.0f%% on trail", kept,
        percent (kept, size_trail));
   LOG ("reset best trail position to 0");
@@ -307,14 +302,14 @@ void WalkerFO::save_final_minimum (int64_t old_init_minimum) {
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
   else
-    save_walker_trail(false);
+    save_walker_trail (false);
 
   ++internal->stats.walk.improved;
   for (auto v : internal->vars) {
     if (best_values[v])
       internal->phases.saved[v] = best_values[v];
     else
-      assert (!internal->active(v));
+      assert (!internal->active (v));
   }
   internal->copy_phases (internal->phases.prev);
 }
@@ -349,12 +344,12 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
 
   internal->require_mode (internal->WALK);
   assert (internal->val (lit) > 0);
-  START(walkbreak);
+  START (walkbreak);
 
   const uint64_t old = ticks;
   unsigned res = 0; // The computed break-count of 'lit'.
-  ticks += (1 + internal->cache_lines (occs(lit).size (), sizeof (Clause *)));
-
+  ticks +=
+      (1 + internal->cache_lines (occs (lit).size (), sizeof (Clause *)));
 
   for (const auto &w : occs (lit)) {
     const unsigned ref = w.counter_pos;
@@ -363,7 +358,7 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
   }
 
   internal->stats.ticks.walkbreak += ticks - old;
-  STOP(walkbreak);
+  STOP (walkbreak);
   return res;
 }
 
@@ -381,7 +376,7 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
 // decision level one, while the other variables are assigned at two.
 
 int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
-  START(walkpick);
+  START (walkpick);
   LOG ("picking literal by break-count");
   assert (scores.empty ());
   const int64_t old = ++ticks;
@@ -430,29 +425,33 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   scores.clear ();
   LOG ("picking literal %d by break-count", res);
   internal->stats.ticks.walkpick += ticks - old;
-  STOP(walkpick);
+  STOP (walkpick);
   return res;
 }
 
 /*------------------------------------------------------------------------*/
-void WalkerFO::make_clause(Tagged t) {
-  assert(t.counter_pos < tclauses.size());
+void WalkerFO::make_clause (Tagged t) {
+  assert (t.counter_pos < tclauses.size ());
   // TODO invalidate position in 'unsatisfied'
   auto count = tclauses[t.counter_pos].count++;
   if (count) {
-    LOG(tclauses[t.counter_pos].clause, "already made with counter %d at position %d",  tclauses[t.counter_pos].count, tclauses[t.counter_pos].pos);
+    LOG (tclauses[t.counter_pos].clause,
+         "already made with counter %d at position %d",
+         tclauses[t.counter_pos].count, tclauses[t.counter_pos].pos);
     assert (tclauses[t.counter_pos].clause == t.c);
     assert (tclauses[t.counter_pos].pos == WalkerFO::invalid_position);
     return;
   }
-  LOG(tclauses[t.counter_pos].clause, "make with counter %d at position %d",  tclauses[t.counter_pos].count, tclauses[t.counter_pos].pos);
+  LOG (tclauses[t.counter_pos].clause,
+       "make with counter %d at position %d", tclauses[t.counter_pos].count,
+       tclauses[t.counter_pos].pos);
   assert (tclauses[t.counter_pos].pos != WalkerFO::invalid_position);
   assert (tclauses[t.counter_pos].pos < broken.size ());
   ++ticks;
-  auto last = broken.back();
+  auto last = broken.back ();
 #ifndef NDEBUG
   assert (tclauses[t.counter_pos].clause == t.c);
-  assert(last.counter_pos < tclauses.size());
+  assert (last.counter_pos < tclauses.size ());
   assert (tclauses[last.counter_pos].clause == last.c);
 #endif
   unsigned pos = tclauses[t.counter_pos].pos;
@@ -464,11 +463,11 @@ void WalkerFO::make_clause(Tagged t) {
   broken.pop_back ();
 }
 
-
-void WalkerFO::make_clauses_along_occurrences(int lit) {
-  const auto &occs = this->occs(lit);
-  LOG("making clauses with %s along %zu occurrences", LOGLIT(lit), occs.size());
-  assert(internal->val (lit) > 0);
+void WalkerFO::make_clauses_along_occurrences (int lit) {
+  const auto &occs = this->occs (lit);
+  LOG ("making clauses with %s along %zu occurrences", LOGLIT (lit),
+       occs.size ());
+  assert (internal->val (lit) > 0);
   size_t made = 0;
   ticks += (1 + internal->cache_lines (occs.size (), sizeof (Clause *)));
 
@@ -480,12 +479,13 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
       return;
     }
 #endif
-    this->make_clause(c);
+    this->make_clause (c);
     made++;
   }
-  LOG("made %zu clauses by flipping %d, still %zu broken", made, lit, broken.size ());
-  LOG("made %zu clauses with flipped %s", made, LOGLIT(lit));
-  (void)made;
+  LOG ("made %zu clauses by flipping %d, still %zu broken", made, lit,
+       broken.size ());
+  LOG ("made %zu clauses with flipped %s", made, LOGLIT (lit));
+  (void) made;
 }
 
 void WalkerFO::make_clauses_along_unsatisfied (int lit) {
@@ -497,7 +497,8 @@ void WalkerFO::make_clauses_along_unsatisfied (int lit) {
   // TODO 'stats.make_visited++', 'made++' appropriately.
   size_t j = 0;
   const size_t size = this->broken.size ();
-  ticks += (1 + internal->cache_lines (this->broken.size (), sizeof (Clause *)));
+  ticks +=
+      (1 + internal->cache_lines (this->broken.size (), sizeof (Clause *)));
   for (size_t i = 0, j = 0; i < size; ++i) {
     assert (i >= j);
     const auto &c = this->broken[i];
@@ -507,16 +508,16 @@ void WalkerFO::make_clauses_along_unsatisfied (int lit) {
     for (auto other : *d.clause) {
       if (lit == other) {
         ++made;
-	--j;
-	++d.count;
-	LOG (d.clause, "made with count %d", d.count);
-	d.pos = WalkerFO::invalid_position;
+        --j;
+        ++d.count;
+        LOG (d.clause, "made with count %d", d.count);
+        d.pos = WalkerFO::invalid_position;
         break;
       }
     }
     if (d.pos != WalkerFO::invalid_position)
       LOG (d.clause, "still broken");
-    assert (made + j == i+1); // assertions holds after incrementing 'i'
+    assert (made + j == i + 1); // assertions holds after incrementing 'i'
   }
   assert (j <= size);
   this->broken.resize (j);
@@ -537,9 +538,9 @@ void WalkerFO::make_clauses (int lit) {
 }
 
 void WalkerFO::break_clauses (int lit) {
-  START(walkflipbroken);
+  START (walkflipbroken);
   const int64_t old = ticks;
-  LOG ("breaking clauses on %s", LOGLIT(lit));
+  LOG ("breaking clauses on %s", LOGLIT (lit));
   // Finally add all new unsatisfied (broken) clauses.
 
 #ifdef LOGGING
@@ -567,7 +568,7 @@ void WalkerFO::break_clauses (int lit) {
   }
   LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
   internal->stats.ticks.walkflipbroken += ticks - old;
-  STOP(walkflipbroken);
+  STOP (walkflipbroken);
 }
 
 void WalkerFO::walk_full_occs_flip_lit (int lit) {
@@ -587,7 +588,7 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
   make_clauses (lit);
   break_clauses (-lit);
 
-  if (!broken.empty())
+  if (!broken.empty ())
     check_all ();
   internal->stats.ticks.walkflip += ticks - old;
 }
@@ -674,7 +675,6 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     }
     size += c->size;
     n++;
-
   }
   double average_size = relative (size, n);
 
@@ -795,7 +795,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
       if (!satisfied) {
         assert (satisfiable); // at least one non-assumed variable ...
         LOG (c, "broken");
-	walker.tclauses[pos].pos = walker.broken.size();
+        walker.tclauses[pos].pos = walker.broken.size ();
         walker.broken.push_back (Tagged (c, pos));
       } else {
 #ifdef LOGGING
@@ -813,7 +813,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     }
 #endif
   }
-  walker.check_all();
+  walker.check_all ();
   int res; // Tells caller to continue with local search.
 
   if (!failed) {
@@ -873,17 +873,15 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 #endif
 
     if (opts.profile >= 2) {
-      PHASE ("walk", stats.walk.count,
-             "%.2f million ticks per second",
-             1e-6 * relative (walker.ticks,
-                       time () - profiles.walk.started));
+      PHASE ("walk", stats.walk.count, "%.2f million ticks per second",
+             1e-6 *
+                 relative (walker.ticks, time () - profiles.walk.started));
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
              relative (1e-3 * flips, time () - profiles.walk.started));
 
     } else {
-      PHASE ("walk", stats.walk.count, "%.2f ticks",
-             1e-6 * walker.ticks);
+      PHASE ("walk", stats.walk.count, "%.2f ticks", 1e-6 * walker.ticks);
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips", 1e-3 * flips);
     }
@@ -905,7 +903,6 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
            "aborted due to inconsistent assumptions");
   }
 
-
   for (auto idx : vars)
     if (active (idx))
       set_val (idx, 0);
@@ -913,7 +910,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
   assert (level == 2);
   level = 0;
 
-  init_watches();
+  init_watches ();
   connect_watches ();
 
 #ifndef QUIET
@@ -947,16 +944,19 @@ void Internal::walk_full_occs () {
   }
   const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t limit = ticks - last.walk.ticks;
-  VERBOSE (2, "walk scheduling: last %" PRId64 " current %" PRId64 " delta %" PRId64, \
-           last.walk.ticks, ticks, limit); \
+  VERBOSE (2,
+           "walk scheduling: last %" PRId64 " current %" PRId64
+           " delta %" PRId64,
+           last.walk.ticks, ticks, limit);
   last.walk.ticks = ticks;
   limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff)
     limit = opts.walkmineff;
-  // local search is very cache friendly, so we actually really go over a lot of ticks
-  if (limit > 1e3 * opts.walkmaxeff){
+  // local search is very cache friendly, so we actually really go over a
+  // lot of ticks
+  if (limit > 1e3 * opts.walkmaxeff) {
     MSG ("reached maximum efficiency %" PRId64, limit);
-    limit =  1e3 * opts.walkmaxeff;
+    limit = 1e3 * opts.walkmaxeff;
   }
   (void) walk_full_occs_round (limit, false);
   STOP_INNER_WALK ();

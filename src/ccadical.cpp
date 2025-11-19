@@ -205,5 +205,4 @@ void ccadical_phase (CCaDiCaL *wrapper, int lit) {
 void ccadical_unphase (CCaDiCaL *wrapper, int lit) {
   ((Wrapper *) wrapper)->solver->unphase (lit);
 }
-
 }

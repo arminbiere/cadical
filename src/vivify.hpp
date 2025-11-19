@@ -42,9 +42,7 @@ struct Vivifier {
         schedule_tier3 (schedules[2]), schedule_irred (schedules[3]),
         tier (mode_tier) {}
 
-  void erase () {
-    erase_vector (sorted);
-  }
+  void erase () { erase_vector (sorted); }
 };
 
 } // namespace CaDiCaL

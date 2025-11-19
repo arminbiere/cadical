@@ -130,7 +130,8 @@ void Internal::backtrack_without_updating_phases (int new_level) {
       // backtracking.  It is possible to just keep out-of-order assigned
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
-      assert ((in_mode(BACKBONE))|| opts.chrono || external_prop || did_external_prop);
+      assert ((in_mode (BACKBONE)) || opts.chrono || external_prop ||
+              did_external_prop);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);

@@ -74,7 +74,8 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
 #endif
   LOG (subsumed, "subsumed to be deleted");
   LOG (subsuming, "subsuming to be (un)deleted");
-  if (subsumed->redundant && subsuming->redundant && subsuming->glue < subsumed->glue) {
+  if (subsumed->redundant && subsuming->redundant &&
+      subsuming->glue < subsumed->glue) {
     promote_clause (subsuming, subsumed->glue);
   }
   if (subsumed->redundant) {
@@ -334,7 +335,9 @@ struct vivify_more_noccs_kissat {
   bool operator() (int a, int b) {
     unsigned s = internal->noccs (a);
     unsigned t = internal->noccs (b);
-    return (((t - s) | ((internal->vlit (a) - internal->vlit (b)) & ~(s - t))) >> 31);
+    return (((t - s) |
+             ((internal->vlit (a) - internal->vlit (b)) & ~(s - t))) >>
+            31);
   }
 };
 
@@ -756,7 +759,6 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
   }
 }
 
-
 /*------------------------------------------------------------------------*/
 
 // checks whether the clause can be strengthen or not.
@@ -908,7 +910,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   }
 
   sort (sorted.begin (), sorted.end (), vivify_more_noccs_kissat (this));
-  assert (std::is_sorted(sorted.begin (), sorted.end (), vivify_more_noccs (this)));
+  assert (std::is_sorted (sorted.begin (), sorted.end (),
+                          vivify_more_noccs (this)));
 
   // The actual vivification checking is performed here, by assuming the
   // negation of each of the remaining literals of the clause in turn and
@@ -1094,9 +1097,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     reverse (lrat_chain.begin (), lrat_chain.end ());
   }
 
-  // For an explanation of the code, see our POS'25 paper ``Revisiting Clause
-  // Vivification'' (although for the experiments we focused on Kissat instead
-  // of CaDiCaL)
+  // For an explanation of the code, see our POS'25 paper ``Revisiting
+  // Clause Vivification'' (although for the experiments we focused on
+  // Kissat instead of CaDiCaL)
   if (subsuming) {
     assert (c != subsuming);
     vivify_subsume_clause (subsuming, c);
@@ -1194,8 +1197,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 //
 
 // Non-recursive version, as some bugs have been found by Dominik Schreiber
-// during his very large experiments. DFS over the reasons with preordering (aka
-// we explore the entire reason before exploring deeper)
+// during his very large experiments. DFS over the reasons with preordering
+// (aka we explore the entire reason before exploring deeper)
 void Internal::vivify_build_lrat (
     int lit, Clause *reason,
     std::vector<std::tuple<int, Clause *, bool>> &stack) {
@@ -1289,7 +1292,8 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
       {
         const int64_t lit_count = internal->noccs (lit);
         assert (lit_count);
-        LOG ("checking literal %s with %" PRId64 " occurrences", LOGLIT (lit), lit_count);
+        LOG ("checking literal %s with %" PRId64 " occurrences",
+             LOGLIT (lit), lit_count);
         if (lit_count <= best_count)
           continue;
         best_count = lit_count;
@@ -1301,9 +1305,9 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
     assert (best_count);
     assert (best_count < UINT32_MAX);
     ref.count[i] =
-      (((uint64_t) best_count) << 32) + (uint64_t) internal->vlit (best);
-    LOG ("final count at position %d is %s - %u: %" PRIu64, i, LOGLIT (best), best_count,
-         ref.count[i]);
+        (((uint64_t) best_count) << 32) + (uint64_t) internal->vlit (best);
+    LOG ("final count at position %d is %s - %u: %" PRIu64, i,
+         LOGLIT (best), best_count, ref.count[i]);
     lits[i] = best;
   }
   return ref;
@@ -1327,7 +1331,7 @@ Internal::vivify_prioritize_leftovers ([[maybe_unused]] char tag,
     if (prioritized) {
       // put the left-overs first to be kept
       std::stable_partition (begin (schedule), end (schedule),
-                      [] (Clause *c) { return c->vivify; });
+                             [] (Clause *c) { return c->vivify; });
     }
     schedule.resize (max);
   }
@@ -1414,7 +1418,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
         // below.
         //
         sort (c->begin (), c->end (), vivify_more_noccs (this));
-//        ++ticks;
+        //        ++ticks;
       }
       // Flush clauses subsumed by another clause with the same prefix,
       // which also includes flushing syntactically identical clauses.
@@ -1422,13 +1426,14 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
       flush_vivification_schedule (sched, ticks);
     }
     // approximation for schedule
-//    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+    //    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
     connect_watches (); // watch all relevant clauses
   }
   vivify_propagate (ticks);
 
   PHASE ("vivify", stats.vivifications,
-         "[phase %c] leftovers out of %zu clauses", 'u', vivifier.schedule_tier1.size ());
+         "[phase %c] leftovers out of %zu clauses", 'u',
+         vivifier.schedule_tier1.size ());
 }
 
 inline std::vector<vivify_ref> &current_refs_schedule (Vivifier &vivifier) {
@@ -1507,7 +1512,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   auto &schedule = current_schedule (vivifier);
 
   PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 " with %zu clauses",
+         "starting %c vivification round ticks limit %" PRId64
+         " with %zu clauses",
          vivifier.tag, ticks_limit, schedule.size ());
 
   assert (watching ());
@@ -1618,7 +1624,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     // if we have gone through all the leftovers (the next candidate
     // is not one), all the current clauses are leftovers for the next
     // round
-    if (!schedule.empty () && !schedule.back()->vivify)
+    if (!schedule.empty () && !schedule.back ()->vivify)
       for (auto c : schedule)
         c->vivify = true;
 #else
@@ -1770,14 +1776,15 @@ bool Internal::vivify () {
   }
   int64_t init_ticks = 0;
 
-  // Refill the schedule every time. Unchecked clauses are 'saved' by setting
-  // their 'vivify' bit, such that they can be tried next time. There are two
-  // things to denote: the option 'vivifyonce' does what it is supposed to do,
-  // and it works because the ticks are kept for the next schedule.
-  // Also, we limit the size of the schedule to limit the cost of sorting.
+  // Refill the schedule every time. Unchecked clauses are 'saved' by
+  // setting their 'vivify' bit, such that they can be tried next time.
+  // There are two things to denote: the option 'vivifyonce' does what it is
+  // supposed to do, and it works because the ticks are kept for the next
+  // schedule. Also, we limit the size of the schedule to limit the cost of
+  // sorting.
   //
-  // TODO: After limiting, the cost we fixed some heuristics bug, so maybe we
-  // could increase the limit.
+  // TODO: After limiting, the cost we fixed some heuristics bug, so maybe
+  // we could increase the limit.
   //
   // TODO: count against ticks.vivify directly instead of this unholy
   // shifting.

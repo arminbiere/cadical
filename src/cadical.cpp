@@ -911,7 +911,8 @@ int App::main (int argc, char **argv) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"
-           "c automated reasoning. 🚧 🚧 🚧\n", write_result_file);
+           "c automated reasoning. 🚧 🚧 🚧\n",
+           write_result_file);
   if (less_pipe) {
     close (1);
     pclose (less_pipe);

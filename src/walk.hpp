@@ -88,6 +88,4 @@ struct ClauseOrBinary {
 };
 } // namespace CaDiCaL
 
-
-
 #endif

@@ -28,11 +28,11 @@
 #endif // VERSION
 #endif // NBUILD
 
-    /*------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------*/
 
-    // The copyright of the code is here.
+// The copyright of the code is here.
 
-    static const char *COPYRIGHT = "Copyright (c) 2016-2024";
+static const char *COPYRIGHT = "Copyright (c) 2016-2024";
 static const char *AUTHORS =
     "A. Biere, M. Fleury, N. Froleyks, K. Fazekas, F. Pollitt, T. Faller";
 static const char *AFFILIATIONS =

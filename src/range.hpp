@@ -64,11 +64,13 @@ class Range {
   // Reverse iterator for iterating from max_var down to 1
   class reverse_iterator {
     int idx;
+
   public:
     reverse_iterator (int i) : idx (i) {}
     void operator++ () { idx = dec (idx); }
     const int &operator* () const { return idx; }
-    friend bool operator!= (const reverse_iterator &a, const reverse_iterator &b) {
+    friend bool operator!= (const reverse_iterator &a,
+                            const reverse_iterator &b) {
       return a.idx != b.idx;
     }
   };
@@ -81,8 +83,12 @@ public:
   iterator end () const { return assert (n >= 0), iterator (inc (n)); }
 
   // Reverse iteration methods
-  reverse_iterator rbegin () const { return assert (n >= 0), reverse_iterator (n); }
-  reverse_iterator rend () const { return assert (n >= 0), reverse_iterator (0); }
+  reverse_iterator rbegin () const {
+    return assert (n >= 0), reverse_iterator (n);
+  }
+  reverse_iterator rend () const {
+    return assert (n >= 0), reverse_iterator (0);
+  }
 
   Range (int &m) : n (m) { assert (m >= 0); }
 };

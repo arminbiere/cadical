@@ -309,7 +309,9 @@ public:
   //   require (SATISFIED)
   //   ensure (SATISFIED)
   //
-  int val (int lit, bool use_default_value_for_declared_but_not_used_variable = true);
+  int val (
+      int lit,
+      bool use_default_value_for_declared_but_not_used_variable = true);
 
   // Try to flip the value of the given literal without falsifying the
   // formula.  Returns 'true' if this was successful. Otherwise the model is
@@ -512,7 +514,8 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
-  [[deprecated ("use the function implied instead with the same semantics and arguments")]]
+  [[deprecated ("use the function implied instead with the same semantics "
+                "and arguments")]]
   void get_entrailed_literals (std::vector<int> &implicants) {
     implied (implicants);
   }
@@ -584,10 +587,10 @@ public:
   // the user is required to use this to check which variables are currently
   // free before adding new variables of their own.
   // The alternative is to reserve variables in batches with
-  // 'declare_more_variables'. Using 'resize' in combination with any technique
-  // that could add variables (currently only factor) is not advised.
-  // After each application of `add`, `vars ()` will return an updated
-  // value, even if you did not import the entire clause yet.
+  // 'declare_more_variables'. Using 'resize' in combination with any
+  // technique that could add variables (currently only factor) is not
+  // advised. After each application of `add`, `vars ()` will return an
+  // updated value, even if you did not import the entire clause yet.
   //
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
@@ -603,7 +606,8 @@ public:
   //   ensure (STEADY)
   //
   void resize (int min_max_var);
-  [[deprecated ("use the function resize instead with the same semantics and arguments.")]]
+  [[deprecated ("use the function resize instead with the same semantics "
+                "and arguments.")]]
   void reserve (int min_max_var);
 
   // Increase the maximum variable index by a number of new variables.
@@ -1248,7 +1252,6 @@ public:
   //
   // virtual void notify_assignment (int lit, bool is_fixed) = 0;
   virtual void notify_assignment (const std::vector<int> &lits) = 0;
-
 
   // The notification for the assignement follow the standard trail
   // used in SAT solvers. The assignment is a stack with (possibly

@@ -1743,7 +1743,8 @@ struct ImpliedCall : public Call {
   ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
     std::vector<int> entrailed;
-    if (mobical.donot.enforce || s->state () == State::SATISFIED || s->state () == State::INCONCLUSIVE)
+    if (mobical.donot.enforce || s->state () == State::SATISFIED ||
+        s->state () == State::INCONCLUSIVE)
       s->implied (entrailed);
     (void) (extendmap);
   }
@@ -2149,8 +2150,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -3140,7 +3141,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
       generate_queries (random), generate_resize (random, maxvars),
           generate_declare_more_variables (random),
           generate_declare_one_more_variable (random),
-	  generate_implied(random), generate_propagate(random),
+          generate_implied (random), generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
     if (in_connection && random.generate_bool ()) {
@@ -4432,9 +4433,11 @@ void Reader::parse () {
       if (first)
         error ("unexpected argument '%s' after 'irredundant'", first);
       c = new IrredundantCall ();
-    } else if (!strcmp (keyword, "resize") || !strcmp (keyword, "reserve") ) {
+    } else if (!strcmp (keyword, "resize") ||
+               !strcmp (keyword, "reserve")) {
       if (!strcmp (keyword, "reserve"))
-        printf ("WARNING use of deprecated 'reserve'. Use 'resize' instead.\n");
+        printf (
+            "WARNING use of deprecated 'reserve'. Use 'resize' instead.\n");
       if (!first)
         error ("argument to 'resize' missing");
       if (!parse_int_str (first, lit))
@@ -4717,7 +4720,8 @@ void Reader::parse () {
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
       c = new PropagateAssumptionsCall ();
-    } else if (!strcmp (keyword, "get_entrailed_literals") || !strcmp (keyword, "implied")) {
+    } else if (!strcmp (keyword, "get_entrailed_literals") ||
+               !strcmp (keyword, "implied")) {
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       c = new ResetAssumptionsCall ();
@@ -4897,7 +4901,6 @@ extern "C" {
 #elif !defined(MAP_ANONYMOUS)
 #error "System does not support mapping anonymous pages?"
 #endif
-
 
 Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;
