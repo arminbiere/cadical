@@ -15,16 +15,16 @@ Breaking Changes:
   as semantics of the function did not change.  This change was announced
   with release 2.2.0 where `reserve` became deprecated.
 
-- Bounded value addition (see below) requires a change in the
-  incremental usage (**breaking change**):
+- As announced in release 2.2.0 our new algorithm for bounded value addition
+  (aka `factor`) requires changing how variables are used, particular in
+  incremental SAT solving:
 
-  This is a *breaking change* for incremental usage when `factor` aka
-  BVA is enabled (which it is by default). To now incrementally add new
-  variables either use `vars ()` or `declare_more_variables ()`.  For more
-  details see their specification in the `cadical.hpp` header file.  As a
-  hot-fix, you can disable `factor` aka BVA with `set ('factor', 0)` though,
-  i.e., the solver checks this API contract only in a lazy way, by making
-  sure that the client code does not use internally added extension variables.
+  To now incrementally add new variables either use `vars ()` or
+  `declare_more_variables ()`.  For more details see their specification in
+  the `cadical.hpp` header file.  As a hot-fix, you can disable `factor` aka
+  BVA with `set ('factor', 0)` though, i.e., the solver checks this API
+  contract only in a lazy way, by making sure that the client code does not
+  use internally added extension variables.
 
 
 Version 2.2.0
