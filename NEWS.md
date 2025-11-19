@@ -54,10 +54,6 @@ New and Improved Techniques:
     factors out common variables and uses extended resolution with a
     new variable to derive equisatisfiable clauses which replace the old ones.
 
-  + Warning: Factor is currenly on in the development branch, but we
-    expect to have factor off in the 2.2 release and plan to activate
-    it by default in the next release.
-
 - Clausal Sweeping.
 
   + Introducing the 'kitten' solver to cadical. Enables semantic search
