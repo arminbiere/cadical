@@ -1314,11 +1314,7 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
 }
 /*------------------------------------------------------------------------*/
 inline void
-Internal::vivify_prioritize_leftovers (
-#if !defined(__APPLE__) && !defined(__MACH__)
-      [[maybe_unused]] 
-#endif
-                                       char tag,
+Internal::vivify_prioritize_leftovers (char tag,
                                        size_t prioritized,
                                        std::vector<Clause *> &schedule) {
   if (prioritized) {
@@ -1330,6 +1326,9 @@ Internal::vivify_prioritize_leftovers (
     for (auto c : schedule)
       c->vivify = true;
   }
+#ifdef QUIET
+  (void) tag;
+#endif
   const size_t max = opts.vivifyschedmax;
   if (schedule.size () > max) {
     if (prioritized) {
