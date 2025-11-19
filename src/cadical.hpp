@@ -514,8 +514,12 @@ public:
   //
   void implied (std::vector<int> &implicants);
 
+#if defined(__APPLE__) || defined(__MACH__)
+  // TODO
+#else
   [[deprecated ("use the function implied instead with the same semantics "
                 "and arguments")]]
+#endif
   void get_entrailed_literals (std::vector<int> &implicants) {
     implied (implicants);
   }
@@ -607,8 +611,13 @@ public:
   //   ensure (STEADY)
   //
   void resize (int min_max_var);
+
+#if defined(__APPLE__) || defined(__MACH__)
+  // TODO
+#else
   [[deprecated ("use the function resize instead with the same semantics "
                 "and arguments.")]]
+#endif
   void reserve (int min_max_var);
 
   // Increase the maximum variable index by a number of new variables.

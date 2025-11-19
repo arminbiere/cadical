@@ -1314,7 +1314,11 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
 }
 /*------------------------------------------------------------------------*/
 inline void
-Internal::vivify_prioritize_leftovers ([[maybe_unused]] char tag,
+Internal::vivify_prioritize_leftovers (
+#if !defined(__APPLE__) && !defined(__MACH__)
+      [[maybe_unused]] 
+#endif
+                                       char tag,
                                        size_t prioritized,
                                        std::vector<Clause *> &schedule) {
   if (prioritized) {
