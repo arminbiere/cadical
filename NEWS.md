@@ -3,29 +3,40 @@ Version 3.0.0
 
 Breaking Changes:
 
-- Renamed `get_entrailed_literals` to `implied`. The call is now also
-  allowed in the 'SATISFIED' state.  Due to removing the former
-  function from the interface it is a breaking change, but the
-  function has the same (slightly extended) semantics since 2.2.0,
-  where `get_entrailed_literals` became deprecated.
+- Renamed `get_entrailed_literals` to `implied` after it became deprecated
+  in the 2.2.0 release.  Due to removing the former function from the
+  interface it is a breaking change, but the function has the same (slightly
+  extended in release 2.2.0) semantics as before and users can just replace
+  `get_entrailed_literals` by `implied`.
 
-- Renamed `reserve` to `resize` due to its misleading name (compared to
-  the semantics `reserve` and `resize` for `std::vector).  Users can
-  replace in their code simply replace `reserve` by `resize` though
-  as semantics of the function did not change.  This change was announced
-  with release 2.2.0 where `reserve` became deprecated.
+- Renamed `reserve` to `resize` after it became deprecated in the 2.2.0
+  release due to its misleading name (cf. semantics of `reserve` and
+  `resize` for `std::vector).  Users can replace in their code simply
+  replace `reserve` by `resize` though as semantics of the function did not
+  change at all.
 
-- As announced in release 2.2.0 our new algorithm for bounded value addition
-  (aka `factor`) requires changing how variables are used, particular in
-  incremental SAT solving:
-
-  To now incrementally add new variables either use `vars ()` or
-  `declare_more_variables ()`.  For more details see their specification in
-  the `cadical.hpp` header file.  As a hot-fix, you can disable `factor` aka
-  BVA with `set ('factor', 0)` though, i.e., the solver checks this API
-  contract only in a lazy way, by making sure that the client code does not
-  use internally added extension variables.
-
+- Furthermore, and probably the most severe change, and as announced in
+  the 2.2.0 release, our incremental version of bounded value addition (aka
+  BVA or `factor`) requires changing how variables are treated, particular
+  in the context of incremental SAT solving.  In principle, variables now
+  have to be declared explicitely (through `declare_more_variables ()` or
+  `vars ()`) before adding clauses containing them or asking for their value
+  etc.  This became necessary for proof checking in incremental SAT solving
+  when using techniques, such as BVA (`factor`), that rely on the
+  introduction of extension variables.  These variables necessarily have to
+  occur in proofs and have to be distinguished from user variables.  Our
+  solution is to force the user to ask the solver for unused variable
+  ranges, which avoids overlap with extension variables. Only these
+  variables can then be used freely as before.  For one-shot-solving there
+  is no usage change, nor for the first solving/simplification call to the
+  SAT solver.  The same applies if all techniques relying on extension
+  variables are disabled (currently when `factor` is disabled).  But for
+  incremental usage, keeping `factor` enabled (the default), the user has to
+  follow this new API contract.  Disabling `factor` however would have the
+  consequence to reduce solving efficiency particularly on hard
+  combinatorial benchmarks such as pigeon hole formulas.  We are also
+  working on further uses of extension variables, for which this new API
+  contract will also apply.
 
 Version 2.2.0
 -------------
