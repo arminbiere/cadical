@@ -57,11 +57,11 @@ User Facing Changes:
 - The `lucky` procedure can now handle assumptions (but not the external
   propagator). Set `luckyassumptions` to false if you do not want that.
 
-- `val` now has a Boolean as second argument that checks that the
-  variables was declared. The default value is the old behavior,
-  but this can be useful for debugging applications.
+- The `val` function now has a Boolean as second argument that checks that
+  the variables was declared. The default is the old behavior.
+  This new parameter can be useful for debugging applications.
 
-- Fixed `VeriPB' compatibility issues.
+- Fixed `VeriPB` compatibility issues.
 
 - The `get_entrailed_literals` function became **deprecated** and is going to be
   replaced by the new `implied` function, with the same sematics, except
