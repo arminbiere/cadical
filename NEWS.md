@@ -11,7 +11,7 @@ Breaking Changes:
 
 - Renamed the `reserve` function to `resize` after it became deprecated in the
   2.2.0 release due to its misleading name (cf. semantics of `reserve` and
-  `resize` for `std::vector).  Users can replace in their code simply replace
+  `resize` for `std::vector`).  Users can replace in their code simply replace
   `reserve` by `resize` though as semantics of the function did not
   change at all.
 
