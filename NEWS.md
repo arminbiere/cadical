@@ -362,7 +362,8 @@ Version 1.7.0
 
 - Added native LRAT support.
 
-Version 1.6.0 -------------
+Version 1.6.0
+-------------
 
 - Added IPASIR-UP functions to the API to support external propagation,
   external decisions, and clause addition during search.  For more details
