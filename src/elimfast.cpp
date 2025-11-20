@@ -13,8 +13,8 @@ namespace CaDiCaL {
 // remaining occurrences (or 'fastelimbound + 1' if some limit was hit).
 
 int64_t Internal::flush_elimfast_occs (int lit) {
-  const int64_t occslim = opts.fastelimbound;
-  const int64_t clslim = opts.fastelimocclim;
+  const int64_t occslim = opts.fastelimocclim;
+  const int64_t clslim = opts.fastelimclslim;
   const int64_t failed = occslim + 1;
   Occs &os = occs (lit);
   const const_occs_iterator end = os.end ();
