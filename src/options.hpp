@@ -122,6 +122,7 @@ OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
 OPTION( factorredundant,   2,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
+OPTION( factorschedule,    0,  0,  3,0,0,1, "schedule (0=occs, 1=queue, 2=heap, 3=idx)") \
 OPTION( factorsize,       20,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( factorxor,         1,  0,  1,0,0,1, "factor eliminated xor (and ite) gates (needs factorsize > 2)") \

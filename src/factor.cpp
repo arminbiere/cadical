@@ -9,12 +9,30 @@ namespace CaDiCaL {
 #define NOUNTED 4
 
 inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
-  size_t s = internal->occs (internal->u2i (a)).size ();
-  size_t t = internal->occs (internal->u2i (b)).size ();
-  if (s > t)
-    return true;
-  if (s < t)
-    return false;
+  const int comp = internal->opts.factorschedule;
+  if (comp == 0) {
+    size_t s = internal->occs (internal->u2i (a)).size ();
+    size_t t = internal->occs (internal->u2i (b)).size ();
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  } else if (comp == 1) {
+    auto s = internal->score (internal->u2i (a));
+    auto t = internal->score (internal->u2i (b));
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  } else if (comp == 2) {
+    size_t s = internal->bumped (internal->u2i (a));
+    size_t t = internal->bumped (internal->u2i (b));
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  }
+  // else (comp == 3) and default if any value is the same.
   return a > b;
 }
 
@@ -1204,7 +1222,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   } else if (opts.factorbumpheap == 2) {
     double new_score = score_inc;
     for (auto idx : vars) {
-      const double tmp = stab[idx];
+      const double tmp = score (idx);
       if (tmp > new_score)
         new_score = tmp;
     }
