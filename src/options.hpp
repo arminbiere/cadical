@@ -117,9 +117,9 @@ OPTION( factorbumpheap,    1,  0,  2,0,0,1, "score extension variables in heap [
 OPTION( factorbumpqueue,   1,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds (is skipped with factorxor)") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delaying factor") \
-OPTION( factoreffort,    100,  0,1e6,0,0,1, "relative effort per mille") \
+OPTION( factoreffort,     75,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
-OPTION( factoriniticks,  500,  1,1e6,0,0,1, "initial effort in millions") \
+OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
 OPTION( factorredundant,   2,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
 OPTION( factorsize,       20,  2,2e9,0,0,1, "clause size limit") \
