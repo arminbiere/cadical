@@ -1,0 +1,22 @@
+name: Build C++
+
+# Controls when the action will run. Triggers the workflow on push
+on: 
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+    steps:
+    - name: "Check out"
+      uses: actions/checkout@v4
+    - name: "Configure"
+      run: |
+        ./configure
+    - name: "Build"
+      run: |
+        make
+    - name: "Test"
+      run: |
+        make test
