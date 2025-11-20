@@ -62,8 +62,8 @@ inline void Internal::mark_added (int lit, int size, bool redundant) {
     mark_ternary (lit);
   if (!redundant)
     mark_block (lit);
-  if (!redundant || (opts.factorredundant == 2 ||
-                     (opts.factorredundant == 1 && size == 2)))
+  if (size <= opts.factorsize && (opts.factorredundant > 1 || !redundant ||
+                                  (opts.factorredundant == 1 && size == 2)))
     mark_factor (lit);
 }
 

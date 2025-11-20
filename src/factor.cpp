@@ -70,10 +70,11 @@ void Internal::factor_mode (bool redundant_only) {
   if (size_limit == 2)
     return;
 
-  // iterate counts of larger clauses rounds often
+  // iterate counts of larger clauses rounds often.
+  // longer clauses can always be useful with xors.
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
-  for (unsigned round = 1; round <= rounds; round++) {
+  for (unsigned round = 1; !opts.factorxor && round <= rounds; round++) {
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
@@ -232,10 +233,12 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 // for each second potential literal. Reset by using a vector.
 Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
                                      int *reduction_ptr) {
-  // fast skip if the maximum number of matched clauses is 4.
   LOG ("xorite for %d", first_factor);
-  if ((int) occs (first_factor).size () < (4 + factoring.bound) ||
-      (int) occs (-first_factor).size () < (4 + factoring.bound))
+  // fast skip if the maximum number of matched clauses is to low
+  // factoring.bound is at least -2
+  const size_t min_match_limit = 4 + factoring.bound;
+  if (occs (first_factor).size () < min_match_limit ||
+      occs (-first_factor).size () < min_match_limit)
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
@@ -251,8 +254,6 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   // match clause c (containing first_factor) with
   // a clause d (containing -first_factor).
   // The two clauses should coincide except on one literal.
-  // TODO: figure out how to count matches and build pairs.
-  // also counting count ticks!
   const int64_t limit = factoring.limit;
   int64_t ticks = stats.ticks.factor;
   ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
@@ -304,13 +305,13 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       LOG (c, "xorite factor matched first");
       LOG (d, "xorite factor matched second");
       // also continue...
-      // break;
     }
     for (auto &lit : *c) {
       unmarkfact (lit, NOUNTED);
     }
   }
   {
+    // drop candidates that did not have enough matches.
     const auto end = thirds.end ();
     auto begin = thirds.begin ();
     auto p = begin;
@@ -319,7 +320,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       const auto &lit = *q++ = *p++;
       const auto tmp = noccs (lit);
       noccs (lit) = 0;
-      if (tmp < 4) {
+      if (tmp < min_match_limit) {
         q--;
         LOG ("dropping candidate third %d with %" PRId64 " matches", lit,
              tmp);
@@ -329,13 +330,11 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     thirds.resize (q - begin);
   }
   // find highest pair count (using noccs).
-  // TODO: improve this algorithm (maybe use counts to shortcut?).
   size_t matches = 0;
   int best_second = 0;
   int best_third = 0;
   for (auto &third : thirds) {
-    // need at least 10 matched clauses (with factoring.bound = 1).
-    if ((int) res->qlauses.size () < 2 * (4 + factoring.bound))
+    if (res->qlauses.size () < 2 * min_match_limit)
       break;
     ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
     for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
@@ -369,6 +368,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         seconds.push_back (other);
     }
     // noccs (other) contains count for (third, other) and (-third, -other).
+    // seconds may contain both other and -other.
     for (auto &other : seconds) {
       if ((size_t) noccs (other) > matches) {
         matches = noccs (other);
