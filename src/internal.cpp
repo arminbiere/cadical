@@ -701,6 +701,8 @@ bool Internal::preprocess_round (int round) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
+  int old_eliminated = stats.all.eliminated;
+
   if (opts.inprobing)
     inprobe (false);
   if (opts.elim)
@@ -723,6 +725,8 @@ bool Internal::preprocess_round (int round) {
   if (after.vars != before.vars)
     return true;
   if (old_elimbound < lim.elimbound)
+    return true;
+  if (old_eliminated < stats.all.eliminated)
     return true;
   return false;
 }
