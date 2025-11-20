@@ -112,7 +112,7 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
     return;
   if (!opts.elimfactor && flags (lit).factored)
     return;
-  int64_t &score = noccs (lit);
+  uint64_t &score = noccs (lit);
   assert (score > 0);
   score--;
   const int idx = abs (lit);

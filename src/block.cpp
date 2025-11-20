@@ -700,7 +700,7 @@ void Internal::block_literal (Blocker &blocker, int lit) {
   // If the maximum number of a negative clauses (with '-lit') exceeds the
   // occurrence limit ignore this candidate literal.
   //
-  if (noccs (-lit) > opts.blockocclim)
+  if (noccs (-lit) > (unsigned) opts.blockocclim)
     return;
 
   LOG ("blocking literal candidate %d "
