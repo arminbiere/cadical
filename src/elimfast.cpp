@@ -278,7 +278,7 @@ int Internal::elimfast_round (bool &completed,
 
   if (opts.elimlimited) {
     int64_t delta = stats.propagations.search;
-    delta *= 1e-3 * opts.elimeffort;
+    delta *= opts.elimeffort;
     if (delta < opts.elimmineff)
       delta = opts.elimmineff;
     if (delta > opts.elimmaxeff)
