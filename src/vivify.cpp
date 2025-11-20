@@ -306,8 +306,8 @@ struct vivify_more_noccs {
   vivify_more_noccs (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    int64_t n = internal->noccs (a);
-    int64_t m = internal->noccs (b);
+    uint64_t n = internal->noccs (a);
+    uint64_t m = internal->noccs (b);
     if (n > m)
       return true; // larger occurrences / score first
     if (n < m)
@@ -317,6 +317,8 @@ struct vivify_more_noccs {
     return abs (a) < abs (b); // smaller index first
   }
 };
+
+// assumes noccs fits in 32 bit.
 
 struct vivify_more_noccs_kissat {
 
@@ -1126,7 +1128,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
     stats.vivifydecs++;
     vivify_assume (-lit);
-    LOG ("negated decision %d score %" PRId64 "", lit, noccs (lit));
+    LOG ("negated decision %d score %" PRIu64 "", lit, noccs (lit));
 
     if (!vivify_propagate (ticks)) {
       break; // hot-spot
@@ -1345,9 +1347,10 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
           goto CONTINUE_WITH_NEXT_LITERAL;
       }
       {
-        const int64_t lit_count = internal->noccs (lit);
+        const uint64_t lit_count = internal->noccs (lit);
         assert (lit_count);
-        LOG ("checking literal %s with %" PRId64 " occurrences", LOGLIT (lit), lit_count);
+        LOG ("checking literal %s with %" PRIu64 " occurrences",
+             LOGLIT (lit), lit_count);
         if (lit_count <= best_count)
           continue;
         best_count = lit_count;
@@ -1360,8 +1363,8 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
     assert (best_count < UINT32_MAX);
     ref.count[i] =
         ((uint64_t) best_count << 32) + (uint64_t) internal->vlit (best);
-    LOG ("final count at position %d is %d - %d: %" PRIu64, i, best, best_count,
-         ref.count[i]);
+    LOG ("final count at position %d is %d - %d: %" PRIu64, i, best,
+         best_count, ref.count[i]);
     lits[i] = best;
   }
   return ref;
@@ -1429,7 +1432,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     // numbers. See the example above (search for '@1').
     //
     const int shift = 12 - c->size;
-    const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
+    const uint64_t score = shift < 1 ? 1 : (1l << shift); // @4
     for (const auto lit : *c) {
       noccs (lit) += score;
     }
@@ -1484,7 +1487,8 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   vivify_propagate (ticks);
 
   PHASE ("vivify", stats.vivifications,
-         "[phase %c] leftovers out of %zu clauses", 'u', vivifier.schedule_tier1.size ());
+         "[phase %c] leftovers out of %zu clauses", 'u',
+         vivifier.schedule_tier1.size ());
 }
 
 inline std::vector<vivify_ref> &current_refs_schedule (Vivifier &vivifier) {
@@ -1563,7 +1567,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   auto &schedule = current_schedule (vivifier);
 
   PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 " with %zd clauses",
+         "starting %c vivification round ticks limit %" PRId64
+         " with %zd clauses",
          vivifier.tag, ticks_limit, schedule.size ());
 
   assert (watching ());
@@ -1675,7 +1680,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     // if we have gone through all the leftovers (the next candidate
     // is not one), all the current clauses are leftovers for the next
     // round
-    if (!schedule.empty () && !schedule.back()->vivify)
+    if (!schedule.empty () && !schedule.back ()->vivify)
       for (auto c : schedule)
         c->vivify = true;
 #else

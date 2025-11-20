@@ -57,6 +57,7 @@ void Internal::sweep_update_noccs (Clause *c) {
   if (c->redundant)
     return;
   for (const auto &lit : *c) {
+    assert (noccs (lit));
     noccs (lit)--;
   }
 }

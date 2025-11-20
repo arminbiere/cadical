@@ -23,7 +23,7 @@ void Internal::collect_instantiation_candidates (
       continue; // BVE attempt pending
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;
-      if (noccs (lit) > opts.instantiateocclim)
+      if (noccs (lit) > (unsigned) opts.instantiateocclim)
         continue;
       Occs &os = occs (lit);
       for (const auto &c : os) {

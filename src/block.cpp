@@ -224,7 +224,7 @@ void Internal::block_schedule (Blocker &blocker) {
       if (!marked_block (lit))
         continue;
       unmark_block (lit);
-      LOG ("scheduling %d with %" PRId64 " positive and %" PRId64
+      LOG ("scheduling %d with %" PRIu64 " positive and %" PRIu64
            " negative occurrences",
            lit, noccs (lit), noccs (-lit));
       blocker.schedule.push_back (vlit (lit));
@@ -439,8 +439,8 @@ size_t Internal::block_candidates (Blocker &blocker, int lit) {
   Occs &pos = occs (lit); // Positive occurrences of 'lit'.
   Occs &nos = occs (-lit);
 
-  assert ((size_t) noccs (lit) <= pos.size ());
-  assert ((size_t) noccs (-lit) == nos.size ()); // Already flushed.
+  assert (noccs (lit) <= pos.size ());
+  assert (noccs (-lit) == nos.size ()); // Already flushed.
 
   // Mark all literals in clauses with '-lit'.  Note that 'mark2' uses
   // separate bits for 'lit' and '-lit'.
@@ -482,7 +482,7 @@ size_t Internal::block_candidates (Blocker &blocker, int lit) {
   else
     pos.resize (j - pos.begin ());
 
-  assert (pos.size () == (size_t) noccs (lit)); // Now also flushed.
+  assert (pos.size () == noccs (lit)); // Now also flushed.
 
   for (const auto &c : nos)
     unmark (c);
@@ -550,7 +550,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
   assert (noccs (-lit) > 1);
 
   Occs &nos = occs (-lit);
-  assert ((size_t) noccs (-lit) <= nos.size ());
+  assert (noccs (-lit) <= nos.size ());
 
   int max_size = 0;
 
@@ -571,7 +571,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
   else
     nos.resize (j - nos.begin ());
 
-  assert (nos.size () == (size_t) noccs (-lit));
+  assert (nos.size () == noccs (-lit));
   assert (nos.size () > 1);
 
   // If the maximum size of a negative clause (with '-lit') exceeds the
@@ -608,7 +608,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
     return;
   }
 
-  LOG ("trying to block %zd clauses out of %" PRId64 " with literal %d",
+  LOG ("trying to block %zd clauses out of %" PRIu64 " with literal %d",
        candidates, noccs (lit), lit);
 
   int64_t blocked = 0;
@@ -653,11 +653,11 @@ void Internal::block_reschedule_clause (Blocker &blocker, int lit,
 
   for (const auto &other : *c) {
 
-    int64_t &n = noccs (other);
+    uint64_t &n = noccs (other);
     assert (n > 0);
     n--;
 
-    LOG ("updating %d with %" PRId64 " positive and %" PRId64
+    LOG ("updating %d with %" PRIu64 " positive and %" PRIu64
          " negative occurrences",
          other, noccs (other), noccs (-other));
 
@@ -704,7 +704,7 @@ void Internal::block_literal (Blocker &blocker, int lit) {
     return;
 
   LOG ("blocking literal candidate %d "
-       "with %" PRId64 " positive and %" PRId64 " negative occurrences",
+       "with %" PRIu64 " positive and %" PRIu64 " negative occurrences",
        lit, noccs (lit), noccs (-lit));
 
   stats.blockcands++;

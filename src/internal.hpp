@@ -230,7 +230,7 @@ struct Internal {
   vector<Occs> otab;            // table of occurrences for all literals
   vector<Occs> rtab;            // table of redundant occurrences
   vector<int> ptab;             // table for caching probing attempts
-  vector<int64_t> ntab;         // number of one-sided occurrences table
+  vector<uint64_t> ntab;        // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
@@ -459,7 +459,7 @@ struct Internal {
 
   Bins &bins (int lit) { return big[vlit (lit)]; }
   Occs &occs (int lit) { return otab[vlit (lit)]; }
-  int64_t &noccs (int lit) { return ntab[vlit (lit)]; }
+  uint64_t &noccs (int lit) { return ntab[vlit (lit)]; }
   Watches &watches (int lit) { return wtab[vlit (lit)]; }
 
   // Variable bumping through exponential VSIDS (EVSIDS) as in MiniSAT.

@@ -677,7 +677,7 @@ void Internal::generate_probes () {
     if (propfixed (probe) >= stats.all.fixed)
       continue;
 
-    LOG ("scheduling probe %d negated occs %" PRId64 "", probe,
+    LOG ("scheduling probe %d negated occs %" PRIu64 "", probe,
          noccs (-probe));
     probes.push_back (probe);
   }

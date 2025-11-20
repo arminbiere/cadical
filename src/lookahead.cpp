@@ -51,7 +51,7 @@ int Internal::most_occurring_literal () {
       for (const auto &lit : *c)
         if (active (lit))
           noccs (lit)++;
-  int64_t max_noccs = 0;
+  uint64_t max_noccs = 0;
   int res = 0;
 
   if (unsat)
@@ -65,14 +65,14 @@ int Internal::most_occurring_literal () {
       const int lit = sign * idx;
       if (!active (lit))
         continue;
-      int64_t tmp = noccs (lit);
+      uint64_t tmp = noccs (lit);
       if (tmp <= max_noccs)
         continue;
       max_noccs = tmp;
       res = lit;
     }
   }
-  MSG ("maximum occurrence %" PRId64 " of literal %d", max_noccs, res);
+  MSG ("maximum occurrence %" PRIu64 " of literal %d", max_noccs, res);
   reset_noccs ();
   return res;
 }
@@ -119,7 +119,7 @@ void Internal::lookahead_flush_probes () {
     assert (!noccs (lit)), assert (noccs (-lit) > 0);
     if (propfixed (lit) >= stats.all.fixed)
       continue;
-    MSG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
+    MSG ("keeping probe %d negated occs %" PRIu64 "", lit, noccs (-lit));
     *j++ = lit;
   }
   size_t remain = j - probes.begin ();
@@ -179,7 +179,7 @@ void Internal::lookahead_generate_probes () {
       if (propfixed (probe) >= stats.all.fixed)
         continue;
 
-      MSG ("scheduling probe %d negated occs %" PRId64 "", probe,
+      MSG ("scheduling probe %d negated occs %" PRIu64 "", probe,
            noccs (-probe));
       probes.push_back (probe);
     }
@@ -192,7 +192,7 @@ void Internal::lookahead_generate_probes () {
       if (propfixed (probe) >= stats.all.fixed)
         continue;
 
-      MSG ("scheduling probe %d negated occs %" PRId64 "", probe,
+      MSG ("scheduling probe %d negated occs %" PRIu64 "", probe,
            noccs (-probe));
       probes.push_back (probe);
     }

@@ -322,10 +322,10 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       noccs (lit) = 0;
       if (tmp < min_match_limit) {
         q--;
-        LOG ("dropping candidate third %d with %" PRId64 " matches", lit,
+        LOG ("dropping candidate third %d with %" PRIu64 " matches", lit,
              tmp);
       }
-      LOG ("keeping candidate third %d with %" PRId64 " matches", lit, tmp);
+      LOG ("keeping candidate third %d with %" PRIu64 " matches", lit, tmp);
     }
     thirds.resize (q - begin);
   }
@@ -370,7 +370,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     // noccs (other) contains count for (third, other) and (-third, -other).
     // seconds may contain both other and -other.
     for (auto &other : seconds) {
-      if ((size_t) noccs (other) > matches) {
+      if (noccs (other) > matches) {
         matches = noccs (other);
         best_second = other;
         best_third = third;

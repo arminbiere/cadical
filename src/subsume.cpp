@@ -304,7 +304,6 @@ inline int Internal::try_to_subsume_clause (Clause *c,
   return 0;
 }
 
-
 struct subsume_less_noccs {
   Internal *internal;
   subsume_less_noccs (Internal *i) : internal (i) {}
@@ -314,7 +313,7 @@ struct subsume_less_noccs {
       return true;
     if (u && !v)
       return false;
-    const int64_t m = internal->noccs (a), n = internal->noccs (b);
+    const uint64_t m = internal->noccs (a), n = internal->noccs (b);
     if (m < n)
       return true;
     if (m > n)
@@ -492,7 +491,7 @@ bool Internal::subsume_round () {
     // occurrences computed before and stored in 'noccs'.
     //
     int minlit = 0;
-    int64_t minoccs = 0;
+    uint64_t minoccs = 0;
     size_t minsize = 0;
     bool subsume = true;
     bool binary = (c->size == 2 && !c->redundant);
@@ -504,7 +503,7 @@ bool Internal::subsume_round () {
       const size_t size = binary ? bins (lit).size () : occs (lit).size ();
       if (minlit && minsize <= size)
         continue;
-      const int64_t tmp = noccs (lit);
+      const uint64_t tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs)
         continue;
       minlit = lit, minsize = size, minoccs = tmp;
@@ -526,7 +525,7 @@ bool Internal::subsume_round () {
         continue;
 
       LOG (c,
-           "watching %d with %zd current and total %" PRId64 " occurrences",
+           "watching %d with %zd current and total %" PRIu64 " occurrences",
            minlit, minsize, minoccs);
 
       occs (minlit).push_back (c);
@@ -550,7 +549,7 @@ bool Internal::subsume_round () {
         continue;
 
       LOG (c,
-           "watching %d with %zd current binary and total %" PRId64
+           "watching %d with %zd current binary and total %" PRIu64
            " occurrences",
            minlit, minsize, minoccs);
 
