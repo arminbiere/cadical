@@ -283,6 +283,7 @@ fi
 
 [ x"$CXX" = x ] && CXX=g++
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
+[ x"$CFLAGS" = x ] || CFLAGS="$CFLAGS "
 
 case x"$CXX" in
   x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra"; CFLAGS="${CFLAGS}-Wall -Wextra";;
