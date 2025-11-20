@@ -47,7 +47,7 @@ User Facing Changes:
   there is now only `ilb` with values `0`, `1` (= only assumptions), and `2`
   (= full reuse).
 
-- The tracer now allows to get equivalent literals during solving
+- The tracer now allows to get equivalent literals during solving.
 
 - Support for compilation of shared library via `./configure -shared`.
 
