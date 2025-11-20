@@ -3,16 +3,16 @@ Version 3.0.0
 
 Breaking Changes:
 
-- Renamed `get_entrailed_literals` to `implied` after it became deprecated
-  in the 2.2.0 release.  Due to removing the former function from the
-  interface it is a breaking change, but the function has the same (slightly
-  extended in release 2.2.0) semantics as before and users can just replace
-  `get_entrailed_literals` by `implied`.
+- Renamed `get_entrailed_literals` function to `implied` after it became
+  deprecated in the 2.2.0 release.  Due to removing the former function from
+  the interface it is a breaking change, but the function has the same
+  (slightly extended in release 2.2.0) semantics as before and users can just
+  replace `get_entrailed_literals` by `implied`.
 
-- Renamed `reserve` to `resize` after it became deprecated in the 2.2.0
-  release due to its misleading name (cf. semantics of `reserve` and
-  `resize` for `std::vector).  Users can replace in their code simply
-  replace `reserve` by `resize` though as semantics of the function did not
+- Renamed the `reserve` function to `resize` after it became deprecated in the
+  2.2.0 release due to its misleading name (cf. semantics of `reserve` and
+  `resize` for `std::vector).  Users can replace in their code simply replace
+  `reserve` by `resize` though as semantics of the function did not
   change at all.
 
 - Furthermore, and probably the most severe change, and as announced in
