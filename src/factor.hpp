@@ -24,7 +24,6 @@ struct Quotient {
   int64_t bid; // for LRAT
   Quotient *prev, *next;
   vector<Clause *> qlauses;
-  vector<Clause *> condition; // ite
   vector<size_t> matches;
   size_t matched;
 };

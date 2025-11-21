@@ -1282,7 +1282,6 @@ struct Internal {
   void clear_flauses (vector<Clause *> &);
   Quotient *best_quotient (Factoring &, int *);
   Quotient *xorite_quotient (Factoring &, int, int *);
-  Quotient *conite_quotient (Factoring &, int, int *);
   int next_factor (Factoring &, unsigned *);
   void factorize_next (Factoring &, int, unsigned);
   void resize_factoring (Factoring &factoring, int lit);
@@ -1298,7 +1297,6 @@ struct Internal {
   void update_factored (Factoring &factoring, Quotient *q);
   bool apply_factoring (Factoring &factoring, Quotient *q);
   bool apply_xorite_factoring (Factoring &factoring, Quotient *q);
-  bool apply_conite_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);
