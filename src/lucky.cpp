@@ -535,21 +535,64 @@ int Internal::lucky_phases () {
   searching_lucky_phases = true;
   stats.lucky.tried++;
   const int64_t active_before = stats.active;
-  int res = trivially_false_satisfiable ();
-  if (!res)
-    res = trivially_true_satisfiable ();
-  if (!res)
-    res = forward_false_satisfiable ();
-  if (!res)
-    res = forward_true_satisfiable ();
-  if (!res)
-    res = backward_false_satisfiable ();
-  if (!res)
-    res = backward_true_satisfiable ();
-  if (!res)
-    res = negative_horn_satisfiable ();
-  if (!res)
-    res = positive_horn_satisfiable ();
+  int res = 0;
+  if (opts.phase) {
+    if (!res)
+      res = trivially_true_satisfiable ();
+    if (!res)
+      res = trivially_false_satisfiable ();
+    if (!opts.reverse) {
+      if (!res)
+        res = backward_true_satisfiable ();
+      if (!res)
+        res = backward_false_satisfiable ();
+      if (!res)
+        res = forward_true_satisfiable ();
+      if (!res)
+        res = forward_false_satisfiable ();
+    } else {
+      if (!res)
+        res = forward_true_satisfiable ();
+      if (!res)
+        res = forward_false_satisfiable ();
+      if (!res)
+        res = backward_true_satisfiable ();
+      if (!res)
+        res = backward_false_satisfiable ();
+    }
+    if (!res)
+      res = positive_horn_satisfiable ();
+    if (!res)
+      res = negative_horn_satisfiable ();
+  } else {
+    if (!res)
+      res = trivially_false_satisfiable ();
+    if (!res)
+      res = trivially_true_satisfiable ();
+    if (!opts.reverse) {
+      if (!res)
+        res = backward_false_satisfiable ();
+      if (!res)
+        res = backward_true_satisfiable ();
+      if (!res)
+        res = forward_false_satisfiable ();
+      if (!res)
+        res = forward_true_satisfiable ();
+    } else {
+      if (!res)
+        res = forward_false_satisfiable ();
+      if (!res)
+        res = forward_true_satisfiable ();
+      if (!res)
+        res = backward_false_satisfiable ();
+      if (!res)
+        res = backward_true_satisfiable ();
+    }
+    if (!res)
+      res = negative_horn_satisfiable ();
+    if (!res)
+      res = positive_horn_satisfiable ();
+  }
   if (res < 0)
     assert (termination_forced), res = 0;
   if (res == 10)
