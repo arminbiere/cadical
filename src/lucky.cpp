@@ -536,6 +536,13 @@ int Internal::lucky_phases () {
   stats.lucky.tried++;
   const int64_t active_before = stats.active;
   int res = 0;
+  // The idea of the code is to:
+  // 1. check for the trival solutions
+  //
+  // 2. a. use the order provided by the user (by default, the decisions are
+  // largest first)
+  //
+  // b. then use first the phases proviveded by the user (by default '1')
   if (opts.phase) {
     if (!res)
       res = trivially_true_satisfiable ();
