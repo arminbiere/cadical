@@ -251,6 +251,9 @@ void Stats::print (Internal *internal) {
          stats.factored_xor, percent (stats.factored_xor, stats.factored));
     PRT ("  ites:          %15" PRId64 "   %10.2f %%  of factored",
          stats.factored_ite, percent (stats.factored_ite, stats.factored));
+    PRT ("  cond-ites:     %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_conite,
+         percent (stats.factored_conite, stats.factored));
     PRT ("  eliminated:    %15" PRId64 "   %10.2f %%  of factored",
          stats.factored_eliminated,
          percent (stats.factored_eliminated, stats.factored));
