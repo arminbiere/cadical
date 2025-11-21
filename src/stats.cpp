@@ -365,6 +365,9 @@ void Stats::print (Internal *internal) {
     PRT ("  negativehorn   %15" PRId64 "   %10.2f %%  of tried",
          stats.lucky.horn.negative,
          percent (stats.lucky.horn.negative, stats.lucky.tried));
+    PRT ("  units:         %15" PRId64 "   %10.2f  of tried",
+         stats.lucky.units,
+         relative (stats.lucky.units, stats.lucky.tried));
   }
   PRT ("  extendbytes:   %15zd   %10.2f    bytes and MB", extendbytes,
        extendbytes / (double) (1l << 20));
