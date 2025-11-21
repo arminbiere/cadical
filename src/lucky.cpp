@@ -27,6 +27,14 @@ int Internal::unlucky (int res) {
   return res;
 }
 
+void Internal::lucky_assume_decision (int lit) {
+  require_mode (SEARCH);
+  assert (propagated == trail.size ());
+  new_trail_level (lit);
+  LOG ("lucky decide %d", lit);
+  search_assign (lit, decision_reason);
+}
+
 int Internal::trivially_false_satisfiable () {
   LOG ("checking that all clauses contain a negative literal");
   assert (!level);
@@ -65,7 +73,7 @@ int Internal::trivially_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (-idx);
+    lucky_assume_decision (-idx);
     if (propagate ())
       continue;
     assert (level > 0);
@@ -114,7 +122,7 @@ int Internal::trivially_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (idx);
+    lucky_assume_decision (idx);
     if (propagate ())
       continue;
     assert (level > 0);
@@ -127,14 +135,14 @@ int Internal::trivially_true_satisfiable () {
 
 /*------------------------------------------------------------------------*/
 inline bool Internal::lucky_propagate_discrepency (int dec) {
-  search_assume_decision (dec);
+  lucky_assume_decision (dec);
   bool no_conflict = propagate ();
   if (no_conflict)
     return false;
   if (level > 1) {
     conflict = nullptr;
     backtrack_without_updating_phases (level - 1);
-    search_assume_decision (-dec);
+    lucky_assume_decision (-dec);
     no_conflict = propagate ();
     if (no_conflict)
       return false;
@@ -308,7 +316,7 @@ int Internal::positive_horn_satisfiable () {
     }
     assert (positive_literal > 0);
     LOG (c, "found positive literal %d in", positive_literal);
-    search_assume_decision (positive_literal);
+    lucky_assume_decision (positive_literal);
     if (propagate ())
       continue;
     LOG ("propagation of positive literal %d leads to conflict",
@@ -320,7 +328,7 @@ int Internal::positive_horn_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (-idx);
+    lucky_assume_decision (-idx);
     if (propagate ())
       continue;
     LOG ("propagation of remaining literal %d leads to conflict", -idx);
@@ -409,7 +417,7 @@ int Internal::negative_horn_satisfiable () {
     }
     assert (negative_literal < 0);
     LOG (c, "found negative literal %d in", negative_literal);
-    search_assume_decision (negative_literal);
+    lucky_assume_decision (negative_literal);
     if (propagate ())
       continue;
     LOG ("propagation of negative literal %d leads to conflict",
@@ -421,7 +429,7 @@ int Internal::negative_horn_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (idx);
+    lucky_assume_decision (idx);
     if (propagate ())
       continue;
     LOG ("propagation of remaining literal %d leads to conflict", idx);
