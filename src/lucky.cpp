@@ -27,12 +27,78 @@ int Internal::unlucky (int res) {
   return res;
 }
 
+inline void Internal::lucky_search_assign (int lit, Clause *reason) {
+  assert (searching_lucky_phases);
+  if (level)
+    require_mode (SEARCH);
+
+  const int idx = vidx (lit);
+  assert (reason != external_reason);
+  assert (!val (idx));
+  assert (!flags (idx).eliminated () || reason == decision_reason ||
+          reason == external_reason);
+  Var &v = var (idx);
+  int lit_level;
+  assert (!lrat || level || reason == external_reason ||
+          reason == decision_reason || !lrat_chain.empty ());
+  // The following cases are explained in the two comments above before
+  // 'decision_reason' and 'assignment_level'.
+  //
+  // External decision reason means that the propagation was done by
+  // an external propagation and the reason clause not known (yet).
+  // In that case it is assumed that the propagation is NOT out of
+  // order (i.e. lit_level = level), because due to lazy explanation,
+  // we can not calculate the real assignment level.
+  // The function assignment_level () will also assign the current level
+  // to literals with external reason.
+  if (!reason)
+    lit_level = 0; // unit
+  else if (reason == decision_reason)
+    lit_level = level, reason = 0;
+  else if (opts.chrono)
+    lit_level = assignment_level (lit, reason);
+  else
+    lit_level = level;
+  if (!lit_level)
+    reason = 0;
+
+  v.level = lit_level;
+  v.trail = trail.size ();
+  v.reason = reason;
+  assert ((int) num_assigned < max_var);
+  assert (num_assigned == trail.size ());
+  num_assigned++;
+  if (!lit_level)
+    learn_unit_clause (lit); // increases 'stats.fixed'
+  assert (lit_level);
+  const signed char tmp = sign (lit);
+  set_val (idx, tmp);
+  assert (val (lit) > 0);  // Just a bit paranoid but useful.
+  assert (val (-lit) < 0); // Ditto.
+  trail.push_back (lit);
+#ifdef LOGGING
+  if (!lit_level)
+    LOG ("root-level unit assign %d @ 0", lit);
+  else
+    LOG (reason, "search assign %d @ %d", lit, lit_level);
+#endif
+
+  if (watching ()) {
+    const Watches &ws = watches (-lit);
+    if (!ws.empty ()) {
+      const Watch &w = ws[0];
+      __builtin_prefetch (&w, 0, 1);
+    }
+  }
+  lrat_chain.clear ();
+}
+
 void Internal::lucky_assume_decision (int lit) {
   require_mode (SEARCH);
   assert (propagated == trail.size ());
   new_trail_level (lit);
   LOG ("lucky decide %d", lit);
-  search_assign (lit, decision_reason);
+  lucky_search_assign (lit, decision_reason);
 }
 
 int Internal::trivially_false_satisfiable () {

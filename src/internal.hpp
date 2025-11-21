@@ -884,6 +884,7 @@ struct Internal {
   //
   int unlucky (int res);
   int lucky_decide_assumptions ();
+  void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
   void lucky_assume_decision (int);
   int trivially_false_satisfiable ();
