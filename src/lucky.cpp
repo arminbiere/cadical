@@ -55,8 +55,6 @@ inline void Internal::lucky_search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono)
-    lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
   if (!lit_level)
