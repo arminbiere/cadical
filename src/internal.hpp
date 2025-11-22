@@ -1013,6 +1013,10 @@ struct Internal {
   void vivify_round (Vivifier &, int64_t delta);
   bool vivify ();
 
+  // Deduplicating clauses
+  //
+  void deduplicate_all_clauses ();
+
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
   //
   bool compacting ();

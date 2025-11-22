@@ -78,6 +78,7 @@ OPTION( covermineff,       0,  0,2e9,1,0,1, "minimum cover efficiency") \
 OPTION( decompose,         1,  0,  1,0,1,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
+OPTION( deduplicateallinit,0,  0,  1,0,1,1, "remove duplicated clauses before solving") \
 OPTION( eagersubsume,      1,  0,  1,0,1,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
 OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \

@@ -167,4 +167,96 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   report ('2', !opts.reportall && !(subsumed + units));
 }
 
+/*------------------------------------------------------------------------*/
+
+// See the comment for vivifyflush.
+//
+struct deduplicate_flush_smaller {
+
+  bool operator() (Clause *a, Clause *b) const {
+
+    const auto eoa = a->end (), eob = b->end ();
+    auto i = a->begin (), j = b->begin ();
+    for (; i != eoa && j != eob; i++, j++)
+      if (*i != *j)
+        return *i < *j;
+    const bool smaller = j == eob && i != eoa;
+    return smaller;
+  }
+};
+
+
+/*------------------------------------------------------------------------*/
+
+// We discovered in a bug report
+// (https://github.com/arminbiere/cadical/issues/147) that some problems
+// contains clauses several times. This was handled properly before (as a side
+// effect of vivifyflush), but the proper ticks scheduling limitation makes this
+// impossible since 2.2. Therefore, we have implemented this detection as a
+// proper inprocessing technique that is off by default and run only once during
+// preprocess quickly. As we do not want to assume anything on the input
+// clauses, we also remove the true/false literals.
+//
+// In essence, the code is simply taken from vivifyflush (without all the rest
+// of the code around obviously).
+//
+void Internal::deduplicate_all_clauses () {
+  assert (!level);
+  reset_watches ();
+
+  mark_satisfied_clauses_as_garbage ();
+  garbage_collection ();
+
+  // in order to do the inprocessing inplace, we remove the deleted clauses, put
+  // the binary deleted clauses first. Then we work on the non-deleted clauses
+  // by sorting them and sorting the clause w.r.t each other.
+  clauses.end () = std::remove_if (clauses.begin (), clauses.end(), [](Clause *c){return c->garbage && c->size !=2;});
+  auto start = std::partition (clauses.begin (), clauses.end (), [](Clause *c) {return c->garbage;});
+  const auto end = clauses.end ();
+  std::for_each (start, end, [](Clause *c) {return sort (c->begin(), c->end ());});
+
+  stable_sort (start, clauses.end (), deduplicate_flush_smaller ());
+  auto j = start, i = j;
+
+  Clause *prev = 0;
+  int64_t subsumed = 0;
+  for (; i != end; i++) {
+    Clause *c = *j++ = *i;
+    if (!prev || c->size < prev->size) {
+      prev = c;
+      continue;
+    }
+    const auto eop = prev->end ();
+    auto k = prev->begin ();
+    for (auto l = c->begin (); k != eop; k++, l++)
+      if (*k != *l)
+        break;
+    if (k == eop) {
+      LOG (c, "found subsumed");
+      LOG (prev, "subsuming");
+      assert (!c->garbage);
+      assert (!prev->garbage);
+      assert (c->redundant || !prev->redundant);
+      mark_garbage (c);
+      subsumed++;
+      j--;
+    } else
+      prev = c;
+  }
+
+  if (subsumed) {
+    clauses.resize (j - clauses.begin ());
+  } else
+    assert (j == end);
+
+  ++stats.deduplicatedinitrounds;
+  PHASE ("deduplicate-all", stats.deduplicatedinitrounds,
+      "flushed %" PRId64 " subsumed clauses out of %" PRId64, subsumed, clauses.end () - start);
+  stats.subsumed += subsumed;
+  stats.deduplicatedinit += subsumed;
+
+  init_watches();
+  connect_watches();
+  report ('d', !opts.reportall && !subsumed);
+}
 } // namespace CaDiCaL
