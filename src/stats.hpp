@@ -183,6 +183,8 @@ struct Stats {
   int64_t instrounds = 0;     // number of instantiation rounds
   int64_t subsumed = 0;       // number of subsumed clauses
   int64_t deduplicated = 0;   // number of removed duplicated binary clauses
+  int64_t deduplicatedinit = 0;// number of removed binary clauses initially
+  int64_t deduplicatedinitrounds = 0;// number of removed binary clauses initially
   int64_t deduplications = 0; // number of deduplication phases
   int64_t strengthened = 0;   // number of strengthened clauses
 

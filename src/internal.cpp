@@ -764,6 +764,8 @@ void Internal::preprocess_quickly (bool always) {
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
 
+  if (opts.deduplicateallinit && stats.deduplicatedinitrounds)
+    deduplicate_all_clauses();
   if (extract_gates (true))
     decompose ();
   binary_clauses_backbone ();

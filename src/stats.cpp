@@ -108,7 +108,15 @@ void Stats::print (Internal *internal) {
          relative (stats.conflicts, stats.backbone.phases));
     PRT ("   units:        %15" PRId64 "   %10.2f    per phase",
          stats.backbone.units,
-         relative (stats.backbone.units, stats.backbone.phases));
+         percent (stats.backbone.units, stats.backbone.phases));
+  }
+  if (all || stats.deduplicatedinit) {
+    PRT ("dedup-init-rnds:  %15" PRId64 "   %10.2f %%  of interval",
+         stats.deduplicatedinitrounds,
+         percent (stats.deduplicatedinitrounds, stats.conflicts));
+    PRT ("dedup-init:       %15" PRId64 "   %10.2f %%  of subsumed",
+         stats.deduplicatedinit,
+         percent (stats.deduplicatedinit, stats.deduplicatedinit));
   }
   if (all || stats.conditioned) {
     PRT ("conditioned:     %15" PRId64
