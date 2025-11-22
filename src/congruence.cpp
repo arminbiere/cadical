@@ -2974,6 +2974,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       LOG ("found merged literals");
       ++internal->stats.congruence.ands;
     }
+    delete g;
     return nullptr;
   } else {
     g->rhs = {rhs};
