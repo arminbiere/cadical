@@ -64,7 +64,7 @@ run () {
 
 ############################################################################
 
-END=29
+END=31
 
 while getopts "j:s:h" arg; do
   case $arg in
@@ -81,9 +81,11 @@ while getopts "j:s:h" arg; do
   esac
 done
 
+foundLast=0
+
 run_configuration () {
     case $1 in		# default configuration (depends on 'MAKEFLAGS'!)
-	0) run -p;;		# then check default pedantic first
+        0) run -p;;		# then check default pedantic first
 
         1) run -q;;		# library users might want to disable messages
         2) run -q -p;;	# also check '--quiet' pedantically
@@ -136,19 +138,31 @@ run_configuration () {
 
         27) run -shared;;
         28) run -shared -p;;
-        $END) run -shared -p -m32;;
+        29) run -shared -p -m32;;
+
+        # sanitizer configurations
+        30) run -a -fsanitize=address -fsanitize=undefined;;
+        31) run -a -p -fsanitize=address -fsanitize=undefined;
+        # this checks that we found the last configuration
+        foundLast=1;
+        # the next line is a hint if you add configurations
+        [ $END -eq 31 ] || die "invalid number of configuration";;
     esac
 }
 
 
 for i in $(seq 0 $(($END - 1))); do
     v=$(($i + $startConfiguration))
-    if [ $v -ge $END ]; then
+    if [ $v -gt $END ]; then
        v=$(( $v - $END ));
     fi
     echo "running configuration $v"
     run_configuration $v
 done
 
+if [ foundLast -ne 1 ];
+then
+  die "END does not correspond to the number of tested configuration, please fix it!"
+end
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"
