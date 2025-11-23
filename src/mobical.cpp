@@ -3551,8 +3551,10 @@ int Trace::fork_and_execute () {
     dup2 (4, 2);
     close (3);
     close (4);
-    if (mobical.donot.fork)
+    if (mobical.donot.fork) {
+      delete mobical.mock_pointer;
       mobical.mock_pointer = nullptr;
+    }
     reset_child_signal_handlers ();
 
     if (!mobical.donot.fork)
