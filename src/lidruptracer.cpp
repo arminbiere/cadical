@@ -9,7 +9,8 @@ LidrupTracer::LidrupTracer (Internal *i, File *f, bool b)
       clauses (0), last_hash (0), last_id (0), last_clause (0)
 #ifndef QUIET
       ,
-      added (0), deleted (0)
+      added (0), deleted (0), weakened (0), restore (0), original (0),
+      solved (0), batched(0)
 #endif
 {
   (void) internal;
