@@ -163,6 +163,7 @@ done
 if [ foundLast -ne 1 ];
 then
   die "END does not correspond to the number of tested configuration, please fix it!"
-end
+fi;
+
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"
