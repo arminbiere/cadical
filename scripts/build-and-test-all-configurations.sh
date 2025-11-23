@@ -160,7 +160,7 @@ for i in $(seq 0 $(($END - 1))); do
     run_configuration $v
 done
 
-if [ foundLast -ne 1 ];
+if [ $foundLast -ne 1 ];
 then
   die "END does not correspond to the number of tested configuration, please fix it!"
 fi;
