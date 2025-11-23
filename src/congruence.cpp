@@ -2577,7 +2577,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
   bool garbage = true;
   if (g->arity () == 1 && internal->val (g->lhs) &&
       internal->val (g->lhs) == internal->val (g->rhs[0])) {
-    g->garbage = true;
+    mark_garbage(g);
     return;
   }
   if (falsifies || clashing) {
