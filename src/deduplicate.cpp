@@ -251,7 +251,7 @@ void Internal::deduplicate_all_clauses () {
 
   ++stats.deduplicatedinitrounds;
   PHASE ("deduplicate-all", stats.deduplicatedinitrounds,
-      "flushed %" PRId64 " subsumed clauses out of %" PRId64, subsumed, clauses.end () - start);
+      "flushed %" PRId64 " subsumed clauses out of %zd", subsumed, clauses.end () - start);
   stats.subsumed += subsumed;
   stats.deduplicatedinit += subsumed;
 
