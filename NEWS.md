@@ -65,7 +65,7 @@ User Facing Changes:
 
 - The `get_entrailed_literals` function became **deprecated** and is going to be
   replaced by the new `implied` function, with the same sematics, except
-  that is now also allowed in the state 'SATISFIED' state. The next
+  that is now also allowed in the 'SATISFIED' state. The next
   major release will remove `get_entrailed_literals`.
 
 - The `reserve` function became **deprecated** and is going to be replaced 
