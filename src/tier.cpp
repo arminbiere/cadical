@@ -12,8 +12,9 @@ void Internal::recompute_tier () {
   const int64_t delta =
       stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
   lim.recompute_tier = stats.conflicts + delta;
-  LOG ("rescheduling in %" PRId64 " at %" PRId64 " (conflicts at %" PRId64 ")", delta,
-       lim.recompute_tier, stats.conflicts);
+  LOG ("rescheduling in %" PRId64 " at %" PRId64 " (conflicts at %" PRId64
+       ")",
+       delta, lim.recompute_tier, stats.conflicts);
 #ifndef NDEBUG
   uint64_t total_used = 0;
   for (auto u : stats.used[stable])
@@ -41,7 +42,7 @@ void Internal::recompute_tier () {
       accumulated_used += u;
       if (accumulated_used >= accumulated_tier1_limit) {
         tier1[stable] = glue;
-	break;
+        break;
       }
     }
     for (; glue < stats.used[stable].size (); ++glue) {
@@ -60,19 +61,23 @@ void Internal::recompute_tier () {
   assert (tier2[stable]);
 
   if (tier1[stable] < opts.tier1minglue) {
-    LOG ("tier1 limit of %d is too low, setting %d instead", tier1[stable], opts.tier1minglue);
+    LOG ("tier1 limit of %d is too low, setting %d instead", tier1[stable],
+         opts.tier1minglue);
     tier1[stable] = opts.tier1minglue;
   }
   if (tier2[stable] < opts.tier2minglue) {
-    LOG ("tier2 limit of %d is too low, setting %d instead", tier2[stable], opts.tier2minglue);
+    LOG ("tier2 limit of %d is too low, setting %d instead", tier2[stable],
+         opts.tier2minglue);
     tier2[stable] = opts.tier2minglue;
   }
   if (tier1[stable] >= tier2[stable])
     tier2[stable] = tier1[stable] + 1;
   assert (tier2[stable] > tier1[stable]);
 
-  PHASE ("retiered", stats.tierecomputed, "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode", tier1[stable],
-       stable ? "stable" : "focused", tier2[stable], stable ? "stable" : "focused");
+  PHASE ("retiered", stats.tierecomputed,
+         "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode",
+         tier1[stable], stable ? "stable" : "focused", tier2[stable],
+         stable ? "stable" : "focused");
 }
 
 void Internal::print_tier_usage_statistics () {
@@ -129,7 +134,7 @@ void Internal::print_tier_usage_statistics () {
     accumulated_middle = 0;
     uint64_t accumulated = 0;
     std::string output;
-    for (unsigned glue = 0; glue <= stats.used[stable].size(); glue++) {
+    for (unsigned glue = 0; glue <= stats.used[stable].size (); glue++) {
       uint64_t used = stats.used[stable][glue];
       accumulated += used;
       if (glue < tier1)

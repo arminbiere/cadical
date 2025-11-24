@@ -549,12 +549,11 @@ struct sort_assumptions_smaller {
 
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilb >= 1);
-  if (assumptions.empty ()){
+  if (assumptions.empty ()) {
     if (opts.ilb == 1) {
       LOG ("no assumptions, reusing nothing (ilb == 1)");
       backtrack (0);
-    }
-    else { // reuse full trail
+    } else { // reuse full trail
       LOG ("no assumptions, reusing everything (ilb == 2)");
       return;
     }
@@ -603,7 +602,8 @@ void Internal::sort_and_reuse_assumptions () {
          lit, alit);
     break;
   }
-  if (opts.ilb == 1 && (size_t)target > assumptions.size ()) // reusing only assumptions
+  if (opts.ilb == 1 &&
+      (size_t) target > assumptions.size ()) // reusing only assumptions
     target = assumptions.size ();
   if (target < level)
     backtrack_without_updating_phases (target);

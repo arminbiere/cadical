@@ -1,8 +1,8 @@
 #ifndef _idruptracer_h_INCLUDED
 #define _idruptracer_h_INCLUDED
 
-#include "tracer.hpp"
 #include "file.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
@@ -72,7 +72,7 @@ public:
   ~IdrupTracer ();
 
   // proof section:
-  void add_derived_clause (int64_t, bool, const std::vector<int> &,
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
                            const std::vector<int64_t> &) override;
   void add_assumption_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
@@ -82,7 +82,8 @@ public:
                             bool = false) override;
   void report_status (int, int64_t) override;
   void conclude_sat (const std::vector<int> &) override;
-  void conclude_unsat (ConclusionType, const std::vector<int64_t> &) override;
+  void conclude_unsat (ConclusionType,
+                       const std::vector<int64_t> &) override;
   void conclude_unknown (const std::vector<int> &) override;
 
   void solve_query () override;

@@ -38,7 +38,8 @@ struct Clause {
     // compactly in a contiguous memory arena.  Otherwise, so almost all of
     // the time, 'id' is valid.  See 'collect.cpp' for details.
   };
-  unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
+  unsigned used
+      : USED_SIZE;      // resolved in conflict analysis since last 'reduce'
   bool conditioned : 1; // Tried for globally blocked clause elimination.
   bool covered : 1;  // Already considered for covered clause elimination.
   bool enqueued : 1; // Enqueued on backward queue.
@@ -54,8 +55,8 @@ struct Clause {
   bool subsume : 1;      // not checked in last subsumption round
   bool swept : 1;        // clause used to sweep equivalences
   bool flushed : 1;      // garbage in proof deleted binaries
-  bool vivified : 1; // clause already vivified
-  bool vivify : 1;   // clause scheduled to be vivified
+  bool vivified : 1;     // clause already vivified
+  bool vivify : 1;       // clause scheduled to be vivified
 
   // The glucose level ('LBD' or short 'glue') is a heuristic value for the
   // expected usefulness of a learned clause, where smaller glue is consider

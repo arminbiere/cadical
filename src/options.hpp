@@ -25,6 +25,11 @@ OPTION( arena,             1,  0,  1,0,0,1, "allocate clauses in arena") \
 OPTION( arenacompact,      1,  0,  1,0,0,1, "keep clauses compact") \
 OPTION( arenasort,         1,  0,  1,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3,0,0,1, "1=clause, 2=var, 3=queue") \
+OPTION( backbone,          1,  0,  2,0,0,1, "binary clause backbone") \
+OPTION( backboneeffort,   20,  0,1e5,0,0,1, "binary effort in per mile") \
+OPTION( backbonemaxrounds,1e3, 0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonerounds,  100,  0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonethresh,    5,  0,1e9,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( binary,            1,  0,  1,0,0,1, "use binary proof format") \
 OPTION( block,             0,  0,  1,0,1,1, "blocked clause elimination") \
 OPTION( blockmaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
@@ -116,11 +121,10 @@ OPTION( factorboundelim,   1,  0,  1,0,0,1, "add current elimbound to factorboun
 OPTION( factorbumpheap,    1,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
 OPTION( factorbumpqueue,   1,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds (is skipped with factorxor)") \
-OPTION( factordelay,       4,  0, 12,0,0,1, "delaying factor") \
+OPTION( factordelay,       4,  0, 12,0,0,1, "delay bounded variable addition between eliminations") \
 OPTION( factoreffort,     75,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
-OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
 OPTION( factorredundant,   2,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
 OPTION( factorschedule,    0,  0,  3,0,0,1, "schedule (0=occs, 1=queue, 2=heap, 3=idx)") \
 OPTION( factorsize,       20,  2,2e9,0,0,1, "clause size limit") \
@@ -153,6 +157,7 @@ LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use LRAT proof format") \
 OPTION( lucky,             1,  0,  1,0,0,1, "lucky phases") \
+OPTION( luckyassumptions,  1,  0,  1,0,0,1, "lucky phases with assumptions") \
 OPTION( luckyearly,        1,  0,  1,0,0,1, "lucky phases before preprocessing") \
 OPTION( luckylate,         1,  0,  1,0,0,1, "lucky phases after preprocessing") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
@@ -213,6 +218,7 @@ OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
 OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of the run") \
+OPTION( stubbornIOfocused, 0,  0,  1,0,0,1, "force phases to I/O in focused mode every once in a while (requires rephase==2)") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumeclslim,   1e2,  0,2e9,2,0,1, "clause length limit") \
@@ -259,24 +265,26 @@ OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete direct
 OPTION( vivifyeffort,     50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
-OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification of irredundant clauses") \
+OPTION( vivifyirred,       1,  0,  1,0,0,1, "vivification of irredundant clauses") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyretry,       0,  0,  5,0,0,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifyschedmax,  5e3, 10,2e9,0,0,1, "maximum schedule size") \
 OPTION( vivifythresh,     20,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
+OPTION( vivifytier1,       1,  0,  1,0,0,1, "vivification tier1") \
 OPTION( vivifytier1eff,    4,  0,100,1,0,1, "relative tier1 effort") \
-OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \
+OPTION( vivifytier2,       1,  0,  1,0,0,1, "vivification tier2") \
 OPTION( vivifytier2eff,    2,  1,100,1,0,1, "relative tier2 effort") \
-OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
+OPTION( vivifytier3,       1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
-OPTION( walkeffort,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
+OPTION( walkeffort,       80,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences instead of the single watched") \
+OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
+OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.

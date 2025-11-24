@@ -493,7 +493,7 @@ static void clear_kitten (kitten *kitten) {
     void *OLD_PTR = (P); \
     CALLOC ((P), new_size / 2); \
     const size_t BYTES = old_vars * sizeof *(P); \
-    if ((P) && OLD_PTR) /* nullptr not allowed */\
+    if ((P) && OLD_PTR) /* nullptr not allowed */ \
       memcpy ((P), OLD_PTR, BYTES); \
     void *NEW_PTR = (P); \
     (P) = OLD_PTR; \
@@ -506,7 +506,7 @@ static void clear_kitten (kitten *kitten) {
     void *OLD_PTR = (P); \
     CALLOC ((P), new_size); \
     const size_t BYTES = old_lits * sizeof *(P); \
-    if ((P) && OLD_PTR) /* nullptr not allowed */\
+    if ((P) && OLD_PTR) /* nullptr not allowed */ \
       memcpy ((P), OLD_PTR, BYTES); \
     void *NEW_PTR = (P); \
     (P) = OLD_PTR; \

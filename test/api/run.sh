@@ -73,7 +73,7 @@ run () {
   then
     src=$tests/$1.c
     language=" -x c"
-    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++17,-std=c11,'`"
+    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'`"
   elif [ -f $tests/$1.cpp ]
   then
     src=$tests/$1.cpp
@@ -108,6 +108,7 @@ run unit
 run morenmore
 run ctest
 run example
+run example_declare_one_more_variable
 run example_constraint
 run example_tracer
 run terminate

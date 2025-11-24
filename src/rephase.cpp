@@ -101,7 +101,10 @@ char Internal::rephase_walk () {
   stats.rephased.walk++;
   PHASE ("rephase", stats.rephased.total,
          "starting local search to improve current phase");
-  walk ();
+  if (opts.walkfullocc)
+    walk_full_occs ();
+  else
+    walk ();
   return 'W';
 }
 
@@ -114,7 +117,8 @@ void Internal::rephase () {
   assert (last.stabilize.rephased <= stats.rephased.total);
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
-         lim.rephase, opts.rephase==2 ? stats.stabconflicts : stats.conflicts);
+         lim.rephase,
+         opts.rephase == 2 ? stats.stabconflicts : stats.conflicts);
 
   // Report current 'target' and 'best' and then set 'rephased' below, which
   // will trigger reporting the new 'target' and 'best' after updating it in
@@ -370,7 +374,8 @@ void Internal::rephase () {
   target_assigned = 0;
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
-  lim.rephase = (opts.rephase == 2 ? stats.stabconflicts : stats.conflicts) + delta;
+  lim.rephase =
+      (opts.rephase == 2 ? stats.stabconflicts : stats.conflicts) + delta;
 
   PHASE ("rephase", stats.rephased.total,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
@@ -384,6 +389,10 @@ void Internal::rephase () {
   last.rephase.conflicts = stats.conflicts;
   rephased = type;
 
+  if (!marked_failed || unsat_constraint) {
+    assert (opts.warmup);
+    return;
+  }
   if (stable)
     shuffle_scores ();
   else

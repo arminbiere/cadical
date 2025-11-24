@@ -33,7 +33,8 @@ struct Flags { // Variable flags.
   //
   unsigned char block : 2; // removed since last 'block' round (*)
   unsigned char skip : 2;  // skip this literal as blocking literal
-
+  bool backbone1 : 1;
+  bool backbone0 : 1;
   // Bits for handling assumptions.
   //
   unsigned char assumed : 2;
@@ -57,7 +58,7 @@ struct Flags { // Variable flags.
   //
   Flags () {
     seen = keep = poison = removable = shrinkable = added = sweep =
-        factored_but_on_reconstruction_stack = factored = false;
+        factored = backbone1 = backbone0 = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = factor = 0;
@@ -80,6 +81,12 @@ struct Flags { // Variable flags.
     dst.subsume = subsume;
     dst.ternary = ternary;
     dst.block = block;
+    dst.sweep = sweep;
+    dst.backbone0 = backbone0;
+    dst.backbone1 = backbone1;
+    dst.added = added;
+    dst.factor = factor;
+    // seen, keep, poison, removable, shrinkable are unused
   }
 };
 

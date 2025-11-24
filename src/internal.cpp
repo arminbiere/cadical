@@ -35,8 +35,10 @@ Internal::Internal ()
   control.push_back (Level (0, 0));
 
   // The 'dummy_binary' is used in 'try_to_subsume_clause' to fake a real
-  // clause, which then can be used to subsume or strengthen the given
-  // clause in one routine for both binary and non binary clauses.  This
+  // clause (which then can be used to subsume or strengthen the given
+  // clause in one routine for both binary and non binary clauses) and
+  // in walk (which is only used as a placeholder in the watch lists
+  // when logging is off, since the clause is not accessed).  This
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
@@ -49,7 +51,7 @@ Internal::Internal ()
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
 
-  static_assert (max_used == (1 << USED_SIZE) - 1);
+  /*with C++17: static_*/ assert (max_used == (1 << USED_SIZE) - 1);
 }
 
 Internal::~Internal () {
@@ -622,9 +624,18 @@ void Internal::init_search_limits () {
     LOG ("no limit on decisions");
   } else {
     lim.decisions = stats.decisions + inc.decisions;
-    LOG ("conflict limit after %" PRId64 " decisions at %" PRId64
+    LOG ("decision limit after %" PRId64 " decisions at %" PRId64
          " decisions",
          inc.decisions, lim.decisions);
+  }
+
+  if (inc.ticks < 0) {
+    lim.ticks = -1;
+    LOG ("no limit on ticks");
+  } else {
+    lim.ticks = stats.ticks.search[0] + stats.ticks.search[1] + inc.ticks;
+    LOG ("ticks limit after %" PRId64 " ticks at %" PRId64 " ticks",
+         inc.ticks, lim.ticks);
   }
 
   /*----------------------------------------------------------------------*/
@@ -752,12 +763,14 @@ void Internal::preprocess_quickly (bool always) {
   // stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
+  report ('(');
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
 
   if (extract_gates (true))
     decompose ();
+  binary_clauses_backbone ();
 
   if (sweep ())
     decompose ();
@@ -768,6 +781,8 @@ void Internal::preprocess_quickly (bool always) {
 
   elimfast ();
 
+  if (opts.fastelim)
+    elimfast ();
   // if (opts.condition)
   // condition (false);
 #ifndef QUIET
@@ -793,6 +808,7 @@ int Internal::preprocess (bool always) {
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
+  report (')');
   if (unsat)
     return 20;
   return 0;
@@ -887,7 +903,11 @@ int Internal::local_search_round (int round) {
   else
     limit = LONG_MAX;
 
-  int res = walk_round (limit, true);
+  int res;
+  if (opts.walkfullocc)
+    res = walk_full_occs_round (limit, true);
+  else
+    res = walk_round (limit, true);
 
   assert (localsearching);
   localsearching = false;

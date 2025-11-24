@@ -773,7 +773,7 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
       assert (lrat_chain.size () == 2);
     }
     if (clause.size () > 1) {
-      new_factor_clause ();
+      new_factor_clause (0);
     } else {
       const int unit = clause[0];
       const signed char tmp = val (unit);
@@ -836,7 +836,7 @@ void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
   clause.push_back (fresh);
   clause.push_back (factor);
   factoring.fresh.back ().push_back (vidx (factor));
-  new_factor_clause ();
+  new_factor_clause (fresh);
   clause.clear ();
   if (lrat)
     mini_chain.push_back (-clause_id);
@@ -855,7 +855,8 @@ void Internal::blocked_clause (Quotient *q, int not_fresh) {
   for (Quotient *p = q; p; p = p->prev)
     clause.push_back (-p->factor);
   assert (!lrat || mini_chain.size ());
-  proof->add_derived_clause (new_id, true, clause, mini_chain);
+  proof->add_derived_rat_clause (new_id, true, externalize (not_fresh),
+                                 clause, mini_chain);
   mini_chain.clear ();
   clause.clear ();
 }
@@ -889,7 +890,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
       lrat_chain.push_back (q->bid);
     }
     clause.push_back (not_fresh);
-    new_factor_clause ();
+    new_factor_clause (0);
     clause.clear ();
     lrat_chain.clear ();
   }
@@ -918,7 +919,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     clause.push_back (fresh);
     clause.push_back (factor);
     clause.push_back (second);
-    new_factor_clause ();
+    new_factor_clause (fresh);
     if (lrat)
       mini_chain.push_back (clause_id);
     clause.clear ();
@@ -927,7 +928,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     clause.push_back (fresh);
     clause.push_back (-factor);
     clause.push_back (third);
-    new_factor_clause ();
+    new_factor_clause (fresh);
     if (lrat) {
       mini_chain.push_back (clause_id);
       // add the last two clauses
@@ -941,7 +942,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     clause.push_back (factor);
     clause.push_back (-second);
     // but don't clear as lrat is the same.
-    new_factor_clause ();
+    new_factor_clause (-fresh);
     if (lrat)
       mini_chain.push_back (clause_id);
     clause.clear ();
@@ -950,7 +951,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
     clause.push_back (-fresh);
     clause.push_back (-factor);
     clause.push_back (-third);
-    new_factor_clause ();
+    new_factor_clause (-fresh);
     if (lrat) {
       mini_chain.push_back (clause_id);
       lrat_chain.clear ();
@@ -1021,7 +1022,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
       lrat_chain.push_back (first_tmp_id);
       lrat_chain.push_back (second_tmp_id);
     }
-    new_factor_clause ();
+    new_factor_clause (0);
     lrat_chain.clear ();
     clause.clear ();
     if (proof) {
@@ -1456,20 +1457,17 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
-  {
-    unsigned actives = active ();
-    size_t log_active = log10 (actives);
-    size_t eliminations = stats.elimrounds;
-    unsigned delay = opts.factordelay;
-    size_t delaylimit = eliminations + delay;
-    if (log_active > delaylimit) {
-      VERBOSE (2,
-               "delaying factorization as "
-               "'%zu = log10(variables) = log10 (%u) "
-               " > eliminations + delay = %zu + %u = %zu",
-               log_active, actives, eliminations, delay, delaylimit);
-      return false;
-    }
+  int v_active = active ();
+  size_t log_active = log10 (v_active);
+  size_t eliminations = stats.elimrounds;
+  size_t delay = opts.factordelay;
+  size_t delay_limit = eliminations + delay;
+  if (log_active > delay_limit) {
+    VERBOSE (3,
+             "factorization delayed as %zu = log10 (%u)"
+             "> eliminations + delay = %zu + %zu = %zu",
+             log_active, v_active, eliminations, delay, delay_limit);
+    return false;
   }
   // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
@@ -1487,6 +1485,8 @@ bool Internal::factor () {
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
   if (preprocessing)
     limit += opts.factoriniticks * 1e6;
+
+  mark_duplicated_binary_clauses_as_garbage ();
 
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;

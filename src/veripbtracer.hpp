@@ -1,8 +1,8 @@
 #ifndef _veripbtracer_h_INCLUDED
 #define _veripbtracer_h_INCLUDED
 
-#include "tracer.hpp"
 #include "file.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
@@ -58,6 +58,8 @@ class VeripbTracer : public FileTracer {
   void put_binary_id (int64_t id, bool = false);
 
   // support veriPB
+  void veripb_add_derived_clause (int64_t, bool redundant, int witness,
+                                  const std::vector<int> &clause);
   void veripb_add_derived_clause (int64_t, bool redundant,
                                   const std::vector<int> &clause,
                                   const std::vector<int64_t> &chain);
@@ -79,11 +81,12 @@ public:
   void add_original_clause (int64_t, bool, const std::vector<int> &,
                             bool = false) override {} // skip
 
-  void add_derived_clause (int64_t, bool, const std::vector<int> &,
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
                            const std::vector<int64_t> &) override;
 
   void delete_clause (int64_t, bool, const std::vector<int> &) override;
-  void finalize_clause (int64_t, const std::vector<int> &) override {} // skip
+  void finalize_clause (int64_t, const std::vector<int> &) override {
+  } // skip
 
   void report_status (int, int64_t) override;
 

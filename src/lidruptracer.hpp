@@ -1,8 +1,8 @@
 #ifndef _lidruptracer_h_INCLUDED
 #define _lidruptracer_h_INCLUDED
 
-#include "tracer.hpp"
 #include "file.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
@@ -61,12 +61,15 @@ class LidrupTracer : public FileTracer {
   void put_binary_lit (int external_lit);
   void put_binary_id (int64_t id, bool = true);
 
-  void lidrup_add_derived_clause (int64_t id, const std::vector<int> &clause,
+  void lidrup_add_derived_clause (int64_t id,
+                                  const std::vector<int> &clause,
                                   const std::vector<int64_t> &chain);
-  void lidrup_delete_clause (int64_t id); //, const std::vector<int> &clause);
   void
-  lidrup_add_restored_clause (int64_t id); //, const std::vector<int> &clause);
-  void lidrup_add_original_clause (int64_t id, const std::vector<int> &clause);
+  lidrup_delete_clause (int64_t id); //, const std::vector<int> &clause);
+  void lidrup_add_restored_clause (
+      int64_t id); //, const std::vector<int> &clause);
+  void lidrup_add_original_clause (int64_t id,
+                                   const std::vector<int> &clause);
   void lidrup_conclude_and_delete (const std::vector<int64_t> &conclusion);
   void lidrup_report_status (int status);
   void lidrup_conclude_sat (const std::vector<int> &model);
@@ -79,7 +82,7 @@ public:
   ~LidrupTracer ();
 
   // proof section:
-  void add_derived_clause (int64_t, bool, const std::vector<int> &,
+  void add_derived_clause (int64_t, bool, int, const std::vector<int> &,
                            const std::vector<int64_t> &) override;
   void add_assumption_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
@@ -89,7 +92,8 @@ public:
                             bool = false) override;
   void report_status (int, int64_t) override;
   void conclude_sat (const std::vector<int> &) override;
-  void conclude_unsat (ConclusionType, const std::vector<int64_t> &) override;
+  void conclude_unsat (ConclusionType,
+                       const std::vector<int64_t> &) override;
   void conclude_unknown (const std::vector<int> &) override;
 
   void solve_query () override;

@@ -4,6 +4,8 @@
 #include <cassert>
 #include <vector>
 
+#include "clause.hpp"
+
 namespace CaDiCaL {
 
 // Watch lists for CDCL search.  The blocking literal (see also comments
@@ -33,6 +35,9 @@ struct Watch {
   int size;
 
   Watch (int b, Clause *c) : clause (c), blit (b), size (c->size) {}
+  Watch (bool, int b, Clause *c) : clause (c), blit (b), size (2) {
+    assert (c->size == 2);
+  }
   Watch () {}
 
   bool binary () const { return size == 2; }

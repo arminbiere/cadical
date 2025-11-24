@@ -421,8 +421,9 @@ void CraigTracer::add_original_clause (int64_t id, bool redundant,
   craig_interpolants.push_back (interpolant);
 }
 
+// TODO: print fatal error if witness (3rd argument) is true.
 void CraigTracer::add_derived_clause (
-    int64_t id, bool redundant, const std::vector<int> &c,
+    int64_t id, bool redundant, int, const std::vector<int> &c,
     const std::vector<int64_t> &proof_chain) {
   assert (proof_chain.size () >= 1);
   (void) redundant;
@@ -468,7 +469,7 @@ void CraigTracer::add_assumption_clause (
   if (proof_chain.size () > 0) {
     // We have a resolution of multiple clauses and therefore reuse
     // the existing code to build our Craig interpolant.
-    add_derived_clause (id, true, c, proof_chain);
+    add_derived_clause (id, true, 0, c, proof_chain);
     interpolant = craig_interpolants[id - 1];
   } else {
     assert (c.size () == 2);
