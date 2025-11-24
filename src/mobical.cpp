@@ -1512,14 +1512,14 @@ struct DeclareMoreVariablesCall : public Call {
   const char *keyword () { return "declare_more_variables"; }
 };
 
-struct DeclareMoreVariableCall : public Call {
-  DeclareMoreVariableCall () : Call (RESIZE) {}
+struct DeclareOneMoreVariableCall : public Call {
+  DeclareOneMoreVariableCall () : Call (RESIZE) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
     s->declare_one_more_variable ();
     (void) extendmap;
   }
   void print (ostream &o) { o << "declare_one_more_variable" << endl; }
-  Call *copy () { return new DeclareMoreVariableCall (); }
+  Call *copy () { return new DeclareOneMoreVariableCall (); }
   const char *keyword () { return "declare_one_more_variable"; }
 };
 
@@ -2654,7 +2654,7 @@ void Trace::generate_declare_more_variables (Random &random) {
 void Trace::generate_declare_one_more_variable (Random &random) {
   if (random.generate_double () > 0.01)
     return;
-  push_back (new DeclareMoreVariableCall ());
+  push_back (new DeclareOneMoreVariableCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -4720,6 +4720,8 @@ void Reader::parse () {
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       c = new ResetAssumptionsCall ();
+    } else if (!strcmp (keyword, "declare_one_more_variable")) {
+      c = new DeclareOneMoreVariableCall ();
     } else
       error ("invalid keyword '%s'", keyword);
 
