@@ -484,7 +484,7 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    double delta = log10 (stats.added.irredundant);
+    double delta = stats.added.irredundant ? log10 (stats.added.irredundant) : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
