@@ -252,7 +252,7 @@ OPTION( transredmineff,    0,  0,2e9,1,0,1, "minimum efficiency") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
-OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
+OPTION( vivifycalctier,    1,  0,  1,0,0,1, "use tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
 OPTION( vivifyeffort,     50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
