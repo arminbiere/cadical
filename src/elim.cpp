@@ -560,8 +560,8 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
   case DEF:
     stats.eliminated_def++;
     break;
-  default:
-    assert (eliminator.gatetype == NO);
+  case NO:
+    break;
   }
 
   LOG ("adding all resolvents on %d", pivot);

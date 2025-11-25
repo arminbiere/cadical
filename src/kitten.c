@@ -1034,7 +1034,7 @@ static inline unsigned propagate_literal (kitten *kitten, unsigned lit) {
   unsigned *q = BEGIN_STACK (*watches);
   const unsigned *const end_watches = END_STACK (*watches);
   unsigned const *p = q;
-  uint64_t ticks = (((char *) end_watches - (char *) q) >> 7) + 1;
+  uint64_t ticks = (((const char *const) end_watches - (char *const) q) >> 7) + 1;
   while (p != end_watches) {
     const unsigned ref = *q++ = *p++;
     klause *c = dereference_klause (kitten, ref);
@@ -1668,7 +1668,7 @@ static bool flip_literal (kitten *kitten, unsigned lit) {
   unsigned *q = BEGIN_STACK (*watches);
   const unsigned *const end_watches = END_STACK (*watches);
   unsigned const *p = q;
-  uint64_t ticks = (((char *) end_watches - (char *) q) >> 7) + 1;
+  uint64_t ticks = (((const char *const) end_watches - (const char *const) q) >> 7) + 1;
   bool res = true;
   while (p != end_watches) {
     const unsigned ref = *q++ = *p++;
@@ -2295,7 +2295,7 @@ static bool prime_propagate (kitten *kitten, const unsigned idx,
     unsigned *q = BEGIN_STACK (*watches);
     const unsigned *const end_watches = END_STACK (*watches);
     unsigned const *p = q;
-    uint64_t ticks = (((char *) end_watches - (char *) q) >> 7) + 1;
+    uint64_t ticks = (((const char *const) end_watches - (const char *const) q) >> 7) + 1;
     while (p != end_watches) {
       const unsigned ref = *q++ = *p++;
       klause *c = dereference_klause (kitten, ref);
@@ -2451,7 +2451,7 @@ static bool prime_propagate_blit (kitten *kitten, const unsigned idx,
     unsigned *q = BEGIN_STACK (*watches);
     const unsigned *const end_watches = END_STACK (*watches);
     unsigned const *p = q;
-    uint64_t ticks = (((char *) end_watches - (char *) q) >> 7) + 1;
+    uint64_t ticks = (((const char *const) end_watches - (const char *const) q) >> 7) + 1;
     while (p != end_watches) {
       const unsigned ref = *q++ = *p++;
       klause *c = dereference_klause (kitten, ref);

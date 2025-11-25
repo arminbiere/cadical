@@ -1285,119 +1285,112 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
   assert (internal->analyzed.empty ());
   assert (lrat_chain.empty ());
   std::vector<LRAT_ID> proof_chain;
-  switch (g->tag) {
-  case Gate_Type::And_Gate:
-    if (clashing) {
-      LOG ("clashing %d where -lhs=%d", clashing, -g->lhs);
-      // Example: -2 = 1&3 and 3=2
-      // The proof consists in taking the binary clause of the clashing
-      // literal
-      if (clashing == -g->lhs) {
-        for (auto litId : g->pos_lhs_ids) {
-          LOG (litId.clause,
-               "found lrat in gate %d from %" PRId64 " (looking for %d)",
-               litId.current_lit, litId.clause->id, falsified);
-          if (litId.current_lit == clashing) {
-            push_id_and_rewriting_lrat_unit (
-                litId.clause, Rewrite (), proof_chain, true, Rewrite (),
-                g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
-                        g->degenerated_gate ==
-                            Special_Gate::DEGENERATED_AND_LHS_FALSE
-                    ? 0
-                    : -g->lhs);
-          }
-        }
-        assert (!proof_chain.empty ());
-      } else {
-        // Example: 3 = (-1&2) and 2=1
-        // The proof consists in taking the binary clause with the rewrites
-        // Example where the rewrite must be before:
-        // 2: 3v2
-        // 9: -2v1
-        // 6: 3v1
-        // The chain cannot start by 9
-        if (g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
-            g->degenerated_gate ==
-                Special_Gate::DEGENERATED_AND_LHS_FALSE) {
-          LOG ("%d %d %d", src, dst, g->lhs);
-          if (src == g->lhs || dst == g->lhs) {
-            LOG ("degenerated AND gate with dst=lhs");
-            for (const auto &litId : g->pos_lhs_ids) {
-              LOG (litId.clause, "definition clause %d ->",
-                   litId.current_lit);
-              if (litId.current_lit == clashing) {
-                push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                                 proof_chain, true,
-                                                 Rewrite (), 0);
-                LOG (proof_chain, "produced lrat chain so far");
-              }
-            }
-            assert (!proof_chain.empty ());
-          } else {
-            LOG ("degenerated AND gate with conflict without LHS for %s",
-                 LOGLIT (unit));
-            for (const auto &litId : g->pos_lhs_ids) {
-              LOG (litId.clause, "definition clause %d ->",
-                   litId.current_lit);
-              const bool insert_after =
-                  std::find (begin (*litId.clause), end (*litId.clause),
-                             unit) == end (*litId.clause);
-              push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                               proof_chain, insert_after,
-                                               Rewrite (), g->lhs);
-              LOG (proof_chain, "produced lrat chain so far");
-            }
-          }
-        } else {
-          LOG ("normal AND gate");
-          for (const auto &litId : g->pos_lhs_ids) {
-            const bool insert_after =
-                std::find (begin (*litId.clause), end (*litId.clause),
-                           unit) == end (*litId.clause);
-            push_id_and_rewriting_lrat_unit (
-                litId.clause, Rewrite (), proof_chain, insert_after,
-                Rewrite (),
-                g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
-                        g->degenerated_gate ==
-                            Special_Gate::DEGENERATED_AND_LHS_FALSE
-                    ? 0
-                    : -g->lhs);
-            LOG (proof_chain, "produced lrat chain so far");
-          }
-        }
-      }
-      LOG (proof_chain, "produced lrat chain");
-    } else if (falsified) {
-      LOG ("falsifies %d", falsified);
-      // Example is 3=(1&2) with 2=false or 3=(1&4) with 4=2 and 2=false
-      // (can happen when the unit was derived in the middle of the
-      // rewriting)
+  assert (g->tag == Gate_Type::And_Gate);
+  if (clashing) {
+    LOG ("clashing %d where -lhs=%d", clashing, -g->lhs);
+    // Example: -2 = 1&3 and 3=2
+    // The proof consists in taking the binary clause of the clashing
+    // literal
+    if (clashing == -g->lhs) {
       for (auto litId : g->pos_lhs_ids) {
         LOG (litId.clause,
              "found lrat in gate %d from %" PRId64 " (looking for %d)",
              litId.current_lit, litId.clause->id, falsified);
-        if (litId.current_lit == falsified ||
-            (litId.current_lit == src && dst == falsified)) {
-          push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                           proof_chain, true, Rewrite (),
-                                           -dst, -g->lhs);
+        if (litId.current_lit == clashing) {
+          push_id_and_rewriting_lrat_unit (
+              litId.clause, Rewrite (), proof_chain, true, Rewrite (),
+              g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
+                      g->degenerated_gate ==
+                          Special_Gate::DEGENERATED_AND_LHS_FALSE
+                  ? 0
+                  : -g->lhs);
         }
       }
+      assert (!proof_chain.empty ());
     } else {
-      assert (unit);
-      // Example is 1 = 2&3 where 2 and 3 are false
-      if (g->neg_lhs_ids ()) {
-        push_id_and_rewriting_lrat_unit (g->neg_lhs_ids.content.clause,
-                                         Rewrite (), proof_chain);
+      // Example: 3 = (-1&2) and 2=1
+      // The proof consists in taking the binary clause with the rewrites
+      // Example where the rewrite must be before:
+      // 2: 3v2
+      // 9: -2v1
+      // 6: 3v1
+      // The chain cannot start by 9
+      if (g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
+          g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) {
+        LOG ("%d %d %d", src, dst, g->lhs);
+        if (src == g->lhs || dst == g->lhs) {
+          LOG ("degenerated AND gate with dst=lhs");
+          for (const auto &litId : g->pos_lhs_ids) {
+            LOG (litId.clause, "definition clause %d ->",
+                 litId.current_lit);
+            if (litId.current_lit == clashing) {
+              push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                               proof_chain, true,
+                                               Rewrite (), 0);
+              LOG (proof_chain, "produced lrat chain so far");
+            }
+          }
+          assert (!proof_chain.empty ());
+        } else {
+          LOG ("degenerated AND gate with conflict without LHS for %s",
+               LOGLIT (unit));
+          for (const auto &litId : g->pos_lhs_ids) {
+            LOG (litId.clause, "definition clause %d ->",
+                 litId.current_lit);
+            const bool insert_after =
+                std::find (begin (*litId.clause), end (*litId.clause),
+                           unit) == end (*litId.clause);
+            push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                             proof_chain, insert_after,
+                                             Rewrite (), g->lhs);
+            LOG (proof_chain, "produced lrat chain so far");
+          }
+        }
+      } else {
+        LOG ("normal AND gate");
+        for (const auto &litId : g->pos_lhs_ids) {
+          const bool insert_after =
+              std::find (begin (*litId.clause), end (*litId.clause),
+                         unit) == end (*litId.clause);
+          push_id_and_rewriting_lrat_unit (
+              litId.clause, Rewrite (), proof_chain, insert_after,
+              Rewrite (),
+              g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
+                      g->degenerated_gate ==
+                          Special_Gate::DEGENERATED_AND_LHS_FALSE
+                  ? 0
+                  : -g->lhs);
+          LOG (proof_chain, "produced lrat chain so far");
+        }
       }
-      LOG (proof_chain, "produced lrat chain");
-      break;
     }
-    lrat_chain = std::move (proof_chain);
-    break;
-  default:
-    assert (false);
+    LOG (proof_chain, "produced lrat chain");
+  } else if (falsified) {
+    LOG ("falsifies %d", falsified);
+    // Example is 3=(1&2) with 2=false or 3=(1&4) with 4=2 and 2=false
+    // (can happen when the unit was derived in the middle of the
+    // rewriting)
+    for (auto litId : g->pos_lhs_ids) {
+      LOG (litId.clause,
+           "found lrat in gate %d from %" PRId64 " (looking for %d)",
+           litId.current_lit, litId.clause->id, falsified);
+      if (litId.current_lit == falsified ||
+          (litId.current_lit == src && dst == falsified)) {
+        push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                         proof_chain, true, Rewrite (),
+                                         -dst, -g->lhs);
+      }
+    }
+  } else {
+    assert (unit);
+    // Example is 1 = 2&3 where 2 and 3 are false
+    if (g->neg_lhs_ids ()) {
+      push_id_and_rewriting_lrat_unit (g->neg_lhs_ids.content.clause,
+                                       Rewrite (), proof_chain);
+    }
+    LOG (proof_chain, "produced lrat chain");
   }
+  lrat_chain = std::move (proof_chain);
   (void) unit;
 }
 

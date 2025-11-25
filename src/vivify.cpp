@@ -811,8 +811,7 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
   case Vivify_Mode::TIER3:
     ++stats.vivifystred3;
     break;
-  default:
-    assert (vivifier.tier == Vivify_Mode::IRREDUNDANT);
+  case Vivify_Mode::IRREDUNDANT:
     ++stats.vivifystrirr;
     break;
   }
@@ -1173,8 +1172,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     case Vivify_Mode::TIER2:
       ++stats.vivifiedtier2;
       break;
-    default:
-      assert (vivifier.tier == Vivify_Mode::TIER3);
+    case Vivify_Mode::TIER3:
       ++stats.vivifiedtier3;
       break;
     }
@@ -1452,7 +1450,7 @@ inline std::vector<Clause *> &current_schedule (Vivifier &vivifier) {
   case Vivify_Mode::TIER3:
     return vivifier.schedule_tier3;
     break;
-  default:
+  case Vivify_Mode::IRREDUNDANT:
     return vivifier.schedule_irred;
     break;
   }
@@ -1706,8 +1704,7 @@ void set_vivifier_mode (Vivifier &vivifier, Vivify_Mode tier) {
   case Vivify_Mode::TIER3:
     vivifier.tag = 'w';
     break;
-  default:
-    assert (tier == Vivify_Mode::IRREDUNDANT);
+  case Vivify_Mode::IRREDUNDANT:
     vivifier.tag = 'x';
     break;
   }
