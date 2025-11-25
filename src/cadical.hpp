@@ -492,16 +492,18 @@ public:
   bool constraint_failed ();
 
   // Collects a subset of those literals that are implied by unit
-  // propagation by assuming the currently defined (potentially empty) set
-  // of assumptions (see IPASIR assume(lit)) function. In case unit
-  // propgation over the defined set of assumptions (or over the clause
-  // database on its own) leads to conflict, the function returns 20 and the
-  // content of 'implicants' is undefined. In case unit propagation happens
-  // to satisfy all the clauses (not probable, but not impossible), the
-  // function returns 10 and 'implicants' is a solution of the current
-  // formula under the current assumptions (after solution reconstruction).
-  // In any other case, the function returns 0 (indicating 'UNKNOWN') and
-  // 'implicants' lists the non-conflicting current value of the trail.
+  // propagation by assuming the currently defined (potentially empty)
+  // set of assumptions (see IPASIR assume(lit)) function. In case
+  // unit propgation over the defined set of assumptions (or over the
+  // clause database on its own) leads to conflict, the function
+  // returns 20 and the content of 'implicates' is undefined. In any
+  // other case, the function returns 0 (indicating 'UNKNOWN') and
+  // 'implicates' lists the non-conflicting current value of the
+  // trail. Especially if ILB is on, propagate might return SAT. In
+  // this case, propagate will still only contain the implied
+  // literals. In the rare case where where no decision was needed and
+  // propagation assigned all literals, then the 'implicates' lists
+  // will contain all assigned literals, which is a model.
 
   // Returns
   //
@@ -522,7 +524,7 @@ public:
   //   require (INCONCLUSIVE)
   //   ensure (INCONCLUSIVE)
   //
-  void implied (std::vector<int> &implicants);
+  void implied (std::vector<int> &implicates);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
