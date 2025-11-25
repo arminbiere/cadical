@@ -298,7 +298,7 @@ void Internal::report (char type, int verbose) {
     fputc (' ', stdout);
     fputs (reports[i].buffer, stdout);
   }
-  if (stable || type == 'L' || type == 'P' || type == ']')
+  if (stable || type == 'L' || type == 'P' || type == ']' || type == ')' || preprocessing)
     tout.normal ();
   fputc ('\n', stdout);
   fflush (stdout);
