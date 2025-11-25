@@ -49,7 +49,6 @@ namespace CaDiCaL {
 inline void Internal::vivify_subsume_clause (Clause *subsuming,
                                              Clause *subsumed) {
   assert (subsumed != subsuming);
-  stats.subsumed++;
   stats.vivifysubs++;
 #ifndef NDEBUG
   assert (subsuming);
