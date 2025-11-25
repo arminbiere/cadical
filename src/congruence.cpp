@@ -1253,28 +1253,21 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
   assert (internal->val (g->lhs) < 0);
-  switch (g->tag) {
-  case Gate_Type::And_Gate:
-    LOG (lrat_chain, "lrat");
-    LOG (lrat_chain, "lrat");
-    if (g->neg_lhs_ids ())
-      push_id_and_rewriting_lrat_unit (g->neg_lhs_ids.content.clause,
-                                       Rewrite (src, dst, id1, id2),
-                                       lrat_chain);
-    else {
-      assert (g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
-              g->degenerated_gate ==
-                  Special_Gate::DEGENERATED_AND_LHS_FALSE);
-      assert (g->pos_lhs_ids.size () == 1);
-      push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
-                                       Rewrite (src, dst, id1, id2),
-                                       lrat_chain);
-    }
-    LOG (lrat_chain, "lrat");
-    break;
-  default:
-    assert (false);
+  assert (g->tag == Gate_Type::And_Gate);
+  LOG (lrat_chain, "lrat");
+  LOG (lrat_chain, "lrat");
+  if (g->neg_lhs_ids ())
+    push_id_and_rewriting_lrat_unit (g->neg_lhs_ids.content.clause,
+                                     Rewrite (src, dst, id1, id2),
+                                     lrat_chain);
+  else {
+    assert (g->degenerated_gate == Special_Gate::DEGENERATED_AND ||
+            g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE);
+    assert (g->pos_lhs_ids.size () == 1);
+    push_id_and_rewriting_lrat_unit (
+        g->pos_lhs_ids[0].clause, Rewrite (src, dst, id1, id2), lrat_chain);
   }
+  LOG (lrat_chain, "lrat");
 }
 
 // Something very important here: as we are producing a unit, we cannot
