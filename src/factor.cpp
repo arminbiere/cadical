@@ -738,6 +738,7 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
 
 void Internal::update_factor_candidate (Factoring &factoring, int lit) {
   FactorSchedule &schedule = factoring.schedule;
+  assert (lit != 7);
   const size_t size = occs (lit).size ();
   const unsigned idx = vlit (lit);
   if (schedule.contains (idx))
@@ -768,6 +769,7 @@ void Internal::schedule_factorization (Factoring &factoring) {
 
 void Internal::adjust_scores_and_phases_of_fresh_variables (
     Factoring &factoring) {
+  activating_all_new_imported_literals();
   if (!opts.factorunbump) {
     factoring.fresh.clear ();
     return;
@@ -813,7 +815,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
 
 #ifndef NDEBUG
   for (auto v : vars)
-    assert (val (v) || scores.contains (v));
+    assert (!flags (v).active () || val (v) || scores.contains (v));
   lit = queue.first;
   int next_lit = links[lit].next;
   while (next_lit) {

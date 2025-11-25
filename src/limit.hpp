@@ -38,7 +38,7 @@ struct Limit {
 
   // How often rephased during (1) or out (0) of stabilization.
   //
-  int64_t rephased[2];
+  int64_t rephased[2] = {0,0};
 
   // Current elimination bound per eliminated variable.
   //

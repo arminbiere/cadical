@@ -176,6 +176,8 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
     const Flags f = flags (v);
     if (!f.active ())
       continue;
+    if (val (v))
+      continue;
     if (f.backbone0) {
       LOG ("scheduling backbone literal candidate %s", LOGLIT (v));
       candidates.push_back (v);
@@ -193,6 +195,8 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       const Flags f = flags (v);
       if (!f.active ())
         continue;
+      if (val (v))
+	continue;
       if (!f.backbone0) {
         LOG ("scheduling backbone literal candidate %s", LOGLIT (v));
         candidates.push_back (v);
@@ -603,7 +607,7 @@ void Internal::binary_clauses_backbone () {
     return;
   if (level)
     backtrack_without_updating_phases ();
-  propagated2 = 0; // TODO: why?
+  propagated = propagated2 = 0; // TODO: why?
   if (!propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
     learn_empty_clause ();

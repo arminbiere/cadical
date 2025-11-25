@@ -272,6 +272,7 @@ struct Internal {
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
   bool sweep_incomplete;      // sweep
   uint64_t randomized_deciding;
+  vector <int> imports;      // impported literals (ordered by order of appearance)
 
   kitten *citten;
 
@@ -335,7 +336,14 @@ struct Internal {
   // 'External' and 'Solver'.  The 'init_vars' function initializes
   // variables up to and including the requested variable index.
   //
-  void init_vars (int new_max_var);
+  void init_and_declare_vars (int new_max_var);
+
+  // Enlarge the external to internal data structures up to the index without
+  // activating any literal.
+  void reserve_vars (int new_max_var);
+
+  void activating_all_new_imported_literals ();
+  void declare_variable (int);
 
   void init_enqueue (int idx);
   void init_queue (int old_max_var, int new_max_var);
@@ -364,6 +372,7 @@ struct Internal {
 #ifndef NDEBUG
     int tmp = max_var;
     tmp -= stats.unused;
+    tmp -= stats.declared;
     tmp -= stats.now.fixed;
     tmp -= stats.now.eliminated;
     tmp -= stats.now.substituted;
@@ -673,6 +682,7 @@ struct Internal {
   // Mark (active) variables as eliminated, substituted, pure or fixed,
   // which turns them into inactive variables.
   //
+  void mark_declared (int);
   void mark_eliminated (int);
   void mark_substituted (int);
   void mark_active (int);

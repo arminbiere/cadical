@@ -360,6 +360,7 @@ struct Stats {
   } otfs;
 
   int64_t unused = 0;   // number of unused variables
+  int64_t declared = 0; // number of declared variables
   int64_t active = 0;   // number of active variables
   int64_t inactive = 0; // number of inactive variables
 

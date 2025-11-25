@@ -1,3 +1,4 @@
+#include "flags.hpp"
 #include "internal.hpp"
 #include "util.hpp"
 
@@ -30,16 +31,37 @@ void External::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
+int External::declare_var (int new_var, bool extension) {
+  assert ((size_t)new_var < e2i.size());
+  if (internal->i2e.size () <= (size_t)new_var) {
+    reserve_at_least (internal->i2e, new_var + 1);
+    internal->i2e.resize (new_var + 1);
+  }
+  if (!e2i[new_var]) {
+    LOG ("new mapping external %d to internal %d", new_var, new_var);
+    e2i[new_var] = new_var;
+    internal->i2e[new_var] = new_var;
+    internal->declare_variable (new_var);
+  }
+
+  (void)extension;
+  return new_var;
+
+}
 void External::init (int new_max_var, bool extension) {
   assert (!extended);
-  if (new_max_var <= max_var)
+  LOG ("declaring new %d external variables from %d", new_max_var, max_var);
+  assert (!max_var || internal->i2e.size () == (size_t)internal->max_var + 1);
+  assert (!max_var || e2i.size () == (size_t)max_var + 1);
+  if (new_max_var <= max_var) {
+    declare_var (new_max_var, extension);
     return;
+  }
   int new_vars = new_max_var - max_var;
   int old_internal_max_var = internal->max_var;
-  int new_internal_max_var = old_internal_max_var + new_vars;
-  internal->init_vars (new_internal_max_var);
-  if ((size_t) new_max_var >= vsize)
-    enlarge (new_max_var);
+  internal->reserve_vars (new_max_var);
+  assert (max_var >= old_internal_max_var);
+
   LOG ("initialized %d external variables", new_vars);
   reserve_at_least (ext_units, 2 * new_max_var + 2);
   reserve_at_least (e2i, new_max_var + 1);
@@ -57,22 +79,21 @@ void External::init (int new_max_var, bool extension) {
     internal->i2e.push_back (0);
   } else {
     assert (e2i.size () == (size_t) max_var + 1);
-    assert (internal->i2e.size () == (size_t) old_internal_max_var + 1);
   }
-  unsigned iidx = old_internal_max_var + 1, eidx;
+  unsigned eidx;
   for (eidx = max_var + 1u; eidx <= (unsigned) new_max_var;
-       eidx++, iidx++) {
-    LOG ("mapping external %u to internal %u", eidx, iidx);
+       eidx++) {
     assert (e2i.size () == eidx);
-    e2i.push_back (iidx);
+    e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
     ervars.push_back (0);
-    internal->i2e.push_back (eidx);
-    assert (internal->i2e[iidx] == (int) eidx);
-    assert (e2i[eidx] == (int) iidx);
   }
+  assert (internal->i2e.size () == (size_t)internal->max_var + 1);
+  assert (e2i.size () == (size_t)new_max_var + 1);
+
+  declare_var (new_max_var, extension);
   if (extension)
     internal->stats.variables_extension += new_vars;
   else
@@ -80,7 +101,6 @@ void External::init (int new_max_var, bool extension) {
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
-  assert (iidx == (size_t) new_internal_max_var + 1);
   assert (eidx == (size_t) new_max_var + 1);
   assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
   max_var = new_max_var;
@@ -134,12 +154,14 @@ int External::internalize (int elit, bool extension) {
       ervars[eidx] = true;
     }
     ilit = e2i[eidx];
+    if (!ilit)
+      ilit = declare_var (eidx, false);
     if (elit < 0)
       ilit = -ilit;
     if (!ilit) {
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
-      internal->init_vars (ilit);
+      internal->reserve_vars (ilit);
       e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
@@ -156,8 +178,8 @@ int External::internalize (int elit, bool extension) {
     }
     Flags &f = internal->flags (ilit);
     if (f.status == Flags::UNUSED)
-      internal->mark_active (ilit);
-    else if (f.status != Flags::ACTIVE && f.status != Flags::FIXED)
+      internal->declare_variable (ilit);
+    else if (f.status != Flags::DECLARED && f.status != Flags::ACTIVE && f.status != Flags::FIXED)
       internal->reactivate (ilit);
     if (!marked (tainted, elit) && marked (witness, -elit)) {
       assert (!internal->opts.checkfrozen);
@@ -988,7 +1010,6 @@ void External::copy_flags (External &other) const {
 }
 
 /*------------------------------------------------------------------------*/
-
 void External::export_learned_empty_clause () {
   assert (learner);
   if (learner->learning (0)) {

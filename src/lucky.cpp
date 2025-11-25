@@ -234,6 +234,8 @@ int Internal::forward_false_satisfiable () {
   if (res)
     return res;
   for (auto idx : vars) {
+    if (flags (idx).unused ())
+      continue;
   START:
     if (terminated_asynchronously (100))
       return unlucky (-1);
@@ -261,6 +263,8 @@ int Internal::forward_true_satisfiable () {
   if (res)
     return res;
   for (auto idx : vars) {
+    if (flags (idx).unused ())
+      continue;
   START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -291,6 +295,8 @@ int Internal::backward_false_satisfiable () {
     return res;
   for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
     int idx = *it;
+    if (flags (idx).unused ())
+      continue;
   START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -319,6 +325,8 @@ int Internal::backward_true_satisfiable () {
     return res;
   for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
     int idx = *it;
+    if (flags (idx).unused ())
+      continue;
   START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -547,7 +555,7 @@ int Internal::lucky_phases () {
       res = trivially_true_satisfiable ();
     if (!res)
       res = trivially_false_satisfiable ();
-    if (!opts.reverse) {
+    if (opts.varprioritizefirst) {
       if (!res)
         res = backward_true_satisfiable ();
       if (!res)
@@ -575,7 +583,7 @@ int Internal::lucky_phases () {
       res = trivially_false_satisfiable ();
     if (!res)
       res = trivially_true_satisfiable ();
-    if (!opts.reverse) {
+    if (opts.varprioritizefirst) {
       if (!res)
         res = backward_false_satisfiable ();
       if (!res)

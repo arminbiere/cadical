@@ -363,11 +363,6 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   mark_fixed (lit);
   if (level)
     return;
-  if (propagate ())
-    return;
-  assert (conflict);
-  LOG ("propagation of original unit results in conflict");
-  learn_empty_clause ();
 }
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
@@ -382,12 +377,12 @@ void Internal::assign_original_unit (int64_t id, int lit) {
 void Internal::add_new_original_clause (int64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
-    backtrack ();
+    backtrack_without_updating_phases ();
   } else if (tainted_literal) {
     assert (val (tainted_literal));
     int new_level = var (tainted_literal).level - 1;
     assert (new_level >= 0);
-    backtrack (new_level);
+    backtrack_without_updating_phases (new_level);
   }
   assert (!tainted_literal);
   LOG (original, "original clause");
@@ -416,6 +411,7 @@ void Internal::add_new_original_clause (int64_t id) {
           if (lrat) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+            // the external units are handled somewhere else
             if (!external->ext_units[eidx]) {
               int64_t uid = unit_id (-lit);
               lrat_chain.push_back (uid);

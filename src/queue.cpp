@@ -7,7 +7,7 @@ namespace CaDiCaL {
 
 inline void Internal::init_enqueue (int idx) {
   Link &l = links[idx];
-  if (opts.reverse) {
+  if (!opts.varprioritizefirst) {
     l.prev = 0;
     if (queue.first) {
       assert (!links[queue.first].prev);

@@ -1,8 +1,9 @@
 #include "internal.hpp"
+#include <initializer_list>
 
 namespace CaDiCaL {
 
-Limit::Limit () { memset (this, 0, sizeof *this); }
+Limit::Limit () { memset (this, 0, sizeof *this); assert (!initialized);}
 
 /*------------------------------------------------------------------------*/
 

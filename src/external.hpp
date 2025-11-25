@@ -276,6 +276,8 @@ struct External {
       bool extension = false); // Translate external to internal literal.
 
   /*----------------------------------------------------------------------*/
+  int declare_var (int new_var, bool extension);
+  /*----------------------------------------------------------------------*/
 
   // According to the CaDiCaL API contract (as well as IPASIR) we have to
   // forget about the previous assumptions after a 'solve' call.  This

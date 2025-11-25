@@ -196,7 +196,6 @@ OPTION( restartmarginstable ,25,0,25,0,0,1, "stable slow fast margin in percent"
 OPTION( restartreusetrail, 1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,        0,  0,  2,0,0,1, "restore all clauses (2=really)") \
 OPTION( restoreflush,      0,  0,  1,0,0,1, "remove satisfied clauses") \
-OPTION( reverse,           0,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( score,             1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,     950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,              0,  0,2e9,0,0,1, "random seed") \
@@ -249,6 +248,8 @@ OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredeffort,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,    0,  0,2e9,1,0,1, "minimum efficiency") \
+OPTION( varpindexorder,    1,  0,  1,0,0,1, "use literals name given as (DIMACS) input") \
+OPTION( varprioritizefirst,0,  0,  1,0,0,1, "reverse variable ordering") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \

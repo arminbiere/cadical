@@ -1,6 +1,16 @@
+#include "flags.hpp"
 #include "internal.hpp"
 
 namespace CaDiCaL {
+
+void Internal::mark_declared (int lit) {
+  Flags &f = flags (lit);
+  assert (f.status == Flags::UNUSED);
+  f.status = Flags::DECLARED;
+  ++stats.declared;
+  --stats.unused;
+  LOG ("declaring new %d (max_var: %d, unused: %" PRId64 ", active: %" PRId64 ")", lit, max_var, stats.unused, stats.active);
+}
 
 void Internal::mark_fixed (int lit) {
   if (external->fixed_listener) {
@@ -11,6 +21,8 @@ void Internal::mark_fixed (int lit) {
       external->fixed_listener->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
+  if (f.status == Flags::DECLARED)
+    mark_active (lit);
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::FIXED;
   LOG ("fixed %d", abs (lit));
@@ -75,13 +87,13 @@ void Internal::mark_substituted (int lit) {
 
 void Internal::mark_active (int lit) {
   Flags &f = flags (lit);
-  assert (f.status == Flags::UNUSED);
+  assert (f.status == Flags::DECLARED);
   f.status = Flags::ACTIVE;
-  LOG ("activate %d previously unused", abs (lit));
+  LOG ("activate %d previously declared", abs (lit));
   assert (stats.inactive);
   stats.inactive--;
-  assert (stats.unused);
-  stats.unused--;
+  assert (stats.declared);
+  stats.declared--;
   stats.active++;
   assert (active (lit));
 }

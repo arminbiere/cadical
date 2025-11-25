@@ -43,11 +43,12 @@ struct Flags { // Variable flags.
 
   enum {
     UNUSED = 0,
-    ACTIVE = 1,
-    FIXED = 2,
-    ELIMINATED = 3,
-    SUBSTITUTED = 4,
-    PURE = 5
+    DECLARED = 1,
+    ACTIVE = 2,
+    FIXED = 3,
+    ELIMINATED = 4,
+    SUBSTITUTED = 5,
+    PURE = 6
   };
 
   unsigned char status : 3;
@@ -63,6 +64,7 @@ struct Flags { // Variable flags.
     status = UNUSED;
   }
 
+  bool declared () const { return status == DECLARED; }
   bool unused () const { return status == UNUSED; }
   bool active () const { return status == ACTIVE; }
   bool fixed () const { return status == FIXED; }
