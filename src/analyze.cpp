@@ -676,7 +676,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     int best_idx = 0, best_pos = 0;
 
     if (use_scores ()) {
-      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+      for (int i = control[jump + 1].trail; i < (int)trail.size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && !score_smaller (this) (best_idx, idx))
           continue;
@@ -685,7 +685,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
       }
       LOG ("best variable score %g", score (best_idx));
     } else {
-      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+      for (int i = control[jump + 1].trail; i < (int)trail.size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && bumped (best_idx) >= bumped (idx))
           continue;
@@ -1047,7 +1047,7 @@ void Internal::analyze () {
   assert (lrat_chain.empty ());
 
   const auto &t = &trail;
-  int i = t->size ();      // Start at end-of-trail.
+  int i = (int)t->size ();      // Start at end-of-trail.
   int open = 0;            // Seen but not processed on this level.
   int uip = 0;             // The first UIP literal.
   int resolvent_size = 0;  // without the uip
@@ -1326,7 +1326,7 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
     clause.clear ();
   } else {
     int jump;
-    const int glue = clause.size () - 1;
+    const int glue = (int)clause.size () - 1;
     conflict = new_driving_clause (glue, jump);
     UPDATE_AVERAGE (averages.current.level, jump);
     backtrack (jump);

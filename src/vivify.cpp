@@ -1789,12 +1789,12 @@ bool Internal::vivify () {
   vivify_initialize (vivifier, init_ticks);
   stats.ticks.vivify += init_ticks;
   int64_t limit = stats.ticks.vivify;
-  const double shared_effort = (double) init_ticks / 4.0;
+  const int64_t shared_effort = (double) init_ticks / 4.0;
   if (opts.vivifytier1) {
     set_vivifier_mode (vivifier, Vivify_Mode::TIER1);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
-    const double effort = (total * tier1effort) / sumeffort;
+    const int64_t effort = (total * tier1effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
@@ -1814,7 +1814,7 @@ bool Internal::vivify () {
     erase_vector (vivifier.schedule_tier1);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
-    const double effort = (total * tier2effort) / sumeffort;
+    const int64_t effort = (total * tier2effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
@@ -1833,7 +1833,7 @@ bool Internal::vivify () {
     erase_vector (vivifier.schedule_tier2);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
-    const double effort = (total * tier3effort) / sumeffort;
+    const int64_t effort = (total * tier3effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
@@ -1852,7 +1852,7 @@ bool Internal::vivify () {
     erase_vector (vivifier.schedule_tier3);
     if (limit < stats.ticks.vivify)
       limit = stats.ticks.vivify;
-    const double effort = (total * irreffort) / sumeffort;
+    const int64_t effort = (total * irreffort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
@@ -1860,8 +1860,8 @@ bool Internal::vivify () {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
-      const int old = stats.vivifystrirr;
-      const int old_tried = stats.vivifychecks;
+      const int64_t old = stats.vivifystrirr;
+      const int64_t old_tried = stats.vivifychecks;
       vivify_round (vivifier, limit);
       if (stats.vivifychecks - old_tried == 0 ||
           (float) (stats.vivifystrirr - old) /

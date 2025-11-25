@@ -320,7 +320,7 @@ private:
   std::vector<ExternalLemma *> external_lemmas;
 
   // The reasons of present external propagations
-  std::map<int, int> reason_map;
+  std::map<int, size_t> reason_map;
   // The external propagations that are currently unassigned
   std::set<int> unassigned_reasons;
 
