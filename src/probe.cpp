@@ -20,7 +20,8 @@ bool Internal::inprobing () {
     return false;
   if (preprocessing)
     assert (lim.preprocessing);
-  if (stats.inprobingphases && last.inprobe.reductions == stats.reductions)
+  if (opts.reduce && stats.inprobingphases &&
+      last.inprobe.reductions == stats.reductions)
     return false;
   return lim.inprobe <= stats.conflicts;
 }
