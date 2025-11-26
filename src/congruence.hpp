@@ -274,7 +274,11 @@ struct Gate {
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }
-  Gate () { garbage = indexed = marked = shrunken = 0; }
+  Gate () {
+    garbage = indexed = marked = shrunken = 0;
+    tag = Gate_Type::And_Gate;
+    lhs = 0;
+  }
 
   bool operator== (Gate const &lhs) {
     return tag == lhs.tag && rhs == lhs.rhs;
