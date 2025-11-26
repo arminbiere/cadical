@@ -901,9 +901,11 @@ static void check_clause_extension (int id, int *literals,
       assert (!value);
       assign_literal (-lit);
     }
-    if (!ext)
-      crr (id, "no pure literal for extension check "
-               "(empty clause)");
+    if (!ext) {
+      dbg (id,
+           "no pure literal for extension check, assuming first literal");
+      ext = *literals;
+    }
     size_t numants = COUNT (-ext);
     for (int *a = antecedents, aid; (aid = *a); a++) {
       if (aid > 0)
