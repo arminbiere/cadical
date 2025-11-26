@@ -2150,8 +2150,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-          // if (c->type == Call::CONTINUE)
-          //   continue;
+        // if (c->type == Call::CONTINUE)
+        //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -4731,11 +4731,14 @@ void Reader::parse () {
     //
     if (enforce) {
 #ifdef MOBICAL_MEMORY
-      if (!state && !(c->type & (Call::INIT | Call::MAXALLOC)))
+      if (!state &&
+          !(c->type & (Call::INIT | Call::MAXALLOC | Call::LEAKALLOC)))
+        error ("first call has to be an 'init', 'maxalloc' or 'leakalloc' "
+               "call");
 #else
       if (!state && !(c->type == Call::INIT))
+        error ("first call has to be an 'init' call");
 #endif
-        error ("first call has to be an 'init' or 'maxalloc' call");
 
       if (state == Call::RESET)
         error ("'%s' after 'reset'", c->keyword ());
