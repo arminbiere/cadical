@@ -7075,6 +7075,10 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
 #ifdef LOGGING
   g->id = -1;
 #endif
+  g->garbage = false;
+  g->indexed = false;
+  g->shrunken = false;
+  g->marked = false;
   Gate *h = find_ite_gate (g, negate_lhs);
   if (negate_lhs)
     lhs = -lhs;
@@ -7099,9 +7103,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
   } else {
     // do not sort clauses here obviously!
     // sort (begin (g->rhs), end (g->rhs));
-    g->garbage = false;
     g->indexed = true;
-    g->shrunken = false;
     table.insert (g);
     ++internal->stats.congruence.gates;
 #ifdef LOGGING
