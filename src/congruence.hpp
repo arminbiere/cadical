@@ -278,6 +278,7 @@ struct Gate {
   bool operator== (Gate const &lhs) {
     return tag == lhs.tag && rhs == lhs.rhs;
   }
+  Gate () : lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), neg_lhs_ids () {}
 };
 
 typedef vector<Gate *> GOccs;
