@@ -277,8 +277,6 @@ void Internal::report (char type, int verbose) {
     break;
   case '(':
   case ')':
-    tout.bold ();
-    tout.yellow ();
     break;
   case '{':
   case '}':
