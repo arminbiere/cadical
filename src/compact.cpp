@@ -281,6 +281,31 @@ void Internal::compact () {
     }
   }
 
+  {
+    for (auto &fg : factored_gates) {
+      {
+      }
+      int tmp_d = mapper.map_lit (fg.definition);
+      int tmp_c = mapper.map_lit (fg.condition);
+      int tmp_t = mapper.map_lit (fg.true_branch);
+      int tmp_f = mapper.map_lit (fg.false_branch);
+      if (tmp_d != fg.definition || tmp_c != fg.condition ||
+          tmp_t != fg.true_branch || tmp_f != fg.false_branch) {
+        fg.false_branch = fg.true_branch = fg.condition = fg.definition = 0;
+      }
+    }
+    auto begin = factored_gates.begin ();
+    auto end = factored_gates.begin ();
+    auto p = factored_gates.begin ();
+    auto q = factored_gates.begin ();
+    while (p != end) {
+      auto fg = *q++ = *p++;
+      if (!fg.definition) // drop
+        q--;
+    }
+    factored_gates.resize (q - begin);
+  }
+
   // Map the blocking literals in all watches.
   //
   if (!wtab.empty ())

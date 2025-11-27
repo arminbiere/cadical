@@ -90,6 +90,7 @@ extern "C" {
 #include "random.hpp"
 #include "range.hpp"
 #include "reap.hpp"
+#include "refactor.hpp"
 #include "reluctant.hpp"
 #include "resources.hpp"
 #include "score.hpp"
@@ -148,15 +149,16 @@ struct Internal {
     FACTOR = (1 << 7),
     LUCKY = (1 << 8),
     PROBE = (1 << 9),
-    SEARCH = (1 << 10),
-    SIMPLIFY = (1 << 11),
-    SUBSUME = (1 << 12),
-    SWEEP = (1 << 13),
+    REFACTOR = (1 << 10),
+    SEARCH = (1 << 11),
+    SIMPLIFY = (1 << 12),
+    SUBSUME = (1 << 13),
+    SWEEP = (1 << 14),
     TERNARY = (1 << 14),
-    TRANSRED = (1 << 15),
-    VIVIFY = (1 << 16),
-    WALK = (1 << 17),
-    BACKBONE = (1 << 18),
+    TRANSRED = (1 << 16),
+    VIVIFY = (1 << 17),
+    WALK = (1 << 18),
+    BACKBONE = (1 << 19),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -211,11 +213,12 @@ struct Internal {
   vector<int64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;    // for LRAT in instantiate
   vector<vector<vector<int64_t>>>
-      probehbr_chains;          // only used if opts.probehbr=false
-  bool lrat;                    // generate LRAT internally
-  bool frat;                    // finalize non-deleted clauses in proof
-  int level;                    // decision level ('control.size () - 1')
-  Phases phases;                // saved, target and best phases
+      probehbr_chains; // only used if opts.probehbr=false
+  bool lrat;           // generate LRAT internally
+  bool frat;           // finalize non-deleted clauses in proof
+  int level;           // decision level ('control.size () - 1')
+  Phases phases;       // saved, target and best phases
+  vector<factored_ite_gate> factored_gates;
   signed char *vals;            // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
   vector<unsigned> frozentab;   // frozen counters [1,max_var]
@@ -1343,6 +1346,26 @@ struct Internal {
   int get_new_extension_variable ();
   Clause *new_factor_clause (int);
   void adjust_scores_and_phases_of_fresh_variables (Factoring &);
+
+  // refactor
+  //
+  void refactor_initialize (Refactoring &vivifier, int64_t &ticks);
+  void refactor_analyze_redundant (Refactoring &, Clause *start, bool &);
+  void refactor_build_lrat (int, Clause *,
+                            std::vector<std::tuple<int, Clause *, bool>> &);
+  void refactor_chain_for_units (int lit, Clause *reason);
+  void refactor_strengthen (Clause *candidate, int64_t &);
+  void refactor_assign (int lit, Clause *);
+  void refactor_assume (int lit);
+  bool refactor_propagate (int64_t &);
+  void refactor_deduce (Clause *candidate, Clause *conflct, int implied,
+                        Clause **, bool &);
+  bool refactor_clause (Refactoring &, Clause *candidate);
+  void refactor_analyze (Clause *start, bool &, Clause **,
+                         const Clause *const, int implied, bool &);
+  bool refactor_shrinkable (const std::vector<int> &sorted, Clause *c);
+  void refactor_round (Refactoring &, int64_t delta);
+  bool refactor ();
 
   // instantiate
   //

@@ -23,6 +23,7 @@ struct Stats {
     int64_t cover = 0;       // propagated during covered clause elimination
     int64_t instantiate = 0; // propagated during variable instantiation
     int64_t probe = 0;       // propagated during probing
+    int64_t refactor = 0;    // propagated during refactor
     int64_t search = 0;      // propagated literals during search
     int64_t transred = 0;    // propagated during transitive reduction
     int64_t vivify = 0;      // propagated during vivification
@@ -211,6 +212,11 @@ struct Stats {
   int64_t clauses_unfactored = 0;
   int64_t clauses_unfactored_redundant = 0;
   int64_t literals_unfactored = 0;
+
+  int64_t refactor = 0;
+  int64_t refactorunits = 0;
+  int64_t refactorstrs = 0;
+  int64_t refactorchecks = 0;
 
   int64_t elimotfstr =
       0; // number of on-the-fly strengthened during elimination

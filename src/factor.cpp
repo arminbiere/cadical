@@ -913,6 +913,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   const int third = q->third;
   LOG ("factored ite %d = if %d then %d else %d", fresh, factor, second,
        third);
+  factored_gates.emplace_back (fresh, factor, second, third);
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   {
