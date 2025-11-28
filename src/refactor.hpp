@@ -12,8 +12,8 @@ struct Clause;
 // be able to iterate over them, but we provide the reference to them to
 // make sure that you do need to remember the order.
 struct Refactoring {
-  std::vector<int> schedule;
-  std::vector<Clause *> current_clauses;
+  std::vector<std::pair<int, std::vector<Clause *>>> gate_clauses;
+  std::vector<std::pair<int, Clause *>> candidates;
   int64_t ticks;
   std::vector<std::tuple<int, Clause *, bool>> lrat_stack;
 };

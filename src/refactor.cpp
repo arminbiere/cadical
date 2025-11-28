@@ -1,9 +1,8 @@
-#include "factor.hpp"
+#include "refactor.hpp"
 #include "internal.hpp"
 #include "util.hpp"
 #include <algorithm>
 #include <limits>
-#include <utility>
 
 namespace CaDiCaL {
 
@@ -468,65 +467,16 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
   // propagations), which in turn lets us also refactor more clauses within
   // the same propagation bounds, or terminate earlier if refactor runs to
   // completion.
+  // TODO: do this eagerly just for the two gate literals in the clause
+  // (which are assigned first anyway).
   //
   if (level) {
-#ifdef LOGGING
-    int orig_level = level;
-#endif
-    // First check whether this clause is actually a reason for forcing
-    // one of its literals to true and then backtrack one level before
-    // that happened.  Otherwise this clause might be incorrectly
-    // considered to be redundant or if this situation is checked then
-    // redundancy by other clauses using this forced literal becomes
-    // impossible.
-    //
-    int forced = 0;
 
-    // This search could be avoided if we would eagerly set the 'reason'
-    // boolean flag of clauses, which however we do not want to do for
-    // binary clauses (during propagation) and thus would still require
-    // a version of 'protect_reason' for binary clauses during 'reduce'
-    // (well binary clauses are not collected during 'reduce', but again
-    // this exception from the exception is pretty complex and thus a
-    // simply search here is probably easier to understand).
-
-    for (const auto &lit : *c) {
-      const signed char tmp = val (lit);
-      if (tmp < 0)
-        continue;
-      if (tmp > 0 && var (lit).reason == c)
-        forced = lit;
-      break;
-    }
-    if (forced) {
-      LOG ("clause is reason forcing %d", forced);
-      assert (var (forced).level);
-      backtrack_without_updating_phases (var (forced).level - 1);
-    }
+    backtrack_without_updating_phases (0);
 
     // As long the (remaining) literals of the sorted clause match
     // decisions on the trail we just reuse them.
     //
-    if (level) {
-
-      int l = 1; // This is the decision level we want to reuse.
-
-      for (const auto &lit : sorted) {
-        assert (!fixed (lit));
-        const int decision = control[l].decision;
-        if (-lit == decision) {
-          LOG ("reusing decision %d at decision level %d", decision, l);
-          ++stats.refactorreused;
-          if (++l > level)
-            break;
-        } else {
-          LOG ("literal %d does not match decision %d at decision level %d",
-               lit, decision, l);
-          backtrack_without_updating_phases (l - 1);
-          break;
-        }
-      }
-    }
 
     LOG ("reused %d decision levels from %d", level, orig_level);
   }
@@ -546,8 +496,9 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
   //
 
   // Go over the literals in the candidate clause in sorted order.
+  // TODO: prioritize the gate literals first.
   //
-  for (const auto &lit : sorted) {
+  for (const auto &lit : clause) {
 
     // Exit loop as soon a literal is positively implied (case '@5' below)
     // or propagation of the negation of a literal fails ('@6').
@@ -595,21 +546,6 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
     }
   }
 
-  if (subsume) {
-    int better_subsume_trail = var (subsume).trail;
-    for (auto lit : sorted) {
-      if (val (lit) <= 0)
-        continue;
-      const Var v = var (lit);
-      if (v.trail < better_subsume_trail) {
-        LOG ("improving subsume from %d at %d to %d at %d", subsume,
-             better_subsume_trail, lit, v.trail);
-        better_subsume_trail = v.trail;
-        subsume = lit;
-      }
-    }
-  }
-
   Clause *subsuming = nullptr;
   bool redundant = false;
   const int level_after_assumptions = level;
@@ -628,62 +564,15 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
     reverse (lrat_chain.begin (), lrat_chain.end ());
   }
 
-  // For an explanation of the code, see our POS'25 paper ``Revisiting
-  // Clause refactoring'' (although for the experiments we focused on
-  // Kissat instead of CaDiCaL)
-  if (subsuming) {
-    assert (c != subsuming);
-    refactor_subsume_clause (subsuming, c);
-    res = false;
-  } else if (refactor_shrinkable (sorted, conflict)) {
-    refactor_increment_stats (refactoring);
-    LOG ("refactor succeeded, learning new clause");
-    clear_analyzed_literals ();
-    LOG (lrat_chain, "lrat");
-    LOG (clause, "learning clause");
-    conflict = nullptr; // TODO dup from below
-    refactor_strengthen (c, ticks);
-    res = true;
-  } else if (subsume && c->redundant) {
-    LOG (c, "refactoring implied");
-    mark_garbage (c);
-    ++stats.refactorimplied;
-    res = true;
-  } else if ((conflict || subsume) && !c->redundant && !redundant) {
-    if (opts.refactordemote) {
-      LOG ("demote clause from irredundant to redundant");
-      demote_clause (c);
-      const int new_glue = recompute_glue (c);
-      promote_clause (c, new_glue);
-      res = false;
-    } else {
-      mark_garbage (c);
-      ++stats.refactorimplied;
-      res = true;
-    }
-  } else if (subsume) {
-    LOG (c, "no refactoring instantiation with implied literal %d",
-         subsume);
-    assert (!c->redundant);
-    assert (redundant);
-    res = false;
-    ++stats.refactorimplied;
+  // TODO: learn clause to shorten c.
+  if (!subsume && !conflict) {
+    LOG (c,
+         "refactoring unsuccessful (no conflict and no subsumed literal)");
   } else {
-    assert (level > 2);
-    assert ((size_t) level == sorted.size ());
-    LOG (c, "refactoring failed on");
-    lrat_chain.clear ();
-    assert (!subsume);
-    if (!subsume && opts.refactorinst) {
-      res = refactor_instantiate (sorted, c, lrat_stack, ticks);
-      assert (!conflict);
-    } else {
-      LOG ("cannot apply instantiation");
-      res = false;
-    }
+    LOG (c, "refactoring successful");
   }
 
-  if (conflict && level == level_after_assumptions) {
+  if (conflict) {
     LOG ("forcing backtracking at least one level after conflict");
     backtrack_without_updating_phases (level - 1);
   }
@@ -693,23 +582,6 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
   lrat_chain.clear ();
   conflict = nullptr;
 
-  if (res) {
-    switch (refactoring.tier) {
-    case refactor_Mode::IRREDUNDANT:
-      ++stats.vivifiedirred;
-      break;
-    case refactor_Mode::TIER1:
-      ++stats.vivifiedtier1;
-      break;
-    case refactor_Mode::TIER2:
-      ++stats.vivifiedtier2;
-      break;
-    default:
-      assert (refactoring.tier == refactor_Mode::TIER3);
-      ++stats.vivifiedtier3;
-      break;
-    }
-  }
   return res;
 }
 
@@ -801,166 +673,61 @@ inline void Internal::refactor_chain_for_units (int lit, Clause *reason) {
 void Internal::refactor_initialize (Refactoring &refactoring,
                                     int64_t &ticks) {
 
-  const int tier1 = refactoring.tier1_limit;
-  const int tier2 = refactoring.tier2_limit;
-  // Count the number of occurrences of literals in all clauses,
-  // particularly binary clauses, which are usually responsible
-  // for most of the propagations.
-  //
-  init_noccs ();
-
-  // Disconnect all watches since we sort literals within clauses.
-  //
   assert (watching ());
-#if 0
   clear_watches ();
-#endif
+  init_occs ();
 
-  size_t prioritized_irred = 0, prioritized_tier1 = 0,
-         prioritized_tier2 = 0, prioritized_tier3 = 0;
-  for (const auto &c : clauses) {
-    ++ticks;
-    if (c->size == 2)
-      continue; // see also (NO-BINARY) above
-    if (!consider_to_refactor_clause (c))
-      continue;
-
-    // This computes an approximation of the Jeroslow Wang heuristic
-    // score
-    //
-    //       nocc (L) =     sum       2^(12-|C|)
-    //                   L in C in F
-    //
-    // but we cap the size at 12, that is all clauses of size 12 and
-    // larger contribute '1' to the score, which allows us to use 'long'
-    // numbers. See the example above (search for '@1').
-    //
-    const int shift = 12 - c->size;
-    const uint64_t score = shift < 1 ? 1 : (1l << shift); // @4
-    for (const auto lit : *c) {
-      noccs (lit) += score;
-    }
-    LOG (c, "putting clause in candidates");
-    if (!c->redundant)
-      refactoring.schedule_irred.push_back (c),
-          prioritized_irred += (c->refactor);
-    else if (c->glue <= tier1)
-      refactoring.schedule_tier1.push_back (c),
-          prioritized_tier1 += (c->refactor);
-    else if (c->glue <= tier2)
-      refactoring.schedule_tier2.push_back (c),
-          prioritized_tier2 += (c->refactor);
-    else
-      refactoring.schedule_tier3.push_back (c),
-          prioritized_tier3 += (c->refactor);
-    ++ticks;
-  }
-
-  refactor_prioritize_leftovers ('x', prioritized_irred,
-                                 refactoring.schedule_irred);
-  refactor_prioritize_leftovers ('u', prioritized_tier1,
-                                 refactoring.schedule_tier1);
-  refactor_prioritize_leftovers ('v', prioritized_tier2,
-                                 refactoring.schedule_tier2);
-  refactor_prioritize_leftovers ('w', prioritized_tier3,
-                                 refactoring.schedule_tier3);
-
-  if (opts.refactorflush) {
-    clear_watches ();
-    for (auto &sched : refactoring.schedules) {
-      // approximation for schedule
-      ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
-      for (const auto &c : sched) {
-        // Literals in scheduled clauses are sorted with their highest score
-        // literals first (as explained above in the example at '@2').  This
-        // is also needed in the prefix subsumption checking below. We do an
-        // approximation below that is done only in the refactor_ref
-        // structure below.
-        //
-        sort (c->begin (), c->end (), refactor_more_noccs (this));
-        //        ++ticks;
+  for (auto &fg : factored_gates) {
+    int found_all_gate_clauses = 0;
+    mark (fg.definition), mark (fg.condition), mark (fg.true_branch),
+        mark (fg.false_branch);
+    refactoring.gate_clauses.emplace_back ();
+    refactoring.gate_clauses.back ().first = fg.definition;
+    for (const auto &c : clauses) {
+      ++ticks;
+      if (!c->redundant && c->size == 3) {
+        bool gate = true;
+        for (auto &lit : *c) {
+          if (!marked (lit) && !marked (!lit)) {
+            gate = false;
+            break;
+          }
+        }
+        if (!gate)
+          continue;
+        found_all_gate_clauses++;
+        refactoring.gate_clauses.back ().second.push_back (c);
       }
-      // Flush clauses subsumed by another clause with the same prefix,
-      // which also includes flushing syntactically identical clauses.
-      //
-      flush_refactoring_schedule (sched, ticks);
+      if (!c->redundant)
+        continue; // see also (NO-BINARY) above
+      if (c->size == 2)
+        continue; // see also (NO-BINARY) above
+      ++ticks;
+      size_t found_true = 0;
+      size_t found_false = 0;
+      for (auto &lit : *c) {
+        if (lit == fg.condition)
+          found_true++;
+        if (lit == -fg.condition)
+          found_false++;
+        if (lit == fg.true_branch)
+          found_true++;
+        if (lit == -fg.true_branch)
+          found_true++;
+        if (lit == fg.false_branch)
+          found_false++;
+        if (lit == -fg.false_branch)
+          found_false++;
+      }
     }
-    // approximation for schedule
-    //    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
-    connect_watches (); // watch all relevant clauses
+    unmark (fg.definition), unmark (fg.condition), unmark (fg.true_branch),
+        unmark (fg.false_branch);
   }
+
   refactor_propagate (ticks);
 
-  PHASE ("refactor", stats.refactorings,
-         "[phase %c] leftovers out of %zu clauses", 'u',
-         refactoring.schedule_tier1.size ());
+  PHASE ("refactor", stats.refactor, "");
 }
-
-inline std::vector<refactor_ref> &
-current_refs_schedule (Refactoring &refactoring) {
-  return refactoring.refs_schedule;
-}
-
-inline std::vector<Clause *> &current_schedule (Refactoring &refactoring) {
-  switch (refactoring.tier) {
-  case refactor_Mode::TIER1:
-    return refactoring.schedule_tier1;
-    break;
-  case refactor_Mode::TIER2:
-    return refactoring.schedule_tier2;
-    break;
-  case refactor_Mode::TIER3:
-    return refactoring.schedule_tier3;
-    break;
-  default:
-    return refactoring.schedule_irred;
-    break;
-  }
-  __builtin_unreachable ();
-}
-
-struct refactor_refcount_rank {
-  int offset;
-  refactor_refcount_rank (int j) : offset (j) {
-    assert (offset < COUNTREF_COUNTS);
-  }
-  typedef uint64_t Type;
-  Type operator() (const refactor_ref &a) const { return a.count[offset]; }
-};
-
-struct refactor_refcount_smaller {
-  int offset;
-  refactor_refcount_smaller (int j) : offset (j) {
-    assert (offset < COUNTREF_COUNTS);
-  }
-  bool operator() (const refactor_ref &a, const refactor_ref &b) const {
-    const auto s = refactor_refcount_rank (offset) (a);
-    const auto t = refactor_refcount_rank (offset) (b);
-    return s < t;
-  }
-};
-
-struct refactor_inversesize_rank {
-  refactor_inversesize_rank () {}
-  typedef uint64_t Type;
-  Type operator() (const refactor_ref &a) const { return ~a.size; }
-};
-
-struct refactor_inversesize_smaller {
-  refactor_inversesize_smaller () {}
-  bool operator() (const refactor_ref &a, const refactor_ref &b) const {
-    const auto s = refactor_inversesize_rank () (a);
-    const auto t = refactor_inversesize_rank () (b);
-    return s < t;
-  }
-};
-
-/*------------------------------------------------------------------------*/
-// There are two modes of refactoring, one using all clauses and one
-// focusing on irredundant clauses only.  The latter variant working on
-// irredundant clauses only can also remove irredundant asymmetric
-// tautologies (clauses subsumed through unit propagation), which in
-// redundant mode is incorrect (due to propagating over redundant clauses).
 
 void Internal::refactor_round (Refactoring &refactoring,
                                int64_t ticks_limit) {
@@ -970,73 +737,26 @@ void Internal::refactor_round (Refactoring &refactoring,
   if (terminated_asynchronously ())
     return;
 
-  auto &refs_schedule = current_refs_schedule (refactoring);
-  auto &schedule = current_schedule (refactoring);
-
-  PHASE ("refactor", stats.refactorings,
-         "starting %c refactoring round ticks limit %" PRId64
+  PHASE ("refactor", stats.refactor,
+         "starting refactoring round ticks limit %" PRId64
          " with %zu clauses",
-         refactoring.tag, ticks_limit, schedule.size ());
+         ticks_limit, refactoring.candidates.size ());
 
   assert (watching ());
 
-  int64_t ticks = 1 + schedule.size ();
-
-  // Sort candidates, with first to be tried candidate clause last, i.e.,
-  // many occurrences and high score literals) as in the example explained
-  // above (search for '@3').
-  //
-  if (refactoring.tier != refactor_Mode::IRREDUNDANT ||
-      irredundant () / 10 < redundant ()) {
-    // Literals in scheduled clauses are sorted with their highest score
-    // literals first (as explained above in the example at '@2').  This is
-    // also needed in the prefix subsumption checking below. We do an
-    // approximation below that is done only in the refactor_ref structure
-    // below.
-    //
-
-    // first build the schedule with refactoring_refs
-    const auto end_schedule = end (schedule);
-    refs_schedule.resize (schedule.size ());
-    std::transform (begin (schedule), end_schedule, begin (refs_schedule),
-                    [&] (Clause *c) { return create_ref (this, c); });
-    // now sort by size
-    MSORT (opts.radixsortlim, refs_schedule.begin (), refs_schedule.end (),
-           refactor_inversesize_rank (), refactor_inversesize_smaller ());
-    // now (stable) sort by number of occurrences
-    for (int i = 0; i < COUNTREF_COUNTS; ++i) {
-      const int offset = COUNTREF_COUNTS - 1 - i;
-      MSORT (opts.radixsortlim, refs_schedule.begin (),
-             refs_schedule.end (), refactor_refcount_rank (offset),
-             refactor_refcount_smaller (offset));
-    }
-    // force left-overs at the end
-    std::stable_partition (begin (refs_schedule), end (refs_schedule),
-                           [] (refactor_ref c) { return !c.refactor; });
-    std::transform (begin (refs_schedule), end (refs_schedule),
-                    begin (schedule),
-                    [] (refactor_ref c) { return c.clause; });
-    refs_schedule.clear ();
-  } else {
-    // skip sorting but still put clauses with the refactor tag at the end
-    // to be done first Kissat does this implicitely by going twice over all
-    // clauses
-    std::stable_partition (begin (schedule), end (schedule),
-                           [] (Clause *c) { return !c->refactor; });
-  }
+  int64_t ticks = 0;
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
   //
   int64_t checked = stats.refactorchecks;
-  int64_t subsumed = stats.refactorsubs;
   int64_t strengthened = stats.refactorstrs;
   int64_t units = stats.refactorunits;
 
-  int64_t scheduled = schedule.size ();
+  int64_t scheduled = refactoring.candidates.size ();
   stats.refactorsched += scheduled;
 
-  PHASE ("refactor", stats.refactorings,
+  PHASE ("refactor", stats.refactor,
          "scheduled %" PRId64 " clauses to be vivified %.0f%%", scheduled,
          percent (scheduled, stats.current.irredundant));
 

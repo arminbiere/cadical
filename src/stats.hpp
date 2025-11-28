@@ -216,6 +216,7 @@ struct Stats {
   int64_t refactor = 0;
   int64_t refactorunits = 0;
   int64_t refactorstrs = 0;
+  int64_t refactordecs = 0;
   int64_t refactorchecks = 0;
 
   int64_t elimotfstr =
