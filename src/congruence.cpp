@@ -3094,7 +3094,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       LOG ("found merged literals");
       ++internal->stats.congruence.ands;
     }
-    free (g);
+    Gate::delete_gate (g);
     return nullptr;
   } else {
     assert (!internal->lrat ||
