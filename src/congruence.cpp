@@ -57,10 +57,11 @@ std::string special_gate_str (int8_t f) {
 
 void update_ite_flags (Gate *g) {
   int8_t f = g->degenerated_gate;
+  int *grhs = g->rhs;
   const int lhs = g->lhs;
-  const int cond = g->rhs[0];
-  const int then_lit = g->rhs[1];
-  const int else_lit = g->rhs[2];
+  const int cond = grhs[0];
+  const int then_lit = grhs[1];
+  const int else_lit = grhs[2];
 
   if (lhs == cond) {
     f |= Special_Gate::NO_NEG_THEN;
@@ -5328,21 +5329,23 @@ void Closure::produce_ite_merge_then_else_reasons (
   if (!internal->lrat)
     return;
   check_correct_ite_flags (g);
+  //obfuscating because flexible array members.
+  int *grhs = g->rhs;
   // no merge is happening actually
   assert (g->rhs[1] == find_eager_representative (g->rhs[1]) ||
           g->rhs[2] == find_eager_representative (g->rhs[2]));
-  if (find_eager_representative (g->lhs) == g->rhs[1] ||
-      find_eager_representative (g->lhs) == g->rhs[2])
+  if (find_eager_representative (g->lhs) == grhs[1] ||
+      find_eager_representative (g->lhs) == grhs[2])
     return;
-  if ((g->rhs[1] == src && g->lhs == dst && g->rhs[2] == g->lhs) ||
-      (g->rhs[2] == src && g->lhs == dst && g->rhs[1] == g->lhs) ||
-      (g->rhs[1] == -src && g->lhs == -dst && g->rhs[2] == g->lhs) ||
-      (g->rhs[2] == -src && g->lhs == -dst && g->rhs[1] == g->lhs))
+  if ((grhs[1] == src && g->lhs == dst && grhs[2] == g->lhs) ||
+      (grhs[2] == src && g->lhs == dst && grhs[1] == g->lhs) ||
+      (grhs[1] == -src && g->lhs == -dst && grhs[2] == g->lhs) ||
+      (grhs[2] == -src && g->lhs == -dst && grhs[1] == g->lhs))
     return;
   check_ite_lrat_reasons (g);
   assert (g->arity () == 3);
-  assert (src == g->rhs[1] || src == g->rhs[2]);
-  assert (dst == g->rhs[1] || dst == g->rhs[2]);
+  assert (src == grhs[1] || src == grhs[2]);
+  assert (dst == grhs[1] || dst == grhs[2]);
   const int8_t flag = g->degenerated_gate;
   assert (!ite_flags_no_then_clauses (flag)); // e = lhs: already merged
   assert (!ite_flags_no_else_clauses (flag)); // t = lhs: already merged
@@ -5479,7 +5482,8 @@ bool Closure::rewrite_ite_gate_to_and (
         // -1 := ITE -4 1 -1 we need 3
         // -2 := ITE 1 2 2 we need 2
         LOG ("g->rhs[0] != -g->lhs");
-        const int idx = (g->lhs == g->rhs[2]) ? 3 : 2;
+        int *grhs = g->rhs;
+        const int idx = (g->lhs == grhs[2]) ? 3 : 2;
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx].clause,
                                          Rewrite (), lrat_chain);
       }
@@ -5583,10 +5587,11 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
   const size_t idx2 = idx1 + 1;
   const size_t other_idx1 = rewritting_then ? 2 : 0;
   const size_t other_idx2 = other_idx1 + 1;
-  const int cond_lit = g->rhs[0];
-  const int lit_to_merge = g->rhs[rewritting_then ? 2 : 1];
-  const int other_lit = g->rhs[rewritting_then ? 1 : 2];
-  const int repr_cond_lit = find_eager_representative (g->rhs[0]);
+  int *grhs = g->rhs;
+  const int cond_lit = grhs[0];
+  const int lit_to_merge = grhs[rewritting_then ? 2 : 1];
+  const int other_lit = grhs[rewritting_then ? 1 : 2];
+  const int repr_cond_lit = find_eager_representative (grhs[0]);
   const int repr_lit_to_merge = find_eager_representative (lit_to_merge);
   const int repr_other_lit = find_eager_representative (other_lit);
   const int repr_lhs = find_eager_representative (g->lhs);
@@ -5791,11 +5796,11 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   assert (!g->shrunken);
   assert (g->arity () == 3);
   assert (!internal->lrat || g->pos_lhs_ids.size () == 4);
-  auto &rhs = g->rhs;
+  int *grhs = g->rhs;
   const int lhs = g->lhs;
-  const int cond = g->rhs[0];
-  const int then_lit = g->rhs[1];
-  const int else_lit = g->rhs[2];
+  const int cond = grhs[0];
+  const int then_lit = grhs[1];
+  const int else_lit = grhs[2];
   const int not_lhs = -(lhs);
   const int not_dst = -(dst);
   const int not_cond = -(cond);
