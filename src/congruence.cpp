@@ -4014,7 +4014,8 @@ void Closure::add_xor_matching_proof_chain (
       const LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
       unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
-        int32_t rest = n &= ~(1 << (unsimplified.size () - 1));
+        int32_t offset = unsimplified.empty () ? 0 : 1 << (unsimplified.size () - 1);
+        int32_t rest = n &= ~offset;
         first_tmp.push_back (LitIdPair (rest, id1));
         n = number_from_xor_reason_reversed (unsimplified);
         lrat_chain.clear ();
@@ -4030,7 +4031,8 @@ void Closure::add_xor_matching_proof_chain (
       unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
         lrat_chain.clear ();
-        int32_t rest = n &= ~(1 << (unsimplified.size () - 1));
+        int32_t offset = unsimplified.empty () ? 0 : 1 << (unsimplified.size () - 1);
+        int32_t rest = n &= ~offset;
         second_tmp.push_back (LitIdPair (rest, id2));
       }
       inc_lits (unsimplified);
