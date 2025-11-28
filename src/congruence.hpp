@@ -238,54 +238,111 @@ struct my_dummy_optional {
 //  - `pos_lhs_ids' contains all the remaining gates.
 //
 // We keep the reasons with an index. This index depends on the gates:
-
+//
 //   - AND-Gates and ITE-Gates: the index is the literal from the RHS
 //
 //   - XOR-Gates: if you order the clauses by the order of the literals,
 //   each literal is either positive (bit '1') or negative (bit '0'). This
 //   gives a number that we can use.
 //
-// TODO Florian: I do not think that you have to changed anything, look at
-// the 'Look at this first' in the CPP file.
 //
-// Important for the proofs: the LHS is not updated.
-//
-// TODO: we currently use a vector for the rhs, but we could also use FMA
-// and inline the structure to avoid any indirection.
+// Important for the proofs: the LHS is not eagerly updated.
 //
 // One warning for degenerated gate: it is a monotone property on the
 // defining clauses, but not on the LHS/RHS as the LHS is not rewritten:
 // take 4 = AND 3 4 (degenerated with only the clause -4 3) with a rewriting
 // 4 -> 1 (unchanged clause) and later 1 -> 3 (unchanged clause) but you do
 // not know anymore from the gate that it is degenerated
+//
+// We use flexible array members, which are actually only a C feature, although
+// most compilers support it. Unlike clauses, we have C++ class within the
+// struct for LRAT proofs. Therefore, we actually need a proper
+// constructor/destructor.
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
 #endif
+  vector<LitClausePair> pos_lhs_ids;
+  my_dummy_optional neg_lhs_ids;
   int lhs;
   Gate_Type tag;
   bool garbage : 1;
   bool indexed : 1;
   bool marked : 1;
   bool shrunken : 1;
-  vector<LitClausePair> pos_lhs_ids;
-  my_dummy_optional neg_lhs_ids;
   int8_t degenerated_gate = Special_Gate::NORMAL;
-  vector<int> rhs;
-
-  size_t arity () const { return rhs.size (); }
+  const int capacity;
+  int size;
+#ifndef NFLEXIBLE
+  int rhs[];
+#else
+  int rhs[2];
+#endif
+  int arity () const { return size; }
 
   bool operator== (Gate const &lhs) {
-    return tag == lhs.tag && rhs == lhs.rhs;
+    if (tag != lhs.tag)
+      return false;
+    if (size != lhs.size)
+      return false;
+    for (int i = 0; i < size; ++i)
+      if (rhs[i] != lhs.rhs[i])
+        return false;
+    return true;
   }
-  Gate () : lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), neg_lhs_ids () {}
+  // default constructor
+  Gate () : neg_lhs_ids (), lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), capacity(0), size (0) {}
+  Gate (int _size) : neg_lhs_ids (), lhs (0), tag (Gate_Type::And_Gate), garbage (false), indexed (false), marked (false), shrunken (false),
+  capacity(_size), size (_size) {}
+
+  static size_t bytes (int size) {
+    assert (size > 1);
+    const size_t header_bytes = sizeof (Gate);
+    const size_t actual_literal_bytes = size * sizeof (int);
+    size_t combined_bytes = header_bytes + actual_literal_bytes;
+#ifdef NFLEXIBLE
+    const size_t faked_literals_bytes = sizeof ((Gate *) 0)->rhs;
+    combined_bytes -= faked_literals_bytes;
+#endif
+    size_t aligned_bytes = align (combined_bytes, 8);
+    return aligned_bytes;
+  }
+  size_t bytes () const { return bytes (size); }
+
+  // creation of a gate with either the size or of the right-hand side
+  static Gate *new_gate(size_t n);
+  static Gate *new_gate(const std::vector<int> &v);
+  static Gate *new_gate(const_literal_iterator begin, const_literal_iterator end);
+
+  // deletion of a gate
+  static void delete_gate (Gate *g);
+
+  literal_iterator begin () {return rhs;}
+  literal_iterator end () { return rhs + size; }
+
+  const_literal_iterator begin () const { return rhs; }
+  const_literal_iterator end () const { return rhs + size; }
+
+  // reduce the size of the rhs of the gate
+  void resize (int n);
+  // set the rhs to the vector passed as argument
+  void set (const std::vector<int> &new_rhs);
+  // set the rhs based on the iterators passed as argument
+  void set (const_literal_iterator begin, const_literal_iterator end);
 };
 
 typedef vector<Gate *> GOccs;
 
 struct GateEqualTo {
   bool operator() (const Gate *const lhs, const Gate *const rhs) const {
-    return lhs->rhs == rhs->rhs && lhs->tag == rhs->tag;
+    if (lhs->tag != rhs->tag)
+      return false;
+    if (lhs->arity () != rhs->arity ())
+      return false;
+    for (int i = 0; i < rhs->arity (); ++i)
+      if (lhs->rhs[i] != rhs->rhs[i])
+        return false;
+    return true;
   }
 };
 
@@ -317,7 +374,7 @@ struct Rewrite {
 struct Closure {
 
   Closure (Internal *i);
-  ~Closure () { delete dummy_search_gate; }
+  ~Closure () { Gate::delete_gate (dummy_search_gate); }
   Gate *dummy_search_gate = nullptr;
 
   Internal *const internal;
@@ -563,14 +620,20 @@ struct Closure {
   void extract_and_gates ();
 
   Gate *find_and_lits (vector<int> &rhs, Gate *except = nullptr);
+
+    Gate *find_and_lits (literal_iterator begin, literal_iterator end, Gate *except = nullptr);
   Gate *
-  find_gate_lits (vector<int> &rhs,
-                  Gate_Type typ, // rhs unchanged but swapped back and forth
+  find_gate_lits (const_literal_iterator begin, const_literal_iterator end,
+                  Gate_Type typ,
+                  Gate *except = nullptr);
+  Gate *
+  find_gate_lits (const std::vector<int>&rhs,
+                  Gate_Type typ,
                   Gate *except = nullptr);
   Gate *find_xor_lits (vector<int> &rhs);
   // not const to normalize negations, also fixes the order of the LRAT
   Gate *find_ite_gate (Gate *, bool &);
-  Gate *find_xor_gate (Gate *);
+  Gate *find_xor_gate (const Gate *const);
 
   void reset_xor_gate_extraction ();
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
@@ -688,6 +751,7 @@ struct Closure {
   Clause *new_clause ();
   //
   void sort_literals_by_var (vector<int> &rhs);
+  void sort_literals_by_var (Gate *rhs);
   void sort_literals_by_var_except (vector<int> &rhs, int, int except2 = 0);
 
   // schedule

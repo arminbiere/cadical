@@ -148,7 +148,7 @@ struct Clause {
     const size_t faked_literals_bytes = sizeof ((Clause *) 0)->literals;
     combined_bytes -= faked_literals_bytes;
 #endif
-    size_t aligned_bytes = align (combined_bytes, 8);
+    size_t aligned_bytes = align (combined_bytes, alignof(Clause*));
     return aligned_bytes;
   }
 
