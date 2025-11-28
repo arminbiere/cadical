@@ -934,6 +934,8 @@ bool Internal::factor () {
     return false;
 
   int v_active = active ();
+  if (!v_active)
+    return false;
   size_t log_active = log10 (v_active);
   size_t eliminations = stats.elimrounds;
   size_t delay = opts.factordelay;
