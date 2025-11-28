@@ -5798,11 +5798,11 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   assert (!g->shrunken);
   assert (g->arity () == 3);
   assert (!internal->lrat || g->pos_lhs_ids.size () == 4);
-  int *grhs = g->rhs;
+  int *rhs = g->rhs;
   const int lhs = g->lhs;
-  const int cond = grhs[0];
-  const int then_lit = grhs[1];
-  const int else_lit = grhs[2];
+  const int cond = rhs[0];
+  const int then_lit = rhs[1];
+  const int else_lit = rhs[2];
   const int not_lhs = -(lhs);
   const int not_dst = -(dst);
   const int not_cond = -(cond);
