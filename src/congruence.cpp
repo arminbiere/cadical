@@ -92,9 +92,10 @@ void check_correct_ite_flags (const Gate *const g) {
 #ifndef NDEBUG
   const int8_t f = g->degenerated_gate;
   const int lhs = g->lhs;
-  const int cond = g->rhs[0];
-  const int then_lit = g->rhs[1];
-  const int else_lit = g->rhs[2];
+  const int *const grhs = g->rhs;
+  const int cond = grhs[0];
+  const int then_lit = grhs[1];
+  const int else_lit = grhs[2];
   assert (g->pos_lhs_ids.size () == 4);
   if (g->pos_lhs_ids[0].clause == nullptr)
     assert ((f & Special_Gate::NO_PLUS_THEN));
@@ -3820,9 +3821,10 @@ bool Closure::normalize_ite_lits_gate (Gate *g) {
 bool is_tautological_ite_gate (Gate *g) {
   assert (g->tag == Gate_Type::ITE_Gate);
   assert (g->arity () == 3);
-  const int cond_lit = g->rhs[0];
-  const int then_lit = g->rhs[1];
-  const int else_lit = g->rhs[2];
+  int *grhs = g->rhs;
+  const int cond_lit = grhs[0];
+  const int then_lit = grhs[1];
+  const int else_lit = grhs[2];
   return cond_lit == then_lit || cond_lit == else_lit;
 }
 #endif
@@ -5332,8 +5334,8 @@ void Closure::produce_ite_merge_then_else_reasons (
   //obfuscating because flexible array members.
   int *grhs = g->rhs;
   // no merge is happening actually
-  assert (g->rhs[1] == find_eager_representative (g->rhs[1]) ||
-          g->rhs[2] == find_eager_representative (g->rhs[2]));
+  assert (grhs[1] == find_eager_representative (grhs[1]) ||
+          grhs[2] == find_eager_representative (grhs[2]));
   if (find_eager_representative (g->lhs) == grhs[1] ||
       find_eager_representative (g->lhs) == grhs[2])
     return;
@@ -7314,7 +7316,8 @@ void Closure::check_ite_gate_implied (Gate *g) {
   assert (g->tag == Gate_Type::ITE_Gate);
   if (internal->lrat)
     return;
-  check_ite_implied (g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
+  int *grhs = g->rhs;
+  check_ite_implied (g->lhs, grhs[0], grhs[1], grhs[2]);
 }
 
 void Closure::init_ite_gate_extraction (
