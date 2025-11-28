@@ -189,6 +189,9 @@ OPTION( reduceopt,         1,  0,  2,0,0,1, "0=prct,1=sqrt,2=max") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \
 OPTION( reducetier1glue,   2,  1,2e9,0,0,1, "glue of kept learned clauses") \
 OPTION( reducetier2glue,   6,  1,2e9,0,0,1, "glue of tier two clauses") \
+OPTION( refactor,          1,  0,  1,0,1,1, "failed literal probing" ) \
+OPTION( refactoreffort,    8,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( refactorthresh,    0,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( reluctant,         1,  0,  1,0,0,1, "stable reluctant doubling restarts") \
 OPTION( reluctantint,   1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,2e9,0,0,1, "maximum reluctant doubling period") \

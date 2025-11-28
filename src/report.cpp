@@ -240,6 +240,7 @@ void Internal::report (char type, int verbose) {
   case 'v':
   case 'w':
   case 'x':
+  case 'y':
   case 'f':
   case '=':
     tout.blue (false);

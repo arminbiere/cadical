@@ -2,7 +2,6 @@
 #include "internal.hpp"
 #include "util.hpp"
 #include <algorithm>
-#include <limits>
 
 namespace CaDiCaL {
 
@@ -433,7 +432,6 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
 
   assert (!c->garbage);
 
-  auto &lrat_stack = refactoring.lrat_stack;
   auto &ticks = refactoring.ticks;
   ticks++;
 
@@ -548,8 +546,6 @@ bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
 
   Clause *subsuming = nullptr;
   bool redundant = false;
-  const int level_after_assumptions = level;
-  assert (level_after_assumptions);
   refactor_deduce (c, conflict, subsume, &subsuming, redundant);
 
   bool res;
@@ -673,10 +669,6 @@ inline void Internal::refactor_chain_for_units (int lit, Clause *reason) {
 void Internal::refactor_initialize (Refactoring &refactoring,
                                     int64_t &ticks) {
 
-  assert (watching ());
-  clear_watches ();
-  init_occs ();
-
   for (auto &fg : factored_gates) {
     int found_all_gate_clauses = 0;
     mark (fg.definition), mark (fg.condition), mark (fg.true_branch),
@@ -705,7 +697,12 @@ void Internal::refactor_initialize (Refactoring &refactoring,
       ++ticks;
       size_t found_true = 0;
       size_t found_false = 0;
+      bool skip = false;
       for (auto &lit : *c) {
+        if (lit == fg.definition) {
+          skip = true;
+          break;
+        }
         if (lit == fg.condition)
           found_true++;
         if (lit == -fg.condition)
@@ -719,6 +716,13 @@ void Internal::refactor_initialize (Refactoring &refactoring,
         if (lit == -fg.false_branch)
           found_false++;
       }
+      if (skip)
+        continue;
+      if (found_true == 2 || found_false == 2) {
+        refactoring.candidates.emplace_back ();
+        refactoring.candidates.back ().second = c;
+        refactoring.candidates.back ().first = fg.definition;
+      }
     }
     unmark (fg.definition), unmark (fg.condition), unmark (fg.true_branch),
         unmark (fg.false_branch);
@@ -726,7 +730,7 @@ void Internal::refactor_initialize (Refactoring &refactoring,
 
   refactor_propagate (ticks);
 
-  PHASE ("refactor", stats.refactor, "");
+  PHASE ("refactor", stats.refactor, "init");
 }
 
 void Internal::refactor_round (Refactoring &refactoring,
@@ -774,59 +778,17 @@ void Internal::refactor_round (Refactoring &refactoring,
     learn_empty_clause ();
   }
 
+  auto &schedule = refactoring.candidates;
   refactoring.ticks = ticks;
-  int retry = 0;
   while (!unsat && !terminated_asynchronously () && !schedule.empty () &&
          refactoring.ticks < limit) {
-    Clause *c = schedule.back (); // Next candidate.
+    Clause *c = schedule.back ().second; // Next candidate.
     schedule.pop_back ();
-    if (refactor_clause (refactoring, c) && !c->garbage && c->size > 2 &&
-        retry < opts.refactorretry) {
-      ++retry;
-      schedule.push_back (c);
-    } else
-      retry = 0;
+    refactor_clause (refactoring, c);
   }
 
   if (level)
     backtrack_without_updating_phases ();
-
-  if (!unsat) {
-    int64_t still_need_to_be_vivified = schedule.size ();
-#if 0
-    // in the current round we have new_clauses_to_refactor @ leftovers from previous round There are
-    // now two possibilities: (i) we consider all clauses as leftovers, or (ii) only the leftovers
-    // from previous round are considered leftovers.
-    //
-    // CaDiCaL had the first version before. If
-    // commented out we go to the second version.
-    for (auto c : schedule)
-      c->refactor = true;
-#elif 1
-    // if we have gone through all the leftovers (the next candidate
-    // is not one), all the current clauses are leftovers for the next
-    // round
-    if (!schedule.empty () && !schedule.back ()->refactor)
-      for (auto c : schedule)
-        c->refactor = true;
-#else
-    // do nothing like in kissat and use the candidates for next time.
-#endif
-    // Preference clauses scheduled but not vivified yet next time.
-    //
-    if (still_need_to_be_vivified)
-      PHASE ("refactor", stats.refactorings,
-             "still need to refactor %" PRId64
-             " clauses %.02f%% of %" PRId64 " scheduled",
-             still_need_to_be_vivified,
-             percent (still_need_to_be_vivified, scheduled), scheduled);
-    else {
-      PHASE ("refactor", stats.refactorings,
-             "no previously not yet vivified clause left");
-    }
-
-    erase_vector (schedule); // Reclaim  memory early.
-  }
 
   if (!unsat) {
 
@@ -839,71 +801,34 @@ void Internal::refactor_round (Refactoring &refactoring,
     propagated2 = propagated = 0;
 
     if (!propagate ()) {
-      LOG ("propagating vivified units leads to conflict");
+      LOG ("propagating refactored units leads to conflict");
       learn_empty_clause ();
     }
   }
 
   checked = stats.refactorchecks - checked;
-  subsumed = stats.refactorsubs - subsumed;
   strengthened = stats.refactorstrs - strengthened;
   units = stats.refactorunits - units;
 
-  PHASE ("refactor", stats.refactorings,
+  PHASE ("refactor", stats.refactor,
          "checked %" PRId64 " clauses %.02f%% of %" PRId64
          " scheduled using %" PRIu64 " ticks",
          checked, percent (checked, scheduled), scheduled,
          refactoring.ticks);
   if (units)
-    PHASE ("refactor", stats.refactorings,
+    PHASE ("refactor", stats.refactor,
            "found %" PRId64 " units %.02f%% of %" PRId64 " checked", units,
            percent (units, checked), checked);
-  if (subsumed)
-    PHASE ("refactor", stats.refactorings,
-           "subsumed %" PRId64 " clauses %.02f%% of %" PRId64 " checked",
-           subsumed, percent (subsumed, checked), checked);
   if (strengthened)
-    PHASE ("refactor", stats.refactorings,
+    PHASE ("refactor", stats.refactor,
            "strengthened %" PRId64 " clauses %.02f%% of %" PRId64
            " checked",
            strengthened, percent (strengthened, checked), checked);
 
-  stats.subsumed += subsumed;
-  stats.strengthened += strengthened;
   stats.ticks.refactor += refactoring.ticks;
 
-  bool unsuccessful = !(subsumed + strengthened + units);
-  report (refactoring.tag, unsuccessful);
-}
-
-void set_refactoring_mode (Refactoring &refactoring, refactor_Mode tier) {
-  refactoring.tier = tier;
-  switch (tier) {
-  case refactor_Mode::TIER1:
-    refactoring.tag = 'u';
-    break;
-  case refactor_Mode::TIER2:
-    refactoring.tag = 'v';
-    break;
-  case refactor_Mode::TIER3:
-    refactoring.tag = 'w';
-    break;
-  default:
-    assert (tier == refactor_Mode::IRREDUNDANT);
-    refactoring.tag = 'x';
-    break;
-  }
-}
-/*------------------------------------------------------------------------*/
-
-void Internal::compute_tier_limits (Refactoring &refactoring) {
-  if (!opts.refactorcalctier) {
-    refactoring.tier1_limit = 2;
-    refactoring.tier2_limit = 6;
-    return;
-  }
-  refactoring.tier1_limit = tier1[false];
-  refactoring.tier2_limit = tier2[false];
+  bool unsuccessful = !(strengthened + units);
+  report ('y', unsuccessful);
 }
 
 /*------------------------------------------------------------------------*/
@@ -927,147 +852,31 @@ bool Internal::refactor () {
 
   private_steps = true;
 
-  START_SIMPLIFIER (REFACTOR, refactor);
-  stats.refactorings++;
+  START_SIMPLIFIER (refactor, REFACTOR);
+  stats.refactor++;
 
   // the effort is normalized by dividing by sumeffort below, hence no need
   // to multiply by 1e-3 (also making the precision better)
-  double tier1effort =
-      !opts.refactortier1 ? 0 : (double) opts.refactortier1eff;
-  double tier2effort =
-      !opts.refactortier2 ? 0 : (double) opts.refactortier2eff;
-  double tier3effort =
-      !opts.refactortier3 ? 0 : (double) opts.refactortier3eff;
-  double irreffort = delaying_refactor_irredundant.bumpreasons.delay () ||
-                             !opts.refactorirred
-                         ? 0
-                         : (double) opts.refactorirredeff;
-  double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
-  if (!stats.current.redundant)
-    tier1effort = tier2effort = tier3effort = 0;
-  if (!sumeffort)
-    sumeffort = irreffort = 1;
   int64_t total = totallimit - stats.ticks.refactor;
 
-  PHASE ("refactor", stats.refactorings,
+  PHASE ("refactor", stats.refactor,
          "refactoring limit of %" PRId64 " ticks", total);
-  Refactoring refactoring (refactor_Mode::TIER1);
-  compute_tier_limits (refactoring);
+  Refactoring refactoring;
 
-  if (refactoring.tier1_limit == refactoring.tier2_limit) {
-    tier1effort += tier2effort;
-    tier2effort = 0;
-    LOG ("refactoring tier1 matches tier2 "
-         "thus using tier2 budget for tier1");
-  }
   int64_t init_ticks = 0;
 
-  // Refill the schedule every time. Unchecked clauses are 'saved' by
-  // setting their 'refactor' bit, such that they can be tried next time.
-  // There are two things to denote: the option 'refactoronce' does what it
-  // is supposed to do, and it works because the ticks are kept for the next
-  // schedule. Also, we limit the size of the schedule to limit the cost of
-  // sorting.
-  //
-  // TODO: After limiting, the cost we fixed some heuristics bug, so maybe
-  // we could increase the limit.
-  //
-  // TODO: count against ticks.refactor directly instead of this unholy
-  // shifting.
   refactor_initialize (refactoring, init_ticks);
   stats.ticks.refactor += init_ticks;
   int64_t limit = stats.ticks.refactor;
-  const double shared_effort = (double) init_ticks / 4.0;
-  if (opts.refactortier1) {
-    set_refactoring_mode (refactoring, refactor_Mode::TIER1);
-    if (limit < stats.ticks.refactor)
-      limit = stats.ticks.refactor;
-    const double effort = (total * tier1effort) / sumeffort;
-    assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
-            limit);
-    limit += effort;
-    if (limit - shared_effort > stats.ticks.refactor) {
-      limit -= shared_effort;
-      assert (limit >= 0);
-      refactor_round (refactoring, limit);
-    } else {
-      LOG ("building the schedule already used our entire ticks budget for "
-           "tier1");
-    }
+  if (limit > stats.ticks.refactor) {
+    assert (limit >= 0);
+    refactor_round (refactoring, limit);
+  } else {
+    LOG ("building the schedule already used our entire ticks budget for "
+         "refactor");
   }
 
-  if (!unsat && tier2effort) {
-    // save memory (well, not really as we
-    // already reached the peak memory)
-    erase_vector (refactoring.schedule_tier1);
-    if (limit < stats.ticks.refactor)
-      limit = stats.ticks.refactor;
-    const double effort = (total * tier2effort) / sumeffort;
-    assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
-            limit);
-    limit += effort;
-    if (limit - shared_effort > stats.ticks.refactor) {
-      limit -= shared_effort;
-      assert (limit >= 0);
-      set_refactoring_mode (refactoring, refactor_Mode::TIER2);
-      refactor_round (refactoring, limit);
-    } else {
-      LOG ("building the schedule already used our entire ticks budget for "
-           "tier2");
-    }
-  }
-
-  if (!unsat && tier3effort) {
-    erase_vector (refactoring.schedule_tier2);
-    if (limit < stats.ticks.refactor)
-      limit = stats.ticks.refactor;
-    const double effort = (total * tier3effort) / sumeffort;
-    assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
-            limit);
-    limit += effort;
-    if (limit - shared_effort > stats.ticks.refactor) {
-      limit -= shared_effort;
-      assert (limit >= 0);
-      set_refactoring_mode (refactoring, refactor_Mode::TIER3);
-      refactor_round (refactoring, limit);
-    } else {
-      LOG ("building the schedule already used our entire ticks budget for "
-           "tier3");
-    }
-  }
-
-  if (!unsat && irreffort) {
-    erase_vector (refactoring.schedule_tier3);
-    if (limit < stats.ticks.refactor)
-      limit = stats.ticks.refactor;
-    const double effort = (total * irreffort) / sumeffort;
-    assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
-            limit);
-    limit += effort;
-    if (limit - shared_effort > stats.ticks.refactor) {
-      limit -= shared_effort;
-      assert (limit >= 0);
-      set_refactoring_mode (refactoring, refactor_Mode::IRREDUNDANT);
-      const int old = stats.refactorstrirr;
-      const int old_tried = stats.refactorchecks;
-      refactor_round (refactoring, limit);
-      if (stats.refactorchecks - old_tried == 0 ||
-          (float) (stats.refactorstrirr - old) /
-                  (float) (stats.refactorchecks - old_tried) <
-              0.01) {
-        delaying_refactor_irredundant.bumpreasons.bump_delay ();
-      } else {
-        delaying_refactor_irredundant.bumpreasons.reduce_delay ();
-      }
-    } else {
-      delaying_refactor_irredundant.bumpreasons.bump_delay ();
-      LOG ("building the schedule already used our entire ticks budget for "
-           "irredundant");
-    }
-  }
-
-  reset_noccs ();
-  STOP_SIMPLIFIER (REFACTOR, refactor);
+  STOP_SIMPLIFIER (refactor, REFACTOR);
 
   private_steps = false;
 

@@ -35,6 +35,7 @@ struct Stats {
     int64_t backbone = 0;
     int64_t factor = 0;
     int64_t probe = 0;
+    int64_t refactor = 0;
     int64_t sweep = 0;
     int64_t ternary = 0;
     int64_t vivify = 0;
@@ -217,6 +218,7 @@ struct Stats {
   int64_t refactorunits = 0;
   int64_t refactorstrs = 0;
   int64_t refactordecs = 0;
+  int64_t refactorsched = 0;
   int64_t refactorchecks = 0;
 
   int64_t elimotfstr =
