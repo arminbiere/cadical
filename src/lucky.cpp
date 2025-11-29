@@ -533,93 +533,98 @@ int Internal::lucky_phases () {
   assert (!searching_lucky_phases);
   searching_lucky_phases = true;
   stats.lucky.tried++;
-  const int64_t active_before = stats.active;
-  int res = 0;
-  // The idea of the code is to:
-  // 1. check for the trival solutions
-  //
-  // 2. a. use the order provided by the user (by default, the decisions are
-  // largest first)
-  //
-  // b. then use first the phases proviveded by the user (by default '1')
-  if (opts.phase) {
-    if (!res)
-      res = trivially_true_satisfiable ();
-    if (!res)
-      res = trivially_false_satisfiable ();
-    if (!opts.reverse) {
+  int64_t units =0;
+  int res = 0, rounds = 0;
+  const int64_t active_initially = stats.active;
+  do {
+    const int64_t active_before = stats.active;
+    // The idea of the code is to:
+    // 1. check for the trival solutions
+    //
+    // 2. a. use the order provided by the user (by default, the decisions are
+    // largest first)
+    //
+    // b. then use first the phases proviveded by the user (by default '1')
+    if (opts.phase) {
       if (!res)
-        res = backward_true_satisfiable ();
+        res = trivially_true_satisfiable ();
       if (!res)
-        res = backward_false_satisfiable ();
+        res = trivially_false_satisfiable ();
+      if (!opts.reverse) {
+        if (!res)
+          res = backward_true_satisfiable ();
+        if (!res)
+          res = backward_false_satisfiable ();
+        if (!res)
+          res = forward_true_satisfiable ();
+        if (!res)
+          res = forward_false_satisfiable ();
+      } else {
+        if (!res)
+          res = forward_true_satisfiable ();
+        if (!res)
+          res = forward_false_satisfiable ();
+        if (!res)
+          res = backward_true_satisfiable ();
+        if (!res)
+          res = backward_false_satisfiable ();
+      }
       if (!res)
-        res = forward_true_satisfiable ();
+        res = positive_horn_satisfiable ();
       if (!res)
-        res = forward_false_satisfiable ();
+        res = negative_horn_satisfiable ();
     } else {
       if (!res)
-        res = forward_true_satisfiable ();
+        res = trivially_false_satisfiable ();
       if (!res)
-        res = forward_false_satisfiable ();
+        res = trivially_true_satisfiable ();
+      if (!opts.reverse) {
+        if (!res)
+          res = backward_false_satisfiable ();
+        if (!res)
+          res = backward_true_satisfiable ();
+        if (!res)
+          res = forward_false_satisfiable ();
+        if (!res)
+          res = forward_true_satisfiable ();
+      } else {
+        if (!res)
+          res = forward_false_satisfiable ();
+        if (!res)
+          res = forward_true_satisfiable ();
+        if (!res)
+          res = backward_false_satisfiable ();
+        if (!res)
+          res = backward_true_satisfiable ();
+      }
       if (!res)
-        res = backward_true_satisfiable ();
+        res = negative_horn_satisfiable ();
       if (!res)
-        res = backward_false_satisfiable ();
+        res = positive_horn_satisfiable ();
     }
-    if (!res)
-      res = positive_horn_satisfiable ();
-    if (!res)
-      res = negative_horn_satisfiable ();
-  } else {
-    if (!res)
-      res = trivially_false_satisfiable ();
-    if (!res)
-      res = trivially_true_satisfiable ();
-    if (!opts.reverse) {
-      if (!res)
-        res = backward_false_satisfiable ();
-      if (!res)
-        res = backward_true_satisfiable ();
-      if (!res)
-        res = forward_false_satisfiable ();
-      if (!res)
-        res = forward_true_satisfiable ();
-    } else {
-      if (!res)
-        res = forward_false_satisfiable ();
-      if (!res)
-        res = forward_true_satisfiable ();
-      if (!res)
-        res = backward_false_satisfiable ();
-      if (!res)
-        res = backward_true_satisfiable ();
+    if (res < 0)
+      assert (termination_forced), res = 0;
+    if (res == 10)
+      stats.lucky.succeeded++;
+    report ('l', !res);
+    assert (searching_lucky_phases);
+
+    assert (res || !level);
+    if (res != 20) {
+      if (!propagate ()) {
+        LOG ("propagating units after elimination results in empty clause");
+        learn_empty_clause ();
+      }
     }
-    if (!res)
-      res = negative_horn_satisfiable ();
-    if (!res)
-      res = positive_horn_satisfiable ();
-  }
-  if (res < 0)
-    assert (termination_forced), res = 0;
-  if (res == 10)
-    stats.lucky.succeeded++;
-  report ('l', !res);
-  assert (searching_lucky_phases);
 
-  assert (res || !level);
-  if (res != 20) {
-    if (!propagate ()) {
-      LOG ("propagating units after elimination results in empty clause");
-      learn_empty_clause ();
-    }
-  }
+    units = active_before - stats.active;
+    stats.lucky.units += units;
 
-  const int64_t units = active_before - stats.active;
-  stats.lucky.units += units;
-
-  if (!res && units)
-    LOG ("lucky %" PRId64 " units", units);
+    if (!res && units)
+      PHASE ("lucky", stats.lucky.tried, "in round %d found %" PRId64 " units", rounds, units);
+  } while (units && !res && ++rounds < opts.luckyrounds);
   searching_lucky_phases = false;
+  PHASE ("lucky", stats.lucky.tried, "produced %" PRId64 " units after %d rounds", active_initially - stats.active, rounds);
 
   STOP (lucky);
   STOP (search);
