@@ -798,8 +798,6 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
 
 int Internal::preprocess (bool always) {
   int res = 0;
-  if (!level && !unsat && opts.luckyearly)
-    res = lucky_phases ();
   if (res)
     return res;
   bool preprecessing_triggered = false;
@@ -990,6 +988,8 @@ int Internal::solve (bool preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
+  if (!preprocess_only && !res && !level && opts.luckyearly)
+    res = lucky_phases ();
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
