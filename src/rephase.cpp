@@ -321,7 +321,6 @@ void Internal::rephase () {
         type = rephase_flipping ();
       else // seems important for BMC due to our unsynchronized rephasing
         type = rephase_original ();
-      }
     }
     else
       switch ((count - 1) % 4) {
