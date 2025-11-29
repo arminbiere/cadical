@@ -425,7 +425,7 @@ int Internal::lucky_decide_assumptions () {
     // analyze and learn from the conflict.
     LOG (conflict, "setting assumption lead to conflict");
     analyze_wrapper ();
-    backtrack (0);
+    backtrack_without_updating_phases (0);
     assert (!conflict);
     int res = 0;
     while (!res) {
