@@ -225,6 +225,7 @@ void Walker::save_final_minimum (int64_t old_init_minimum) {
     else
       assert (!internal->active (v));
   }
+  internal->copy_phases (internal->phases.best);
   internal->copy_phases (internal->phases.prev);
 }
 // The scores are tabulated for faster computation (to avoid 'pow').

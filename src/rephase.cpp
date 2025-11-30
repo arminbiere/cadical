@@ -375,7 +375,7 @@ void Internal::rephase () {
   // clear after walk such that random walk can still access the target
   // by using the saved phases
   copy_phases (phases.target);
-  target_assigned = 0;
+  // resetting target_assigned is not in `update_target_and_best`.
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
   lim.rephase =
