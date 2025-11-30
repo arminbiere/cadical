@@ -14,9 +14,8 @@ void Internal::copy_phases (vector<signed char> &dst) {
 
 void Internal::save_assigned_phases (vector<signed char> &dst) {
   START (copy);
-  for (auto i : vars) {
-    if (vals[i])
-      dst[i] = vals[i];
+  for (auto l : trail) {
+    dst[vidx (l)] = vals[vidx (l)];
   }
   STOP (copy);
 }
