@@ -608,7 +608,6 @@ int Internal::lucky_phases () {
       assert (termination_forced), res = 0;
     if (res == 10)
       stats.lucky.succeeded++;
-    report ('l', !res);
     assert (searching_lucky_phases);
 
     assert (res || !level);
@@ -625,6 +624,8 @@ int Internal::lucky_phases () {
     if (!res && units)
       PHASE ("lucky", stats.lucky.tried, "in round %d found %" PRId64 " units", rounds, units);
   } while (units && !res && ++rounds < opts.luckyrounds);
+
+  report ('l', !res && !units);
   searching_lucky_phases = false;
   PHASE ("lucky", stats.lucky.tried, "produced %" PRId64 " units after %d rounds", active_initially - stats.active, rounds);
 
