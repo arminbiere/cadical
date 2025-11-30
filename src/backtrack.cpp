@@ -57,13 +57,13 @@ void Internal::update_target_and_best () {
   }
 
   if (no_conflict_until > target_assigned) {
-    copy_phases (phases.target);
+    save_assigned_phases (phases.target);
     target_assigned = no_conflict_until;
     LOG ("new target trail level %zu", target_assigned);
   }
 
   if (no_conflict_until > best_assigned) {
-    copy_phases (phases.best);
+    save_assigned_phases (phases.best);
     best_assigned = no_conflict_until;
     LOG ("new best trail level %zu", best_assigned);
   }
