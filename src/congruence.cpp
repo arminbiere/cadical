@@ -182,12 +182,12 @@ void Gate::delete_gate (Gate *g) {
 }
 
 void Gate::resize (int n) {
-  assert (n <= capacity);
+  assert (n <= size || n <= 2);
   size = n;
 }
 
 void Gate::set (const std::vector<int> &new_rhs) {
-  assert (new_rhs.size () <= (size_t)capacity);
+  assert (new_rhs.size () <= (size_t)size);
   size = new_rhs.size ();
   for (int i = 0; i < size; ++i)
     this->rhs[i] = new_rhs[i];
@@ -195,7 +195,7 @@ void Gate::set (const std::vector<int> &new_rhs) {
 
 void Gate::set (const_literal_iterator begin, const_literal_iterator end) {
   const size_t n = end - begin;
-  assert (n <= (size_t)capacity);
+  assert (n <= (size_t)size);
   size = n;
   auto u = begin;
   for (int i = 0; i < size; ++i, ++u){
@@ -2356,7 +2356,6 @@ void Closure::shrink_and_gate (Gate *g, int falsifies, int clashing) {
     g->rhs[1] = -clashing;
     LOG (g, "gate after clashing on %d", clashing);
   }
-  g->shrunken = true;
 }
 
 void Closure::update_and_gate_unit_build_lrat_chain (
@@ -2882,7 +2881,6 @@ void Closure::simplify_and_gate (Gate *g) {
   assert (it >= begin (*g));
   LOG (g, "shrunken");
 
-  g->shrunken = true;
   g->resize (it - std::begin (*g));
 
   LOG (g, "shrunken");
@@ -2961,10 +2959,12 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
 #endif
   Gate *h = nullptr;
   const int size = rhs.size ();
-  if (size >= dummy_search_gate->capacity) {
+  if (size >= dummy_search_gate_capacity) {
     Gate::delete_gate (dummy_search_gate);
     dummy_search_gate = Gate::new_gate (rhs, false);
+    dummy_search_gate_capacity = rhs.size ();
   } else {
+    dummy_search_gate_capacity = size;
     dummy_search_gate->set (rhs);
   }
   dummy_search_gate->tag = typ;
@@ -3013,10 +3013,12 @@ Gate *Closure::find_gate_lits (const_literal_iterator begin, const_literal_itera
 #endif
   Gate *h = nullptr;
   const int size = end - begin;
-  if (size > dummy_search_gate->capacity) {
+  if (size > dummy_search_gate_capacity) {
     Gate::delete_gate (dummy_search_gate);
     dummy_search_gate = Gate::new_gate (begin, end, false);
+    dummy_search_gate_capacity = size;
   } else {
+    dummy_search_gate->size = dummy_search_gate_capacity;
     dummy_search_gate->set (begin, end);
   }
   assert (dummy_search_gate->arity () == size);
@@ -3115,7 +3117,6 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
                 (size_t)g->arity ()); // otherwise we need intermediate clauses
     g->garbage = false;
     g->indexed = true;
-    g->shrunken = false;
 
     table.insert (g);
     ++internal->stats.congruence.gates;
@@ -4100,7 +4101,6 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
     g->tag = Gate_Type::XOr_Gate;
     g->garbage = false;
     g->indexed = true;
-    g->shrunken = false;
     if (internal->lrat)
       for (auto pair : glauses)
         g->pos_lhs_ids().push_back (pair);
@@ -4701,7 +4701,6 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
 
   if (q != end (*g)) {
     g->resize (q - begin (*g));
-    g->shrunken = true;
   }
 
   if (internal->lrat) { // updating reasons in the chain.
@@ -4878,11 +4877,9 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     }
     assert (k == j - 2);
     g->resize (k);
-    g->shrunken = true;
     assert (is_sorted (begin (*g), end (*g),
                        sort_literals_by_var_smaller (internal)));
   } else if (j != size) {
-    g->shrunken = true;
     g->resize (j);
     sort_literals_by_var (g);
   } else {
@@ -4934,7 +4931,6 @@ void Closure::simplify_xor_gate (Gate *g) {
   }
   if (j != size) {
     LOG ("shrunken gate");
-    g->shrunken = true;
     g->resize (j);
     assert (is_sorted (begin (*g), end (*g),
                        sort_literals_by_var_smaller (internal)));
@@ -5806,7 +5802,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   if (!gate_contains (g, src))
     return;
   LOG (g, "rewriting %d by %d in", src, dst);
-  assert (!g->shrunken);
   assert (g->arity () == 3);
   assert (!internal->lrat || g->pos_lhs_ids().size () == 4);
   int *rhs = g->rhs;
@@ -6141,8 +6136,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         assert (new_tag != Gate_Type::ITE_Gate);
       }
       assert (internal->vlit (rhs[0]) < internal->vlit (rhs[1]));
-      assert (!g->shrunken);
-      g->shrunken = true;
       rhs[2] = 0;
       g->tag = new_tag;
       g->resize (2);
@@ -6198,11 +6191,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             garbage = true;
           else if (i == 1) {
 #ifdef LOGGING
-            for (auto litId : g->pos_lhs_ids()) {
-              LOG (litId.clause, "%d ->", litId.current_lit);
-            }
+            if (internal->lrat)
+              for (auto litId : g->pos_lhs_ids())
+                LOG (litId.clause, "%d ->", litId.current_lit);
 #endif
-            produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(),
+            if (internal->lrat)
+              produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(),
                                                      g->lhs);
             assert (
                 !internal->lrat || g->pos_lhs_ids().size () == 2 ||
@@ -6264,7 +6258,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 #endif
             assert (g->pos_lhs_ids().size () == 2 ||
                     gate_contains (g, g->lhs));
-            assert (g->neg_lhs_ids () || gate_contains (g, g->lhs));
+            assert (g->neg_lhs_ids ()() || gate_contains (g, g->lhs));
             assert (g->arity () == 2);
 #ifndef NDEBUG
             std::for_each (
@@ -6793,7 +6787,6 @@ void Closure::simplify_ite_gate (Gate *g) {
         return;
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);
-      g->shrunken = true;
       g->tag = Gate_Type::And_Gate;
       g->resize (2);
       assert (is_sorted (begin (*g), end (*g),
@@ -7240,7 +7233,6 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     // sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
-    g->shrunken = false;
     table.insert (g);
     ++internal->stats.congruence.gates;
 #ifdef LOGGING

@@ -276,9 +276,7 @@ struct Gate {
   bool garbage : 1;
   bool indexed : 1;
   bool marked : 1;
-  bool shrunken : 1;
   int8_t degenerated_gate = Special_Gate::NORMAL;
-  const int capacity;
   int size;
 #ifndef NFLEXIBLE
   int rhs[];
@@ -298,9 +296,10 @@ struct Gate {
     return true;
   }
   // default constructor
-  Gate () : lrat_reasons (nullptr), lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), capacity(0), size (0) {}
-  Gate (int _size) : lrat_reasons (nullptr), lhs (0), tag (Gate_Type::And_Gate), garbage (false), indexed (false), marked (false), shrunken (false),
-  capacity(_size), size (_size) {}
+  Gate () : lrat_reasons (nullptr), lhs (0), garbage (false), indexed (false), marked (false), size (0) {}
+  Gate (int _size) : lrat_reasons (nullptr), lhs (0), tag (Gate_Type::And_Gate), garbage (false), indexed (false), marked (false), size (_size) {
+      assert (size >= 2);
+    }
 
   static size_t bytes (int size) {
     assert (size > 1);
@@ -343,6 +342,14 @@ struct Gate {
     return lrat_reasons->pos_lhs_ids;
   }
   my_dummy_optional& neg_lhs_ids () {
+    assert (lrat_reasons);
+    return lrat_reasons->neg_lhs_ids;
+  }
+  const vector<LitClausePair>& pos_lhs_ids () const {
+    assert (lrat_reasons);
+    return lrat_reasons->pos_lhs_ids;
+  }
+  const my_dummy_optional& neg_lhs_ids () const {
     assert (lrat_reasons);
     return lrat_reasons->neg_lhs_ids;
   }
@@ -393,6 +400,7 @@ struct Closure {
   Closure (Internal *i);
   ~Closure () { Gate::delete_gate (dummy_search_gate); }
   Gate *dummy_search_gate = nullptr;
+  int dummy_search_gate_capacity = 0;
 
   Internal *const internal;
   vector<Clause *> extra_clauses;
