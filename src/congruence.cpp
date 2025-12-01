@@ -3714,7 +3714,9 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
       return;
     inc_lits (clause);
   }
-  g->pos_lhs_ids().swap (newclauses);
+  assert (internal->lrat == !!g->lrat_reasons);
+  if (internal->lrat)
+    g->pos_lhs_ids().swap (newclauses);
 
   clause.clear ();
 }
