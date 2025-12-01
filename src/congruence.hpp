@@ -258,12 +258,19 @@ struct my_dummy_optional {
 // most compilers support it. Unlike clauses, we have C++ class within the
 // struct for LRAT proofs. Therefore, we actually need a proper
 // constructor/destructor.
+//
+// We initially had the vector for lrat as part of the structure. As the memory
+// usage is extremely high we tried to get rid of it and we observed a memory
+// overhead of 2GB on `hash_table_find_safety_size_29.cnf.xz` by using a
+// pointer to something that is not initialized.
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
 #endif
-  vector<LitClausePair> pos_lhs_ids;
-  my_dummy_optional neg_lhs_ids;
+  struct LRAT_Reasons {
+    vector<LitClausePair> pos_lhs_ids;
+    my_dummy_optional neg_lhs_ids;
+  } *lrat_reasons;
   int lhs;
   Gate_Type tag;
   bool garbage : 1;
@@ -291,8 +298,8 @@ struct Gate {
     return true;
   }
   // default constructor
-  Gate () : neg_lhs_ids (), lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), capacity(0), size (0) {}
-  Gate (int _size) : neg_lhs_ids (), lhs (0), tag (Gate_Type::And_Gate), garbage (false), indexed (false), marked (false), shrunken (false),
+  Gate () : lrat_reasons (nullptr), lhs (0), garbage (false), indexed (false), marked (false), shrunken (false), capacity(0), size (0) {}
+  Gate (int _size) : lrat_reasons (nullptr), lhs (0), tag (Gate_Type::And_Gate), garbage (false), indexed (false), marked (false), shrunken (false),
   capacity(_size), size (_size) {}
 
   static size_t bytes (int size) {
@@ -310,9 +317,9 @@ struct Gate {
   size_t bytes () const { return bytes (size); }
 
   // creation of a gate with either the size or of the right-hand side
-  static Gate *new_gate(size_t n);
-  static Gate *new_gate(const std::vector<int> &v);
-  static Gate *new_gate(const_literal_iterator begin, const_literal_iterator end);
+  static Gate *new_gate(size_t n, bool lrat);
+  static Gate *new_gate(const std::vector<int> &v, bool lrat);
+  static Gate *new_gate(const_literal_iterator begin, const_literal_iterator end, bool lrat);
 
   // deletion of a gate
   static void delete_gate (Gate *g);
@@ -329,6 +336,16 @@ struct Gate {
   void set (const std::vector<int> &new_rhs);
   // set the rhs based on the iterators passed as argument
   void set (const_literal_iterator begin, const_literal_iterator end);
+
+
+  vector<LitClausePair>& pos_lhs_ids () {
+    assert (lrat_reasons);
+    return lrat_reasons->pos_lhs_ids;
+  }
+  my_dummy_optional& neg_lhs_ids () {
+    assert (lrat_reasons);
+    return lrat_reasons->neg_lhs_ids;
+  }
 };
 
 typedef vector<Gate *> GOccs;
