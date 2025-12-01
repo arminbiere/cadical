@@ -854,7 +854,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (c->garbage)
         continue;
       if (c->redundant) {
-        if (!opts.walkredundant)
+        if (opts.walkredundant == 1 && c->size == 2 && !c->hyper)
+	  LOG (c, "importing binary clause");
+        else if (opts.walkredundant == 0)
           continue;
         if (!likely_to_be_kept_clause (c))
           continue;
