@@ -1417,7 +1417,8 @@ struct Internal {
   // Warmup
   inline void warmup_assign (int lit, Clause *reason);
   void warmup_propagate_beyond_conflict ();
-  int warmup_decide ();
+  int warmup_decide_assumptions (); // only assumptions and constraints
+  void warmup_decide (); // rest of the decisions
   int warmup ();
 
   // Detect strongly connected components in the binary implication graph
