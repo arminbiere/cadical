@@ -425,8 +425,14 @@ void Internal::refactor_deduce (Clause *candidate, Clause *conflict,
 
 // Main function: try to refactor this candidate clause in the given mode.
 
-bool Internal::refactor_clause (Refactoring &refactoring, Clause *c) {
+bool Internal::refactor_clause (Refactoring &refactoring,
+                                refactor_candidate cand) {
 
+  refactor_gate fate = refactoring.gate_clauses[cand.index];
+  if (fate.skip)
+    return false;
+
+  Clause *c = cand.candidate;
   assert (c->size > 2); // see (NO-BINARY) below
   assert (analyzed.empty ());
 
@@ -669,12 +675,17 @@ inline void Internal::refactor_chain_for_units (int lit, Clause *reason) {
 void Internal::refactor_initialize (Refactoring &refactoring,
                                     int64_t &ticks) {
 
+  size_t index = 0;
   for (auto &fg : factored_gates) {
     int found_all_gate_clauses = 0;
     mark (fg.definition), mark (fg.condition), mark (fg.true_branch),
         mark (fg.false_branch);
     refactoring.gate_clauses.emplace_back ();
-    refactoring.gate_clauses.back ().first = fg.definition;
+    refactoring.gate_clauses.back ().definition = fg.definition;
+    refactoring.gate_clauses.back ().condition = fg.condition;
+    refactoring.gate_clauses.back ().true_branch = fg.true_branch;
+    refactoring.gate_clauses.back ().false_branch = fg.false_branch;
+    refactoring.gate_clauses.back ().skip = false;
     for (const auto &c : clauses) {
       ++ticks;
       if (!c->redundant && c->size == 3) {
@@ -688,7 +699,7 @@ void Internal::refactor_initialize (Refactoring &refactoring,
         if (!gate)
           continue;
         found_all_gate_clauses++;
-        refactoring.gate_clauses.back ().second.push_back (c);
+        refactoring.gate_clauses.back ().clauses.push_back (c);
       }
       if (!c->redundant)
         continue; // see also (NO-BINARY) above
@@ -719,11 +730,17 @@ void Internal::refactor_initialize (Refactoring &refactoring,
       if (skip)
         continue;
       if (found_true == 2 || found_false == 2) {
+        assert (found_true != found_false);
         refactoring.candidates.emplace_back ();
-        refactoring.candidates.back ().second = c;
-        refactoring.candidates.back ().first = fg.definition;
+        refactoring.candidates.back ().candidate = c;
+        refactoring.candidates.back ().index = index;
+        refactoring.candidates.back ().negated = found_true != 2;
       }
     }
+    index++;
+    // drop gate.
+    if (found_all_gate_clauses != 4)
+      refactoring.gate_clauses.back ().skip = true;
     unmark (fg.definition), unmark (fg.condition), unmark (fg.true_branch),
         unmark (fg.false_branch);
   }
@@ -757,11 +774,12 @@ void Internal::refactor_round (Refactoring &refactoring,
   int64_t strengthened = stats.refactorstrs;
   int64_t units = stats.refactorunits;
 
-  int64_t scheduled = refactoring.candidates.size ();
+  auto &schedule = refactoring.candidates;
+  int64_t scheduled = schedule.size ();
   stats.refactorsched += scheduled;
 
   PHASE ("refactor", stats.refactor,
-         "scheduled %" PRId64 " clauses to be vivified %.0f%%", scheduled,
+         "scheduled %" PRId64 " clauses to be refactored %.0f%%", scheduled,
          percent (scheduled, stats.current.irredundant));
 
   // Limit the number of propagations during refactoring as in 'probe'.
@@ -778,13 +796,12 @@ void Internal::refactor_round (Refactoring &refactoring,
     learn_empty_clause ();
   }
 
-  auto &schedule = refactoring.candidates;
   refactoring.ticks = ticks;
   while (!unsat && !terminated_asynchronously () && !schedule.empty () &&
          refactoring.ticks < limit) {
-    Clause *c = schedule.back ().second; // Next candidate.
+    refactor_candidate cand = schedule.back (); // Next candidate.
     schedule.pop_back ();
-    refactor_clause (refactoring, c);
+    refactor_clause (refactoring, cand);
   }
 
   if (level)
@@ -842,6 +859,8 @@ bool Internal::refactor () {
   if (!opts.refactor)
     return false;
   if (!stats.current.irredundant)
+    return false;
+  if (factored_gates.empty ())
     return false;
   if (level)
     backtrack ();

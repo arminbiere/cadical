@@ -1360,7 +1360,7 @@ struct Internal {
   bool refactor_propagate (int64_t &);
   void refactor_deduce (Clause *candidate, Clause *conflct, int implied,
                         Clause **, bool &);
-  bool refactor_clause (Refactoring &, Clause *candidate);
+  bool refactor_clause (Refactoring &, refactor_candidate);
   void refactor_analyze (Clause *start, bool &, Clause **,
                          const Clause *const, int implied, bool &);
   bool refactor_shrinkable (const std::vector<int> &sorted, Clause *c);
