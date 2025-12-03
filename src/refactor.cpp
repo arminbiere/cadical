@@ -475,8 +475,21 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   // (which are assigned first anyway).
   //
   if (level) {
+    int bt_level = 0;
+    if (cand.negated) {
+      if (control[0].decision == fate.condition)
+        bt_level = 1;
+      if (bt_level && level > 1 && control[1].decision == -fate.true_branch)
+        bt_level = 2;
+    } else {
+      if (control[0].decision == -fate.condition)
+        bt_level = 1;
+      if (bt_level && level > 1 &&
+          control[1].decision == -fate.false_branch)
+        bt_level = 2;
+    }
 
-    backtrack_without_updating_phases (0);
+    backtrack_without_updating_phases (bt_level);
 
     // As long the (remaining) literals of the sorted clause match
     // decisions on the trail we just reuse them.
@@ -484,8 +497,6 @@ bool Internal::refactor_clause (Refactoring &refactoring,
 
     LOG ("reused %d decision levels from %d", level, orig_level);
   }
-
-  LOG (sorted, "sorted size %zd probing schedule", sorted.size ());
 
   int subsume = 0; // determined to be redundant / subsumed
 
@@ -499,7 +510,42 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   // implication graph during transitive reduction.
   //
 
-  // Go over the literals in the candidate clause in sorted order.
+  if (!level) {
+    int lit = fate.condition;
+    if (!cand.negated)
+      lit = -lit;
+    const signed char tmp = val (lit);
+    if (tmp) {
+      LOG ("condition %d is root-level assigned", lit);
+      return false;
+    }
+    stats.refactordecs++;
+    refactor_assume (-lit);
+    LOG ("condition decision %d", lit);
+    if (!refactor_propagate (ticks)) {
+      // TODO: conflict analysis
+      return false;
+    }
+  }
+  if (level != 1) {
+    int lit = -fate.false_branch;
+    if (!cand.negated)
+      lit = -fate.true_branch;
+    const signed char tmp = val (lit);
+    if (tmp) {
+      LOG ("branch %d is implied by condition (or root-level)", lit);
+      return false;
+    }
+    stats.refactordecs++;
+    refactor_assume (-lit);
+    LOG ("branch decision %d", lit);
+    if (!refactor_propagate (ticks)) {
+      // TODO: conflict analysis
+      return false;
+    }
+  }
+
+  // Go over the literals in the candidate clause.
   // TODO: prioritize the gate literals first.
   //
   for (const auto &lit : clause) {
@@ -543,7 +589,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
 
     stats.refactordecs++;
     refactor_assume (-lit);
-    LOG ("negated decision %d score %" PRIu64 "", lit, noccs (lit));
+    LOG ("negated decision %d", lit);
 
     if (!refactor_propagate (ticks)) {
       break; // hot-spot
