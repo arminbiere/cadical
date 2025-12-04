@@ -143,7 +143,9 @@ run_configuration () {
         # sanitizer configurations
         30) run -a -fsanitize=address -fsanitize=undefined;;
         31) run -a -p -fsanitize=address -fsanitize=undefined;;
-	32) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wcast-align -Wswitch-enum -Wpointer-arith -Winline -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing=3 -fno-common -fstrict-aliasing -Wno-format-nonliteral
+
+	#pot-pourri of many useful flags and flags that people did report issues
+	32) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wcast-align -Wswitch-enum -Wpointer-arith -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing=3 -fno-common -fstrict-aliasing -Wno-format-nonliteral -Wtype-limits
         # this checks that we found the last configuration
         foundLast=1;
         # the next line is a hint if you add configurations
