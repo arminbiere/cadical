@@ -6173,7 +6173,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           for (int j = 0; j < 2; ++i, ++j) {
             assert (i <= j);
             const int lit = rhs[i] = rhs[j];
-            const char v = internal->val (lit);
+            const signed char v = internal->val (lit);
             if (v > 0) {
               --i;
               negated = !negated;
