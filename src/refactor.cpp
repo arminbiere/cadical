@@ -1,7 +1,6 @@
 #include "refactor.hpp"
 #include "internal.hpp"
 #include "util.hpp"
-#include <algorithm>
 
 namespace CaDiCaL {
 
@@ -229,39 +228,27 @@ void Internal::refactor_strengthen (Clause *c, int64_t &ticks) {
 // We cannot use the stack-based implementation of Kissat, because we need
 // to iterate over the conflict in topological ordering to produce a valid
 // LRAT proof
-void Internal::refactor_analyze (Clause *start, bool &subsumes,
-                                 Clause **subsuming,
-                                 const Clause *const candidate, int implied,
-                                 bool &redundant) {
+void Internal::refactor_analyze (Clause *start) {
   const auto &t = &trail; // normal trail, so next_trail is wrong
   int i = t->size ();     // Start at end-of-trail.
   Clause *reason = start;
   assert (reason);
   assert (!trail.empty ());
   int uip = trail.back ();
-  bool mark_implied = (implied);
 
   while (i >= 0) {
     if (reason) {
-      redundant = (redundant || reason->redundant);
-      subsumes = (start != reason && reason->size <= start->size);
       LOG (reason, "resolving on %d with", uip);
       for (auto other : *reason) {
+        if (other == uip)
+          continue;
         const Var v = var (other);
         Flags &f = flags (other);
-        if (!marked2 (other) && v.level) {
-          LOG ("not subsuming due to lit %d", other);
-          subsumes = false;
-        }
-        if (!val (other)) {
-          LOG ("skipping unset lit %d", other);
+        assert (val (other));
+        if (f.seen)
           continue;
-        }
-        if (other == uip) {
-          continue;
-        }
         if (!v.level) {
-          if (f.seen || !lrat || reason == start)
+          if (f.seen || !lrat)
             continue;
           LOG ("unit reason for %d", other);
           int64_t id = unit_id (-other);
@@ -271,41 +258,21 @@ void Internal::refactor_analyze (Clause *start, bool &subsumes,
           analyzed.push_back (other);
           continue;
         }
-        if (mark_implied && other != implied) {
-          LOG ("skipping non-implied literal %d on current level", other);
-          continue;
-        }
-
-        assert (val (other));
-        if (f.seen)
-          continue;
         LOG ("pushing lit %d", other);
         analyzed.push_back (other);
         f.seen = true;
-      }
-      if (reason != start && reason->redundant) {
-        const int new_glue = recompute_glue (reason);
-        promote_clause (reason, new_glue);
-      }
-      if (subsumes) {
-        assert (reason);
-        LOG (reason, "clause found subsuming");
-        LOG (candidate, "clause found subsumed");
-        *subsuming = reason;
-        return;
       }
     } else {
       LOG ("refactor analyzed decision %d", uip);
       clause.push_back (-uip);
     }
-    mark_implied = false;
 
     uip = 0;
     while (!uip && i > 0) {
       assert (i > 0);
       const int lit = (*t)[--i];
       if (!var (lit).level)
-        continue;
+        break;
       if (flags (lit).seen)
         uip = lit;
     }
@@ -316,108 +283,6 @@ void Internal::refactor_analyze (Clause *start, bool &subsumes,
     reason = w.reason;
     if (lrat && reason)
       lrat_chain.push_back (reason->id);
-  }
-  (void) candidate;
-}
-
-/*------------------------------------------------------------------------*/
-// First decide which clause (candidate or conflict) to analyze and
-// how to do it. We also prepare the clause by removing units.
-void Internal::refactor_deduce (Clause *candidate, Clause *conflict,
-                                int implied, Clause **subsuming,
-                                bool &redundant) {
-  assert (lrat_chain.empty ());
-  bool subsumes;
-  Clause *reason;
-
-  assert (clause.empty ());
-  if (implied) {
-    reason = candidate;
-    mark2 (candidate);
-    const int not_implied = -implied;
-    assert (var (not_implied).level);
-    Flags &f = flags (not_implied);
-    f.seen = true;
-    LOG ("pushing implied lit %d", not_implied);
-    analyzed.push_back (not_implied);
-    clause.push_back (implied);
-  } else {
-    reason = (conflict ? conflict : candidate);
-    assert (reason);
-    assert (!reason->garbage || reason->size == 2);
-    mark2 (candidate);
-    subsumes = (candidate != reason);
-    redundant = reason->redundant;
-    LOG (reason, "resolving with");
-    if (lrat)
-      lrat_chain.push_back (reason->id);
-    for (auto lit : *reason) {
-      const Var &v = var (lit);
-      Flags &f = flags (lit);
-      assert (val (lit) < 0);
-      if (!v.level) {
-        if (!lrat)
-          continue;
-        LOG ("adding unit %d", lit);
-        if (!f.seen) {
-          // nevertheless we can use var (l) as if l was still assigned
-          // because var is updated lazily
-          int64_t id = unit_id (-lit);
-          LOG ("adding unit reason %" PRId64 " for %s", id, LOGLIT (lit));
-          unit_chain.push_back (id);
-        }
-        f.seen = true;
-        analyzed.push_back (lit);
-        continue;
-      }
-      assert (v.level);
-      if (!marked2 (lit)) {
-        LOG ("lit %d is not marked", lit);
-        subsumes = false;
-      }
-      LOG ("analyzing lit %d", lit);
-      LOG ("pushing lit %d", lit);
-      analyzed.push_back (lit);
-      f.seen = true;
-    }
-    if (reason != candidate && reason->redundant) {
-      const int new_glue = recompute_glue (reason);
-      promote_clause (reason, new_glue);
-    }
-    if (subsumes) {
-      assert (candidate != reason);
-#ifndef NDEBUG
-      int nonfalse_reason = 0;
-      for (auto lit : *reason)
-        if (!fixed (lit))
-          ++nonfalse_reason;
-
-      int nonfalse_candidate = 0;
-      for (auto lit : *candidate)
-        if (!fixed (lit))
-          ++nonfalse_candidate;
-
-      assert (nonfalse_reason <= nonfalse_candidate);
-#endif
-      LOG (candidate, "refactor subsumed 0");
-      LOG (reason, "refactor subsuming 0");
-      *subsuming = reason;
-      unmark (candidate);
-      if (lrat)
-        lrat_chain.clear ();
-      return;
-    }
-  }
-
-  refactor_analyze (reason, subsumes, subsuming, candidate, implied,
-                    redundant);
-  unmark (candidate);
-  if (subsumes) {
-    assert (*subsuming);
-    LOG (candidate, "refactor subsumed");
-    LOG (*subsuming, "refactor subsuming");
-    if (lrat)
-      lrat_chain.clear ();
   }
 }
 
@@ -476,17 +341,30 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   //
   if (level) {
     int bt_level = 0;
-    if (cand.negated) {
+    if (cand.negcon) {
       if (control[0].decision == fate.condition)
         bt_level = 1;
-      if (bt_level && level > 1 && control[1].decision == -fate.true_branch)
-        bt_level = 2;
+      if (cand.negdef) {
+        if (bt_level && level > 1 &&
+            control[1].decision == fate.true_branch)
+          bt_level = 2;
+      } else {
+        if (bt_level && level > 1 &&
+            control[1].decision == -fate.true_branch)
+          bt_level = 2;
+      }
     } else {
       if (control[0].decision == -fate.condition)
         bt_level = 1;
-      if (bt_level && level > 1 &&
-          control[1].decision == -fate.false_branch)
-        bt_level = 2;
+      if (cand.negdef) {
+        if (bt_level && level > 1 &&
+            control[1].decision == fate.false_branch)
+          bt_level = 2;
+      } else {
+        if (bt_level && level > 1 &&
+            control[1].decision == -fate.false_branch)
+          bt_level = 2;
+      }
     }
 
     backtrack_without_updating_phases (bt_level);
@@ -512,7 +390,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
 
   if (!level) {
     int lit = fate.condition;
-    if (!cand.negated)
+    if (!cand.negcon)
       lit = -lit;
     const signed char tmp = val (lit);
     if (tmp) {
@@ -529,7 +407,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   }
   if (level != 1) {
     int lit = -fate.false_branch;
-    if (!cand.negated)
+    if (cand.negdef)
       lit = -fate.true_branch;
     const signed char tmp = val (lit);
     if (tmp) {
@@ -571,7 +449,9 @@ bool Internal::refactor_clause (Refactoring &refactoring,
       if (!v.reason) {
         LOG ("skipping decision %d", lit);
         continue;
-      }
+      } else if (abs (lit) == abs (fate.true_branch) ||
+                 abs (lit) == abs (fate.false_branch))
+        continue;
 
       if (tmp < 0) {
         assert (v.level);
@@ -596,29 +476,16 @@ bool Internal::refactor_clause (Refactoring &refactoring,
     }
   }
 
-  Clause *subsuming = nullptr;
-  bool redundant = false;
-  refactor_deduce (c, conflict, subsume, &subsuming, redundant);
+  Clause *reason = conflict;
+  if (subsume)
+    reason = var (subsume).reason;
+  if (!reason)
+    return false;
 
-  bool res;
+  // fills clause stack and lrat_chain (if applicable).
+  refactor_analyze (reason);
 
-  // reverse lrat_chain. We could probably work with reversed iterators
-  // (views) to be more efficient but we would have to distinguish in proof
-  //
-  if (lrat) {
-    for (auto id : unit_chain)
-      lrat_chain.push_back (id);
-    unit_chain.clear ();
-    reverse (lrat_chain.begin (), lrat_chain.end ());
-  }
-
-  // TODO: learn clause to shorten c.
-  if (!subsume && !conflict) {
-    LOG (c,
-         "refactoring unsuccessful (no conflict and no subsumed literal)");
-  } else {
-    LOG (c, "refactoring successful");
-  }
+  // TODO: learn temporary clauses and use gate clauses to shrink candidate
 
   if (conflict) {
     LOG ("forcing backtracking at least one level after conflict");
@@ -630,73 +497,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   lrat_chain.clear ();
   conflict = nullptr;
 
-  return res;
-}
-
-// when we can strengthen clause c we have to build lrat.
-// uses f.seen so do not forget to clear flags afterwards.
-// this can happen in three cases. (1), (2) are only sound in redundant mode
-// (1) literal l in c is positively implied. in this case we call the
-// function with (l, l.reason). This justifies the reduction because the new
-// clause c' will include l and all decisions so l.reason is a conflict
-// assuming -c' (2) conflict during refactor propagation. function is called
-// with (0, conflict) similar to (1) but more direct. (3) some literals in c
-// are negatively implied and can therefore be removed. in this case we call
-// the function with (0, c). originally we justified each literal in c on
-// its own but this is not actually necessary.
-//
-
-// Non-recursive version, as some bugs have been found by Dominik Schreiber
-// during his very large experiments. DFS over the reasons with preordering
-// (aka we explore the entire reason before exploring deeper)
-void Internal::refactor_build_lrat (
-    int lit, Clause *reason,
-    std::vector<std::tuple<int, Clause *, bool>> &stack) {
-  assert (stack.empty ());
-  stack.push_back ({lit, reason, false});
-  while (!stack.empty ()) {
-    int lit;
-    Clause *reason;
-    bool finished;
-    std::tie (lit, reason, finished) = stack.back ();
-    LOG ("refactor LRAT justifying %d", lit);
-    stack.pop_back ();
-    if (lit && flags (lit).seen) {
-      LOG ("skipping already justified");
-      continue;
-    }
-    if (finished) {
-      lrat_chain.push_back (reason->id);
-      if (lit && reason) {
-        Flags &f = flags (lit);
-        f.seen = true;
-        analyzed.push_back (lit); // assert (val (other) < 0);
-        assert (flags (lit).seen);
-      }
-      continue;
-    } else
-      stack.push_back ({lit, reason, true});
-    for (const auto &other : *reason) {
-      if (other == lit)
-        continue;
-      Var &v = var (other);
-      Flags &f = flags (other);
-      if (f.seen)
-        continue;
-      if (!v.level) {
-        const int64_t id = unit_id (-other);
-        lrat_chain.push_back (id);
-        f.seen = true;
-        analyzed.push_back (other);
-        continue;
-      }
-      if (v.reason) { // recursive justification
-        LOG ("refactor LRAT pushing %d", other);
-        stack.push_back ({other, v.reason, false});
-      }
-    }
-  }
-  stack.clear ();
+  return true;
 }
 
 // calculate lrat_chain
@@ -754,6 +555,7 @@ void Internal::refactor_initialize (Refactoring &refactoring,
       ++ticks;
       size_t found_true = 0;
       size_t found_false = 0;
+      bool negdef = 0;
       bool skip = false;
       for (auto &lit : *c) {
         if (lit == fg.definition) {
@@ -764,12 +566,16 @@ void Internal::refactor_initialize (Refactoring &refactoring,
           found_true++;
         if (lit == -fg.condition)
           found_false++;
-        if (lit == fg.true_branch)
+        if (lit == fg.true_branch) {
           found_true++;
+          negdef = true;
+        }
         if (lit == -fg.true_branch)
           found_true++;
-        if (lit == fg.false_branch)
+        if (lit == fg.false_branch) {
           found_false++;
+          negdef = true;
+        }
         if (lit == -fg.false_branch)
           found_false++;
       }
@@ -780,7 +586,8 @@ void Internal::refactor_initialize (Refactoring &refactoring,
         refactoring.candidates.emplace_back ();
         refactoring.candidates.back ().candidate = c;
         refactoring.candidates.back ().index = index;
-        refactoring.candidates.back ().negated = found_true != 2;
+        refactoring.candidates.back ().negcon = found_true != 2;
+        refactoring.candidates.back ().negdef = negdef;
       }
     }
     index++;

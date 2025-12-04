@@ -19,7 +19,8 @@ struct refactor_gate {
 
 struct refactor_candidate {
   size_t index;
-  bool negated;
+  bool negdef;
+  bool negcon;
   Clause *candidate;
 };
 // In the vivifier structure, we put the schedules in an array in order to
