@@ -107,7 +107,7 @@ void Internal::lucky_assume_decision (int lit) {
 }
 
 int Internal::trivially_false_satisfiable () {
-  LOG ("checking that all clauses contain a negative literal");
+  MSG ("checking that all clauses contain a negative literal");
   assert (!level);
   ++stats.lucky.constant.zero;
   int res = lucky_decide_assumptions ();
@@ -157,7 +157,7 @@ int Internal::trivially_false_satisfiable () {
 }
 
 int Internal::trivially_true_satisfiable () {
-  LOG ("checking that all clauses contain a positive literal");
+  MSG ("checking that all clauses contain a positive literal");
   assert (!level);
   ++stats.lucky.constant.one;
   int res = lucky_decide_assumptions ();
@@ -233,7 +233,7 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 }
 
 int Internal::forward_false_satisfiable () {
-  LOG ("checking increasing variable index false assignment");
+  MSG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
   ++stats.lucky.forward.zero;
@@ -260,7 +260,7 @@ int Internal::forward_false_satisfiable () {
 }
 
 int Internal::forward_true_satisfiable () {
-  LOG ("checking increasing variable index true assignment");
+  MSG ("checking increasing variable index true assignment");
   assert (!unsat);
   assert (!level);
   stats.lucky.forward.one++;
@@ -289,7 +289,7 @@ int Internal::forward_true_satisfiable () {
 /*------------------------------------------------------------------------*/
 
 int Internal::backward_false_satisfiable () {
-  LOG ("checking decreasing variable index false assignment");
+  MSG ("checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
   stats.lucky.backward.zero++;
@@ -317,7 +317,7 @@ int Internal::backward_false_satisfiable () {
 }
 
 int Internal::backward_true_satisfiable () {
-  LOG ("checking decreasing variable index true assignment");
+  MSG ("checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
   stats.lucky.backward.one++;
@@ -353,7 +353,7 @@ int Internal::backward_true_satisfiable () {
 // is not implemented yet.
 
 int Internal::positive_horn_satisfiable () {
-  LOG ("checking that all clauses are positive horn satisfiable");
+  MSG ("checking that all clauses are positive horn satisfiable");
   assert (!level);
   stats.lucky.horn.positive++;
   int res = lucky_decide_assumptions ();
@@ -453,7 +453,7 @@ int Internal::lucky_decide_assumptions () {
 
 int Internal::negative_horn_satisfiable () {
   assert (!level);
-  LOG ("checking that all clauses are negative horn satisfiable");
+  MSG ("checking that all clauses are negative horn satisfiable");
   stats.lucky.horn.negative++;
   int res = lucky_decide_assumptions ();
   if (res)

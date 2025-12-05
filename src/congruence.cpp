@@ -6146,9 +6146,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (rhs[0] == -g->lhs || rhs[1] == -g->lhs) {
           LOG (g, "special XOR:");
           const int unit = rhs[0] ^ -g->lhs ^ rhs[1];
-          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), not_lhs,
-                                                   false);
           if (internal->lrat) {
+            produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), not_lhs,
+                                                     false);
             assert (g->pos_lhs_ids().size () == 2);
             lrat_chain.push_back (g->pos_lhs_ids()[0].clause->id);
             lrat_chain.push_back (g->pos_lhs_ids()[1].clause->id);
@@ -6158,9 +6158,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         } else if (rhs[0] == g->lhs || rhs[1] == g->lhs) {
           LOG (g, "special XOR:");
           const int unit = rhs[0] ^ g->lhs ^ rhs[1];
-          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), not_lhs,
-                                                   false);
           if (internal->lrat) {
+            produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), not_lhs,
+                                                   false);
             assert (g->pos_lhs_ids().size () == 2);
             lrat_chain.push_back (g->pos_lhs_ids()[0].clause->id);
             lrat_chain.push_back (g->pos_lhs_ids()[1].clause->id);
