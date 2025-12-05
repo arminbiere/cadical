@@ -5956,9 +5956,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // cond & !else_lit | !cond & else_lit
       // cond ^ else_lit
       if (g->lhs == cond) {
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), g->lhs,
-                                                 false);
         if (internal->lrat) {
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids(), g->lhs,
+                                                   false);
           assert (g->pos_lhs_ids().size () == 2);
           lrat_chain.push_back (g->pos_lhs_ids()[0].clause->id);
           lrat_chain.push_back (g->pos_lhs_ids()[1].clause->id);
