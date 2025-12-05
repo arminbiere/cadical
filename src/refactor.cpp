@@ -615,8 +615,8 @@ void Internal::refactor_initialize (Refactoring &refactoring,
   size_t index = 0;
   for (auto &fg : factored_gates) {
     int found_all_gate_clauses = 0;
-    mark (fg.definition), mark (fg.condition), mark (fg.true_branch),
-        mark (fg.false_branch);
+    mark2 (fg.definition), mark2 (fg.condition), mark2 (fg.true_branch),
+        mark2 (fg.false_branch);
     refactoring.gate_clauses.emplace_back ();
     refactoring.gate_clauses.back ().definition = fg.definition;
     refactoring.gate_clauses.back ().condition = fg.condition;
@@ -628,13 +628,15 @@ void Internal::refactor_initialize (Refactoring &refactoring,
       if (!c->redundant && c->size == 3) {
         bool gate = true;
         for (auto &lit : *c) {
-          if (!marked (lit) && !marked (!lit)) {
+          if (!marked2 (lit) && !marked2 (-lit)) {
             gate = false;
             break;
           }
         }
         if (!gate)
           continue;
+        // TODO: what if the phases do not match
+        // or we have duplicated clauses...
         found_all_gate_clauses++;
         refactoring.gate_clauses.back ().clauses.push_back (c);
       }
@@ -682,7 +684,7 @@ void Internal::refactor_initialize (Refactoring &refactoring,
     }
     index++;
     // drop gate.
-    if (found_all_gate_clauses != 4)
+    if (found_all_gate_clauses < 4)
       refactoring.gate_clauses.back ().skip = true;
     unmark (fg.definition), unmark (fg.condition), unmark (fg.true_branch),
         unmark (fg.false_branch);
@@ -744,7 +746,9 @@ void Internal::refactor_round (Refactoring &refactoring,
          refactoring.ticks < limit) {
     refactor_candidate cand = schedule.back (); // Next candidate.
     schedule.pop_back ();
-    refactor_clause (refactoring, cand);
+    bool suc = refactor_clause (refactoring, cand);
+    if (suc)
+      stats.refactorsuccs++;
   }
 
   if (level)

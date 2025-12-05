@@ -220,6 +220,7 @@ struct Stats {
   int64_t refactordecs = 0;
   int64_t refactorsched = 0;
   int64_t refactorchecks = 0;
+  int64_t refactorsuccs = 0;
 
   int64_t elimotfstr =
       0; // number of on-the-fly strengthened during elimination

@@ -284,6 +284,13 @@ void Stats::print (Internal *internal) {
     PRT ("  lits unfactored:%14" PRId64 "   %10.2f    per factored",
          stats.literals_unfactored,
          relative (stats.literals_unfactored, factored));
+    if (all || stats.refactor) {
+      PRT ("refactored:      %15" PRId64 "   %10.2f    per refactor",
+           stats.refactorsuccs,
+           relative (stats.refactorsuccs, stats.refactor));
+      PRT ("  refactor:      %15" PRId64 "   %10.2f    conflict interval",
+           stats.refactor, relative (stats.conflicts, stats.refactor));
+    }
   }
   if (all || stats.all.fixed) {
     PRT ("fixed:           %15" PRId64 "   %10.2f %%  of all variables",
