@@ -951,7 +951,8 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     transred ();      // builds big.
     binary_clauses_backbone ();
     mark_duplicated_binary_clauses_as_garbage ();
-    factor (); // resets watches, partial occurrence list
+    factor ();   // resets watches, partial occurrence list
+    refactor (); // apply gates to simplify clauses.
   }
 
   if (external_prop) {
