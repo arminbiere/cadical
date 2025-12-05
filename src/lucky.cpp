@@ -28,6 +28,7 @@ namespace CaDiCaL {
 int Internal::unlucky (int res) {
   if (level > 0)
     backtrack_without_updating_phases ();
+  assert (propagated == trail.size ());
   if (conflict)
     conflict = 0;
   return res;
