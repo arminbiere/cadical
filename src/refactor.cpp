@@ -462,7 +462,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
     // decisions on the trail we just reuse them.
     //
 
-    LOG ("reused %d decision levels from %d", level, orig_level);
+    LOG ("reused %d decision levels", level);
   }
 
   int subsume = 0; // determined to be redundant / subsumed
