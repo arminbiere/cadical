@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <functional>
 
 namespace CaDiCaL {
 
@@ -8,6 +9,11 @@ namespace CaDiCaL {
 // latter situation this can be done either in the order of all variables
 // (forward or backward) or in the order of all clauses.  These lucky
 // assignments can be tested initially in a kind of pre-solving step.
+
+// We extended the search to do discrepency search to strengthen the original
+// idea. We try both direction of a literal if it leads to a conflict. On top of
+// that, as long as we are on level 1, we actually learn the unit, similarly to
+// how probing is done.
 
 // This function factors out clean up code common among the 'lucky'
 // functions for backtracking and resetting a potential conflict.  One could
@@ -538,71 +544,61 @@ int Internal::lucky_phases () {
   int64_t units =0;
   int res = 0, rounds = 0;
   const int64_t active_initially = stats.active;
+
+  std::vector<std::function<int ()> > schedule;
+  schedule.reserve (8);
+
+  // The idea of the code is to:
+  // 1. check for the trival solutions
+  //
+  // 2. a. use the order provided by the user (by default, the decisions are
+  // largest first)
+  //
+  // b. then use first the phases proviveded by the user (by default '1')
+  if (opts.phase) {
+    schedule.push_back([this]() {return trivially_true_satisfiable();});
+    schedule.push_back([this]() {return trivially_false_satisfiable();});
+
+    if (!opts.reverse) {
+      schedule.push_back([this]() {return backward_true_satisfiable();});
+      schedule.push_back([this]() {return backward_false_satisfiable();});
+      schedule.push_back([this]() {return forward_true_satisfiable();});
+      schedule.push_back([this]() {return forward_false_satisfiable();});
+    } else {
+      schedule.push_back([this]() {return forward_true_satisfiable();});
+      schedule.push_back([this]() {return forward_false_satisfiable();});
+      schedule.push_back([this]() {return backward_true_satisfiable();});
+      schedule.push_back([this]() {return backward_false_satisfiable();});
+    }
+
+    schedule.push_back([this]() {return positive_horn_satisfiable();});
+    schedule.push_back([this]() {return negative_horn_satisfiable();});
+  } else {
+    schedule.push_back([this]() {return trivially_true_satisfiable();});
+    schedule.push_back([this]() {return trivially_false_satisfiable();});
+
+    if (!opts.reverse) {
+      schedule.push_back([this]() {return backward_false_satisfiable();});
+      schedule.push_back([this]() {return backward_true_satisfiable();});
+      schedule.push_back([this]() {return forward_false_satisfiable();});
+      schedule.push_back([this]() {return forward_true_satisfiable();});
+    } else {
+      schedule.push_back([this]() {return forward_false_satisfiable();});
+      schedule.push_back([this]() {return forward_true_satisfiable();});
+      schedule.push_back([this]() {return backward_false_satisfiable();});
+      schedule.push_back([this]() {return backward_true_satisfiable();});
+    }
+    schedule.push_back([this]() {return negative_horn_satisfiable();});
+    schedule.push_back([this]() {return positive_horn_satisfiable();});
+  }
+
   do {
     const int64_t active_before = stats.active;
-    // The idea of the code is to:
-    // 1. check for the trival solutions
-    //
-    // 2. a. use the order provided by the user (by default, the decisions are
-    // largest first)
-    //
-    // b. then use first the phases proviveded by the user (by default '1')
-    if (opts.phase) {
-      if (!res)
-        res = trivially_true_satisfiable ();
-      if (!res)
-        res = trivially_false_satisfiable ();
-      if (!opts.reverse) {
-        if (!res)
-          res = backward_true_satisfiable ();
-        if (!res)
-          res = backward_false_satisfiable ();
-        if (!res)
-          res = forward_true_satisfiable ();
-        if (!res)
-          res = forward_false_satisfiable ();
-      } else {
-        if (!res)
-          res = forward_true_satisfiable ();
-        if (!res)
-          res = forward_false_satisfiable ();
-        if (!res)
-          res = backward_true_satisfiable ();
-        if (!res)
-          res = backward_false_satisfiable ();
-      }
-      if (!res)
-        res = positive_horn_satisfiable ();
-      if (!res)
-        res = negative_horn_satisfiable ();
-    } else {
-      if (!res)
-        res = trivially_false_satisfiable ();
-      if (!res)
-        res = trivially_true_satisfiable ();
-      if (!opts.reverse) {
-        if (!res)
-          res = backward_false_satisfiable ();
-        if (!res)
-          res = backward_true_satisfiable ();
-        if (!res)
-          res = forward_false_satisfiable ();
-        if (!res)
-          res = forward_true_satisfiable ();
-      } else {
-        if (!res)
-          res = forward_false_satisfiable ();
-        if (!res)
-          res = forward_true_satisfiable ();
-        if (!res)
-          res = backward_false_satisfiable ();
-        if (!res)
-          res = backward_true_satisfiable ();
-      }
-      if (!res)
-        res = negative_horn_satisfiable ();
-      if (!res)
-        res = positive_horn_satisfiable ();
+
+    for (auto &luck : schedule) {
+      res = luck ();
+      if (res)
+        break;
     }
     if (res < 0)
       assert (termination_forced), res = 0;
