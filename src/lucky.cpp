@@ -545,8 +545,10 @@ int Internal::lucky_phases () {
   int res = 0, rounds = 0;
   const int64_t active_initially = stats.active;
 
-  std::vector<std::function<int ()> > schedule;
-  schedule.reserve (8);
+  constexpr int schedule_size = 8;
+  std::array<std::function<int ()>, schedule_size > schedule;
+  int schedule_pos = 0;
+
 
   // The idea of the code is to:
   // 1. check for the trival solutions
@@ -556,41 +558,42 @@ int Internal::lucky_phases () {
   //
   // b. then use first the phases proviveded by the user (by default '1')
   if (opts.phase) {
-    schedule.push_back([this]() {return trivially_true_satisfiable();});
-    schedule.push_back([this]() {return trivially_false_satisfiable();});
+    schedule[schedule_pos++] = [this]() {return trivially_true_satisfiable();};
+    schedule[schedule_pos++] = [this]() {return trivially_false_satisfiable();};
 
     if (!opts.reverse) {
-      schedule.push_back([this]() {return backward_true_satisfiable();});
-      schedule.push_back([this]() {return backward_false_satisfiable();});
-      schedule.push_back([this]() {return forward_true_satisfiable();});
-      schedule.push_back([this]() {return forward_false_satisfiable();});
+      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
     } else {
-      schedule.push_back([this]() {return forward_true_satisfiable();});
-      schedule.push_back([this]() {return forward_false_satisfiable();});
-      schedule.push_back([this]() {return backward_true_satisfiable();});
-      schedule.push_back([this]() {return backward_false_satisfiable();});
+      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
     }
 
-    schedule.push_back([this]() {return positive_horn_satisfiable();});
-    schedule.push_back([this]() {return negative_horn_satisfiable();});
+    schedule[schedule_pos++] = [this]() {return positive_horn_satisfiable();};
+    schedule[schedule_pos++] = [this]() {return negative_horn_satisfiable();};
   } else {
-    schedule.push_back([this]() {return trivially_true_satisfiable();});
-    schedule.push_back([this]() {return trivially_false_satisfiable();});
+    schedule[schedule_pos++] = [this]() {return trivially_true_satisfiable();};
+    schedule[schedule_pos++] = [this]() {return trivially_false_satisfiable();};
 
     if (!opts.reverse) {
-      schedule.push_back([this]() {return backward_false_satisfiable();});
-      schedule.push_back([this]() {return backward_true_satisfiable();});
-      schedule.push_back([this]() {return forward_false_satisfiable();});
-      schedule.push_back([this]() {return forward_true_satisfiable();});
+      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
     } else {
-      schedule.push_back([this]() {return forward_false_satisfiable();});
-      schedule.push_back([this]() {return forward_true_satisfiable();});
-      schedule.push_back([this]() {return backward_false_satisfiable();});
-      schedule.push_back([this]() {return backward_true_satisfiable();});
+      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
+      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
     }
-    schedule.push_back([this]() {return negative_horn_satisfiable();});
-    schedule.push_back([this]() {return positive_horn_satisfiable();});
+    schedule[schedule_pos++] = [this]() {return negative_horn_satisfiable();};
+    schedule[schedule_pos++] = [this]() {return positive_horn_satisfiable();};
   }
+  assert (schedule_pos == schedule_size);
 
   do {
     const int64_t active_before = stats.active;
