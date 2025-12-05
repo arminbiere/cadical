@@ -610,12 +610,7 @@ int Internal::lucky_phases () {
     assert (searching_lucky_phases);
 
     assert (res || !level);
-    if (res != 20) {
-      if (!propagate ()) {
-        LOG ("propagating units after elimination results in empty clause");
-        learn_empty_clause ();
-      }
-    }
+    assert (res || propagated == trail.size ());
 
     units = active_before - stats.active;
     stats.lucky.units += units;
