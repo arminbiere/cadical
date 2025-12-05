@@ -1351,8 +1351,6 @@ struct Internal {
   //
   void refactor_initialize (Refactoring &vivifier, int64_t &ticks);
   void refactor_analyze_redundant (Refactoring &, Clause *start, bool &);
-  void refactor_build_lrat (int, Clause *,
-                            std::vector<std::tuple<int, Clause *, bool>> &);
   void refactor_chain_for_units (int lit, Clause *reason);
   void refactor_strengthen (Clause *candidate, int64_t &);
   void refactor_assign (int lit, Clause *);
@@ -1360,7 +1358,7 @@ struct Internal {
   bool refactor_propagate (int64_t &);
   bool refactor_clause (Refactoring &, refactor_candidate);
   void refactor_analyze (Clause *start);
-  bool refactor_shrinkable (const std::vector<int> &sorted, Clause *c);
+  void refactor_shrink_candidate (refactor_candidate, refactor_gate);
   void refactor_round (Refactoring &, int64_t delta);
   bool refactor ();
 

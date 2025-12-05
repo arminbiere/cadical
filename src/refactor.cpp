@@ -286,6 +286,95 @@ void Internal::refactor_analyze (Clause *start) {
   }
 }
 
+void Internal::refactor_shrink_candidate (refactor_candidate cand,
+                                          refactor_gate fate) {
+  const int definition = cand.negdef ? -fate.definition : fate.definition;
+  const int cand_branch =
+      cand.negcon ? fate.true_branch : fate.false_branch;
+  const int other_branch =
+      !cand.negcon ? fate.true_branch : fate.false_branch;
+  const int condition = cand.negcon ? -fate.condition : fate.condition;
+  const int64_t tmp_id_1 = ++clause_id;
+  Clause *gate_1 = 0;
+  Clause *gate_2 = 0;
+  std::vector<int> tmp_clause_1;
+  tmp_clause_1.swap (clause);
+  clause.clear ();
+  const int64_t tmp_id_2 = ++clause_id;
+  std::vector<int> tmp_clause_2;
+  const int64_t tmp_id_3 = ++clause_id;
+  std::vector<int> tmp_clause_3;
+  if (proof) {
+    // take the two gate clauses that are needed (fate is not ordered)
+    for (auto c : fate.clauses) {
+      bool g1 = true;
+      bool g2 = true;
+      for (auto &lit : *c) {
+        if (lit == -definition) {
+          g1 = false;
+          g2 = false;
+        } else if (lit == cand_branch) {
+          g1 = false;
+        } else if (lit == other_branch) {
+          g2 = false;
+        }
+      }
+      if (g1)
+        gate_1 = c;
+      else if (g2)
+        gate_2 = c;
+    }
+    assert (gate_1 && gate_2);
+
+    proof->add_derived_clause (tmp_id_1, true, tmp_clause_1, lrat_chain);
+    lrat_chain.clear ();
+    clause.clear ();
+    tmp_clause_2.push_back (definition);
+    for (const auto &lit : tmp_clause_1) {
+      if (abs (lit) == abs (other_branch))
+        continue;
+      tmp_clause_2.push_back (lit);
+    }
+    if (lrat) {
+      lrat_chain.push_back (tmp_id_1);
+      lrat_chain.push_back (gate_1->id);
+    }
+    proof->add_derived_clause (tmp_id_2, true, tmp_clause_2, lrat_chain);
+    lrat_chain.clear ();
+    proof->delete_clause (tmp_id_1, true, tmp_clause_1);
+
+    tmp_clause_3.push_back (definition);
+    for (const auto &lit : *cand.candidate) {
+      if (abs (lit) == abs (cand_branch))
+        continue;
+      tmp_clause_3.push_back (lit);
+    }
+    if (lrat) {
+      lrat_chain.push_back (cand.candidate->id);
+      lrat_chain.push_back (gate_2->id);
+    }
+    proof->add_derived_clause (tmp_id_3, true, tmp_clause_3, lrat_chain);
+    lrat_chain.clear ();
+    if (lrat) {
+      lrat_chain.push_back (tmp_id_2);
+      lrat_chain.push_back (tmp_id_3);
+    }
+  }
+  for (const auto &lit : *cand.candidate) {
+    if (abs (lit) == abs (condition))
+      continue;
+    if (abs (lit) == abs (cand_branch))
+      clause.push_back (lit);
+  }
+  new_clause_as (cand.candidate);
+  clause.clear ();
+  lrat_chain.clear ();
+  if (proof) {
+    proof->delete_clause (tmp_id_2, true, tmp_clause_2);
+    proof->delete_clause (tmp_id_3, true, tmp_clause_3);
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 // Main function: try to refactor this candidate clause in the given mode.
@@ -486,6 +575,7 @@ bool Internal::refactor_clause (Refactoring &refactoring,
   refactor_analyze (reason);
 
   // TODO: learn temporary clauses and use gate clauses to shrink candidate
+  refactor_shrink_candidate (cand, fate);
 
   if (conflict) {
     LOG ("forcing backtracking at least one level after conflict");
