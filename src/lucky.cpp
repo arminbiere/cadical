@@ -232,21 +232,24 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
   return false;
 }
 
-int Internal::forward_false_satisfiable () {
-  MSG ("checking increasing variable index false assignment");
+template<class Iterator>
+int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, std::string str) {
+  VERBOSE (3, "checking %s variable index %s assignment", str.c_str (), pol == 1 ? "true" : "false");
   assert (!unsat);
   assert (!level);
-  ++stats.lucky.forward.zero;
+  stats.lucky.forward.one++;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
-  for (auto idx : vars) {
+  for (auto it = begin; it != end; ++it) {
   START:
-    if (terminated_asynchronously (100))
+    int idx = *it;
+    int lit = idx * pol;
+    if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (lucky_propagate_discrepency (-idx)) {
+    if (lucky_propagate_discrepency (lit)) {
       if (unsat)
         return 20;
       else
@@ -481,22 +484,22 @@ int Internal::lucky_phases () {
   int res = 0, rounds = 0;
   const int64_t active_initially = stats.active;
 
-  constexpr int schedule_size = 8;
+  constexpr int schedule_size = 6;
   std::array<std::function<int ()>, schedule_size > schedule;
   int schedule_pos = 0;
 
 
   // The idea of the code is to:
-  // 1. check for the trival solutions
+  //
+  //  1. check for the trival solutions. The trivial solution are
+  // tested only once, because the forward/backward true/false would
+  // solve the same model too (which higher cost).
   //
   // 2. a. use the order provided by the user (by default, the decisions are
   // largest first)
   //
   // b. then use first the phases proviveded by the user (by default '1')
   if (opts.phase) {
-    schedule[schedule_pos++] = [this]() {return trivially_true_satisfiable();};
-    schedule[schedule_pos++] = [this]() {return trivially_false_satisfiable();};
-
     if (!opts.reverse) {
       schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
       schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
@@ -512,9 +515,6 @@ int Internal::lucky_phases () {
     schedule[schedule_pos++] = [this]() {return positive_horn_satisfiable();};
     schedule[schedule_pos++] = [this]() {return negative_horn_satisfiable();};
   } else {
-    schedule[schedule_pos++] = [this]() {return trivially_true_satisfiable();};
-    schedule[schedule_pos++] = [this]() {return trivially_false_satisfiable();};
-
     if (!opts.reverse) {
       schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
       schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
@@ -531,29 +531,43 @@ int Internal::lucky_phases () {
   }
   assert (schedule_pos == schedule_size);
 
-  do {
-    const int64_t active_before = stats.active;
+  if (opts.phase) {
+    if (!res)
+      res = trivially_true_satisfiable ();
+    if (!res)
+      res = trivially_false_satisfiable ();
+  } else {
+    if (!res)
+      res = trivially_false_satisfiable ();
+    if (!res)
+      res = trivially_true_satisfiable ();
+  }
 
-    for (auto &luck : schedule) {
-      res = luck ();
-      if (res)
-        break;
-    }
-    if (res < 0)
-      assert (termination_forced), res = 0;
-    if (res == 10)
-      stats.lucky.succeeded++;
-    assert (searching_lucky_phases);
+  if (!res)
+    do {
+      const int64_t active_before = stats.active;
 
-    assert (res || !level);
-    assert (res || propagated == trail.size ());
+      for (auto &luck : schedule) {
+        res = luck ();
+        if (res)
+          break;
+      }
+      if (res < 0)
+        assert (termination_forced), res = 0;
+      if (res == 10)
+        stats.lucky.succeeded++;
+      assert (searching_lucky_phases);
 
-    units = active_before - stats.active;
-    stats.lucky.units += units;
+      assert (res || !level);
+      assert (res || propagated == trail.size ());
 
-    if (!res && units)
-      PHASE ("lucky", stats.lucky.tried, "in round %d found %" PRId64 " units", rounds, units);
-  } while (units && !res && ++rounds < opts.luckyrounds);
+      units = active_before - stats.active;
+      stats.lucky.units += units;
+
+      if (!res && units)
+        PHASE ("lucky", stats.lucky.tried,
+               "in round %d found %" PRId64 " units", rounds, units);
+    } while (units && !res && ++rounds < opts.luckyrounds);
 
   report ('l', !res && !units);
   searching_lucky_phases = false;

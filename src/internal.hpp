@@ -889,6 +889,8 @@ struct Internal {
   void lucky_assume_decision (int);
   int trivially_false_satisfiable ();
   int trivially_true_satisfiable ();
+  template<class Iterator>
+  int lucky_fixed_test (Iterator begin, Iterator end, signed char pol, std::string str);
   int forward_false_satisfiable ();
   int forward_true_satisfiable ();
   int backward_false_satisfiable ();
