@@ -107,7 +107,7 @@ void Internal::lucky_assume_decision (int lit) {
 }
 
 int Internal::trivially_false_satisfiable () {
-  MSG ("checking that all clauses contain a negative literal");
+  VERBOSE (3, "checking that all clauses contain a negative literal");
   assert (!level);
   ++stats.lucky.constant.zero;
   int res = lucky_decide_assumptions ();
@@ -157,7 +157,7 @@ int Internal::trivially_false_satisfiable () {
 }
 
 int Internal::trivially_true_satisfiable () {
-  MSG ("checking that all clauses contain a positive literal");
+  VERBOSE (3, "checking that all clauses contain a positive literal");
   assert (!level);
   ++stats.lucky.constant.one;
   int res = lucky_decide_assumptions ();
@@ -254,94 +254,29 @@ int Internal::forward_false_satisfiable () {
     } else
       goto START;
   }
-  VERBOSE (1, "forward assuming variables false satisfies formula");
+  VERBOSE (1, "%s assuming variables %s satisfies formula", str.c_str (), pol == 1 ? "true" : "false");
   assert (satisfied ());
   return 10;
 }
 
+
+
+int Internal::forward_false_satisfiable () {
+  return lucky_fixed_test (vars.begin(), vars.end (), -1, "forward");
+}
+
 int Internal::forward_true_satisfiable () {
-  MSG ("checking increasing variable index true assignment");
-  assert (!unsat);
-  assert (!level);
-  stats.lucky.forward.one++;
-  int res = lucky_decide_assumptions ();
-  if (res)
-    return res;
-  for (auto idx : vars) {
-  START:
-    if (terminated_asynchronously (10))
-      return unlucky (-1);
-    if (val (idx))
-      continue;
-    if (lucky_propagate_discrepency (idx)) {
-      if (unsat)
-        return 20;
-      else
-        return unlucky (0);
-    } else
-      goto START;
-  }
-  VERBOSE (1, "forward assuming variables true satisfies formula");
-  assert (satisfied ());
-  return 10;
+  return lucky_fixed_test (vars.begin(), vars.end (), 1, "forward");
 }
 
 /*------------------------------------------------------------------------*/
 
 int Internal::backward_false_satisfiable () {
-  MSG ("checking decreasing variable index false assignment");
-  assert (!unsat);
-  assert (!level);
-  stats.lucky.backward.zero++;
-  int res = lucky_decide_assumptions ();
-  if (res)
-    return res;
-  for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
-    int idx = *it;
-  START:
-    if (terminated_asynchronously (10))
-      return unlucky (-1);
-    if (val (idx))
-      continue;
-    if (lucky_propagate_discrepency (-idx)) {
-      if (unsat)
-        return 20;
-      else
-        return unlucky (0);
-    } else
-      goto START;
-  }
-  VERBOSE (1, "backward assuming variables false satisfies formula");
-  assert (satisfied ());
-  return 10;
+  return lucky_fixed_test (vars.rbegin(), vars.rend (), -1, "backward");
 }
 
 int Internal::backward_true_satisfiable () {
-  MSG ("checking decreasing variable index true assignment");
-  assert (!unsat);
-  assert (!level);
-  stats.lucky.backward.one++;
-  int res = lucky_decide_assumptions ();
-  if (res)
-    return res;
-  for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
-    int idx = *it;
-  START:
-    if (terminated_asynchronously (10))
-      return unlucky (-1);
-    if (val (idx))
-      continue;
-    if (lucky_propagate_discrepency (idx)) {
-      if (unsat)
-        return 20;
-      else
-        return unlucky (0);
-    } else
-      goto START;
-  }
-  VERBOSE (1, "backward assuming variables true satisfies formula");
-  assert (satisfied ());
-  return 10;
+  return lucky_fixed_test (vars.rbegin(), vars.rend (), 1, "backward");
 }
 
 /*------------------------------------------------------------------------*/
@@ -353,7 +288,7 @@ int Internal::backward_true_satisfiable () {
 // is not implemented yet.
 
 int Internal::positive_horn_satisfiable () {
-  MSG ("checking that all clauses are positive horn satisfiable");
+  VERBOSE (3, "checking that all clauses are positive horn satisfiable");
   assert (!level);
   stats.lucky.horn.positive++;
   int res = lucky_decide_assumptions ();
@@ -453,7 +388,7 @@ int Internal::lucky_decide_assumptions () {
 
 int Internal::negative_horn_satisfiable () {
   assert (!level);
-  MSG ("checking that all clauses are negative horn satisfiable");
+  VERBOSE (3, "checking that all clauses are negative horn satisfiable");
   stats.lucky.horn.negative++;
   int res = lucky_decide_assumptions ();
   if (res)
