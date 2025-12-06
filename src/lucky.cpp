@@ -235,6 +235,9 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 template<class Iterator>
 int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, std::string str) {
   VERBOSE (3, "checking %s variable index %s assignment", str.c_str (), pol == 1 ? "true" : "false");
+#ifdef QUIET
+  (void) str;
+#endif
   assert (!unsat);
   assert (!level);
   stats.lucky.forward.one++;
@@ -482,7 +485,9 @@ int Internal::lucky_phases () {
   stats.lucky.tried++;
   int64_t units =0;
   int res = 0, rounds = 0;
+#ifndef QUIET
   const int64_t active_initially = stats.active;
+#endif
 
   constexpr int schedule_size = 6;
   std::array<std::function<int ()>, schedule_size > schedule;
