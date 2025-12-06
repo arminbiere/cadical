@@ -570,8 +570,7 @@ int Internal::lucky_phases () {
       stats.lucky.units += units;
 
       if (!res && units)
-        PHASE ("lucky", stats.lucky.tried,
-               "in round %d found %" PRId64 " units", rounds, units);
+        VERBOSE (3, "lucky %" PRId64 "in round %d found %" PRId64 " units", stats.lucky.tried, rounds, units);
     } while (units && !res && ++rounds < opts.luckyrounds);
 
   report ('l', !res && !units);

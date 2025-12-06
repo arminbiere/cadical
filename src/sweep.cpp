@@ -1595,7 +1595,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
   stats.sweep_depth += depth;
   stats.sweep_clauses += sweeper.encoded;
   stats.sweep_environment += sweeper.vars.size ();
-  VERBOSE (3,
+  VERBOSE (4,
            "sweeping variable %d environment of "
            "%zu variables %u clauses depth %u",
            externalize (idx), sweeper.vars.size (), sweeper.encoded, depth);
@@ -1918,7 +1918,7 @@ bool Internal::sweep () {
     const char *res =
 #endif
         sweep_variable (sweeper, idx);
-    VERBOSE (3, "swept[%" PRIu64 "] external variable %d %s", swept,
+    VERBOSE (4, "swept[%" PRIu64 "] external variable %d %s", swept,
              externalize (idx), res);
     if (++swept == limit) {
       VERBOSE (2,
