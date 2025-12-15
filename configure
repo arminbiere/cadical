@@ -283,6 +283,8 @@ fi
 
 [ x"$CXX" = x ] && CXX=g++
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
+[ x"$CPPFLAGS" = x ] || CPPFLAGS="$CPPFLAGS "
+[ x"$LDFLAGS" = x ] || LDFLAGS="$LDFLAGS "
 
 case x"$CXX" in
   x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra"; CFLAGS="${CFLAGS}-Wall -Wextra";;
@@ -589,6 +591,8 @@ sed \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s#@CFLAGS@#$CFLAGS#" \
+-e "s#@CPPFLAGS@#$CPPFLAGS#" \
+-e "s#@LDFLAGS@#$LDFLAGS#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \

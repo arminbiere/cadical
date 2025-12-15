@@ -10,6 +10,8 @@
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
 CFLAGS=@CFLAGS@
+CPPFLAGS=@CPPFLAGS@
+LDFLAGS=@LDFLAGS@
 
 LIBS=@LIBS@
 CONTRIB=@CONTRIB@
@@ -37,8 +39,8 @@ OBJ_C=$(SRC_C:.c=.o)
 # generated build header 'build.hpp'.
 
 DIR=../$(shell pwd|sed -e 's,.*/,,')
-COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR) -I../src
-COMPILEC=$(CXX) $(CFLAGS) -I$(DIR) -I../src
+COMPILE=$(CXX) $(CXXFLAGS) $(CPPFLAGS) -I$(DIR) -I../src
+COMPILEC=$(CXX) $(CFLAGS) $(CPPFLAGS) -I$(DIR) -I../src
 
 #--------------------------------------------------------------------------#
 
@@ -62,10 +64,10 @@ all: @GOALS@
 # tester 'mobical') and the library are the main build targets.
 
 cadical: cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. libcadical.a $(LIBS)
+	$(COMPILE) -o $@ $< $(LDFLAGS) -L. libcadical.a $(LIBS)
 
 mobical: mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -o $@ $< -L. libcadical.a
+	$(COMPILE) -o $@ $< $(LDFLAGS) -L. libcadical.a
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C) makefile
 	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C)
