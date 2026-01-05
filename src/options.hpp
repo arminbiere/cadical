@@ -127,7 +127,7 @@ OPTION( factorunbump,      1,  0,  1,0,1,1, "extension variable with lowest impo
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( fastelimclslim,  1e2,  2,2e9,2,0,1, "fast BVE resolvent size limit") \
-OPTION( fastelimocclim,  100,  1,2e9,2,0,1, "fast BVE occurence limit during preprocessing") \
+OPTION( fastelimocclim,  100,  1,2e9,2,0,1, "fast BVE occurrence limit during preprocessing") \
 OPTION( fastelimrounds,    4,  1,512,1,0,1, "number of fastelim rounds") \
 OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
@@ -169,7 +169,7 @@ QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( randec,            0,  0,  1,0,0,1, "random decisions") \
 OPTION( randecfocused,     1,  0,  1,0,0,1, "random decisions in focused mode") \
-OPTION( randecinit,       1e3, 2,2e9,0,0,1, "inital random decision interval") \
+OPTION( randecinit,       1e3, 2,2e9,0,0,1, "initial random decision interval") \
 OPTION( randecint,       500,  0,2e9,0,0,1, "random conflict length") \
 OPTION( randeclength,     10,  1,1e9,0,0,1, "length random decisions phases") \
 OPTION( randecstable,      0,  0,  1,0,0,1, "random decisions in stable mode") \

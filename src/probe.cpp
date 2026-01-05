@@ -903,7 +903,7 @@ bool Internal::probe () {
 // overhead in setting up the datastructures. This has to be accounted for
 // with the 'ticks', however, since inprocessing is done frequently, this
 // overhead is too expensive to pay. So instead, we accumulate the budget
-// of 'ticks' and delay the technique until it passes a certain threshhold,
+// of 'ticks' and delay the technique until it passes a certain threshold,
 // which depends on the the cost of initialization. Note that in the case of
 // sweeping, we have two different delays, one which resets the budged, and
 // one which passes it to the next round. In this case the former takes

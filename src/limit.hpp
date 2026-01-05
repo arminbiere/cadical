@@ -151,7 +151,7 @@ struct Inc {
     if (THRESHHOLD && DELTA < THRESH) { \
       VERBOSE (2, \
                "delaying %s with ticklimit %" PRId64 \
-               " and threshhold %" PRId64, \
+               " and threshold %" PRId64, \
                #NAME, DELTA, THRESH); \
       return false; \
     } \
