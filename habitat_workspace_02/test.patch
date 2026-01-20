@@ -1,0 +1,1035 @@
+diff --git a/test/api/test_habitat_validation_api.cpp b/test/api/test_habitat_validation_api.cpp
+new file mode 100644
+index 00000000..34742a4d
+--- /dev/null
++++ b/test/api/test_habitat_validation_api.cpp
+@@ -0,0 +1,316 @@
++#include "cadical.hpp"
++#include <cassert>
++#include <vector>
++#include <iostream>
++
++using namespace CaDiCaL;
++
++// __HABITAT Test: Core API semantic change - ival() returns literal not sign
++void __HABITAT_test_ival_returns_literal_not_sign() {
++    Solver *solver = new Solver();
++
++    // Simple satisfiable formula: (1) (2) (-1 Γê¿ -2)
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++    solver->add(-1);
++    solver->add(-2);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10); // SAT
++
++    // Critical test: ival should return the literal itself, not just sign
++    int val1 = solver->val(1);
++    int val2 = solver->val(2);
++    int val_neg1 = solver->val(-1);
++    int val_neg2 = solver->val(-2);
++
++    // The new semantics: val(lit) returns lit if true, -lit if false
++    assert(val1 == 1 || val1 == -1);
++    assert(val2 == 2 || val2 == -2);
++    assert(val_neg1 == 1 || val_neg1 == -1);
++    assert(val_neg2 == 2 || val_neg2 == -2);
++
++    // Consistency check: val(lit) and val(-lit) must be opposites
++    assert(val1 == -val_neg1);
++    assert(val2 == -val_neg2);
++
++    delete solver;
++}
++
++// __HABITAT Test: Edge case with unassigned variables
++void __HABITAT_test_unassigned_variables_return_zero() {
++    Solver *solver = new Solver();
++
++    // Add variables but don't constrain them
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10); // SAT
++
++    // Unassigned variables should return 0
++    int val3 = solver->val(3);
++    int val_neg3 = solver->val(-3);
++    assert(val3 == 0);
++    assert(val_neg3 == 0);
++
++    delete solver;
++}
++
++// __HABITAT Test: Complex formula with multiple solutions
++void __HABITAT_test_complex_formula_consistency() {
++    Solver *solver = new Solver();
++
++    // (1 Γê¿ 2 Γê¿ 3) Γêº (-1 Γê¿ -2) Γêº (-2 Γê¿ -3) Γêº (-1 Γê¿ -3)
++    solver->add(1); solver->add(2); solver->add(3); solver->add(0);
++    solver->add(-1); solver->add(-2); solver->add(0);
++    solver->add(-2); solver->add(-3); solver->add(0);
++    solver->add(-1); solver->add(-3); solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10); // SAT
++
++    // Check consistency across all variables
++    std::vector<int> vals;
++    for (int i = 1; i <= 3; i++) {
++        int val_pos = solver->val(i);
++        int val_neg = solver->val(-i);
++
++        // Must return literal or its negation
++        assert(val_pos == i || val_pos == -i);
++        assert(val_neg == i || val_neg == -i);
++        // Must be opposites
++        assert(val_pos == -val_neg);
++
++        vals.push_back(val_pos);
++    }
++
++    // Check that at most one variable is true (due to constraints)
++    int true_count = 0;
++    for (int val : vals) {
++        if (val > 0) true_count++;
++    }
++    assert(true_count <= 1);
++
++    delete solver;
++}
++
++// __HABITAT Test: UNSAT formula behavior
++void __HABITAT_test_unsat_formula_values() {
++    Solver *solver = new Solver();
++
++    // Contradictory formula: (1) and (-1)
++    solver->add(1);
++    solver->add(0);
++    solver->add(-1);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 20); // UNSAT
++
++    // In UNSAT case, val should return 0 for all literals
++    int val1 = solver->val(1);
++    int val_neg1 = solver->val(-1);
++    int val2 = solver->val(2);
++    int val_neg2 = solver->val(-2);
++
++    assert(val1 == 0);
++    assert(val_neg1 == 0);
++    assert(val2 == 0);
++    assert(val_neg2 == 0);
++
++    delete solver;
++}
++
++// __HABITAT Test: Incremental solving with assumptions
++void __HABITAT_test_incremental_assumptions() {
++    Solver *solver = new Solver();
++
++    // Formula: (1 Γê¿ 2) Γêº (-1 Γê¿ 3) Γêº (-2 Γê¿ -3)
++    solver->add(1); solver->add(2); solver->add(0);
++    solver->add(-1); solver->add(3); solver->add(0);
++    solver->add(-2); solver->add(-3); solver->add(0);
++
++    // Solve with assumption 1
++    std::vector<int> assumptions = {1};
++    int res = solver->solve(assumptions);
++    assert(res == 10); // SAT
++
++    // Check values under assumption
++    int val1 = solver->val(1);
++    int val2 = solver->val(2);
++    int val3 = solver->val(3);
++
++    assert(val1 == 1); // Assumption should be true
++    assert(val2 == 2 || val2 == -2);
++    assert(val3 == 3 || val3 == -3);
++
++    // Check consistency
++    assert(val1 == -solver->val(-1));
++    assert(val2 == -solver->val(-2));
++    assert(val3 == -solver->val(-3));
++
++    delete solver;
++}
++
++// __HABITAT Test: Variable bounds and edge cases
++void __HABITAT_test_variable_bounds_and_edge_cases() {
++    Solver *solver = new Solver();
++
++    // Test with variable 0 (should be invalid)
++    bool exception_caught = false;
++    try {
++        solver->val(0);
++    } catch (...) {
++        exception_caught = true;
++    }
++    // Note: The actual behavior depends on implementation
++
++    // Test with very large variable numbers
++    const int large_var = 10000;
++    solver->add(large_var);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    int val_large = solver->val(large_var);
++    int val_neg_large = solver->val(-large_var);
++
++    assert(val_large == large_var || val_large == -large_var);
++    assert(val_neg_large == large_var || val_neg_large == -large_var);
++    assert(val_large == -val_neg_large);
++
++    delete solver;
++}
++
++// __HABITAT Test: Model consistency after multiple solves
++void __HABITAT_test_multiple_solve_consistency() {
++    Solver *solver = new Solver();
++
++    // Simple formula
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++
++    // First solve
++    int res1 = solver->solve();
++    assert(res1 == 10);
++
++    int val1_first = solver->val(1);
++    int val2_first = solver->val(2);
++
++    // Second solve (should be consistent)
++    int res2 = solver->solve();
++    assert(res2 == 10);
++
++    int val1_second = solver->val(1);
++    int val2_second = solver->val(2);
++
++    // Values should be consistent across solves
++    assert(val1_first == val1_second);
++    assert(val2_first == val2_second);
++
++    // Check consistency with negations
++    assert(val1_second == -solver->val(-1));
++    assert(val2_second == -solver->val(-2));
++
++    delete solver;
++}
++
++// __HABITAT Test: Stress test with many variables
++void __HABITAT_test_stress_many_variables() {
++    Solver *solver = new Solver();
++
++    const int num_vars = 1000;
++
++    // Add a simple constraint: at least one variable must be true
++    for (int i = 1; i <= num_vars; i++) {
++        solver->add(i);
++    }
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Check all variables for consistency
++    int true_count = 0;
++    for (int i = 1; i <= num_vars; i++) {
++        int val_pos = solver->val(i);
++        int val_neg = solver->val(-i);
++
++        assert(val_pos == i || val_pos == -i);
++        assert(val_neg == i || val_neg == -i);
++        assert(val_pos == -val_neg);
++
++        if (val_pos > 0) true_count++;
++    }
++
++    // At least one should be true
++    assert(true_count >= 1);
++
++    delete solver;
++}
++
++// __HABITAT Test: Deeply nested formula with backtracking
++void __HABITAT_test_nested_formula_backtracking() {
++    Solver *solver = new Solver();
++
++    // Create a complex formula that requires backtracking
++    // This tests the solver's internal state consistency
++
++    // Add variables with complex constraints
++    for (int i = 1; i <= 10; i++) {
++        solver->add(i);
++        solver->add(0);
++    }
++
++    // Add constraints that create dependencies
++    for (int i = 1; i < 10; i++) {
++        solver->add(-i);
++        solver->add(i + 1);
++        solver->add(0);
++    }
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Verify all variables are consistent
++    for (int i = 1; i <= 10; i++) {
++        int val_pos = solver->val(i);
++        int val_neg = solver->val(-i);
++
++        assert(val_pos == i || val_pos == -i);
++        assert(val_neg == i || val_neg == -i);
++        assert(val_pos == -val_neg);
++    }
++
++    // Due to constraints, there should be exactly one true variable
++    int true_count = 0;
++    for (int i = 1; i <= 10; i++) {
++        if (solver->val(i) > 0) true_count++;
++    }
++    assert(true_count == 1);
++
++    delete solver;
++}
++
++int main() {
++    std::cout << "Running HABITAT validation API tests..." << std::endl;
++
++    __HABITAT_test_ival_returns_literal_not_sign();
++    __HABITAT_test_unassigned_variables_return_zero();
++    __HABITAT_test_complex_formula_consistency();
++    __HABITAT_test_unsat_formula_values();
++    __HABITAT_test_incremental_assumptions();
++    __HABITAT_test_variable_bounds_and_edge_cases();
++    __HABITAT_test_multiple_solve_consistency();
++    __HABITAT_test_stress_many_variables();
++    __HABITAT_test_nested_formula_backtracking();
++
++    std::cout << "All HABITAT validation API tests passed!" << std::endl;
++    return 0;
++}
+diff --git a/test/api/test_habitat_validation_edge_cases.cpp b/test/api/test_habitat_validation_edge_cases.cpp
+new file mode 100644
+index 00000000..6ed2b967
+--- /dev/null
++++ b/test/api/test_habitat_validation_edge_cases.cpp
+@@ -0,0 +1,338 @@
++#include "cadical.hpp"
++#include <cassert>
++#include <vector>
++#include <iostream>
++#include <climits>
++
++using namespace CaDiCaL;
++
++// __HABITAT Test: Critical edge case - INT_MIN literal handling
++void __HABITAT_test_int_min_literal_handling() {
++    Solver *solver = new Solver();
++
++    // Test with INT_MIN - this should not crash and should be handled gracefully
++    bool exception_caught = false;
++    try {
++        int val = solver->val(INT_MIN);
++        // Should either return 0 or handle gracefully
++        (void)val; // Suppress unused variable warning
++    } catch (...) {
++        exception_caught = true;
++    }
++
++    // The exact behavior depends on implementation, but it shouldn't crash
++    // This tests the assert(elit != INT_MIN) in the new implementation
++
++    delete solver;
++}
++
++// __HABITAT Test: Memory boundary conditions
++void __HABITAT_test_memory_boundary_conditions() {
++    Solver *solver = new Solver();
++
++    // Test with variables that might trigger boundary conditions
++    const int boundary_var = 32767; // Near signed 16-bit limit
++
++    solver->add(boundary_var);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    int val_boundary = solver->val(boundary_var);
++    int val_neg_boundary = solver->val(-boundary_var);
++
++    assert(val_boundary == boundary_var || val_boundary == -boundary_var);
++    assert(val_neg_boundary == boundary_var || val_neg_boundary == -boundary_var);
++    assert(val_boundary == -val_neg_boundary);
++
++    delete solver;
++}
++
++// __HABITAT Test: Solution consistency after constraint addition
++void __HABITAT_test_solution_consistency_after_constraints() {
++    Solver *solver = new Solver();
++
++    // Initial formula
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++
++    int res1 = solver->solve();
++    assert(res1 == 10);
++
++    int val1_initial = solver->val(1);
++    int val2_initial = solver->val(2);
++
++    // Add more constraints
++    solver->add(-1);
++    solver->add(3);
++    solver->add(0);
++
++    int res2 = solver->solve();
++    assert(res2 == 10);
++
++    int val1_new = solver->val(1);
++    int val2_new = solver->val(2);
++    int val3_new = solver->val(3);
++
++    // All values should be consistent with new semantics
++    assert(val1_new == 1 || val1_new == -1);
++    assert(val2_new == 2 || val2_new == -2);
++    assert(val3_new == 3 || val3_new == -3);
++
++    // Check opposites
++    assert(val1_new == -solver->val(-1));
++    assert(val2_new == -solver->val(-2));
++    assert(val3_new == -solver->val(-3));
++
++    delete solver;
++}
++
++// __HABITAT Test: Complex assumption scenarios
++void __HABITAT_test_complex_assumption_scenarios() {
++    Solver *solver = new Solver();
++
++    // Formula: (1 Γê¿ 2 Γê¿ 3) Γêº (-1 Γê¿ -2) Γêº (-2 Γê¿ -3) Γêº (-1 Γê¿ -3)
++    solver->add(1); solver->add(2); solver->add(3); solver->add(0);
++    solver->add(-1); solver->add(-2); solver->add(0);
++    solver->add(-2); solver->add(-3); solver->add(0);
++    solver->add(-1); solver->add(-3); solver->add(0);
++
++    // Test with contradictory assumptions
++    std::vector<int> contradictory_assumptions = {1, -1};
++    int res_contradictory = solver->solve(contradictory_assumptions);
++    assert(res_contradictory == 20); // UNSAT
++
++    // In UNSAT, all values should be 0
++    assert(solver->val(1) == 0);
++    assert(solver->val(-1) == 0);
++    assert(solver->val(2) == 0);
++    assert(solver->val(-2) == 0);
++
++    // Test with consistent assumptions
++    std::vector<int> consistent_assumptions = {1};
++    int res_consistent = solver->solve(consistent_assumptions);
++    assert(res_consistent == 10); // SAT
++
++    int val1 = solver->val(1);
++    int val2 = solver->val(2);
++    int val3 = solver->val(3);
++
++    assert(val1 == 1); // Assumption should be true
++    assert(val2 == 2 || val2 == -2);
++    assert(val3 == 3 || val3 == -3);
++
++    delete solver;
++}
++
++// __HABITAT Test: Solver state consistency after failed solves
++void __HABITAT_test_solver_state_after_failed_solves() {
++    Solver *solver = new Solver();
++
++    // Create a formula that will fail
++    solver->add(1);
++    solver->add(0);
++    solver->add(-1);
++    solver->add(0);
++
++    int res_unsat = solver->solve();
++    assert(res_unsat == 20); // UNSAT
++
++    // All values should be 0 after UNSAT
++    assert(solver->val(1) == 0);
++    assert(solver->val(-1) == 0);
++    assert(solver->val(2) == 0);
++    assert(solver->val(-2) == 0);
++
++    // Now add a satisfiable formula
++    solver = new Solver(); // Fresh solver
++    solver->add(2);
++    solver->add(0);
++
++    int res_sat = solver->solve();
++    assert(res_sat == 10); // SAT
++
++    int val2 = solver->val(2);
++    assert(val2 == 2 || val2 == -2);
++    assert(val2 == -solver->val(-2));
++
++    delete solver;
++}
++
++// __HABITAT Test: Performance with large clause sets
++void __HABITAT_test_performance_large_clause_sets() {
++    Solver *solver = new Solver();
++
++    const int num_vars = 100;
++    const int num_clauses = 500;
++
++    // Generate random-like clauses
++    for (int i = 0; i < num_clauses; i++) {
++        for (int j = 1; j <= 3; j++) {
++            int var = (i * 3 + j) % num_vars + 1;
++            int lit = (i % 2 == 0) ? var : -var;
++            solver->add(lit);
++        }
++        solver->add(0);
++    }
++
++    int res = solver->solve();
++    assert(res == 10 || res == 20); // Either SAT or UNSAT is fine
++
++    if (res == 10) {
++        // If SAT, check consistency
++        for (int i = 1; i <= num_vars; i++) {
++            int val_pos = solver->val(i);
++            int val_neg = solver->val(-i);
++
++            assert(val_pos == i || val_pos == -i || val_pos == 0);
++            assert(val_neg == i || val_neg == -i || val_neg == 0);
++            assert(val_pos == -val_neg);
++        }
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Edge case with variable initialization
++void __HABITAT_test_variable_initialization_edge_cases() {
++    Solver *solver = new Solver();
++
++    // Test accessing variables before any are added
++    int val_early = solver->val(1);
++    assert(val_early == 0); // Should be 0 for unadded variables
++
++    // Add variables one by one and test
++    solver->add(1);
++    int res1 = solver->solve();
++    assert(res1 == 10);
++
++    int val1 = solver->val(1);
++    assert(val1 == 1 || val1 == -1);
++
++    // Add second variable
++    solver->add(2);
++    int res2 = solver->solve();
++    assert(res2 == 10);
++
++    int val1_again = solver->val(1);
++    int val2 = solver->val(2);
++
++    assert(val1_again == 1 || val1_again == -1);
++    assert(val2 == 2 || val2 == -2);
++
++    // Values should be consistent
++    assert(val1_again == -solver->val(-1));
++    assert(val2 == -solver->val(-2));
++
++    delete solver;
++}
++
++// __HABITAT Test: Deep recursion and stack handling
++void __HABITAT_test_deep_recursion_handling() {
++    Solver *solver = new Solver();
++
++    // Create a formula that might cause deep recursion
++    const int depth = 50;
++
++    // Create a chain: (1) ΓåÆ (2) ΓåÆ (3) ΓåÆ ... ΓåÆ (depth)
++    for (int i = 1; i < depth; i++) {
++        solver->add(-i);
++        solver->add(i + 1);
++        solver->add(0);
++    }
++
++    // Add the first variable
++    solver->add(1);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // All variables should be consistently assigned
++    for (int i = 1; i <= depth; i++) {
++        int val_pos = solver->val(i);
++        int val_neg = solver->val(-i);
++
++        assert(val_pos == i || val_pos == -i);
++        assert(val_neg == i || val_neg == -i);
++        assert(val_pos == -val_neg);
++    }
++
++    // Due to the chain structure, all should be true
++    for (int i = 1; i <= depth; i++) {
++        assert(solver->val(i) > 0);
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Memory corruption detection
++void __HABITAT_test_memory_corruption_detection() {
++    Solver *solver = new Solver();
++
++    // Create multiple solvers to test for memory corruption
++    std::vector<Solver*> solvers;
++    for (int i = 0; i < 10; i++) {
++        solvers.push_back(new Solver());
++        solvers[i]->add(i + 1);
++        solvers[i]->add(0);
++    }
++
++    // Solve all
++    for (int i = 0; i < 10; i++) {
++        int res = solvers[i]->solve();
++        assert(res == 10);
++
++        int val = solvers[i]->val(i + 1);
++        assert(val == i + 1 || val == -(i + 1));
++        assert(val == -solvers[i]->val(-(i + 1)));
++    }
++
++    // Clean up
++    for (int i = 0; i < 10; i++) {
++        delete solvers[i];
++    }
++}
++
++// __HABITAT Test: Extreme variable numbers
++void __HABITAT_test_extreme_variable_numbers() {
++    Solver *solver = new Solver();
++
++    // Test with very large variable numbers
++    const int extreme_var = 1000000;
++
++    solver->add(extreme_var);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    int val_extreme = solver->val(extreme_var);
++    int val_neg_extreme = solver->val(-extreme_var);
++
++    assert(val_extreme == extreme_var || val_extreme == -extreme_var);
++    assert(val_neg_extreme == extreme_var || val_neg_extreme == -extreme_var);
++    assert(val_extreme == -val_neg_extreme);
++
++    delete solver;
++}
++
++int main() {
++    std::cout << "Running HABITAT validation edge case tests..." << std::endl;
++
++    __HABITAT_test_int_min_literal_handling();
++    __HABITAT_test_memory_boundary_conditions();
++    __HABITAT_test_solution_consistency_after_constraints();
++    __HABITAT_test_complex_assumption_scenarios();
++    __HABITAT_test_solver_state_after_failed_solves();
++    __HABITAT_test_performance_large_clause_sets();
++    __HABITAT_test_variable_initialization_edge_cases();
++    __HABITAT_test_deep_recursion_handling();
++    __HABITAT_test_memory_corruption_detection();
++    __HABITAT_test_extreme_variable_numbers();
++
++    std::cout << "All HABITAT validation edge case tests passed!" << std::endl;
++    return 0;
++}
+diff --git a/test/api/test_habitat_validation_subtle.cpp b/test/api/test_habitat_validation_subtle.cpp
+new file mode 100644
+index 00000000..1520f287
+--- /dev/null
++++ b/test/api/test_habitat_validation_subtle.cpp
+@@ -0,0 +1,363 @@
++#include "cadical.hpp"
++#include <cassert>
++#include <vector>
++#include <iostream>
++#include <cstring>
++
++using namespace CaDiCaL;
++
++// __HABITAT Test: Subtle bug detection - vals array boundary access
++void __HABITAT_test_vals_array_boundary_access() {
++    Solver *solver = new Solver();
++
++    // Test accessing variables that might trigger vals array boundary issues
++    // This targets the change: (size_t) eidx < vals.size() check
++
++    // Add a variable
++    solver->add(1);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Test accessing variables beyond current max but within reasonable range
++    int val_beyond = solver->val(100);
++    assert(val_beyond == 0); // Should return 0 for non-existent variables
++
++    int val_neg_beyond = solver->val(-100);
++    assert(val_neg_beyond == 0);
++
++    delete solver;
++}
++
++// __HABITAT Test: Critical consistency check - solution vs vals arrays
++void __HABITAT_test_solution_vs_vals_consistency() {
++    Solver *solver = new Solver();
++
++    // Create a formula and solve
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // This tests the consistency between solution[] and vals[] arrays
++    // The new implementation should maintain consistency between these
++
++    int val1_ival = solver->val(1);
++    int val2_ival = solver->val(2);
++
++    // The values should be consistent with the new semantics
++    assert(val1_ival == 1 || val1_ival == -1);
++    assert(val2_ival == 2 || val2_ival == -2);
++
++    // Test that the internal state is consistent
++    // This is a subtle test that might catch implementation bugs
++
++    delete solver;
++}
++
++// __HABITAT Test: Edge case in solution array access
++void __HABITAT_test_solution_array_edge_cases() {
++    Solver *solver = new Solver();
++
++    // This targets the sol() function changes in external.hpp
++    // Specifically: signed char value = solution[eidx];
++
++    solver->add(1);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Test solution consistency
++    int val1 = solver->val(1);
++    int val_neg1 = solver->val(-1);
++
++    assert(val1 == 1 || val1 == -1);
++    assert(val_neg1 == 1 || val_neg1 == -1);
++    assert(val1 == -val_neg1);
++
++    // Test with variables that don't exist
++    int val_nonexistent = solver->val(999);
++    assert(val_nonexistent == 0);
++
++    delete solver;
++}
++
++// __HABITAT Test: Complex formula with learned clauses
++void __HABITAT_test_learned_clause_consistency() {
++    Solver *solver = new Solver();
++
++    // Create a formula that will generate learned clauses
++    // This tests the solution checking on learned clauses
++
++    // Pigeonhole principle: 3 pigeons, 2 holes
++    for (int p = 1; p <= 3; p++) {
++        for (int h = 1; h <= 2; h++) {
++            solver->add(p * 10 + h); // Variable p*h means pigeon p in hole h
++        }
++        solver->add(0);
++    }
++
++    // Each pigeon in exactly one hole
++    for (int p = 1; p <= 3; p++) {
++        for (int h1 = 1; h1 <= 2; h1++) {
++            for (int h2 = h1 + 1; h2 <= 2; h2++) {
++                solver->add(-(p * 10 + h1));
++                solver->add(-(p * 10 + h2));
++                solver->add(0);
++            }
++        }
++    }
++
++    // Each hole has at most one pigeon
++    for (int h = 1; h <= 2; h++) {
++        for (int p1 = 1; p1 <= 3; p1++) {
++            for (int p2 = p1 + 1; p2 <= 3; p2++) {
++                solver->add(-(p1 * 10 + h));
++                solver->add(-(p2 * 10 + h));
++                solver->add(0);
++            }
++        }
++    }
++
++    int res = solver->solve();
++    assert(res == 20); // Should be UNSAT
++
++    // In UNSAT case, all values should be 0
++    for (int p = 1; p <= 3; p++) {
++        for (int h = 1; h <= 2; h++) {
++            int var = p * 10 + h;
++            assert(solver->val(var) == 0);
++            assert(solver->val(-var) == 0);
++        }
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Incremental solving with clause addition
++void __HABITAT_test_incremental_clause_addition() {
++    Solver *solver = new Solver();
++
++    // Start with a simple formula
++    solver->add(1);
++    solver->add(0);
++
++    int res1 = solver->solve();
++    assert(res1 == 10);
++
++    int val1_initial = solver->val(1);
++    assert(val1_initial == 1 || val1_initial == -1);
++
++    // Add more clauses incrementally
++    solver->add(-1);
++    solver->add(2);
++    solver->add(0);
++
++    int res2 = solver->solve();
++    assert(res2 == 10);
++
++    int val1_new = solver->val(1);
++    int val2_new = solver->val(2);
++
++    // Check consistency with new constraints
++    assert(val1_new == 1 || val1_new == -1);
++    assert(val2_new == 2 || val2_new == -2);
++
++    // Due to the new clause, if val1_new is true, val2_new should be true
++    if (val1_new == 1) {
++        assert(val2_new == 2);
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Memory alignment and padding issues
++void __HABITAT_test_memory_alignment_issues() {
++    Solver *solver = new Solver();
++
++    // Test with variables that might trigger memory alignment issues
++    // This is especially important for the vals array access
++
++    const int alignment_test_vars[] = {7, 8, 15, 16, 31, 32, 63, 64, 127, 128};
++
++    for (int var : alignment_test_vars) {
++        solver->add(var);
++        solver->add(0);
++    }
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Check all alignment test variables
++    for (int var : alignment_test_vars) {
++        int val_pos = solver->val(var);
++        int val_neg = solver->val(-var);
++
++        assert(val_pos == var || val_pos == -var);
++        assert(val_neg == var || val_neg == -var);
++        assert(val_pos == -val_neg);
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Solver state corruption detection
++void __HABITAT_test_solver_state_corruption() {
++    Solver *solver = new Solver();
++
++    // Create a complex scenario that might corrupt solver state
++    // This tests the robustness of the new implementation
++
++    solver->add(1);
++    solver->add(2);
++    solver->add(0);
++
++    int res1 = solver->solve();
++    assert(res1 == 10);
++
++    // Store initial values
++    int val1_initial = solver->val(1);
++    int val2_initial = solver->val(2);
++
++    // Add contradictory clause
++    solver->add(-1);
++    solver->add(-2);
++    solver->add(0);
++
++    int res2 = solver->solve();
++    // This might be SAT or UNSAT depending on the solver
++
++    if (res2 == 10) {
++        // If SAT, check consistency
++        int val1_new = solver->val(1);
++        int val2_new = solver->val(2);
++
++        assert(val1_new == 1 || val1_new == -1);
++        assert(val2_new == 2 || val2_new == -2);
++
++        // Due to the new clause, at least one should be false
++        assert(val1_new == -1 || val2_new == -2);
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Thread safety and concurrent access
++void __HABITAT_test_concurrent_access_patterns() {
++    // Note: This test simulates concurrent access patterns
++    // Even if the solver is not thread-safe, this tests for race conditions
++
++    Solver *solver = new Solver();
++
++    solver->add(1);
++    solver->add(2);
++    solver->add(3);
++    solver->add(0);
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    // Rapidly access values to simulate concurrent access
++    for (int i = 0; i < 1000; i++) {
++        int val1 = solver->val(1);
++        int val2 = solver->val(2);
++        int val3 = solver->val(3);
++
++        assert(val1 == 1 || val1 == -1);
++        assert(val2 == 2 || val2 == -2);
++        assert(val3 == 3 || val3 == -3);
++
++        assert(val1 == -solver->val(-1));
++        assert(val2 == -solver->val(-2));
++        assert(val3 == -solver->val(-3));
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Extreme formula complexity
++void __HABITAT_test_extreme_formula_complexity() {
++    Solver *solver = new Solver();
++
++    // Create a formula with high complexity
++    const int num_vars = 50;
++
++    // Add all possible 3-clauses (this will be very large)
++    for (int i = 1; i <= num_vars - 2; i++) {
++        for (int j = i + 1; j <= num_vars - 1; j++) {
++            for (int k = j + 1; k <= num_vars; k++) {
++                solver->add(i);
++                solver->add(j);
++                solver->add(k);
++                solver->add(0);
++            }
++        }
++    }
++
++    int res = solver->solve();
++    assert(res == 10); // Should be SAT
++
++    // Check consistency for all variables
++    for (int i = 1; i <= num_vars; i++) {
++        int val_pos = solver->val(i);
++        int val_neg = solver->val(-i);
++
++        assert(val_pos == i || val_pos == -i);
++        assert(val_neg == i || val_neg == -i);
++        assert(val_pos == -val_neg);
++    }
++
++    delete solver;
++}
++
++// __HABITAT Test: Zero literal handling
++void __HABITAT_test_zero_literal_handling() {
++    Solver *solver = new Solver();
++
++    // Test how zero literals are handled
++    // Zero is typically used as clause terminator
++
++    solver->add(1);
++    solver->add(0); // Clause terminator
++
++    int res = solver->solve();
++    assert(res == 10);
++
++    int val1 = solver->val(1);
++    assert(val1 == 1 || val1 == -1);
++
++    // Test accessing literal 0 directly
++    bool exception_caught = false;
++    try {
++        int val0 = solver->val(0);
++        (void)val0; // Suppress warning
++    } catch (...) {
++        exception_caught = true;
++    }
++
++    // The behavior depends on implementation, but shouldn't crash
++
++    delete solver;
++}
++
++int main() {
++    std::cout << "Running HABITAT validation subtle tests..." << std::endl;
++
++    __HABITAT_test_vals_array_boundary_access();
++    __HABITAT_test_solution_vs_vals_consistency();
++    __HABITAT_test_solution_array_edge_cases();
++    __HABITAT_test_learned_clause_consistency();
++    __HABITAT_test_incremental_clause_addition();
++    __HABITAT_test_memory_alignment_issues();
++    __HABITAT_test_solver_state_corruption();
++    __HABITAT_test_concurrent_access_patterns();
++    __HABITAT_test_extreme_formula_complexity();
++    __HABITAT_test_zero_literal_handling();
++
++    std::cout << "All HABITAT validation subtle tests passed!" << std::endl;
++    return 0;
++}

@@ -1,0 +1,226 @@
+diff --git a/src/extend.cpp b/src/extend.cpp
+index 20165e1e..2533aafd 100644
+--- a/src/extend.cpp
++++ b/src/extend.cpp
+@@ -152,7 +152,7 @@ void External::extend () {
+     while ((lit = *--i)) {
+       if (satisfied)
+         continue;
+-      if (ival (lit) > 0)
++      if (ival (lit) == lit)
+         satisfied = true;
+       assert (i != begin);
+     }
+@@ -172,7 +172,7 @@ void External::extend () {
+     else {
+       while ((lit = *--i)) {
+         const int tmp = ival (lit); // not 'signed char'!!!
+-        if (tmp < 0) {
++        if (tmp != lit) {
+           LOG ("flipping blocking literal %d", lit);
+           assert (lit);
+           assert (lit != INT_MIN);
+@@ -270,12 +270,8 @@ void External::conclude_sat () {
+   if (!extended)
+     extend ();
+   vector<int> model;
+-  for (int i = 1; i <= max_var; i++) {
+-    int lit = i;
+-    const int value = ival (lit);
+-    assert (value);
+-    if (value < 0)
+-      lit = -lit;
++  for (int idx = 1; idx <= max_var; idx++) {
++    const int lit = ival (idx);
+     model.push_back (lit);
+   }
+   internal->proof->conclude_sat (model);
+diff --git a/src/external.cpp b/src/external.cpp
+index 6b9d4910..e2635cce 100644
+--- a/src/external.cpp
++++ b/src/external.cpp
+@@ -600,7 +600,15 @@ void External::check_assignment (int (External::*a) (int) const) {
+   for (auto idx : vars) {
+     if (!(this->*a) (idx))
+       FATAL ("unassigned variable: %d", idx);
+-    if ((this->*a) (idx) != -(this->*a) (-idx))
++    int value_idx = (this->*a) (idx);
++    int value_neg_idx = (this->*a) (-idx);
++    if (value_idx == idx)
++      assert (value_neg_idx == idx);
++    else {
++      assert (value_idx == -idx);
++      assert (value_neg_idx == -idx);
++    }
++    if (value_idx != value_neg_idx)
+       FATAL ("inconsistently assigned literals %d and %d", idx, -idx);
+   }
+
+@@ -628,7 +636,7 @@ void External::check_assignment (int (External::*a) (int) const) {
+ #ifndef QUIET
+       count++;
+ #endif
+-    } else if (!satisfied && (this->*a) (lit) > 0)
++    } else if (!satisfied && (this->*a) (lit) == lit)
+       satisfied = true;
+   }
+   VERBOSE (1, "satisfying assignment checked on %" PRId64 " clauses",
+@@ -641,7 +649,7 @@ void External::check_assumptions_satisfied () {
+   for (const auto &lit : assumptions) {
+     // Not 'signed char' !!!!
+     const int tmp = ival (lit);
+-    if (tmp < 0)
++    if (tmp != lit)
+       FATAL ("assumption %d falsified", lit);
+     if (!tmp)
+       FATAL ("assumption %d unassigned", lit);
+@@ -652,7 +660,7 @@ void External::check_assumptions_satisfied () {
+
+ void External::check_constraint_satisfied () {
+   for (const auto lit : constraint) {
+-    if (ival (lit) > 0) {
++    if (ival (lit) == lit) {
+       VERBOSE (1, "checked that constraint is satisfied");
+       return;
+     }
+diff --git a/src/external.hpp b/src/external.hpp
+index ff412f2e..bac17fd6 100644
+--- a/src/external.hpp
++++ b/src/external.hpp
+@@ -293,16 +293,13 @@ struct External {
+   //
+   inline int ival (int elit) const {
+     assert (elit != INT_MIN);
+-    int eidx = abs (elit), res;
+-    if (eidx > max_var)
+-      res = -eidx;
+-    else if ((size_t) eidx >= vals.size ())
+-      res = -eidx;
+-    else
+-      res = vals[eidx] ? eidx : -eidx;
++    int eidx = abs (elit);
++    bool val = false;
++    if (eidx <= max_var && (size_t) eidx < vals.size ())
++      val = vals[eidx];
+     if (elit < 0)
+-      res = -res;
+-    return res;
++      val = !val;
++    return val ? elit : -elit;
+   }
+
+   bool flip (int elit);
+@@ -410,10 +407,12 @@ struct External {
+     int eidx = abs (elit);
+     if (eidx > max_var)
+       return 0;
+-    int res = solution[eidx];
++    signed char value = solution[eidx];
++    if (!value)
++      return 0;
+     if (elit < 0)
+-      res = -res;
+-    return res;
++      value = -value;
++    return value > 0 ? elit : -elit;
+   }
+ };
+
+diff --git a/src/external_propagate.cpp b/src/external_propagate.cpp
+index 57ace71d..86d1e950 100644
+--- a/src/external_propagate.cpp
++++ b/src/external_propagate.cpp
+@@ -661,18 +661,15 @@ bool Internal::external_check_solution () {
+     // Here the variables must be filtered by external->is_observed,
+     // because fixed variables are internally not necessarily observed
+     // anymore.
+-    for (unsigned i = 1; i <= (unsigned) external->max_var; i++) {
+-      if (!external->is_observed[i])
++    for (int idx = 1; idx <= external->max_var; idx++) {
++      if (!external->is_observed[idx])
+         continue;
+-      const int tmp = external->ival (i);
+-      if (tmp > 0)
+-        etrail.push_back (i);
+-      else
+-        etrail.push_back (-i);
++      const int lit = external->ival (idx);
++      etrail.push_back (lit);
+ #ifndef NDEBUG
+ #ifdef LOGGING
+-      bool p = external->vals[i];
+-      LOG ("evals[%d]: %d ival(%d): %d", i, p, i, tmp);
++      bool p = external->vals[idx];
++      LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
+ #endif
+ #endif
+     }
+diff --git a/src/solution.cpp b/src/solution.cpp
+index ea0490dd..8427d14e 100644
+--- a/src/solution.cpp
++++ b/src/solution.cpp
+@@ -13,7 +13,7 @@ namespace CaDiCaL {
+ void External::check_solution_on_learned_clause () {
+   assert (solution);
+   for (const auto &lit : internal->clause)
+-    if (sol (internal->externalize (lit)) > 0)
++    if (sol (internal->externalize (lit)) == lit)
+       return;
+   fatal_message_start ();
+   fputs ("learned clause unsatisfied by solution:\n", stderr);
+@@ -26,7 +26,7 @@ void External::check_solution_on_learned_clause () {
+ void External::check_solution_on_shrunken_clause (Clause *c) {
+   assert (solution);
+   for (const auto &lit : *c)
+-    if (sol (internal->externalize (lit)) > 0)
++    if (sol (internal->externalize (lit)) == lit)
+       return;
+   fatal_message_start ();
+   for (const auto &lit : *c)
+@@ -42,7 +42,7 @@ void External::check_no_solution_after_learning_empty_clause () {
+
+ void External::check_solution_on_learned_unit_clause (int unit) {
+   assert (solution);
+-  if (sol (internal->externalize (unit)) > 0)
++  if (sol (internal->externalize (unit)) == unit)
+     return;
+   FATAL ("learned unit %d contradicts solution", unit);
+ }
+diff --git a/test/api/ctest.c b/test/api/ctest.c
+index 2517467a..ff038873 100644
+--- a/test/api/ctest.c
++++ b/test/api/ctest.c
+@@ -25,6 +25,10 @@ int main (void) {
+   assert (res == -1);
+   res = ccadical_val (solver, 2);
+   assert (res == 2);
++  res = ccadical_val (solver, -1);
++  assert (res == -1);
++  res = ccadical_val (solver, -2);
++  assert (res == 2);
+   ccadical_release (solver);
+   return 0;
+ }
+diff --git a/test/api/example.cpp b/test/api/example.cpp
+index f528c7ca..0cf83306 100644
+--- a/test/api/example.cpp
++++ b/test/api/example.cpp
+@@ -23,10 +23,16 @@ int main () {
+   assert (res == 10);         // Check it is 'SATISFIABLE'.
+
+   res = solver->val (TIE); // Obtain assignment of 'TIE'.
+-  assert (res < 0);        // Check 'TIE' assigned to 'false'.
++  assert (res == -TIE);    // Check 'TIE' assigned to 'false'.
+
+   res = solver->val (SHIRT); // Obtain assignment of 'SHIRT'.
+-  assert (res > 0);          // Check 'SHIRT' assigned to 'true'.
++  assert (res == SHIRT);     // Check 'SHIRT' assigned to 'true'.
++
++  res = solver->val (-TIE);
++  assert (res == -TIE);
++
++  res = solver->val (-SHIRT);
++  assert (res == SHIRT);
+
+   // ------------------------------------------------------------------
+   // Incrementally solve again under one assumption.
