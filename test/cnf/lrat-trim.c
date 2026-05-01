@@ -766,9 +766,15 @@ static double process_time () {
 }
 
 static size_t maximum_resident_set_size (void) {
+  size_t res = 0;
   struct rusage u;
-  (void) getrusage (RUSAGE_SELF, &u);
-  return ((size_t) u.ru_maxrss) << 10;
+  if (!getrusage (RUSAGE_SELF, &u)) {
+    res = (size_t) u.ru_maxrss;
+#ifndef __APPLE__
+    res <<= 10;
+#endif
+  }
+  return res;
 }
 
 static double mega_bytes (void) {
