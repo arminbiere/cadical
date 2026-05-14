@@ -2440,6 +2440,7 @@ public:
   static int64_t terminate_triggered;
   static int64_t mallocs_after_trigger;
   static int64_t terminate_delay_failed;
+  static Call::Type current_call_type;
 #endif
 
 #ifdef MOBICAL_TERMINATE
@@ -2680,13 +2681,7 @@ public:
     memory_bad_failed = 0;
     memory_leak_alloc = 0;
     memory_leak_next_free = 0;
-    // mobical malloc count terminate hack
-    terminate_budget = 0;
-    terminate_k = 0;
-    terminate_triggered = 0;
-    mallocs_after_trigger = 0;
-    terminate_delay_failed = 0;
-    // ---
+
     std::memset (&mobical.shared->bad_alloc, 0,
                  sizeof (mobical.shared->bad_alloc));
     std::memset (&mobical.shared->leak_alloc, 0,
@@ -2697,7 +2692,14 @@ public:
     limit_terminate = 0;
     limit_terminate_remaining = 0;
 #endif
-
+#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE)
+    // mobical malloc count terminate hack
+    terminate_budget = 0;
+    terminate_k = 0;
+    terminate_triggered = 0;
+    mallocs_after_trigger = 0;
+    terminate_delay_failed = 0;
+#endif
     executed++;
     bool first = true;
     bool deallocated = false;
@@ -2752,7 +2754,8 @@ public:
           terminate_delay_failed = 0;
 
           continue;
-        }
+        } 
+        current_call_type = c->type;
 #endif
 
         if (c->type == Call::SET) {
@@ -2777,6 +2780,9 @@ public:
             mobical.add_statistics (solver);
           mobical.shared->executed++;
         }
+#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
+        current_call_type = c->type;
+#endif
         if (mobical.shared && process_type (c->type)) {
           mobical.shared->solved++;
           if (first)
@@ -3786,7 +3792,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int terminatecallsize = random.pick_log (1e1, 1e4);
   // terminate delay hack
   int terminatedelaycall = random.pick_int (0, 2); // activate malloc/new count based termination
-  int terminatedelay_budget = random.pick_log (1e3, 1e4); // when to terminate
+  int terminatedelay_budget = random.pick_log (5e2, 5e4); // when to terminate
   int terminatedelay_k = random.pick_int (400, 1000); // maximum delay in number of mallocs/news before signal is raised
 
 #ifdef MOBICAL_MEMORY
@@ -4119,6 +4125,7 @@ int64_t Trace::terminate_k = 0;
 int64_t Trace::terminate_triggered = 0;
 int64_t Trace::mallocs_after_trigger = 0;
 int64_t Trace::terminate_delay_failed = 0;
+Call::Type Trace::current_call_type = Call::INIT; // just some non-PROCESS value
 #endif
 
 #define SIGNAL(SIG) void (*Trace::old_##SIG##_handler) (int);
@@ -4209,6 +4216,11 @@ void Trace::hooks_uninstall (void) {
 
 void Trace::account_terminate_delay_allocation () {
 #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
+  // TODO: check call type here before adjusting counters
+  if (!process_type(current_call_type)) {
+    printf ("SKIPPED NEW/MALLOC\n");
+    return;
+  }
   if (terminate_triggered) {
     mallocs_after_trigger++;
     printf ("NEW/MALLOC %lld AFTER TRIGGER\n",mallocs_after_trigger); // TODO: remove after being sure it works
