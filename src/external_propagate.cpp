@@ -315,6 +315,7 @@ bool Internal::external_adding_clauses () {
   assert (notified_level == level);
   assert (!unsat);
   assert (!conflict);
+  bool added = false;
   while (true) {
     LOG ("external clause adding starts (decision level: %d, trail size: "
          "%zd, notified %zd)",
@@ -327,6 +328,7 @@ bool Internal::external_adding_clauses () {
 
     if (!adding)
       break;
+    added = true;
     stats.up_cb_asked_added++;
 
     // actually adding the clause
@@ -349,8 +351,16 @@ bool Internal::external_adding_clauses () {
     return true;
   }
   assert (!conflict && !unsat);
-  LOG ("external clause addition did not change solver state");
-  return notifying_assignments ();
+  // Only necessary when clause addition returns false but
+  // there are new assignments.
+  // notifying_assignments ();
+  if (added) {
+    LOG ("external clause addition added clauses");
+    return true;
+  }
+  assert (notified_trail == trail.size ());
+  LOG ("external clause addition did not add clauses");
+  return false;
 }
 
 /*----------------------------------------------------------------------------*/
