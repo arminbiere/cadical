@@ -342,6 +342,10 @@ bool Internal::external_adding_clauses () {
     }
     notify_loop ();
   }
+  if (level < notified_level || notified_trail < trail.size ()) {
+    LOG ("external clause addition changed level");
+    return true;
+  }
   assert (!conflict && !unsat);
   // Only necessary when clause addition returns false but
   // there are new assignments.
@@ -350,7 +354,6 @@ bool Internal::external_adding_clauses () {
     LOG ("external clause addition added clauses");
     return true;
   }
-  // assert (notified_trail == trail.size ());
   LOG ("external clause addition did not add clauses");
   return false;
 }
