@@ -83,9 +83,15 @@ fi
 #
 LC_TIME="C" # Avoid umlaut in 'DATE'.
 export LC_TIME
+
 # The time and date we compiled the CaDiCaL library.
-DATE="`date 2>/dev/null|sed -e 's,  *, ,g'`"
+# This respects the SOURCE_DATE_EPOCH, if set, for reproducible builds.
+# See <https://reproducible-builds.org/docs/source-date-epoch>.
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
+BUILD_DATE=$(date -d "@$SOURCE_DATE_EPOCH" 2>/dev/null || date -r "$SOURCE_DATE_EPOCH" 2>/dev/null || date)
+
 OS="`uname -srmn 2>/dev/null`"
+DATE="`echo $BUILD_DATE |sed -e 's,  *, ,g'`"
 DATE="`echo $DATE $OS|sed -e 's,^ *,,' -e 's, *$,,'`"
 if [ x"$DATE" = x" " ]
 then
