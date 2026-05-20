@@ -40,6 +40,7 @@ struct Limit {
   //
   int64_t rephased[2] = {0, 0};
 
+  int64_t lucky; // conflict limit for next 'lucky'
   // Current elimination bound per eliminated variable.
   //
   int64_t elimbound;

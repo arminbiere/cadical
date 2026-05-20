@@ -452,6 +452,8 @@ int Internal::lucky_phases () {
     return 0;
   if (unsat)
     return 20;
+  if (stats.conflicts < lim.lucky)
+    return 0;
   if (!propagate ()) {
     learn_empty_clause ();
     return 20;
@@ -564,6 +566,10 @@ int Internal::lucky_phases () {
   searching_lucky_phases = false;
   PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
 
+  if (!res && (old_active == stats.vars_active)) {
+    lim.lucky = stats.conflicts + opts.luckymininterval;
+    VERBOSE (3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64, stats.lucky_tried, lim.lucky);
+  }
   STOP (lucky);
   STOP (search);
 

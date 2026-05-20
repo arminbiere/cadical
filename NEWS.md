@@ -12,7 +12,10 @@ User Facing Changes:
 - Improved walk with assumptions (literals propagated by the assumptions cannot
   be flipped anymore). This means that lucky will now run if you have
   assumptions. For many short calls, this can be prohibitive. Use
-  `--no-luckyassumptions`.
+  `--no-luckyassumptions`. To limit the effect, when lucky is not effective, it
+  will not be reused for the next `luckymininterval' conflicts (and then still
+  only at the beginning of the solve call). Set this option to 0, if you want to
+  make sure that lucky is executed in each 
 
 - Fixed accidental deactivation of local search initially (off by
   default, activation with `-L`), due to a ticks limit of 0. Only noticeable if
