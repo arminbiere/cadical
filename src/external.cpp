@@ -840,6 +840,10 @@ void External::check_assignment (int (External::*a) (int) const) {
       if ((this->*a) (lit) == lit) {
         satisfied = true;
         break;
+      } else if (!observed (lit)) {
+        // unobserved variables do not need to be satisfied
+        satisfied = true;
+        break;
       }
     }
 

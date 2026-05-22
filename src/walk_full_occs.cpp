@@ -146,7 +146,7 @@ struct WalkerFO {
 // 'b^-i' for picking a literal with the break value 'i' (first column is
 // the 'size', second the 'CB' value).
 
-static double cbvals[][2] = {
+static constexpr double cbvals[][2] = {
     {0.0, 2.00}, {3.0, 2.50}, {4.0, 2.85}, {5.0, 3.70},
     {6.0, 5.10}, {7.0, 7.40}, // Adrian has '5.4', but '7.4' looks better.
 };

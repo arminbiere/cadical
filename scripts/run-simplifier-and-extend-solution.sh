@@ -1,3 +1,4 @@
+
 #!/bin/sh
 scriptsdir=`dirname $0`
 bindir=$scriptsdir/../build
@@ -52,14 +53,14 @@ trap "rm -f $prefix*" 2 9 15
 out=$prefix.out
 ext=$prefix.ext
 log=$prefix.log
-msg "$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log"
-$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log
+msg "$solver $options --modelalllits -n -O1 -c 0 -o $out -e $ext $input > $log"
+$solver $options --modelalllits -n -O1 -c 0 -o $out -e $ext $input > $log
 res=$?
 msg "simplifier exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log"
 sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log
-msg "$solver $options $out > $log"
-$solver $options $out > $log
+msg "$solver $options --modelalllits $out > $log"
+$solver $options --modelalllits $out > $log
 res=$?
 msg "solver exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [solver],' $log"

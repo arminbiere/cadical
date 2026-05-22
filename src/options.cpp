@@ -156,6 +156,7 @@ Options::Options (Internal *s) : internal (s) {
 /*------------------------------------------------------------------------*/
 
 void Options::set (Option *o, int new_val) {
+#ifndef NOPTIONS
   assert (o);
   int &val = o->val (this), old_val = val;
   if (old_val == new_val) {
@@ -175,16 +176,24 @@ void Options::set (Option *o, int new_val) {
   val = new_val;
   LOG ("set option 'set (\"%s\", %d)' from '%d'", o->name, new_val,
        old_val);
+#else
+    (void) o; (void) new_val;
+#endif
 }
 
 // Explicit option value setting.
 
 bool Options::set (const char *name, int val) {
+#ifndef NOPTIONS
   Option *o = has (name);
   if (!o)
     return false;
   set (o, val);
   return true;
+#else
+  (void) name; (void) val;
+  return false;
+#endif
 }
 
 int Options::get (const char *name) {

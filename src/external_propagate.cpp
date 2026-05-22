@@ -34,20 +34,6 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
   fflush (trace_api_file);
 }
 
-#define LOG_INTERACTION_END(NAME) \
-  do { \
-    LOG (#NAME " on level %d END", level); \
-    if (!external->trace_api_file) \
-      break; \
-    trace_api_call (external->trace_api_file, this, #NAME); \
-  } while (0)
-#define LOG_INTERACTION_RETURN(NAME, VAL) \
-  do { \
-    LOG (#NAME " returns %d on level %d END", VAL, level); \
-    if (!external->trace_api_file) \
-      break; \
-    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
-  } while (0)
 #define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
   do { \
     LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level); \
@@ -58,6 +44,20 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   do { \
     LOG (#NAME "(%d) on level %d END", VAL, level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
+  } while (0)
+#define LOG_INTERACTION_END(NAME) \
+  do { \
+    LOG (#NAME " on level %d END", level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME); \
+  } while (0)
+#define LOG_INTERACTION_RETURN(NAME, VAL) \
+  do { \
+    LOG (#NAME "returns %d on level %d END", VAL, level); \
     if (!external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \

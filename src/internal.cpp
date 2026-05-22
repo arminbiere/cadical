@@ -845,8 +845,8 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
 
   elimfast ();
 
-  if (opts.fastelim)
-    elimfast ();
+  // if (opts.fastelim)
+  //  elimfast ();
   // if (opts.condition)
   // condition (false);
 #ifndef QUIET

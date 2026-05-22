@@ -426,7 +426,7 @@ struct Internal {
     return (lit < 0) + 2u * (unsigned) vidx (lit);
   }
 
-  int u2i (unsigned u) {
+  int u2i (unsigned u) const {
     assert (u > 1);
     assert (u <= INT32_MAX);
     int res = (int) u / 2;
@@ -436,7 +436,7 @@ struct Internal {
     return res;
   }
 
-  int citten2lit (unsigned ulit) {
+  int citten2lit (unsigned ulit) const {
     assert (ulit <= INT32_MAX);
     int res = (int) (ulit / 2) + 1;
     assert (res <= max_var);
@@ -445,7 +445,7 @@ struct Internal {
     return res;
   }
 
-  unsigned lit2citten (int lit) {
+  unsigned lit2citten (int lit) const {
     int idx = vidx (lit) - 1;
     return (lit < 0) + 2u * (unsigned) idx;
   }
@@ -1431,7 +1431,8 @@ struct Internal {
   int walk_pick_lit (Walker &walker, ClauseOrBinary);
   int walk_pick_lit (Walker &, Clause *);
   bool walk_flip_lit (Walker &, int lit);
-  int walk_pick_lit (Walker &walker, TaggedBinary c);
+  int walk_pick_lit (Walker &walker,
+                     ClauseOrBinary::clause_or_binary::TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
 

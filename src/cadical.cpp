@@ -274,7 +274,7 @@ void App::print_witness (FILE *file) {
       if (!c)
         fputc ('v', file), c = 1;
       if (solver->external->ervars[elit])
-        continue;
+        tmp = elit;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
       char str[32];
@@ -293,6 +293,7 @@ void App::print_witness (FILE *file) {
         fputc ('v', file), c = 1;
       if (!ilit)
         continue;
+      assert (elit);
       if (solver->external->ervars[elit])
         continue;
       else

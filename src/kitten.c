@@ -1611,7 +1611,12 @@ static void reset_core (kitten *kitten) {
   for (all_klauses (c))
     if (is_core_klause (c))
       unset_core_klause (c), reset++;
+
+#ifdef LOGGING
   LOG ("reset %zu core clauses", reset);
+#else
+  (void)reset;
+#endif
   CLEAR_STACK (kitten->core);
 }
 

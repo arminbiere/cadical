@@ -169,7 +169,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   propergated = 0; // Always go back to root-level.
 
   control.resize (new_level + 1);
-  level = new_level;
   if (earliest_changed_val) {
     assert (opts.ilb);
     if (!val (earliest_changed_val)) {
@@ -177,11 +176,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
     }
   }
   assert (num_assigned == trail.size ());
-  // root-level backtrack is eagerly notified.
-  /*
-  if (!level)
-    notifying_backtrack ();
-    */
+  level = new_level;
 }
 
 } // namespace CaDiCaL
