@@ -7782,7 +7782,7 @@ void Closure::extract_ite_gates () {
   for (auto idx : internal->vars) {
     if (internal->flags (idx).active ()) {
       extract_ite_gates_of_variable (idx);
-      if (internal->unsat)
+      if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: inserted TA
         break;
     }
   }

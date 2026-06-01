@@ -443,6 +443,8 @@ void Internal::elimfast () {
     return;
   if (unsat)
     return;
+  if (terminated_asynchronously ()) // REVIEW: inserted TA
+    return;
   if (level)
     backtrack ();
   if (!propagate ()) {

@@ -608,6 +608,8 @@ void Internal::binary_clauses_backbone () {
     return;
   if (!opts.backbone)
     return;
+  if (terminated_asynchronously ()) // REVIEW: inserted TA 
+    return;
   if (level)
     backtrack_without_updating_phases ();
   propagated = propagated2 = 0; // TODO: why?

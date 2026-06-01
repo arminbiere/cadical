@@ -298,6 +298,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     if (ticks > limit)
       break;
+    if (terminated_asynchronously ()) // REVIEW: inserted TA
+      break;
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
     }
@@ -1570,13 +1572,13 @@ bool Internal::factor () {
   // TODO: redundant mode sometimes?
   factor_mode (!is_preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
+  
   reset_factor_mode ();
 
   propagated = 0;
   if (!unsat && !propagate ()) {
     learn_empty_clause ();
   }
-
   after.ticks = stats.ticks_factor;
   delta.ticks = after.ticks - before.ticks;
 #ifndef QUIET
