@@ -551,13 +551,20 @@ struct Rewrite {
 
 /*------------------------------------------------------------------------*/
 // This is a more compact representation of binary clauses. Sadly we have to
-// include the IDs in the clause making it larger than necessary.
+// include the IDs in the clause making it larger than necessary. We also need
+// to include the clause pointer in order to be able to delete the subsumed
+// clause.
 struct CompactBinary {
   Clause *clause;
   LRAT_ID id;
   int lit1, lit2;
   CompactBinary (Clause *c, LRAT_ID i, int l1, int l2)
-      : clause (c), id (i), lit1 (l1), lit2 (l2) {}
+      : clause (c), id (i), lit1 (l1), lit2 (l2) {
+    assert (c), assert (c->size == 2);
+    assert (c->literals[0] == lit1 || c->literals[1] == lit1);
+    assert (c->literals[0] == lit2 || c->literals[1] == lit2);
+  }
+
   CompactBinary () : clause (nullptr), id (0), lit1 (0), lit2 (0) {}
 };
 
