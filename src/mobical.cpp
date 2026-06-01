@@ -2449,7 +2449,7 @@ public:
   bool terminate () override {
     // Malloc-based termination delay fuzzing
     #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE_DELAY)
-    //printf("CADICAL CHECKING FOR ASYNC TERMINATE.\n");
+    printf("CADICAL CHECKING FOR ASYNC TERMINATE.\n");
     if (terminate_triggered) {
       printf("CADICAL DETECTED ASYNC TERMINATE.\n");
       terminate_triggered = 0;
@@ -2755,7 +2755,6 @@ public:
 
           continue;
         } 
-        current_call_type = c->type;
 #endif
 
         if (c->type == Call::SET) {
@@ -3792,8 +3791,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int terminatecallsize = random.pick_log (1e1, 1e4);
   // terminate delay hack
   int terminatedelaycall = random.pick_int (0, 2); // activate malloc/new count based termination
-  int terminatedelay_budget = random.pick_log (5e2, 5e4); // when to terminate
-  int terminatedelay_k = random.pick_int (400, 1000); // maximum delay in number of mallocs/news before signal is raised
+  int terminatedelay_budget = random.pick_log (1, 5e4); // when to terminate
+  int terminatedelay_k = random.pick_int (600, 1000); // maximum delay in number of mallocs/news before signal is raised
 
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && (mallocall == 0))
@@ -4216,14 +4215,12 @@ void Trace::hooks_uninstall (void) {
 
 void Trace::account_terminate_delay_allocation () {
 #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
-  // TODO: check call type here before adjusting counters
   if (!process_type(current_call_type)) {
-    printf ("SKIPPED NEW/MALLOC\n");
     return;
   }
   if (terminate_triggered) {
     mallocs_after_trigger++;
-    printf ("NEW/MALLOC %lld AFTER TRIGGER\n",mallocs_after_trigger); // TODO: remove after being sure it works
+    //printf ("NEW/MALLOC %lld AFTER TRIGGER\n", mallocs_after_trigger); // TODO: remove after being sure it works
     if (mallocs_after_trigger > terminate_k && !terminate_delay_failed) {
       terminate_delay_failed = 1;
       hooks_uninstall ();
@@ -4241,7 +4238,7 @@ void Trace::account_terminate_delay_allocation () {
   if (terminate_budget > 0) {
     //printf ("NEW/MALLOC CAUGHT, BUDGET: %lld\n", terminate_budget); // TODO: remove after being sure it works
     if (--terminate_budget <= 0 && !terminate_triggered) {
-      printf ("ASYNC TERMINATE TRIGGERED.\n"); // TODO: remove after being sure it works
+      printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove after being sure it works
       terminate_triggered = 1;
       hooks_uninstall ();
       mobical.shared->limit_terminate.terminate_call_index = trace_call_index;
