@@ -12,3 +12,4 @@ makefile
 *.plist
 *.pch
 .cache
+.DS_Store

@@ -1,0 +1,3925 @@
+# seed: 15424063191646217658
+# status: solver was destructed, but memory leaked (4 / SIGUSR2)
+0 terminate_delay 1363 841
+1 init
+2 add 41
+3 add -34
+4 add 25
+5 add 0
+6 active
+7 add -23
+8 add 38
+9 add -33
+10 add 0
+11 add -29
+12 add -26
+13 add -36
+14 add 0
+15 add 27
+16 add 43
+17 add 13
+18 add 0
+19 add -5
+20 add 24
+21 add -26
+22 add 0
+23 add 37
+24 add 28
+25 add -26
+26 add 0
+27 add 18
+28 add -37
+29 add 16
+30 add 0
+31 add 10
+32 add 40
+33 add 2
+34 add 0
+35 add 36
+36 add -16
+37 add 22
+38 add 0
+39 add 43
+40 add -1
+41 add -17
+42 add 0
+43 add -11
+44 add -15
+45 add -42
+46 add 0
+47 add -16
+48 add 19
+49 add -21
+50 add 0
+51 add -33
+52 add 41
+53 add 37
+54 add 0
+55 add 17
+56 add -22
+57 add 7
+58 add 0
+59 add -28
+60 add -5
+61 add 25
+62 add 0
+63 add 13
+64 add 33
+65 add 31
+66 add 0
+67 add -17
+68 add 21
+69 add -20
+70 add 0
+71 add 37
+72 add -17
+73 add 35
+74 add 0
+75 add -20
+76 add 8
+77 add 18
+78 add -23
+79 add 0
+80 add 43
+81 add 38
+82 add 5
+83 add -15
+84 add -22
+85 add 3
+86 add -24
+87 add -31
+88 add 21
+89 add -42
+90 add 18
+91 add -9
+92 add -26
+93 add -8
+94 add 0
+95 add 34
+96 add 14
+97 add 15
+98 add 0
+99 add 35
+100 add 29
+101 add 24
+102 add 0
+103 add -20
+104 add -42
+105 add 16
+106 add 0
+107 add 26
+108 add 31
+109 add 2
+110 add 0
+111 add -9
+112 add 42
+113 add 11
+114 add 0
+115 add -42
+116 add -17
+117 add -9
+118 add 0
+119 add 1
+120 add 11
+121 add 35
+122 add 0
+123 add 35
+124 add 17
+125 add -10
+126 add 0
+127 add -32
+128 add 13
+129 add -27
+130 add 0
+131 add -5
+132 add -21
+133 add -40
+134 add 0
+135 add 21
+136 add 24
+137 add -42
+138 add 0
+139 add -30
+140 add 17
+141 add 37
+142 add -40
+143 add 20
+144 add 36
+145 add 0
+146 add 2
+147 add -13
+148 add 22
+149 add 0
+150 add -39
+151 add 38
+152 add 32
+153 add -37
+154 add -18
+155 add -36
+156 add 12
+157 add -21
+158 add -4
+159 add -19
+160 add -17
+161 add 30
+162 add -42
+163 add 9
+164 add -31
+165 add 1
+166 add 0
+167 add -14
+168 add -1
+169 add -22
+170 add 0
+171 add -39
+172 add -38
+173 add 23
+174 add 0
+175 add -43
+176 add 14
+177 add 37
+178 add 0
+179 add 2
+180 add -39
+181 add -1
+182 add 0
+183 add -9
+184 add 19
+185 add -20
+186 add 0
+187 add 33
+188 add -5
+189 add -37
+190 add 0
+191 vars
+192 add 3
+193 add -15
+194 add 0
+195 add -43
+196 add -14
+197 add -27
+198 add 0
+199 add -30
+200 add 12
+201 add 29
+202 add 0
+203 add -9
+204 add -15
+205 add -6
+206 add 0
+207 add 27
+208 add -40
+209 add 39
+210 add 0
+211 declare_var
+212 add 42
+213 add -37
+214 add -34
+215 add 0
+216 add -25
+217 add 22
+218 add -7
+219 add 0
+220 redundant
+221 add -27
+222 add -42
+223 add 22
+224 add 0
+225 add 13
+226 add 12
+227 add 28
+228 add 0
+229 add -42
+230 add -6
+231 add -27
+232 add 0
+233 add -24
+234 add -9
+235 add 23
+236 add 0
+237 add -18
+238 add 34
+239 add 12
+240 add 0
+241 add -19
+242 add 14
+243 add -27
+244 add 0
+245 add 6
+246 add 42
+247 add -21
+248 add 0
+249 add -35
+250 add 39
+251 add -31
+252 add 0
+253 add 4
+254 add 27
+255 add -43
+256 add 0
+257 add -11
+258 add -5
+259 add -33
+260 add 0
+261 add 42
+262 add -18
+263 add -14
+264 add -23
+265 add 0
+266 add -29
+267 add -15
+268 add 42
+269 add 0
+270 add 34
+271 add -15
+272 add -23
+273 add 0
+274 add 29
+275 add 33
+276 add 13
+277 add 0
+278 active
+279 add 21
+280 add 11
+281 add -37
+282 add 0
+283 add -40
+284 add 28
+285 add 26
+286 add 0
+287 redundant
+288 add 4
+289 add 36
+290 add 5
+291 add -15
+292 add 0
+293 irredundant
+294 add 39
+295 add 23
+296 add 11
+297 add 0
+298 add 24
+299 add 26
+300 add 30
+301 add 0
+302 add -24
+303 add -29
+304 add 7
+305 add 0
+306 add 10
+307 add 13
+308 add 21
+309 add 0
+310 add -34
+311 add -15
+312 add -4
+313 add 0
+314 redundant
+315 add -19
+316 add 25
+317 add 12
+318 add 0
+319 redundant
+320 add 20
+321 add 24
+322 add -19
+323 add 0
+324 add -8
+325 add -43
+326 add -26
+327 add 0
+328 add -30
+329 add -15
+330 add -25
+331 add 0
+332 add -29
+333 add -24
+334 add 40
+335 add 0
+336 add -9
+337 add -34
+338 add 14
+339 add 0
+340 add -27
+341 add 40
+342 add -12
+343 add 0
+344 add -13
+345 add -24
+346 add -22
+347 add 0
+348 add -5
+349 add 7
+350 add -6
+351 add 0
+352 add 31
+353 add 20
+354 add -12
+355 add 0
+356 add 37
+357 add 17
+358 add -34
+359 add 0
+360 add 33
+361 add 22
+362 add 31
+363 add 0
+364 add -16
+365 add -41
+366 add 29
+367 add 0
+368 add 26
+369 add -5
+370 add 0
+371 add -19
+372 add -29
+373 add 11
+374 add 0
+375 add -15
+376 add -4
+377 add -29
+378 add 0
+379 add -30
+380 add 17
+381 add -31
+382 add 0
+383 add 3
+384 add 32
+385 add 37
+386 add 0
+387 add -30
+388 add -4
+389 add 33
+390 add 0
+391 add 15
+392 add -38
+393 add 17
+394 add 0
+395 add -21
+396 add -1
+397 add -19
+398 add 0
+399 add -5
+400 add 20
+401 add -14
+402 add 0
+403 add -13
+404 add 42
+405 add -41
+406 add 0
+407 add 25
+408 add -27
+409 add -30
+410 add 0
+411 declare_var
+412 add -8
+413 add -14
+414 add 22
+415 add 0
+416 active
+417 add -34
+418 add 29
+419 add 37
+420 add 0
+421 add -17
+422 add -35
+423 add 23
+424 add 0
+425 add -24
+426 add -9
+427 add -15
+428 add 0
+429 add -11
+430 add -40
+431 add 29
+432 add 0
+433 add 27
+434 add -21
+435 add -5
+436 add 0
+437 add 26
+438 add 38
+439 add -16
+440 add 0
+441 add 37
+442 add 20
+443 add -34
+444 add 0
+445 add 39
+446 add -18
+447 add -4
+448 add 0
+449 add 38
+450 add 20
+451 add -24
+452 add -8
+453 add 27
+454 add -12
+455 add -4
+456 add 36
+457 add -41
+458 add -6
+459 add -13
+460 add 16
+461 add 26
+462 add -23
+463 add -33
+464 add 39
+465 add 14
+466 add 37
+467 add 15
+468 add 0
+469 add 2
+470 add -40
+471 add -22
+472 add 0
+473 add -11
+474 add -29
+475 add 6
+476 add 0
+477 add -16
+478 add -25
+479 add 37
+480 add 0
+481 propagate 0
+482 add -28
+483 add -17
+484 add 41
+485 add 0
+486 add 19
+487 add -38
+488 add -41
+489 add 15
+490 add 0
+491 add 42
+492 add 43
+493 add 4
+494 add 0
+495 add -42
+496 add 39
+497 add 43
+498 add 0
+499 add 5
+500 add 42
+501 add 16
+502 add 0
+503 add -29
+504 add 35
+505 add -40
+506 add 0
+507 add -36
+508 add -4
+509 add 25
+510 add 0
+511 add 21
+512 add -17
+513 add 1
+514 add 0
+515 add -8
+516 add 1
+517 add -18
+518 add 0
+519 add 2
+520 add -22
+521 add 7
+522 add 0
+523 irredundant
+524 add -40
+525 add 5
+526 add -29
+527 add 0
+528 add -3
+529 add -9
+530 add -22
+531 add 0
+532 add -38
+533 add 9
+534 add 35
+535 add 0
+536 add -33
+537 add -4
+538 add -2
+539 add 0
+540 add 5
+541 add -33
+542 add 19
+543 add 0
+544 add 40
+545 add -18
+546 add -24
+547 add 0
+548 add 11
+549 add -27
+550 add 22
+551 add 0
+552 add -23
+553 add -4
+554 add -29
+555 add 0
+556 add -12
+557 add -38
+558 add 36
+559 add 0
+560 add -43
+561 add 30
+562 add 12
+563 add 0
+564 add -24
+565 add 17
+566 add 36
+567 add 0
+568 add -33
+569 add 7
+570 add -5
+571 add 0
+572 add 21
+573 add -19
+574 add 22
+575 add 0
+576 add -32
+577 add 14
+578 add 1
+579 add 0
+580 add 12
+581 add 18
+582 add -22
+583 add 0
+584 add -40
+585 add 42
+586 add -25
+587 add 0
+588 add 17
+589 add -8
+590 add -6
+591 add 0
+592 add 42
+593 add -2
+594 add 26
+595 add 0
+596 add -27
+597 add 9
+598 add 43
+599 add 0
+600 add 14
+601 add -2
+602 add 18
+603 add 0
+604 add 43
+605 add -18
+606 add 8
+607 add 0
+608 add 37
+609 add 36
+610 add -5
+611 add 0
+612 add -8
+613 add 39
+614 add -6
+615 add 0
+616 add 35
+617 add -4
+618 add -36
+619 add 0
+620 add -31
+621 add 34
+622 add 18
+623 add 0
+624 vars
+625 add -23
+626 add 12
+627 add -2
+628 add 0
+629 add -10
+630 add 17
+631 add 21
+632 add 0
+633 add 15
+634 add 3
+635 add -35
+636 add 0
+637 add -36
+638 add -16
+639 add -3
+640 add 0
+641 add -6
+642 add 25
+643 add -5
+644 add 0
+645 add 3
+646 add -16
+647 add -22
+648 add 0
+649 add -27
+650 add -3
+651 add 18
+652 add 0
+653 add 35
+654 add 34
+655 add 12
+656 add 0
+657 add -36
+658 add 30
+659 add 41
+660 add 0
+661 add -35
+662 add 24
+663 add 15
+664 add 0
+665 add 10
+666 add -15
+667 add -20
+668 add 0
+669 add -4
+670 add -1
+671 add -9
+672 add 29
+673 add -3
+674 add 0
+675 add 2
+676 add 23
+677 add 9
+678 add 0
+679 add 23
+680 add -3
+681 add 29
+682 add 0
+683 add -33
+684 add -41
+685 add 18
+686 add 0
+687 add 21
+688 add -37
+689 add 27
+690 add 0
+691 add -10
+692 add -43
+693 add 27
+694 add 0
+695 add -37
+696 add 4
+697 add 12
+698 add 0
+699 add 16
+700 add -33
+701 add -21
+702 add 0
+703 add -32
+704 add -36
+705 add -20
+706 add 0
+707 implied
+708 add 34
+709 add -19
+710 add -37
+711 add 0
+712 add -36
+713 add 35
+714 add 2
+715 add 0
+716 add -3
+717 add 25
+718 add 40
+719 add 0
+720 add 26
+721 add -23
+722 add -5
+723 add 0
+724 add 14
+725 add 12
+726 add -15
+727 add 0
+728 add -39
+729 add -10
+730 add 36
+731 add 0
+732 add 27
+733 add -39
+734 add -11
+735 add 0
+736 add 14
+737 add -7
+738 add -43
+739 add 0
+740 add 8
+741 add -31
+742 add 16
+743 add 0
+744 add -23
+745 add -24
+746 add 3
+747 add -20
+748 add 0
+749 add -9
+750 add -27
+751 add 35
+752 add 0
+753 add -19
+754 add 42
+755 add -36
+756 add 0
+757 add -41
+758 add 24
+759 add 21
+760 add 22
+761 add 0
+762 add -37
+763 add 34
+764 add 30
+765 add 0
+766 add 26
+767 add -14
+768 add -23
+769 add 0
+770 add -33
+771 add 40
+772 add 0
+773 add -5
+774 add 30
+775 add -20
+776 add 0
+777 add -26
+778 add -29
+779 add 32
+780 add 0
+781 assume -12
+782 limit terminate 18
+783 phase -1
+784 phase 7
+785 phase -8
+786 phase -9
+787 phase -11
+788 phase -13
+789 phase 14
+790 phase 20
+791 phase -25
+792 phase 28
+793 phase 29
+794 phase 31
+795 phase 32
+796 phase -36
+797 phase -40
+798 phase -41
+799 phase 42
+800 phase -43
+801 solve 0
+802 val 1 0
+803 val 2 0
+804 val -6 1
+805 val 7 0
+806 val -9 1
+807 val 11 0
+808 val -15 0
+809 val -16 1
+810 val -18 1
+811 val -22 1
+812 val 23 0
+813 val 24 1
+814 val -27 0
+815 val 29 0
+816 val -30 0
+817 val 33 0
+818 val 34 1
+819 val -35 0
+820 val 39 0
+821 val 51 1
+822 flip -6 0
+823 flip -7 0
+824 flippable 9 0
+825 flippable 12 0
+826 flippable -14 0
+827 flippable 21 0
+828 flippable -28 0
+829 flip 29 0
+830 flip 32 0
+831 flippable 33 0
+832 flippable 37 0
+833 flip -38 0
+834 flippable 39 0
+835 flippable 41 0
+836 failed -1 0
+837 failed -3 0
+838 failed -6 0
+839 failed 7 0
+840 failed 8 0
+841 failed -9 0
+842 failed -10 0
+843 failed 13 0
+844 failed -14 0
+845 failed 15 0
+846 failed -17 0
+847 failed 18 0
+848 failed 19 0
+849 failed 21 0
+850 failed -23 0
+851 failed -24 0
+852 failed 25 0
+853 failed -26 0
+854 failed 28 0
+855 failed 31 0
+856 failed 34 0
+857 failed 35 0
+858 failed -36 0
+859 failed -38 0
+860 failed 40 0
+861 failed 41 0
+862 failed 42 0
+863 failed 43 0
+864 frozen 1 0
+865 frozen -2 0
+866 frozen -3 0
+867 frozen 4 0
+868 frozen -5 0
+869 frozen 6 0
+870 frozen -7 0
+871 frozen -8 0
+872 frozen 9 0
+873 frozen -10 0
+874 frozen -11 0
+875 frozen 12 0
+876 frozen -13 0
+877 frozen 14 0
+878 frozen -16 0
+879 frozen 17 0
+880 frozen 18 0
+881 frozen -19 0
+882 frozen 20 0
+883 frozen 21 0
+884 frozen 22 0
+885 frozen -23 0
+886 frozen 24 0
+887 frozen -25 0
+888 frozen 26 0
+889 frozen -27 0
+890 frozen -28 0
+891 frozen -29 0
+892 frozen 30 0
+893 frozen 31 0
+894 frozen 32 0
+895 frozen -33 0
+896 frozen 34 0
+897 frozen 35 0
+898 frozen -36 0
+899 frozen 37 0
+900 frozen 38 0
+901 frozen -39 0
+902 frozen -40 0
+903 frozen 42 0
+904 frozen 43 0
+905 add 49
+906 add 76
+907 add -67
+908 add 0
+909 add 60
+910 add -45
+911 add -34
+912 add 0
+913 add 44
+914 add 72
+915 add 29
+916 add 0
+917 add -59
+918 add 33
+919 add 75
+920 add 0
+921 add 29
+922 add -34
+923 add -37
+924 add 0
+925 add -28
+926 add -61
+927 add 72
+928 add 0
+929 add 40
+930 add 56
+931 add 68
+932 add 0
+933 vars
+934 add -76
+935 add -48
+936 add -47
+937 add 0
+938 add 47
+939 add -72
+940 add 73
+941 add 0
+942 add 47
+943 add 73
+944 add 57
+945 add 0
+946 add -46
+947 add -70
+948 add -55
+949 add 0
+950 add -52
+951 add -69
+952 add 38
+953 add 0
+954 add -57
+955 add 69
+956 add -54
+957 add 0
+958 add -68
+959 add 47
+960 add 46
+961 add 0
+962 add -36
+963 add -37
+964 add 46
+965 add 0
+966 add -38
+967 add 64
+968 add -32
+969 add 0
+970 irredundant
+971 add -39
+972 add -59
+973 add 67
+974 add 0
+975 add 60
+976 add -63
+977 add 68
+978 add 0
+979 add -55
+980 add 41
+981 add -66
+982 add 0
+983 add -73
+984 add -56
+985 add 72
+986 add 0
+987 add 61
+988 add 45
+989 add 30
+990 add 0
+991 add -43
+992 add 71
+993 add -28
+994 add 0
+995 add 71
+996 add -64
+997 add -66
+998 add 0
+999 irredundant
+1000 add 44
+1001 add -55
+1002 add -39
+1003 add 0
+1004 declare_vars 99
+1005 add 63
+1006 add -56
+1007 add -57
+1008 add 0
+1009 add 73
+1010 add 52
+1011 add 29
+1012 add 0
+1013 add -58
+1014 add 74
+1015 add 62
+1016 add 0
+1017 add 37
+1018 add 76
+1019 add 53
+1020 add 0
+1021 add 41
+1022 add 70
+1023 add 31
+1024 add 0
+1025 add 48
+1026 add -43
+1027 add -71
+1028 add 0
+1029 add 40
+1030 add 34
+1031 add 68
+1032 add 0
+1033 add 65
+1034 add 64
+1035 add 75
+1036 add 0
+1037 add 55
+1038 add 36
+1039 add -62
+1040 add 0
+1041 add 57
+1042 add 51
+1043 add 64
+1044 add 0
+1045 add -45
+1046 add 53
+1047 add -75
+1048 add 0
+1049 add 31
+1050 add -74
+1051 add 76
+1052 add 0
+1053 add 26
+1054 add -30
+1055 add -71
+1056 add 0
+1057 add -52
+1058 add -55
+1059 add 31
+1060 add 0
+1061 add 50
+1062 add -54
+1063 add -66
+1064 add 0
+1065 irredundant
+1066 add -74
+1067 add -71
+1068 add -34
+1069 add 0
+1070 implied
+1071 add -34
+1072 add -64
+1073 add -28
+1074 add 0
+1075 add -35
+1076 add -48
+1077 add 73
+1078 add 0
+1079 propagate 0
+1080 add 36
+1081 add -51
+1082 add -67
+1083 add 0
+1084 propagate 0
+1085 add 55
+1086 add 38
+1087 add 52
+1088 add 0
+1089 add -54
+1090 add -70
+1091 add 56
+1092 add 0
+1093 irredundant
+1094 add 35
+1095 add 66
+1096 add -51
+1097 add 0
+1098 add -27
+1099 add -69
+1100 add 74
+1101 add 0
+1102 add 65
+1103 add 69
+1104 add 33
+1105 add 0
+1106 vars
+1107 add -74
+1108 add -36
+1109 add -73
+1110 add 0
+1111 add -63
+1112 add -34
+1113 add 76
+1114 add 0
+1115 active
+1116 add -70
+1117 add -38
+1118 add 46
+1119 add 0
+1120 add -45
+1121 add 30
+1122 add -67
+1123 add 0
+1124 add -28
+1125 add 58
+1126 add -37
+1127 add 0
+1128 add -41
+1129 add -74
+1130 add 28
+1131 add 0
+1132 add -73
+1133 add 39
+1134 add -44
+1135 add 0
+1136 add -63
+1137 add -62
+1138 add -48
+1139 add 0
+1140 add -35
+1141 add 26
+1142 add -51
+1143 add 0
+1144 add 56
+1145 add -64
+1146 add -48
+1147 add 0
+1148 add -55
+1149 add 75
+1150 add 49
+1151 add 0
+1152 add 39
+1153 add -26
+1154 add -45
+1155 add 0
+1156 add -50
+1157 add -46
+1158 add 35
+1159 add 0
+1160 add -53
+1161 add 31
+1162 add -41
+1163 add 0
+1164 add -53
+1165 add 62
+1166 add 49
+1167 add 0
+1168 add -66
+1169 add 57
+1170 add -68
+1171 add 0
+1172 add 47
+1173 add -46
+1174 add -73
+1175 add 0
+1176 add 50
+1177 add 62
+1178 add -67
+1179 add 0
+1180 add 28
+1181 add -36
+1182 add 45
+1183 add 0
+1184 add -29
+1185 add -33
+1186 add 76
+1187 add 0
+1188 add 72
+1189 add -39
+1190 add 56
+1191 add 0
+1192 add 52
+1193 add -74
+1194 add 31
+1195 add 0
+1196 add 52
+1197 add 66
+1198 add -50
+1199 add 0
+1200 add 75
+1201 add 66
+1202 add 48
+1203 add 0
+1204 add -27
+1205 add 31
+1206 add -54
+1207 add 0
+1208 add -34
+1209 add -35
+1210 add 31
+1211 add 0
+1212 add -31
+1213 add -67
+1214 add -55
+1215 add 0
+1216 add 36
+1217 add -47
+1218 add 39
+1219 add 0
+1220 redundant
+1221 add -44
+1222 add -29
+1223 add -32
+1224 add 0
+1225 add -68
+1226 add -53
+1227 add 40
+1228 add 0
+1229 add 65
+1230 add -29
+1231 add 32
+1232 add 0
+1233 add -37
+1234 add -51
+1235 add 35
+1236 add 0
+1237 add 39
+1238 add 30
+1239 add 69
+1240 add 0
+1241 add -69
+1242 add -36
+1243 add 53
+1244 add 0
+1245 irredundant
+1246 add 41
+1247 add -76
+1248 add 34
+1249 add 0
+1250 add -46
+1251 add -61
+1252 add 70
+1253 add 0
+1254 irredundant
+1255 add -55
+1256 add -73
+1257 add -30
+1258 add 0
+1259 declare_vars 59
+1260 add 71
+1261 add 56
+1262 add 26
+1263 add 0
+1264 add -64
+1265 add 50
+1266 add -47
+1267 add 0
+1268 add 74
+1269 add -38
+1270 add -42
+1271 add 0
+1272 add -53
+1273 add 29
+1274 add 55
+1275 add 0
+1276 add 41
+1277 add -59
+1278 add 27
+1279 add 0
+1280 add 69
+1281 add 62
+1282 add 41
+1283 add 0
+1284 add 72
+1285 add 40
+1286 add -73
+1287 add 0
+1288 add 48
+1289 add -43
+1290 add 34
+1291 add 0
+1292 add -56
+1293 add 65
+1294 add 64
+1295 add 0
+1296 add -62
+1297 add 59
+1298 add -46
+1299 add 0
+1300 add 73
+1301 add 33
+1302 add -61
+1303 add 0
+1304 add 29
+1305 add 38
+1306 add 57
+1307 add 0
+1308 add -74
+1309 add -67
+1310 add 57
+1311 add 0
+1312 add 66
+1313 add -54
+1314 add 63
+1315 add 0
+1316 add 57
+1317 add -76
+1318 add 45
+1319 add 0
+1320 add -42
+1321 add -33
+1322 add -35
+1323 add 0
+1324 add 47
+1325 add 68
+1326 add 53
+1327 add 0
+1328 add 40
+1329 add -60
+1330 add 39
+1331 add 0
+1332 add -41
+1333 add 64
+1334 add -44
+1335 add 0
+1336 add -63
+1337 add -48
+1338 add -29
+1339 add 0
+1340 add 34
+1341 add -69
+1342 add 28
+1343 add 0
+1344 add 31
+1345 add 60
+1346 add -67
+1347 add 0
+1348 add 27
+1349 add -57
+1350 add 60
+1351 add 0
+1352 add -70
+1353 add -63
+1354 add -64
+1355 add 0
+1356 add -29
+1357 add 52
+1358 add -43
+1359 add 0
+1360 add -53
+1361 add 49
+1362 add 72
+1363 add 0
+1364 add 35
+1365 add 64
+1366 add -40
+1367 add 0
+1368 add 42
+1369 add 68
+1370 add -51
+1371 add 0
+1372 add -76
+1373 add -59
+1374 add 69
+1375 add 0
+1376 add 60
+1377 add -27
+1378 add 30
+1379 add 0
+1380 declare_var
+1381 add -42
+1382 add -50
+1383 add 66
+1384 add 0
+1385 add 31
+1386 add -63
+1387 add -67
+1388 add 0
+1389 add 48
+1390 add -45
+1391 add 40
+1392 add 0
+1393 add 49
+1394 add -60
+1395 add -74
+1396 add 0
+1397 add 37
+1398 add -65
+1399 add -70
+1400 add 0
+1401 add -29
+1402 add 46
+1403 add -65
+1404 add 0
+1405 add 26
+1406 add 66
+1407 add -53
+1408 add 0
+1409 add 59
+1410 add -55
+1411 add 57
+1412 add 0
+1413 add 34
+1414 add 45
+1415 add 29
+1416 add 0
+1417 add 69
+1418 add 51
+1419 add 61
+1420 add 0
+1421 add 70
+1422 add 34
+1423 add -64
+1424 add 0
+1425 add -53
+1426 add 38
+1427 add 34
+1428 add 0
+1429 add 45
+1430 add 63
+1431 add 42
+1432 add 0
+1433 add 35
+1434 add -66
+1435 add -70
+1436 add 0
+1437 add 38
+1438 add 67
+1439 add -71
+1440 add 0
+1441 implied
+1442 add -38
+1443 add 52
+1444 add -58
+1445 add 0
+1446 add -64
+1447 add -63
+1448 add -68
+1449 add 0
+1450 add -58
+1451 add 31
+1452 add 36
+1453 add 0
+1454 add -54
+1455 add -57
+1456 add 51
+1457 add 0
+1458 add -52
+1459 add 27
+1460 add 35
+1461 add 0
+1462 add 73
+1463 add -45
+1464 add 75
+1465 add 0
+1466 add -27
+1467 add -75
+1468 add -56
+1469 add 0
+1470 add -71
+1471 add 47
+1472 add -31
+1473 add 0
+1474 add -42
+1475 add 34
+1476 add 33
+1477 add 0
+1478 add 44
+1479 add -27
+1480 add -65
+1481 add 0
+1482 add 50
+1483 add -48
+1484 add -60
+1485 add 0
+1486 add -74
+1487 add 32
+1488 add -69
+1489 add 0
+1490 add 70
+1491 add -38
+1492 add -63
+1493 add 0
+1494 add 60
+1495 add 36
+1496 add -39
+1497 add 0
+1498 add 46
+1499 add 47
+1500 add -54
+1501 add 0
+1502 add -38
+1503 add 30
+1504 add -59
+1505 add 0
+1506 add 53
+1507 add 48
+1508 add 63
+1509 add 0
+1510 add -30
+1511 add -65
+1512 add -26
+1513 add 0
+1514 add -52
+1515 add 65
+1516 add -76
+1517 add 0
+1518 irredundant
+1519 add 44
+1520 add 70
+1521 add 69
+1522 add 0
+1523 add -74
+1524 add 37
+1525 add 48
+1526 add 0
+1527 add -54
+1528 add 63
+1529 add 53
+1530 add 0
+1531 add 59
+1532 add -38
+1533 add -31
+1534 add 0
+1535 add -33
+1536 add -31
+1537 add 32
+1538 add 0
+1539 add 68
+1540 add 29
+1541 add -65
+1542 add 0
+1543 add 71
+1544 add 74
+1545 add -70
+1546 add 0
+1547 active
+1548 add -46
+1549 add -61
+1550 add -75
+1551 add 0
+1552 add 49
+1553 add 58
+1554 add -54
+1555 add 0
+1556 add 64
+1557 add -71
+1558 add -51
+1559 add 0
+1560 add -75
+1561 add -50
+1562 add -29
+1563 add 0
+1564 add 31
+1565 add 54
+1566 add -38
+1567 add 0
+1568 add 49
+1569 add 44
+1570 add -41
+1571 add 0
+1572 add -33
+1573 add 64
+1574 add -51
+1575 add 0
+1576 add -28
+1577 add -76
+1578 add -49
+1579 add 0
+1580 add -76
+1581 add 57
+1582 add -51
+1583 add 0
+1584 add 63
+1585 add -42
+1586 add -62
+1587 add 0
+1588 add 38
+1589 add 40
+1590 add -74
+1591 add 0
+1592 add 64
+1593 add 26
+1594 add -59
+1595 add 0
+1596 add 60
+1597 add -32
+1598 add 49
+1599 add 0
+1600 add -72
+1601 add -29
+1602 add -55
+1603 add 0
+1604 active
+1605 add -30
+1606 add 73
+1607 add -41
+1608 add 0
+1609 add -59
+1610 add 66
+1611 add 65
+1612 add 0
+1613 active
+1614 add -44
+1615 add -70
+1616 add 35
+1617 add 0
+1618 add -65
+1619 add 40
+1620 add 69
+1621 add 0
+1622 add 48
+1623 add -55
+1624 add -58
+1625 add 0
+1626 add 55
+1627 add -72
+1628 add -26
+1629 add 0
+1630 add -48
+1631 add 49
+1632 add -35
+1633 add 0
+1634 add -42
+1635 add 37
+1636 add 70
+1637 add 0
+1638 add 40
+1639 add 58
+1640 add -44
+1641 add 0
+1642 add 43
+1643 add 36
+1644 add -26
+1645 add 0
+1646 add 66
+1647 add -40
+1648 add -53
+1649 add 0
+1650 add 26
+1651 add -36
+1652 add -32
+1653 add 0
+1654 add 60
+1655 add 47
+1656 add 72
+1657 add 0
+1658 add 64
+1659 add -42
+1660 add -70
+1661 add 0
+1662 add 48
+1663 add 71
+1664 add -75
+1665 add 0
+1666 add -34
+1667 add -72
+1668 add 64
+1669 add 0
+1670 add 26
+1671 add 62
+1672 add -73
+1673 add 0
+1674 add -34
+1675 add -43
+1676 add 44
+1677 add 0
+1678 add 76
+1679 add -62
+1680 add 51
+1681 add 0
+1682 add -42
+1683 add -74
+1684 add 41
+1685 add 0
+1686 add -49
+1687 add -52
+1688 add 37
+1689 add 0
+1690 add -51
+1691 add 67
+1692 add -44
+1693 add 0
+1694 redundant
+1695 add -67
+1696 add -57
+1697 add 37
+1698 add 0
+1699 add 38
+1700 add -56
+1701 add 39
+1702 add 0
+1703 declare_vars 3
+1704 add -62
+1705 add 49
+1706 add 56
+1707 add 0
+1708 add -29
+1709 add -31
+1710 add 50
+1711 add 0
+1712 implied
+1713 add 38
+1714 add 53
+1715 add 55
+1716 add 0
+1717 add -43
+1718 add 62
+1719 add 70
+1720 add 0
+1721 add 75
+1722 add -62
+1723 add -50
+1724 add 0
+1725 add -41
+1726 add 67
+1727 add 55
+1728 add 0
+1729 add -71
+1730 add -72
+1731 add 48
+1732 add 0
+1733 add 55
+1734 add 32
+1735 add -26
+1736 add 0
+1737 add 33
+1738 add -53
+1739 add -27
+1740 add 0
+1741 add 31
+1742 add -38
+1743 add 68
+1744 add 0
+1745 redundant
+1746 add -60
+1747 add -75
+1748 add 61
+1749 add 0
+1750 add 64
+1751 add -50
+1752 add 31
+1753 add 0
+1754 add -71
+1755 add -52
+1756 add -54
+1757 add 0
+1758 add -49
+1759 add -66
+1760 add -71
+1761 add 0
+1762 add -75
+1763 add 30
+1764 add 38
+1765 add 0
+1766 add -60
+1767 add -65
+1768 add -76
+1769 add 0
+1770 add 74
+1771 add 35
+1772 add -50
+1773 add 0
+1774 add 34
+1775 add -43
+1776 add 67
+1777 add 0
+1778 add -68
+1779 add -29
+1780 add -73
+1781 add 0
+1782 assume 10
+1783 freeze 1
+1784 freeze -2
+1785 freeze 3
+1786 freeze 4
+1787 freeze 6
+1788 freeze -7
+1789 freeze -9
+1790 freeze 10
+1791 freeze 12
+1792 freeze 14
+1793 freeze -15
+1794 freeze -16
+1795 freeze 17
+1796 freeze -19
+1797 freeze -20
+1798 freeze 21
+1799 freeze -22
+1800 freeze -23
+1801 freeze 24
+1802 freeze 26
+1803 freeze 27
+1804 freeze -28
+1805 freeze 29
+1806 freeze -30
+1807 freeze -31
+1808 freeze -32
+1809 freeze -33
+1810 freeze -34
+1811 freeze -36
+1812 freeze -37
+1813 freeze 39
+1814 freeze 40
+1815 freeze -41
+1816 freeze -42
+1817 freeze 43
+1818 freeze -45
+1819 freeze 46
+1820 freeze -47
+1821 freeze 48
+1822 freeze 50
+1823 freeze -51
+1824 freeze 52
+1825 freeze 53
+1826 freeze 54
+1827 freeze -55
+1828 freeze 56
+1829 freeze 57
+1830 freeze -60
+1831 freeze -61
+1832 freeze 62
+1833 freeze 63
+1834 freeze 65
+1835 freeze -66
+1836 freeze -67
+1837 freeze -69
+1838 freeze 70
+1839 freeze -71
+1840 freeze 72
+1841 freeze -73
+1842 freeze -76
+1843 phase -2
+1844 phase 7
+1845 phase -10
+1846 phase 13
+1847 phase 15
+1848 phase -16
+1849 phase 20
+1850 phase -26
+1851 phase 28
+1852 phase 29
+1853 phase -30
+1854 phase 32
+1855 phase 35
+1856 phase 38
+1857 phase -39
+1858 phase -45
+1859 phase 47
+1860 phase -50
+1861 phase 51
+1862 phase 52
+1863 phase 53
+1864 phase -54
+1865 phase -63
+1866 phase -65
+1867 phase -68
+1868 phase 70
+1869 unphase -71
+1870 phase 72
+1871 phase 73
+1872 phase 76
+# V---------------------------------------------------------------------- terminate: termination requested
+1873 simplify 2 0
+1874 val -2 0
+1875 val 5 1
+1876 val -6 0
+1877 val 8 1
+1878 val 14 0
+1879 val -15 0
+1880 val -18 0
+1881 val 20 1
+1882 val 24 1
+1883 val -26 0
+1884 val 27 1
+1885 val 30 1
+1886 val -31 0
+1887 val -32 1
+1888 val 35 1
+1889 val 37 0
+1890 val -38 1
+1891 val -39 0
+1892 val -40 0
+1893 val -48 1
+1894 val -49 1
+1895 val -53 0
+1896 val -55 1
+1897 val 56 1
+1898 val 58 0
+1899 val 62 1
+1900 val -69 0
+1901 val -70 1
+1902 val 72 1
+1903 val 75 1
+1904 failed -1 0
+1905 failed 2 0
+1906 failed -5 0
+1907 failed -6 0
+1908 failed -7 0
+1909 failed -8 0
+1910 failed -9 0
+1911 failed 10 0
+1912 failed -13 0
+1913 failed -14 0
+1914 failed 15 0
+1915 failed 16 0
+1916 failed -17 0
+1917 failed -18 0
+1918 failed 19 0
+1919 failed -20 0
+1920 failed 22 0
+1921 failed 23 0
+1922 failed 24 0
+1923 failed 25 0
+1924 failed 26 0
+1925 failed 27 0
+1926 failed -29 0
+1927 failed 30 0
+1928 failed -32 0
+1929 failed 34 0
+1930 failed 36 0
+1931 failed -38 0
+1932 failed -39 0
+1933 failed 40 0
+1934 failed -41 0
+1935 failed -42 0
+1936 failed 44 0
+1937 failed 45 0
+1938 failed -46 0
+1939 failed 48 0
+1940 failed -49 0
+1941 failed -50 0
+1942 failed -51 0
+1943 failed 53 0
+1944 failed -55 0
+1945 failed -57 0
+1946 failed -59 0
+1947 failed -61 0
+1948 failed -62 0
+1949 failed -63 0
+1950 failed -64 0
+1951 failed 67 0
+1952 failed 68 0
+1953 failed -70 0
+1954 failed 71 0
+1955 failed 72 0
+1956 failed 91 0
+1957 add -49
+1958 add 32
+1959 add 50
+1960 add 0
+1961 add 62
+1962 add -55
+1963 add -54
+1964 add 0
+1965 add 30
+1966 add 42
+1967 add 55
+1968 add 0
+1969 vars
+1970 add 38
+1971 add -17
+1972 add -27
+1973 add 0
+1974 add -23
+1975 add 55
+1976 add -47
+1977 add 0
+1978 add -43
+1979 add 37
+1980 add 26
+1981 add 0
+1982 add 30
+1983 add -39
+1984 add -24
+1985 add 0
+1986 add 40
+1987 add 39
+1988 add 47
+1989 add 0
+1990 add 32
+1991 add 38
+1992 add 63
+1993 add 0
+1994 add 28
+1995 add 20
+1996 add 53
+1997 add 0
+1998 add -54
+1999 add 63
+2000 add 47
+2001 add 0
+2002 add 51
+2003 add 54
+2004 add 61
+2005 add 0
+2006 add -25
+2007 add 43
+2008 add 48
+2009 add 0
+2010 add 52
+2011 add -40
+2012 add 65
+2013 add 0
+2014 add -22
+2015 add 31
+2016 add 37
+2017 add -61
+2018 add 0
+2019 add -32
+2020 add 62
+2021 add 57
+2022 add 0
+2023 add 23
+2024 add -43
+2025 add -21
+2026 add 0
+2027 add -64
+2028 add 18
+2029 add 39
+2030 add 0
+2031 add -34
+2032 add -25
+2033 add -19
+2034 add 0
+2035 add 43
+2036 add -54
+2037 add 33
+2038 add 0
+2039 add 40
+2040 add -50
+2041 add -35
+2042 add 0
+2043 add -51
+2044 add -45
+2045 add -58
+2046 add 0
+2047 add -22
+2048 add -29
+2049 add 51
+2050 add 0
+2051 add -34
+2052 add -38
+2053 add 23
+2054 add 0
+2055 add 49
+2056 add 42
+2057 add 50
+2058 add 0
+2059 add -30
+2060 add -34
+2061 add -61
+2062 add 0
+2063 add 44
+2064 add -63
+2065 add 29
+2066 add 0
+2067 add 44
+2068 add 22
+2069 add 52
+2070 add 0
+2071 add -64
+2072 add 43
+2073 add -18
+2074 add 0
+2075 add -61
+2076 add 33
+2077 add -31
+2078 add 0
+2079 add -60
+2080 add -33
+2081 add -26
+2082 add 0
+2083 add -39
+2084 add 26
+2085 add 56
+2086 add 0
+2087 add 35
+2088 add 56
+2089 add 32
+2090 add 0
+2091 add 45
+2092 add 51
+2093 add 44
+2094 add 0
+2095 add 41
+2096 add -55
+2097 add -36
+2098 add 0
+2099 active
+2100 add -32
+2101 add -18
+2102 add -50
+2103 add 0
+2104 add 40
+2105 add -65
+2106 add 24
+2107 add 0
+2108 add -43
+2109 add 24
+2110 add -57
+2111 add 0
+2112 add 53
+2113 add 19
+2114 add 62
+2115 add 0
+2116 propagate 0
+2117 add -26
+2118 add 18
+2119 add 35
+2120 add 0
+2121 add 19
+2122 add 51
+2123 add -30
+2124 add 0
+2125 add -54
+2126 add -26
+2127 add 31
+2128 add -63
+2129 add -17
+2130 add 30
+2131 add -29
+2132 add 34
+2133 add 39
+2134 add -46
+2135 add 65
+2136 add -59
+2137 add 48
+2138 add 42
+2139 add 52
+2140 add 0
+2141 add -18
+2142 add -51
+2143 add 45
+2144 add 0
+2145 add 43
+2146 add -45
+2147 add -59
+2148 add 0
+2149 add 35
+2150 add -18
+2151 add -48
+2152 add 0
+2153 add 43
+2154 add -21
+2155 add 55
+2156 add 0
+2157 add 47
+2158 add -39
+2159 add 19
+2160 add 0
+2161 add -31
+2162 add -51
+2163 add 61
+2164 add 0
+2165 add 29
+2166 add -62
+2167 add 17
+2168 add 0
+2169 add 42
+2170 add 24
+2171 add 29
+2172 add 0
+2173 implied
+2174 add 37
+2175 add -51
+2176 add -24
+2177 add 0
+2178 add 35
+2179 add -52
+2180 add 65
+2181 add 0
+2182 add -36
+2183 add -27
+2184 add 40
+2185 add 0
+2186 add -27
+2187 add -52
+2188 add 42
+2189 add 0
+2190 add 43
+2191 add 20
+2192 add 32
+2193 add 0
+2194 add -35
+2195 add -51
+2196 add -43
+2197 add 0
+2198 add 30
+2199 add 22
+2200 add -59
+2201 add 0
+2202 add 36
+2203 add 29
+2204 add -58
+2205 add 0
+2206 add 54
+2207 add -46
+2208 add 40
+2209 add 0
+2210 add 46
+2211 add 52
+2212 add -51
+2213 add 0
+2214 irredundant
+2215 add -25
+2216 add -24
+2217 add 47
+2218 add 0
+2219 add 51
+2220 add 58
+2221 add -63
+2222 add 0
+2223 declare_vars 95
+2224 add -30
+2225 add 43
+2226 add 49
+2227 add 65
+2228 add 0
+2229 add 35
+2230 add -47
+2231 add -20
+2232 add 0
+2233 add 61
+2234 add 39
+2235 add -45
+2236 add 0
+2237 add -63
+2238 add 33
+2239 add 44
+2240 add 0
+2241 add -53
+2242 add 41
+2243 add 62
+2244 add 0
+2245 add -63
+2246 add -20
+2247 add 40
+2248 add 0
+2249 add -48
+2250 add -25
+2251 add -63
+2252 add 0
+2253 add 36
+2254 add -24
+2255 add -54
+2256 add 0
+2257 add -56
+2258 add 42
+2259 add -39
+2260 add 0
+2261 add 40
+2262 add 24
+2263 add -35
+2264 add 0
+2265 add -57
+2266 add -42
+2267 add 21
+2268 add 0
+2269 add 63
+2270 add -38
+2271 add 53
+2272 add 0
+2273 add -64
+2274 add -50
+2275 add -53
+2276 add 23
+2277 add 0
+2278 add -31
+2279 add 46
+2280 add -36
+2281 add 0
+2282 add -42
+2283 add -41
+2284 add -40
+2285 add 0
+2286 add -40
+2287 add 56
+2288 add -42
+2289 add 0
+2290 add 61
+2291 add 20
+2292 add 48
+2293 add 0
+2294 add 42
+2295 add -56
+2296 add -32
+2297 add 0
+2298 add -48
+2299 add 41
+2300 add -24
+2301 add 0
+2302 add 24
+2303 add -58
+2304 add 61
+2305 add 0
+2306 vars
+2307 add -44
+2308 add -58
+2309 add 20
+2310 add 0
+2311 add 43
+2312 add -45
+2313 add 38
+2314 add -60
+2315 add 0
+2316 add 38
+2317 add 42
+2318 add -43
+2319 add 0
+2320 add -24
+2321 add 29
+2322 add 43
+2323 add 0
+2324 implied
+2325 add 17
+2326 add -38
+2327 add 61
+2328 add 0
+2329 add -40
+2330 add 22
+2331 add -51
+2332 add 0
+2333 add 42
+2334 add -25
+2335 add -37
+2336 add 58
+2337 add 0
+2338 add 41
+2339 add -60
+2340 add -50
+2341 add 0
+2342 implied
+2343 add 57
+2344 add -56
+2345 add -25
+2346 add 0
+2347 irredundant
+2348 add -35
+2349 add -18
+2350 add 50
+2351 add 0
+2352 add 24
+2353 add -61
+2354 add -30
+2355 add 45
+2356 add 54
+2357 add 38
+2358 add -19
+2359 add -42
+2360 add -23
+2361 add 25
+2362 add -60
+2363 add 33
+2364 add -64
+2365 add 17
+2366 add 0
+2367 add 62
+2368 add -61
+2369 add -65
+2370 add 0
+2371 add 59
+2372 add -22
+2373 add 55
+2374 add 0
+2375 add -20
+2376 add -58
+2377 add -51
+2378 add 0
+2379 add -36
+2380 add 45
+2381 add 25
+2382 add 0
+2383 add -51
+2384 add -46
+2385 add -61
+2386 add 0
+2387 add -43
+2388 add 47
+2389 add -46
+2390 add 56
+2391 add 36
+2392 add -30
+2393 add 63
+2394 add 49
+2395 add -27
+2396 add -61
+2397 add 53
+2398 add 0
+2399 add -30
+2400 add -37
+2401 add 22
+2402 add 0
+2403 add -65
+2404 add 26
+2405 add 45
+2406 add 0
+2407 add 61
+2408 add -55
+2409 add 26
+2410 add 0
+2411 add 61
+2412 add -21
+2413 add 39
+2414 add 0
+2415 add -24
+2416 add 20
+2417 add 65
+2418 add 0
+2419 irredundant
+2420 add -25
+2421 add 33
+2422 add -45
+2423 add 0
+2424 add 17
+2425 add 27
+2426 add 35
+2427 add 0
+2428 add -45
+2429 add 21
+2430 add -61
+2431 add 0
+2432 add -54
+2433 add -17
+2434 add 43
+2435 add 0
+2436 add 32
+2437 add 49
+2438 add 53
+2439 add 61
+2440 add -27
+2441 add -31
+2442 add -34
+2443 add -26
+2444 add -64
+2445 add -50
+2446 add 57
+2447 add 52
+2448 add -20
+2449 add -38
+2450 add 24
+2451 add 65
+2452 add 0
+2453 add 56
+2454 add -41
+2455 add 22
+2456 add 0
+2457 add -26
+2458 add 54
+2459 add 29
+2460 add 0
+2461 add 19
+2462 add 44
+2463 add -59
+2464 add 0
+2465 add 64
+2466 add -25
+2467 add 0
+2468 add -30
+2469 add -25
+2470 add -36
+2471 add 0
+2472 add -56
+2473 add 63
+2474 add 22
+2475 add 0
+2476 add 28
+2477 add -59
+2478 add -29
+2479 add 0
+2480 add 51
+2481 add -42
+2482 add 31
+2483 add 0
+2484 add -46
+2485 add 18
+2486 add 43
+2487 add 0
+2488 add -52
+2489 add 29
+2490 add 49
+2491 add 0
+2492 add -46
+2493 add 56
+2494 add -27
+2495 add 0
+2496 add -65
+2497 add -38
+2498 add -43
+2499 add 0
+2500 declare_vars 28
+2501 add -45
+2502 add 56
+2503 add -24
+2504 add 0
+2505 add 26
+2506 add 21
+2507 add 27
+2508 add 0
+2509 add 20
+2510 add 42
+2511 add -45
+2512 add 0
+2513 add 56
+2514 add -33
+2515 add -38
+2516 add 0
+2517 add 28
+2518 add 34
+2519 add 60
+2520 add 0
+2521 add 38
+2522 add -65
+2523 add 51
+2524 add -20
+2525 add 48
+2526 add 23
+2527 add -43
+2528 add -58
+2529 add -39
+2530 add 36
+2531 add -19
+2532 add 0
+2533 add -17
+2534 add -56
+2535 add 22
+2536 add 0
+2537 add 36
+2538 add -19
+2539 add 38
+2540 add 0
+2541 add -52
+2542 add 32
+2543 add -62
+2544 add 0
+2545 active
+2546 add -59
+2547 add -18
+2548 add 28
+2549 add 0
+2550 add -40
+2551 add -30
+2552 add 65
+2553 add 0
+2554 add -46
+2555 add -24
+2556 add -20
+2557 add 0
+2558 add 57
+2559 add 17
+2560 add -60
+2561 add 0
+2562 add -50
+2563 add 17
+2564 add 22
+2565 add 0
+2566 add -60
+2567 add -50
+2568 add -32
+2569 add 0
+2570 add -38
+2571 add -37
+2572 add 54
+2573 add 0
+2574 add 36
+2575 add -21
+2576 add -19
+2577 add 0
+2578 add 34
+2579 add 36
+2580 add -27
+2581 add 0
+2582 add -34
+2583 add -44
+2584 add -65
+2585 add 0
+2586 add -29
+2587 add -49
+2588 add -35
+2589 add 0
+2590 add 53
+2591 add -47
+2592 add -18
+2593 add 0
+2594 add 34
+2595 add 28
+2596 add -18
+2597 add 0
+2598 irredundant
+2599 declare_var
+2600 add -56
+2601 add 55
+2602 add 22
+2603 add 0
+2604 add -27
+2605 add -36
+2606 add -48
+2607 add -30
+2608 add 34
+2609 add -35
+2610 add -60
+2611 add 58
+2612 add 61
+2613 add 31
+2614 add 0
+2615 add 63
+2616 add 18
+2617 add 25
+2618 add 0
+2619 add -30
+2620 add -62
+2621 add 18
+2622 add 19
+2623 add 0
+2624 add -25
+2625 add 29
+2626 add -41
+2627 add 0
+2628 add -18
+2629 add 37
+2630 add 40
+2631 add 0
+2632 add -49
+2633 add -27
+2634 add -23
+2635 add 0
+2636 add 20
+2637 add 58
+2638 add 62
+2639 add 0
+2640 add 36
+2641 add 40
+2642 add 62
+2643 add 0
+2644 irredundant
+2645 add 28
+2646 add 46
+2647 add 55
+2648 add 0
+2649 add 49
+2650 add -56
+2651 add -28
+2652 add 0
+2653 propagate 0
+2654 add -49
+2655 add -54
+2656 add -45
+2657 add 0
+2658 add 33
+2659 add -21
+2660 add 53
+2661 add 0
+2662 add 17
+2663 add 52
+2664 add -20
+2665 add 0
+2666 add -51
+2667 add -52
+2668 add 61
+2669 add 0
+2670 active
+2671 add 62
+2672 add 31
+2673 add 18
+2674 add 0
+2675 add 49
+2676 add -52
+2677 add -42
+2678 add 0
+2679 add -63
+2680 add 38
+2681 add 28
+2682 add 0
+2683 resize 48
+2684 add -37
+2685 add 62
+2686 add -43
+2687 add 0
+2688 add 38
+2689 add -53
+2690 add -31
+2691 add 0
+2692 add 32
+2693 add -47
+2694 add -37
+2695 add 0
+2696 add 38
+2697 add -36
+2698 add 21
+2699 add 0
+2700 add 34
+2701 add -40
+2702 add 28
+2703 add 0
+2704 add 62
+2705 add 51
+2706 add -63
+2707 add 0
+2708 add 21
+2709 add -54
+2710 add -44
+2711 add 0
+2712 add 25
+2713 add 36
+2714 add 41
+2715 add 0
+2716 add -31
+2717 add 59
+2718 add -39
+2719 add 0
+2720 add -46
+2721 add -64
+2722 add 57
+2723 add 0
+2724 add 60
+2725 add -53
+2726 add 57
+2727 add 0
+2728 add -63
+2729 add 29
+2730 add 64
+2731 add 0
+2732 add -39
+2733 add -61
+2734 add 24
+2735 add 0
+2736 add -55
+2737 add 19
+2738 add 31
+2739 add 0
+2740 add -62
+2741 add -31
+2742 add -51
+2743 add -53
+2744 add 0
+2745 add 33
+2746 add -37
+2747 add 41
+2748 add 0
+2749 add -64
+2750 add -45
+2751 add -39
+2752 add 0
+2753 add -48
+2754 add -30
+2755 add 54
+2756 add 0
+2757 add 58
+2758 add 56
+2759 add -48
+2760 add 0
+2761 add 41
+2762 add 49
+2763 add 22
+2764 add 0
+2765 add 25
+2766 add -60
+2767 add -63
+2768 add 0
+2769 add -63
+2770 add 57
+2771 add -27
+2772 add 0
+2773 add 61
+2774 add 34
+2775 add -44
+2776 add 0
+2777 add -18
+2778 add 56
+2779 add -28
+2780 add 49
+2781 add 0
+2782 add -29
+2783 add 59
+2784 add 24
+2785 add 0
+2786 add -42
+2787 add -21
+2788 add -54
+2789 add 0
+2790 add -62
+2791 add 32
+2792 add 49
+2793 add 0
+2794 add -20
+2795 add 62
+2796 add 51
+2797 add 0
+2798 add 45
+2799 add -48
+2800 add 20
+2801 add 0
+2802 add -26
+2803 add -56
+2804 add -41
+2805 add 0
+2806 add -28
+2807 add 55
+2808 add 17
+2809 add 0
+2810 add 57
+2811 add -27
+2812 add -36
+2813 add 0
+2814 add -31
+2815 add 49
+2816 add 50
+2817 add 0
+2818 active
+2819 add -34
+2820 add -28
+2821 add -40
+2822 add 0
+2823 add -41
+2824 add -59
+2825 add -45
+2826 add 0
+2827 add 59
+2828 add 54
+2829 add -46
+2830 add 0
+2831 add -27
+2832 add 46
+2833 add -38
+2834 add 0
+2835 add 46
+2836 add 25
+2837 add -53
+2838 add 0
+2839 add -46
+2840 add -37
+2841 add -17
+2842 add 0
+2843 add 41
+2844 add -37
+2845 add -32
+2846 add 0
+2847 vars
+2848 add -31
+2849 add -55
+2850 add 40
+2851 add 0
+2852 declare_vars 72
+2853 add -35
+2854 add 27
+2855 add 50
+2856 add 0
+2857 add -42
+2858 add -41
+2859 add -56
+2860 add 0
+2861 connect mock-propagator
+2862 observe -17
+2863 observe 18
+2864 observe 20
+2865 observe -24
+2866 observe 25
+2867 observe -26
+2868 observe 28
+2869 observe -31
+2870 observe 32
+2871 observe 33
+2872 observe -35
+2873 observe -36
+2874 observe 37
+2875 observe -39
+2876 observe -40
+2877 observe 42
+2878 observe -43
+2879 observe -44
+2880 observe -45
+2881 observe -47
+2882 observe -49
+2883 observe -51
+2884 observe 56
+2885 observe -59
+2886 observe -62
+2887 observe -64
+2888 observe 65
+2889 observe -76
+2890 observe 96
+2891 observe -99
+2892 observe 103
+2893 observe -110
+2894 observe 119
+2895 observe 121
+2896 observe -123
+2897 observe 133
+2898 observe 145
+2899 observe -146
+2900 observe -156
+2901 observe -157
+2902 observe -158
+2903 observe 160
+2904 observe 161
+2905 assume -4
+2906 assume -29
+2907 assume -3
+2908 assume 10
+2909 assume 59
+2910 assume -16
+2911 assume 50
+2912 assume 5
+2913 assume -33
+2914 assume 37
+2915 assume 30
+2916 assume -23
+2917 assume -25
+2918 assume 6
+2919 assume 12
+2920 assume -26
+2921 assume -2
+2922 assume -35
+2923 assume 57
+2924 assume -8
+2925 assume -31
+2926 assume 34
+2927 assume 14
+2928 assume 51
+2929 assume -42
+2930 assume 67
+2931 assume -62
+2932 assume -11
+2933 assume -28
+2934 assume 52
+2935 assume 56
+2936 assume 47
+2937 assume -65
+2938 assume 22
+2939 assume 13
+2940 assume 19
+2941 assume 39
+2942 assume 43
+2943 assume -7
+2944 assume 36
+2945 assume -55
+2946 assume 54
+2947 assume 61
+2948 assume -44
+2949 assume -9
+2950 assume 20
+2951 phase -12
+2952 phase 14
+2953 phase -38
+2954 unphase -39
+2955 phase -40
+2956 phase 43
+2957 phase -49
+2958 phase -54
+2959 phase -57
+2960 phase 64
+2961 solve 0
+2962 decide 65 27
+2963 decide 121 45
+2964 decide -110 5
+2965 decide 76 47
+2966 decide -39 3
+2967 decide 26 25
+2968 decide 45 16
+2969 decide 42 14
+2970 decide -25 11
+2971 decide 42 9
+2972 decide -157 24
+2973 decide 20 38
+2974 decide 123 41
+2975 decide 65 28
+2976 decide -36 43
+2977 decide 35 9
+2978 decide -45 15
+2979 decide -24 14
+2980 decide 123 8
+2981 decide 110 4
+2982 decide -35 18
+2983 decide 20 23
+2984 decide 35 45
+2985 decide -76 47
+2986 decide -96 48
+2987 decide 35 36
+2988 decide 96 17
+2989 decide -157 11
+2990 decide -51 13
+2991 decide 37 22
+2992 decide 32 7
+2993 decide 39 36
+2994 decide -121 15
+2995 decide 17 38
+2996 decide -42 25
+2997 decide 123 24
+2998 decide -158 6
+2999 decide -37 44
+3000 decide 123 6
+3001 decide 156 11
+3002 decide 56 9
+3003 decide 99 30
+3004 decide -59 0
+3005 decide 119 4
+3006 decide -158 17
+3007 decide -110 32
+3008 decide 18 1
+3009 decide 76 23
+3010 decide 37 42
+3011 decide 62 40
+3012 decide 32 5
+3013 decide -119 20
+3014 decide 76 11
+3015 decide -31 30
+3016 decide -123 34
+3017 decide 56 18
+3018 decide 32 25
+3019 decide 110 41
+3020 decide 123 17
+3021 decide 133 25
+3022 decide -76 19
+3023 decide 51 36
+3024 decide 76 28
+3025 decide -35 42
+3026 decide 17 10
+3027 decide -157 7
+3028 decide 40 28
+3029 decide 161 42
+3030 decide -119 10
+3031 decide -24 23
+3032 decide 44 24
+3033 decide -35 16
+3034 decide 133 30
+3035 decide 119 46
+3036 decide 156 46
+3037 decide -33 30
+3038 decide -26 43
+3039 decide -64 34
+3040 decide -43 13
+3041 decide -103 38
+3042 decide 65 30
+3043 decide -33 35
+3044 decide 17 3
+3045 decide -59 18
+3046 decide -43 37
+3047 decide -133 23
+3048 decide 157 15
+3049 decide -45 3
+3050 decide 47 38
+3051 decide 51 11
+3052 decide -39 45
+3053 decide 44 28
+3054 decide 31 2
+3055 decide 158 1
+3056 decide -64 7
+3057 decide 31 29
+3058 decide 146 4
+3059 decide -33 33
+3060 decide -37 33
+3061 decide -158 45
+3062 lemma 145
+3063 lemma 26
+3064 lemma 99
+3065 lemma 0 1 29
+3066 lemma 49
+3067 lemma 121
+3068 lemma -156
+3069 lemma 0 1 16
+3070 lemma -17
+3071 lemma -65
+3072 lemma -59
+3073 lemma 0 1 22
+3074 lemma -37
+3075 lemma 45
+3076 lemma -145
+3077 lemma 0 1 9
+3078 lemma -39
+3079 lemma -123
+3080 lemma -47
+3081 lemma -37
+3082 lemma 0 1 23
+3083 lemma -133
+3084 lemma 160
+3085 lemma -36
+3086 lemma 0 3 14
+3087 lemma 18
+3088 lemma 133
+3089 lemma 44
+3090 lemma 0 3 6
+3091 lemma 25
+3092 lemma 24
+3093 lemma 51
+3094 lemma 76
+3095 lemma 0 1 37
+3096 lemma -44
+3097 lemma -156
+3098 lemma 59
+3099 lemma 0 1 14
+3100 lemma 25
+3101 lemma 28
+3102 lemma 33
+3103 lemma 39
+3104 lemma 0 1 25
+3105 lemma -39
+3106 lemma -24
+3107 lemma -44
+3108 lemma 0 1 48
+3109 lemma -51
+3110 lemma 110
+3111 lemma -32
+3112 lemma 0 1 24
+3113 lemma 43
+3114 lemma -56
+3115 lemma 18
+3116 lemma 0 1 21
+3117 lemma 35
+3118 lemma 59
+3119 lemma -51
+3120 lemma 0 3 5
+3121 lemma 133
+3122 lemma -99
+3123 lemma -65
+3124 lemma 0 1 45
+3125 lemma -76
+3126 lemma -20
+3127 lemma 44
+3128 lemma 18
+3129 lemma 0 1 45
+3130 lemma -160
+3131 lemma -146
+3132 lemma -76
+3133 lemma 0 1 34
+3134 lemma 146
+3135 lemma -160
+3136 lemma 103
+3137 lemma 0 0 24
+3138 lemma -103
+3139 lemma -18
+3140 lemma -49
+3141 lemma 0 1 27
+3142 lemma 17
+3143 lemma 119
+3144 lemma -33
+3145 lemma 0 1 22
+3146 lemma 64
+3147 lemma -157
+3148 lemma -99
+3149 lemma 0 1 40
+3150 lemma -51
+3151 lemma -32
+3152 lemma 25
+3153 lemma 0 1 38
+3154 lemma 145
+3155 lemma 28
+3156 lemma -25
+3157 lemma -20
+3158 lemma 156
+3159 lemma -26
+3160 lemma -62
+3161 lemma -158
+3162 lemma 123
+3163 lemma 0 3 5
+3164 lemma 28
+3165 lemma -25
+3166 lemma 32
+3167 lemma 0 1 2
+3168 lemma 20
+3169 lemma -99
+3170 lemma 103
+3171 lemma 0 1 42
+3172 lemma -123
+3173 lemma 17
+3174 lemma -31
+3175 lemma 0 3 29
+3176 lemma -121
+3177 lemma -24
+3178 lemma 119
+3179 lemma 0 1 35
+3180 lemma 31
+3181 lemma 32
+3182 lemma -133
+3183 lemma 0 1 50
+3184 lemma -59
+3185 lemma -157
+3186 lemma -47
+3187 lemma 0 3 34
+3188 lemma 25
+3189 lemma -33
+3190 lemma -110
+3191 lemma 0 1 38
+3192 lemma 157
+3193 lemma -119
+3194 lemma -37
+3195 lemma 0 2 25
+3196 lemma 133
+3197 lemma 39
+3198 lemma 43
+3199 lemma 0 1 14
+3200 lemma -44
+3201 lemma 43
+3202 lemma -18
+3203 lemma 17
+3204 lemma 0 1 36
+3205 lemma 76
+3206 lemma -156
+3207 lemma -99
+3208 lemma 0 3 37
+3209 lemma 44
+3210 lemma -110
+3211 lemma -123
+3212 lemma 0 1 10
+3213 lemma -146
+3214 lemma 24
+3215 lemma 26
+3216 lemma 0 1 1
+3217 lemma -123
+3218 lemma -33
+3219 lemma 160
+3220 lemma 0 3 14
+3221 lemma -158
+3222 lemma 103
+3223 lemma -24
+3224 lemma 0 1 2
+3225 lemma 56
+3226 lemma -31
+3227 lemma 32
+3228 lemma -76
+3229 lemma 0 1 49
+3230 lemma 18
+3231 lemma 158
+3232 lemma 0 1 17
+3233 lemma -35
+3234 lemma 121
+3235 lemma -47
+3236 lemma 0 1 0
+3237 lemma 33
+3238 lemma 161
+3239 lemma 25
+3240 lemma 99
+3241 lemma 0 1 5
+3242 lemma -119
+3243 lemma 42
+3244 lemma 18
+3245 lemma 0 1 25
+3246 lemma -44
+3247 lemma 99
+3248 lemma 64
+3249 lemma 0 3 9
+3250 lemma -156
+3251 lemma -110
+3252 lemma 76
+3253 lemma 0 1 42
+3254 lemma 37
+3255 lemma -49
+3256 lemma -25
+3257 lemma 0 3 49
+3258 lemma 133
+3259 lemma 157
+3260 lemma -65
+3261 lemma 0 1 3
+3262 lemma 33
+3263 lemma 20
+3264 lemma 59
+3265 lemma 161
+3266 lemma 0 3 50
+3267 lemma -17
+3268 lemma -158
+3269 lemma 121
+3270 lemma 0 1 32
+3271 lemma -64
+3272 lemma -17
+3273 lemma -119
+3274 lemma -156
+3275 lemma 0 1 50
+3276 lemma -160
+3277 lemma 146
+3278 lemma 156
+3279 lemma 0 3 38
+3280 lemma -145
+3281 lemma 59
+3282 lemma 45
+3283 lemma 0 1 27
+3284 lemma -103
+3285 lemma 99
+3286 lemma 32
+3287 lemma 0 1 43
+3288 lemma 160
+3289 lemma -31
+3290 lemma -161
+3291 lemma -37
+3292 lemma 0 1 49
+3293 lemma -103
+3294 lemma -146
+3295 lemma 157
+3296 lemma -56
+3297 lemma 0 1 0
+3298 lemma -32
+3299 lemma -40
+3300 lemma -17
+3301 lemma 0 3 13
+3302 lemma -76
+3303 lemma 28
+3304 lemma -65
+3305 lemma -33
+3306 lemma -59
+3307 lemma -35
+3308 lemma -103
+3309 lemma -64
+3310 lemma 0 1 39
+3311 lemma 161
+3312 lemma 103
+3313 lemma -65
+3314 lemma 0 3 4
+3315 lemma -156
+3316 lemma -47
+3317 lemma -35
+3318 lemma 0 2 50
+3319 lemma 157
+3320 lemma 24
+3321 lemma -110
+3322 lemma 0 3 44
+3323 lemma -76
+3324 lemma -36
+3325 lemma 103
+3326 lemma 161
+3327 lemma -37
+3328 lemma 0 3 33
+3329 lemma 99
+3330 lemma 51
+3331 lemma 157
+3332 lemma 24
+3333 lemma 0 1 50
+3334 lemma -40
+3335 lemma 26
+3336 lemma 157
+3337 lemma 37
+3338 lemma -17
+3339 lemma -35
+3340 lemma -62
+3341 lemma 47
+3342 lemma -121
+3343 lemma 59
+3344 lemma -146
+3345 lemma 31
+3346 lemma 110
+3347 lemma 0 1 18
+3348 lemma 76
+3349 lemma -31
+3350 lemma -133
+3351 lemma 0 3 16
+3352 lemma -42
+3353 lemma 110
+3354 lemma -145
+3355 lemma -49
+3356 lemma 0 1 31
+3357 lemma -20
+3358 lemma -158
+3359 lemma -39
+3360 lemma -157
+3361 lemma -40
+3362 lemma -160
+3363 lemma -51
+3364 lemma 62
+3365 lemma 25
+3366 lemma 133
+3367 lemma 156
+3368 lemma -45
+3369 lemma 110
+3370 lemma 99
+3371 lemma 121
+3372 lemma -96
+3373 lemma 65
+3374 lemma -24
+3375 lemma 0 1 11
+3376 lemma 62
+3377 lemma 49
+3378 lemma 64
+3379 lemma 0 1 33
+3380 lemma -45
+3381 lemma -20
+3382 lemma -158
+3383 lemma 0 3 28
+3384 lemma -62
+3385 lemma -47
+3386 lemma -59
+3387 lemma 0 1 42
+3388 lemma -40
+3389 lemma 110
+3390 lemma 103
+3391 lemma 0 1 49
+3392 lemma 47
+3393 lemma -33
+3394 lemma 96
+3395 lemma 0 1 30
+3396 lemma 56
+3397 lemma -62
+3398 lemma 158
+3399 lemma 0 1 49
+3400 lemma 65
+3401 lemma -161
+3402 lemma 103
+3403 lemma 0 1 33
+3404 lemma -119
+3405 lemma -31
+3406 lemma -99
+3407 lemma 0 3 15
+3408 lemma 32
+3409 lemma -76
+3410 lemma -123
+3411 lemma 64
+3412 lemma -24
+3413 lemma 0 3 47
+3414 lemma 25
+3415 lemma 39
+3416 lemma -49
+3417 lemma 0 1 29
+3418 lemma 33
+3419 lemma -121
+3420 lemma -76
+3421 lemma 0 3 10
+3422 lemma -17
+3423 lemma -99
+3424 lemma -47
+3425 lemma 0 1 38
+3426 lemma 156
+3427 lemma -49
+3428 lemma 133
+3429 lemma 26
+3430 lemma 0 1 7
+3431 lemma 32
+3432 lemma -156
+3433 lemma -28
+3434 lemma 0 1 31
+3435 lemma 56
+3436 lemma -43
+3437 lemma -64
+3438 lemma 0 3 25
+3439 lemma 103
+3440 lemma -64
+3441 lemma -146
+3442 lemma 0 1 5
+3443 lemma 40
+3444 lemma 33
+3445 lemma 37
+3446 lemma 0 3 16
+3447 lemma -103
+3448 lemma -17
+3449 lemma 133
+3450 lemma 0 1 50
+3451 lemma -65
+3452 lemma 32
+3453 lemma 17
+3454 lemma -110
+3455 lemma 0 0 2
+3456 lemma -26
+3457 lemma 76
+3458 lemma -24
+3459 lemma 0 3 38
+3460 lemma 64
+3461 lemma -40
+3462 lemma -31
+3463 lemma 0 1 48
+3464 lemma 103
+3465 lemma 35
+3466 lemma -44
+3467 lemma 0 1 22
+3468 lemma -119
+3469 lemma -31
+3470 lemma -39
+3471 lemma 0 3 22
+3472 lemma 160
+3473 lemma 18
+3474 lemma -25
+3475 lemma 0 1 44
+3476 lemma -65
+3477 lemma -31
+3478 lemma 160
+3479 lemma 0 1 1
+3480 lemma 158
+3481 lemma -42
+3482 lemma -157
+3483 lemma 0 1 29
+3484 lemma 133
+3485 lemma 42
+3486 lemma 145
+3487 lemma 0 1 26
+3488 lemma 158
+3489 lemma 156
+3490 lemma -157
+3491 lemma 0 3 49
+3492 lemma -103
+3493 lemma 161
+3494 lemma 0 3 28
+3495 lemma 96
+3496 lemma 25
+3497 lemma 59
+3498 lemma 0 3 15
+3499 lemma -32
+3500 lemma 17
+3501 lemma 59
+3502 lemma 0 3 42
+3503 lemma 20
+3504 lemma 119
+3505 lemma -99
+3506 lemma -64
+3507 lemma 0 1 40
+3508 lemma 28
+3509 lemma 45
+3510 lemma -51
+3511 lemma 0 1 0
+3512 lemma -99
+3513 lemma -121
+3514 lemma -24
+3515 lemma 0 1 12
+3516 lemma -59
+3517 lemma 25
+3518 lemma 28
+3519 lemma -145
+3520 lemma 0 1 43
+3521 lemma 156
+3522 lemma -56
+3523 lemma 28
+3524 lemma 0 1 36
+3525 lemma 25
+3526 lemma 35
+3527 lemma 133
+3528 lemma 0 3 6
+3529 lemma -32
+3530 lemma 18
+3531 lemma -156
+3532 lemma 0 3 15
+3533 lemma -59
+3534 lemma -31
+3535 lemma -25
+3536 lemma -18
+3537 lemma 0 2 8
+3538 lemma -65
+3539 lemma -119
+3540 lemma 45
+3541 lemma 0 2 8
+3542 lemma -35
+3543 lemma 51
+3544 lemma -43
+3545 lemma 0 1 5
+3546 lemma -64
+3547 lemma 156
+3548 lemma 28
+3549 lemma 0 1 17
+3550 lemma -28
+3551 lemma -35
+3552 lemma -160
+3553 lemma 0 2 43
+3554 lemma 18
+3555 lemma -96
+3556 lemma -32
+3557 lemma 156
+3558 lemma 0 3 36
+3559 lemma 119
+3560 lemma -145
+3561 lemma 18
+3562 lemma 96
+3563 lemma 156
+3564 lemma 0 1 37
+3565 lemma -119
+3566 lemma -20
+3567 lemma 43
+3568 lemma 0 3 40
+3569 lemma -43
+3570 lemma -44
+3571 lemma 42
+3572 lemma 0 1 27
+3573 lemma -17
+3574 lemma 103
+3575 lemma -20
+3576 lemma 0 3 33
+3577 lemma -56
+3578 lemma 39
+3579 lemma -35
+3580 lemma 0 2 50
+3581 lemma 43
+3582 lemma -160
+3583 lemma 31
+3584 lemma 0 1 34
+3585 lemma -103
+3586 lemma 62
+3587 lemma -99
+3588 lemma 103
+3589 lemma 0 1 37
+3590 lemma 56
+3591 lemma 26
+3592 lemma 96
+3593 lemma 0 2 29
+3594 lemma -39
+3595 lemma -59
+3596 lemma 25
+3597 lemma -17
+3598 lemma 0 3 13
+3599 lemma 64
+3600 lemma -65
+3601 lemma -160
+3602 lemma -161
+3603 lemma 0 1 17
+3604 lemma -65
+3605 lemma -49
+3606 lemma 145
+3607 lemma 0 1 46
+3608 lemma 146
+3609 lemma -156
+3610 lemma -99
+3611 lemma 33
+3612 lemma 17
+3613 lemma -40
+3614 lemma 32
+3615 lemma 0 1 21
+3616 lemma -157
+3617 lemma -56
+3618 lemma 65
+3619 lemma -24
+3620 lemma 25
+3621 lemma 35
+3622 lemma 103
+3623 lemma -40
+3624 lemma 161
+3625 lemma 44
+3626 lemma -32
+3627 lemma 146
+3628 lemma -36
+3629 lemma 26
+3630 lemma 160
+3631 lemma 119
+3632 lemma 17
+3633 lemma 45
+3634 lemma -49
+3635 lemma -96
+3636 lemma 0 1 35
+3637 lemma 31
+3638 lemma -121
+3639 lemma -18
+3640 lemma -32
+3641 lemma 0 1 23
+3642 lemma -25
+3643 lemma -24
+3644 lemma 56
+3645 lemma 0 3 8
+3646 lemma 17
+3647 lemma 24
+3648 lemma 96
+3649 lemma -123
+3650 lemma 0 1 47
+3651 lemma -64
+3652 lemma -24
+3653 lemma -103
+3654 lemma 0 1 19
+3655 lemma 44
+3656 lemma -26
+3657 lemma 39
+3658 lemma 0 3 47
+3659 lemma -39
+3660 lemma -31
+3661 lemma 28
+3662 lemma 0 3 49
+3663 lemma -44
+3664 lemma -32
+3665 lemma -161
+3666 lemma 0 1 38
+3667 lemma 20
+3668 lemma 51
+3669 lemma 45
+3670 lemma 0 1 11
+3671 lemma 47
+3672 lemma 64
+3673 lemma -44
+3674 lemma 0 3 28
+3675 lemma 65
+3676 lemma -35
+3677 lemma 62
+3678 lemma 0 3 36
+3679 lemma 31
+3680 lemma -49
+3681 lemma -37
+3682 lemma 0 1 26
+3683 lemma -25
+3684 lemma 64
+3685 lemma -20
+3686 lemma 0 1 33
+3687 lemma 37
+3688 lemma 18
+3689 lemma -145
+3690 lemma 0 1 38
+3691 lemma 99
+3692 lemma 123
+3693 lemma -20
+3694 lemma 0 3 0
+3695 lemma -99
+3696 lemma -43
+3697 lemma 123
+3698 lemma 0 2 6
+3699 lemma 43
+3700 lemma 160
+3701 lemma -36
+3702 lemma -56
+3703 lemma 0 3 8
+3704 lemma 31
+3705 lemma 146
+3706 lemma -42
+3707 lemma 0 1 5
+3708 lemma -37
+3709 lemma 123
+3710 lemma -103
+3711 lemma 0 1 1
+3712 lemma -47
+3713 lemma 28
+3714 lemma 157
+3715 lemma 17
+3716 lemma 0 1 19
+3717 lemma 65
+3718 lemma -20
+3719 lemma 28
+3720 lemma 0 1 23
+3721 lemma 119
+3722 lemma -121
+3723 lemma -133
+3724 lemma 0 2 43
+3725 lemma 158
+3726 lemma -24
+3727 lemma -49
+3728 lemma 0 3 24
+3729 lemma 65
+3730 lemma -110
+3731 lemma -121
+3732 lemma 0 3 49
+3733 lemma 33
+3734 lemma 49
+3735 lemma 44
+3736 lemma 0 3 2
+3737 lemma -18
+3738 lemma -32
+3739 lemma -42
+3740 lemma 49
+3741 lemma 0 1 6
+3742 lemma -47
+3743 lemma 24
+3744 lemma 49
+3745 lemma 0 1 17
+3746 lemma 161
+3747 lemma -31
+3748 lemma 26
+3749 lemma 0 1 0
+3750 lemma -145
+3751 lemma 45
+3752 lemma 0 3 5
+3753 lemma 121
+3754 lemma -24
+3755 lemma 62
+3756 lemma 96
+3757 lemma 0 1 44
+3758 lemma 145
+3759 lemma 65
+3760 lemma -45
+3761 lemma 0 1 16
+3762 lemma 28
+3763 lemma 99
+3764 lemma -33
+3765 lemma 0 1 50
+3766 lemma 121
+3767 lemma -36
+3768 lemma -99
+3769 lemma 0 1 41
+3770 lemma -51
+3771 lemma -65
+3772 lemma -76
+3773 lemma -42
+3774 lemma 0 1 35
+3775 lemma 133
+3776 lemma 121
+3777 lemma 64
+3778 lemma 0 3 37
+3779 lemma -156
+3780 lemma 51
+3781 lemma -39
+3782 lemma 0 3 44
+3783 lemma -103
+3784 lemma -160
+3785 lemma 37
+3786 lemma 0 3 48
+3787 lemma 103
+3788 lemma 76
+3789 lemma 56
+3790 lemma 0 3 9
+3791 lemma 42
+3792 lemma -37
+3793 lemma -103
+3794 lemma 0 3 41
+3795 lemma -32
+3796 lemma 110
+3797 lemma -40
+3798 lemma 0 1 34
+3799 lemma 37
+3800 lemma 103
+3801 lemma 47
+3802 lemma 0 1 35
+3803 lemma 37
+3804 lemma -146
+3805 lemma -160
+3806 lemma 0 1 15
+3807 lemma 18
+3808 lemma -157
+3809 lemma -119
+3810 lemma 0 3 30
+3811 lemma -156
+3812 lemma 49
+3813 lemma 146
+3814 lemma 0 3 14
+3815 lemma 20
+3816 lemma 62
+3817 lemma -51
+3818 lemma 0 3 2
+3819 val -1 1
+3820 val 4 1
+3821 val 5 1
+3822 val -6 0
+3823 val 7 0
+3824 val -8 1
+3825 val -10 0
+3826 val 11 0
+3827 val 12 1
+3828 val -13 1
+3829 val -14 1
+3830 val -15 1
+3831 val -16 0
+3832 val -17 1
+3833 val 18 1
+3834 val 20 0
+3835 val 21 1
+3836 val 25 0
+3837 val -27 1
+3838 val 29 1
+3839 val -30 0
+3840 val -31 0
+3841 val 32 1
+3842 val 33 0
+3843 val -34 1
+3844 val 35 0
+3845 val 36 1
+3846 val -37 0
+3847 val 38 1
+3848 val 40 1
+3849 val 41 0
+3850 val 43 1
+3851 val -44 1
+3852 val 45 0
+3853 val 46 0
+3854 val 47 1
+3855 val -48 1
+3856 val 49 1
+3857 val 50 1
+3858 val -51 0
+3859 val 52 1
+3860 val 54 1
+3861 val -55 0
+3862 val 56 1
+3863 val 57 0
+3864 val -59 1
+3865 val -60 0
+3866 val 61 0
+3867 val 62 1
+3868 val -63 0
+3869 val -64 1
+3870 failed -2 0
+3871 failed 6 0
+3872 failed 7 0
+3873 failed -9 0
+3874 failed 10 0
+3875 failed 22 0
+3876 failed 23 0
+3877 failed 25 0
+3878 failed 30 0
+3879 failed -32 0
+3880 failed 33 0
+3881 failed -35 0
+3882 failed -38 0
+3883 failed 39 0
+3884 failed -43 0
+3885 failed -44 0
+3886 failed 45 0
+3887 failed -48 0
+3888 failed -50 0
+3889 failed 52 0
+3890 failed 53 0
+3891 failed 55 0
+3892 failed -64 0
+3893 frozen 1 0
+3894 frozen -3 0
+3895 frozen -9 0
+3896 frozen -18 0
+3897 frozen -25 0
+3898 frozen 31 0
+3899 frozen 38 0
+3900 frozen -44 0
+3901 frozen 56 0
+3902 frozen 59 0
+3903 reset
+# ---------------------------------------------------
+# CaDiCal was tried to be terminated here:
+# 0   mobical                             0x000000010a099f9a _ZN7CaDiCaL5Trace34account_terminate_delay_allocationEv + 170
+# 1   mobical                             0x000000010a00fc8c _Znwm + 44
+# 2   mobical                             0x000000010a0c8b6f _ZN7CaDiCaL8Internal13watch_literalEiiPNS_6ClauseE + 271
+# 3   mobical                             0x000000010a22ec37 _ZN7CaDiCaL8Internal15connect_watchesEb + 487
+# 4   mobical                             0x000000010a203c57 _ZN7CaDiCaL8Internal5sweepEv + 1543
+# 5   mobical                             0x000000010a16ec94 _ZN7CaDiCaL8Internal18preprocess_quicklyEbRb + 260
+# 6   mobical                             0x000000010a16f61f _ZN7CaDiCaL8Internal5solveEb + 927
+# 7   mobical                             0x000000010a14b2ab _ZN7CaDiCaL8External5solveEb + 75
+# 8   mobical                             0x000000010a1e125f _ZN7CaDiCaL6Solver37call_external_solve_and_check_resultsEb + 111
+# 9   mobical                             0x000000010a1e16d8 _ZN7CaDiCaL6Solver8simplifyEi + 360
+# 10  mobical                             0x000000010a0b3494 _ZN7CaDiCaL12SimplifyCall7executeERPNS_6SolverERPNS_9ExtendMapE + 20
+# 11  mobical                             0x000000010a09b346 _ZN7CaDiCaL5Trace7executeEv + 502
+# 12  mobical                             0x000000010a09af78 _ZN7CaDiCaL5Trace16fork_and_executeEv + 520
+# 13  mobical                             0x000000010a0a9eed _ZN7CaDiCaL7Mobical4mainEiPPc + 13341
+# 14  dyld                                0x00007ff803801530 start + 3056
+#
