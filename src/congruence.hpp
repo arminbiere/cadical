@@ -560,9 +560,9 @@ struct CompactBinary {
   int lit1, lit2;
   CompactBinary (Clause *c, LRAT_ID i, int l1, int l2)
       : clause (c), id (i), lit1 (l1), lit2 (l2) {
-    assert (c), assert (c->size == 2);
-    assert (c->literals[0] == lit1 || c->literals[1] == lit1);
-    assert (c->literals[0] == lit2 || c->literals[1] == lit2);
+    assert (!c || c->size == 2);
+    assert (!c || c->literals[0] == lit1 || c->literals[1] == lit1);
+    assert (!c || c->literals[0] == lit2 || c->literals[1] == lit2);
   }
 
   CompactBinary () : clause (nullptr), id (0), lit1 (0), lit2 (0) {}
