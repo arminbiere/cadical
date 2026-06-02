@@ -2449,9 +2449,11 @@ public:
   bool terminate () override {
     // Malloc-based termination delay fuzzing
     #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE_DELAY)
-    printf("CADICAL CHECKING FOR ASYNC TERMINATE.\n");
+    if (mobical.add_set_log_to_true)
+      printf("CADICAL CHECKING FOR ASYNC TERMINATE.\n");
     if (terminate_triggered) {
-      printf("CADICAL DETECTED ASYNC TERMINATE.\n");
+      if (mobical.add_set_log_to_true)
+        printf("CADICAL DETECTED ASYNC TERMINATE.\n");
       terminate_triggered = 0;
       mallocs_after_trigger = 0;
       return true;
@@ -4231,14 +4233,16 @@ void Trace::account_terminate_delay_allocation () {
           MOBICAL_TERMINATE_STACK_COUNT);
       hooks_install ();
       reset_child_signal_handlers ();
-      printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
+      if (mobical.add_set_log_to_true)
+        printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
       raise (SIGUSR2);
     }
   }
   if (terminate_budget > 0) {
     //printf ("NEW/MALLOC CAUGHT, BUDGET: %lld\n", terminate_budget); // TODO: remove after being sure it works
     if (--terminate_budget <= 0 && !terminate_triggered) {
-      printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove after being sure it works
+      if (mobical.add_set_log_to_true)
+        printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove after being sure it works
       terminate_triggered = 1;
       hooks_uninstall ();
       mobical.shared->limit_terminate.terminate_call_index = trace_call_index;
@@ -6843,7 +6847,10 @@ END_OF_BANNER_AND_OPTIONS:
 
 // -----------------------------------------------------------------------------
 // --- Terminate Delay Fuzzing: macOS new hook
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
+#if defined(__APPLE__) && \
+    defined(MOBICAL_TERMINATE_DELAY) && \
+    defined(MOBICAL_TERMINATE) && \
+    defined(MOBICAL_MEMORY)
 
 static thread_local bool inside_operator_new = false;
 
