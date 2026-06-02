@@ -864,7 +864,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
          scheduled, percent (scheduled, active ()));
 
   // Connect irredundant clauses.
-  //
+  // REVIEW: What should we do here? This takes some time
   for (const auto &c : clauses)
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)

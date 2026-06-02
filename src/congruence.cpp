@@ -4337,6 +4337,8 @@ void Closure::extract_xor_gates () {
   for (auto c : candidates) {
     if (internal->unsat)
       break;
+    if (internal->terminated_asynchronously ()) // REVIEW: TA added
+      break;
     if (c->garbage)
       continue;
     extract_xor_gates_with_base_clause (c);

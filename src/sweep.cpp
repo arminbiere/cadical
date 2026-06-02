@@ -1934,6 +1934,8 @@ bool Internal::sweep () {
          equivalences, units);
   unschedule_sweeping (*sweeper, swept, scheduled);
   delete_sweeper.free ();
+  //if (terminated_asynchronously ())
+  //  return false; // here before we build the watches. But this does not work because the solver has a bad state now for incremental. REVIEW: inserted TA 
   sweep_sparse_mode ();
 
   if (!unsat) {
