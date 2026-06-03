@@ -355,7 +355,7 @@ fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
-[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 
 [ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
