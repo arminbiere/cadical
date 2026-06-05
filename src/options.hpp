@@ -123,6 +123,7 @@ OPTION( exteagerreasons,   0,  0,  1,0,0,1, "eagerly ask for all reasons (0: onl
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( extnassign,        0,  0,  1,0,0,1, "notify assign literal by literal") \
 OPTION( extnbacktrack,     0,  0,  1,0,0,1, "notify backtrack level by level") \
+OPTION( exttracecalls,     0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,       1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,   0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
