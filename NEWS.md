@@ -28,7 +28,7 @@ User Facing Changes:
   LRAT checking where the antecedents subsume the learned clause.
 
 - Option '-O' accepts negative argument to decrease the amount of inprocessing.
-  Before only positive value were supported.
+  Before only positive value were supported. Value '0' has no effect.
 
 New and Improved Techniques:
 
