@@ -98,8 +98,8 @@ void External::init (int new_max_var, bool extension) {
     declare_var (new_max_var, extension);
     return;
   }
-  int new_vars = new_max_var - max_var;
-  LOG ("initialized %d external variables", new_vars);
+
+  LOG ("initialized %d external variables", new_max_var - max_var);
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
