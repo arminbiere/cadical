@@ -141,11 +141,17 @@ void check_correct_ite_flags (const Gate *const g) {
 
 /*------------------------------------------------------------------------*/
 Gate *Gate::new_gate (size_t n, bool lrat) {
-  void *raw = malloc (sizeof (Gate) + n * sizeof (int));
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate ();
+  size_t bytes = Gate::bytes (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = 0;
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL;
   if (lrat) {
     g->lrat_reasons = new Gate::LRAT_Reasons ();
   }
@@ -156,11 +162,16 @@ Gate *Gate::new_gate (size_t n, bool lrat) {
 Gate *Gate::new_gate (const std::vector<int> &v, bool lrat) {
   const int n = v.size ();
   size_t bytes = Gate::bytes (n);
-  void *raw = malloc (bytes);
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = (n);
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL;
   for (int i = 0; i < n; ++i)
     g->rhs[i] = v[i];
   if (lrat) {
@@ -174,11 +185,16 @@ Gate *Gate::new_gate (const_literal_iterator begin,
                       const_literal_iterator end, bool lrat) {
   const int n = end - begin;
   size_t bytes = Gate::bytes (n);
-  void *raw = malloc (bytes);
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = (n);
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL; 
   auto u = begin;
   for (int i = 0; i < n; ++i, ++u) {
     assert (u < end);
@@ -194,7 +210,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
 void Gate::delete_gate (Gate *&g) {
   if (g) {
     delete g->lrat_reasons;
-    free (g);
+    delete [] (g);
   }
   g = 0;
 }
