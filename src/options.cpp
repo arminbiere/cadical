@@ -257,8 +257,37 @@ void Options::usage () {
 
 void Options::optimize (int val) {
 #if !defined (NOPTIONS)
+  int64_t factor2 = 1;
+  for (int i = 0; i < abs (val) && factor2 <= INT_MAX; i++)
+    factor2 *= 2;
+
+  int64_t factor10 = 1;
+  for (int i = 0; i < abs (val) && factor10 <= INT_MAX; i++)
+    factor10 *= 10;
+
   if (val < 0) {
-    LOG ("ignoring negative optimization mode '%d'", val);
+    unsigned increased = 0;
+  #define OPTION(N, V, L, H, O, P, R, D) \
+    do { \
+      if (!(O)) \
+        break; \
+      const int64_t factor1 = ((O) == 1 ? factor2 : factor10); \
+      int64_t new_val = (int64_t) (V) / factor1; \
+      if (new_val < (L)) \
+        new_val = (L); \
+      if (new_val == (int) (V)) \
+        break; \
+      LOG ("optimization mode '%d' for '%s' " \
+           "gives '%" PRId64 "' instead of '%d", \
+           val, #N, new_val, (int) (V)); \
+      assert (new_val <= INT_MAX); \
+      N = (int) new_val; \
+      increased++; \
+    } while (0);
+    OPTIONS
+  #undef OPTION
+    if (increased)
+      MSG ("optimization mode '-O%d' increased %u limits", val, increased);
     return;
   }
 
@@ -267,14 +296,6 @@ void Options::optimize (int val) {
     LOG ("optimization argument '%d' reduced to '%d'", val, max_val);
     val = max_val;
   }
-
-  int64_t factor2 = 1;
-  for (int i = 0; i < val && factor2 <= INT_MAX; i++)
-    factor2 *= 2;
-
-  int64_t factor10 = 1;
-  for (int i = 0; i < val && factor10 <= INT_MAX; i++)
-    factor10 *= 10;
 
   unsigned increased = 0;
 #define OPTION(N, V, L, H, O, P, R, D) \

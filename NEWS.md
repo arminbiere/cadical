@@ -1,4 +1,4 @@
-Version 3.0.X
+  Version 3.0.X
 -------------
 
 User Facing Changes:
@@ -26,6 +26,9 @@ User Facing Changes:
   LRAT with extended resolution (and therefore no interpolation) and
   `cover`, `instantiate` and `vivifyinst` which all require less strict
   LRAT checking where the antecedents subsume the learned clause.
+
+- New option '-O' with negative argument to decrease the amount of inprocessing.
+  Earlier only positive value were supported.
 
 New and Improved Techniques:
 
