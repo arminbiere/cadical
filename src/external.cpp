@@ -103,10 +103,6 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (extension)
-    internal->stats.variables_extension += new_vars;
-  else
-    internal->stats.variables_original += new_vars;
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
