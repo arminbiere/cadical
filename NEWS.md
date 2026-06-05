@@ -27,8 +27,8 @@ User Facing Changes:
   `cover`, `instantiate` and `vivifyinst` which all require less strict
   LRAT checking where the antecedents subsume the learned clause.
 
-- New option '-O' with negative argument to decrease the amount of inprocessing.
-  Earlier only positive value were supported.
+- Option '-O' accepts negative argument to decrease the amount of inprocessing.
+  Before only positive value were supported.
 
 New and Improved Techniques:
 
