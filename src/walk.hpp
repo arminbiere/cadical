@@ -43,7 +43,12 @@ struct ClauseOrBinary {
     // the fact that there are at the same position.
     struct ClausePtr {
       bool binary : 1;
+#if ((ULONG_MAX) == (UINT_MAX))
+      //32 bit version: no bit padding required
+      uintptr_t clause_ptr;
+#else
       uintptr_t clause_ptr : 63;  // 63 bits for clause pointer
+#endif
       ClausePtr (): binary (0), clause_ptr(0) {};
     } clause;
     struct TaggedBinary {

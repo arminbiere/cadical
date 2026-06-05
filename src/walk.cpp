@@ -56,7 +56,7 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 #if !defined(LOGGING) && defined(NDEBUG)
-  static_assert (sizeof (ClauseOrBinary) == 8);
+  static_assert (sizeof (ClauseOrBinary) == 8, "ClauseOrBinary compression does not work");
 #endif
 }
 
