@@ -19,7 +19,7 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
   assert (c->literals[0] == cother || c->literals[1] == cother);
 #endif
 
-#ifndef LOGGING
+#if !defined(LOGGING) || defined(NDEBUG)
   (void) c;
   (void) internal;
 #endif
@@ -52,7 +52,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
       return;
     }
   }
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 #if !defined(LOGGING) && defined(NDEBUG)
@@ -61,7 +63,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
 }
 
 ClauseOrBinary::ClauseOrBinary (Clause *c) {
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   assert (c->size != 2);
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
@@ -97,7 +101,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
     tagged.b.other = lit;
     return;
   }
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
 
 }
