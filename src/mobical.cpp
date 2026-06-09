@@ -4268,10 +4268,17 @@ int Trace::fork_and_execute () {
 
     // disable core dumps for faster delta-debugging.
 #ifndef _WIN32
+#ifdef __APPLE__
+    rlimit limit;
+    limit.rlim_cur = 0;
+    limit.rlim_max = 0;
+    setrlimit (RLIMIT_CORE, &limit);
+#else
     rlimit64 limit;
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
     setrlimit64 (RLIMIT_CORE, &limit);
+#endif
 #endif
 
     int status, other = wait (&status);
