@@ -990,6 +990,25 @@ void Solver::unphase (int lit) {
 }
 
 /*------------------------------------------------------------------------*/
+double Solver::get_vsids_score (int lit) {
+  TRACE (get_vsids_score, "get_vsids_score", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  double res = external->get_vsids_score (lit);
+  LOG_API_CALL_RETURNS ("get_vsids_score", lit, res);
+  return res;
+}
+
+double Solver::get_vmtf_score (int lit) {
+  TRACE (get_vsids_score, "get_vmtf_score", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  external->phase (lit);
+  double res = external->get_vmtf_score (lit);
+  LOG_API_CALL_RETURNS ("get_vmtf_score", lit, res);
+  return res;
+}
+/*------------------------------------------------------------------------*/
 
 void Solver::terminate () {
   LOG_API_CALL_BEGIN ("terminate");

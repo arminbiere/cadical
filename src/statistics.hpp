@@ -33,6 +33,8 @@
   STATISTIC (api_fixed,                 3, NOTHING, 0, 0) \
   STATISTIC (api_phase,                 3, NOTHING, 0, 0) \
   STATISTIC (api_unphase,               3, NOTHING, 0, 0) \
+  STATISTIC (api_get_vsids_score,       3, NOTHING, 0, 0) \
+  STATISTIC (api_get_vmtf_score,        3, NOTHING, 0, 0) \
   STATISTIC (api_active,                3, NOTHING, 0, 0) \
   STATISTIC (api_redundant,             3, NOTHING, 0, 0) \
   STATISTIC (api_irredundant,           3, NOTHING, 0, 0) \

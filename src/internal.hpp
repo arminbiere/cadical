@@ -1531,6 +1531,11 @@ struct Internal {
   void phase (int lit);
   void unphase (int lit);
 
+  // Get variables scores.
+  //
+  double get_vsids_score (int var);
+  double get_vmtf_score (int var);
+
   // Globally blocked clause elimination.
   //
   bool is_autarky_literal (int lit) const;

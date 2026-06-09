@@ -342,6 +342,30 @@ bool External::failed_constraint () {
   return internal->failed_constraint ();
 }
 
+double External::get_vsids_score (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return 0;
+  int ilit = e2i[eidx];
+  if (!ilit)
+    return 0;
+  return internal->get_vsids_score (ilit);
+}
+
+double External::get_vmtf_score (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return 0;
+  int ilit = e2i[eidx];
+  if (!ilit)
+    return 0;
+  return internal->get_vmtf_score (ilit);
+}
+
 void External::phase (int elit) {
   assert (elit);
   assert (elit != INT_MIN);

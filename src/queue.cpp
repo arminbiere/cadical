@@ -10,7 +10,7 @@ void Internal::init_enqueue (int idx) {
   Link &l = links[idx];
   assert (flags (idx).active () || flags (idx).fixed ());
   if (opts.varprioritizeswap) {
-    LOG ("enqueueing %s at the beginning", LOGLIT(idx));
+    LOG ("enqueueing %s at the beginning", LOGLIT (idx));
     l.prev = 0;
     if (queue.first) {
       assert (!links[queue.first].prev);
@@ -24,12 +24,13 @@ void Internal::init_enqueue (int idx) {
     assert (btab[idx] <= stats.vars_bumped);
     l.next = queue.first;
     queue.first = idx;
-    LOG ("enqueueing %s at the beginning, next: %d, last: %d", LOGLIT(idx), l.next, queue.last);
-    //due to interactions with IPASIR-UP, we need to update it every time.
-    //if (!queue.unassigned)
+    LOG ("enqueueing %s at the beginning, next: %d, last: %d", LOGLIT (idx),
+         l.next, queue.last);
+    // due to interactions with IPASIR-UP, we need to update it every time.
+    // if (!queue.unassigned)
     update_queue_unassigned (queue.last);
   } else {
-    LOG ("enqueueing %s at the end", LOGLIT(idx));
+    LOG ("enqueueing %s at the end", LOGLIT (idx));
     l.next = 0;
     if (queue.last) {
       assert (!links[queue.last].next);
@@ -61,6 +62,14 @@ void Internal::init_queue (int old_max_var, int new_max_var) {
     init_enqueue (idx + 1);
 }
 
+double Internal::get_vmtf_score (int var) {
+  assert (var > 0);
+  const unsigned idx = abs (var);
+  if (btab.size () <= idx)
+    return 0;
+  return btab[idx];
+}
+
 // Shuffle the VMTF queue.
 
 void Internal::shuffle_queue () {
@@ -74,9 +83,9 @@ void Internal::shuffle_queue () {
   if (opts.shufflerandom) {
     for (int idx = max_var; idx; idx--)
       if (!flags (idx).unused ())
-	shuffle.push_back (idx);
-    Random random (opts.seed); // global seed
-    random += stats.scores_shuffled;  // different every time
+        shuffle.push_back (idx);
+    Random random (opts.seed);       // global seed
+    random += stats.scores_shuffled; // different every time
     const int highest_var = shuffle.size ();
     for (int i = 0; i <= highest_var - 2; i++) {
       const int j = random.pick_int (i, highest_var - 1);
@@ -95,17 +104,17 @@ void Internal::shuffle_queue () {
   queue.unassigned = queue.last;
 }
 
-
 void Internal::check_queue () {
 #ifndef NDEBUG
   int res = queue.first;
   std::vector<bool> seen;
-  seen.resize (max_var+1, false);
+  seen.resize (max_var + 1, false);
   while (res) {
     assert (!flags (res).declared () && !flags (res).unused ());
-    seen [res] = true;
+    seen[res] = true;
     int next = links[res].next;
-    if (!next) break;
+    if (!next)
+      break;
     assert (links[next].prev == res);
     assert (btab[next] > btab[res]);
     res = next;

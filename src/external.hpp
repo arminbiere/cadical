@@ -418,6 +418,11 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
+  double get_vsids_score (int elit);
+  double get_vmtf_score (int elit);
+
+  /*----------------------------------------------------------------------*/
+
   // Traversal functions for the witness stack and units.  The explanation
   // in 'external.cpp' for why we have to distinguish these cases.
 

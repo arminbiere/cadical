@@ -873,6 +873,24 @@ public:
   int fixed (int lit) const;
 
   //------------------------------------------------------------------------
+
+  // Get current VSIDS score of the literal (0 if scores are not active
+  // for the specified literal). The score is phase-agnostic
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  double get_vsids_score (int lit);
+
+  //------------------------------------------------------------------------
+  // Get current VMTF score of the literal (0 if scores are not active
+  // for the specified literal). The score is phase-agnostic
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  double get_vmtf_score (int lit);
+
   // Force the default decision phase of a variable to a certain value.
   //
   void phase (int lit);
