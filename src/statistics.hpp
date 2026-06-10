@@ -55,7 +55,7 @@
   STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
   STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
-  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0) 
+  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
 
 #else
 #define CADICAL_API_STATISTICS
@@ -386,6 +386,7 @@
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   STATISTIC (walk_broken,            2, relative, "per", walk_flips) \
   STATISTIC (walk_flips,             2, relative, "per", walk) \
+  STATISTIC (walk_ddfw_flips,        2, relative, "per", walk) \
   STATISTIC (walk_flips_reducing,    2, percent, "%", walk_flips) \
   STATISTIC (walk_flips_sideways,    2, percent, "%", walk_flips) \
   STATISTIC (walk_flips_transfer,    2, percent, "%", walk_flips) \

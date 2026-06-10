@@ -851,15 +851,24 @@ void Stats::print_old (Internal *internal) {
            stats.walk_warmup, relative (stats.walk_warmup, stats.walk));
     }
 #ifndef QUIET
-    if (internal->profiles.walk.value > 0)
+    if (internal->profiles.walk.value > 0) {
       PRT ("  flips:         %15" PRId64 "   %10.2f M  per second",
            stats.walk_flips,
            relative (1e-6 * stats.walk_flips,
                      internal->profiles.walk.value));
+      PRT ("  ddfwflips:     %15" PRId64 "   %10.2f M  per second",
+           stats.walk_ddfw_flips,
+           relative (1e-6 * stats.walk_ddfw_flips,
+                     internal->profiles.walk.value));
+    }
     else
 #endif
+    {
       PRT ("  flips:         %15" PRId64 "   %10.2f    per walk",
            stats.walk_flips, relative (stats.walk_flips, stats.walk));
+      PRT ("  ddfwflips:     %15" PRId64 "   %10.2f    per walk",
+           stats.walk_ddfw_flips, relative (stats.walk_ddfw_flips, stats.walk));
+    }
     if (stats.walk_minimum < INT64_MAX)
       PRT ("  minimum:       %15" PRId64 "   %10.2f %%  clauses",
            stats.walk_minimum,

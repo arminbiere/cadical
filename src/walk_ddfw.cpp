@@ -1,3 +1,4 @@
+#include "congruence.hpp"
 #include "internal.hpp"
 
 #include <cstddef>
@@ -45,6 +46,14 @@ namespace CaDiCaL {
 //
 // We experimented with smaller values but did not a see a benefit (although
 // CaDiCaL is using 5 times as much memory as Tassat).
+//
+// There are few techniques which have been tested in the Tassat paper, but are
+// not default, so we implemented them here:
+//
+// - starting with probsat instead of ddfw until few enough clauses are
+// satisfied.
+// - TODO probabilistic weight reducing variable (in the yal-lin paper)
+// - TODO don't check all weight reducing variables, only the first 100
 using position_type = uint32_t;
 
 // This is the core structure representing positions in the array of values.
@@ -295,6 +304,25 @@ struct Walker_DDFW {
   position_type random_satisfied_big_weight_clause (double w_0);
   void update_unsat_weights (position_type pos, double);
   void update_sat_weights (position_type pos, double);
+  void walk_ddfw_loop (size_t &, int64_t &);
+
+
+  /*-------------------------------------*/
+  void walk_probsat_loop (size_t &, int64_t &);
+  unsigned walk_probsat_pick_clause ();
+
+  int walk_probsat_pick_lit (Clause *c);
+  int walk_probsat_pick_lit (DDFWCompactBinary c);
+
+  void walk_probsat_flip_lit (int lit);
+
+  unsigned walk_probsat_break_value (int lit);
+
+  vector<double> scores; // scores of candidate literals
+  vector<double> table;  // break value to score table
+  double epsilon;        // smallest considered score
+  double score (unsigned);              // compute score from break count
+  /*-------------------------------------*/
 
   void check_occs () const {
 #ifndef NDEBUG
@@ -1156,6 +1184,348 @@ bool Walker_DDFW::import_clauses (bool &failed) {
   return true;
 }
 
+inline double Walker_DDFW::score (unsigned i) {
+  const double res = (i < table.size () ? table[i] : epsilon);
+  LOG ("break %u mapped to score %g", i, res);
+  return res;
+}
+unsigned Walker_DDFW::walk_probsat_pick_clause () {
+  internal->require_mode (internal->WALK);
+  assert (!broken.empty ());
+  int64_t size = broken.size ();
+  if (size > INT_MAX)
+    size = INT_MAX;
+  int pos = random.pick_int (0, size - 1);
+  unsigned res = broken[pos].counter_pos;
+  LOG (clause_info (pos).always_clause, "picking random position %d", pos);
+  return res;
+}
+
+unsigned Walker_DDFW::walk_probsat_break_value (int lit) {
+
+  internal->require_mode (internal->WALK);
+  assert (internal->val (lit) > 0);
+  START (walkbreak);
+
+  const uint64_t old = ticks;
+  unsigned res = 0; // The computed break-count of 'lit'.
+  ticks +=
+      (1 + internal->cache_lines (occs (lit).size (), sizeof (Clause *)));
+
+  for (const auto &w : occs (lit)) {
+    const unsigned ref = w.counter_pos;
+    res += (clause_info(ref).count == 1);
+  }
+
+  internal->stats.ticks_walk_break += ticks - old;
+  STOP (walkbreak);
+  return res;
+}
+
+int Walker_DDFW::walk_probsat_pick_lit (Clause *c) {
+  START (walkpick);
+  LOG ("picking literal by break-count");
+  assert (scores.empty ());
+  const int64_t old = ++ticks;
+  double sum = 0;
+  int64_t propagations = 0;
+  for (const auto lit : *c) {
+    assert (internal->active (lit));
+    if (internal->var (lit).level == 1) {
+      LOG ("skipping assumption %d for scoring", -lit);
+      continue;
+    }
+    propagations++;
+    unsigned tmp = walk_probsat_break_value (-lit);
+    double score = this->score (tmp);
+    LOG ("literal %d break-count %u score %g", lit, tmp, score);
+    scores.push_back (score);
+    sum += score;
+  }
+  (void) propagations; // TODO unused?
+  LOG ("scored %zd literals", scores.size ());
+  assert (!scores.empty ());
+  assert (this->scores.size () <= (size_t) c->size);
+  const double lim = sum * random.generate_double ();
+  LOG ("score sum %g limit %g", sum, lim);
+
+  const auto end = c->end ();
+  auto i = c->begin ();
+  auto j = scores.begin ();
+  int res;
+  for (;;) {
+    assert (i != end);
+    res = *i++;
+    if (internal->var (res).level > 1)
+      break;
+    LOG ("skipping assumption %d without score", -res);
+  }
+  sum = *j++;
+  while (sum <= lim && i != end) {
+    res = *i++;
+    if (internal->var (res).level == 1) {
+      LOG ("skipping assumption %d without score", -res);
+      continue;
+    }
+    sum += *j++;
+  }
+  scores.clear ();
+  LOG ("picking literal %d by break-count", res);
+  internal->stats.ticks_walk_pick += ticks - old;
+  STOP (walkpick);
+  return res;
+}
+
+
+int Walker_DDFW::walk_probsat_pick_lit (DDFWCompactBinary c) {
+  START (walkpick);
+  LOG ("picking literal by break-count");
+  assert (scores.empty ());
+  const int64_t old = ++ticks;
+  double sum = 0;
+  int64_t propagations = 0;
+  std::array<int,2> d = {c.lit, c.other};
+  for (const auto lit : d) {
+    assert (internal->active (lit));
+    if (internal->var (lit).level == 1) {
+      LOG ("skipping assumption %d for scoring", -lit);
+      continue;
+    }
+    propagations++;
+    unsigned tmp = walk_probsat_break_value (-lit);
+    double score = this->score (tmp);
+    LOG ("literal %d break-count %u score %g", lit, tmp, score);
+    scores.push_back (score);
+    sum += score;
+  }
+  (void) propagations; // TODO unused?
+  LOG ("scored %zd literals", scores.size ());
+  assert (!scores.empty ());
+  assert (this->scores.size () <= (size_t) d.size ());
+  const double lim = sum * random.generate_double ();
+  LOG ("score sum %g limit %g", sum, lim);
+
+  const auto end = d.end ();
+  auto i = d.begin ();
+  auto j = scores.begin ();
+  int res;
+  for (;;) {
+    assert (i != end);
+    res = *i++;
+    if (internal->var (res).level > 1)
+      break;
+    LOG ("skipping assumption %d without score", -res);
+  }
+  sum = *j++;
+  while (sum <= lim && i != end) {
+    res = *i++;
+    if (internal->var (res).level == 1) {
+      LOG ("skipping assumption %d without score", -res);
+      continue;
+    }
+    sum += *j++;
+  }
+  scores.clear ();
+  LOG ("picking literal %d by break-count", res);
+  internal->stats.ticks_walk_pick += ticks - old;
+  STOP (walkpick);
+  return res;
+}
+
+void Walker_DDFW::walk_probsat_flip_lit (int lit) {
+
+  internal->require_mode (internal->WALK);
+  LOG ("flipping assign %d", lit);
+  assert (internal->val (lit) < 0);
+  const int64_t old = ticks;
+
+  // First flip the literal value.
+  //
+  const signed char tmp = sign (lit);
+  const int idx = abs (lit);
+  internal->set_val (idx, tmp);
+  assert (internal->val (lit) > 0);
+
+  make_clauses (lit);
+  break_clauses (-lit);
+
+  if (!broken.empty ())
+    check_all ();
+  internal->stats.ticks_walk_flip += ticks - old;
+}
+
+static constexpr double cbvals[][2] = {
+    {0.0, 2.00}, {3.0, 2.50}, {4.0, 2.85}, {5.0, 3.70},
+    {6.0, 5.10}, {7.0, 7.40}, // Adrian has '5.4', but '7.4' looks better.
+};
+
+static const int ncbvals = sizeof cbvals / sizeof cbvals[0];
+
+// We interpolate the CB values for uniform random SAT formula to the non
+// integer situation of average clause size by piecewise linear functions.
+//
+//   y2 - y1
+//   ------- * (x - x1) + y1
+//   x2 - x1
+//
+// where 'x' is the average size of clauses and 'y' the CB value.
+
+inline static double fitcbval (double size) {
+  int i = 0;
+  while (i + 2 < ncbvals &&
+         (cbvals[i][0] > size || cbvals[i + 1][0] < size))
+    i++;
+  const double x2 = cbvals[i + 1][0], x1 = cbvals[i][0];
+  const double y2 = cbvals[i + 1][1], y1 = cbvals[i][1];
+  const double dx = x2 - x1, dy = y2 - y1;
+  assert (dx);
+  const double res = dy * (size - x1) / dx + y1;
+  assert (res > 0);
+  return res;
+}
+
+inline void Walker_DDFW::walk_probsat_loop (size_t &broken, int64_t &flips) {
+  // default value for Tassat
+  const size_t broken_bound =
+    std::min ((size_t)100,
+      (size_t)((internal->opts.walkredundant ? internal->stats.clauses_now_total : internal->stats.clauses_now_irr) * (double)1.0/(double)internal->opts.walkprobsatddfw));
+  if (this->broken.size () <= broken_bound) {
+    LOG ("not enough clauses broken: skip probsat");
+    return;
+  }
+
+  double size = 0;
+  int64_t n = 0;
+  for (const auto c : internal->clauses) {
+    if (c->garbage)
+      continue;
+    if (c->redundant) {
+      if (!internal->opts.walkredundant)
+        continue;
+      if (!internal->likely_to_be_kept_clause (c))
+        continue;
+    }
+    size += c->size;
+    n++;
+  }
+  double average_size = relative (size, n);
+  PHASE ("walk", internal->stats.walk,
+         "%" PRId64 " clauses average size %.2f over %d variables", n,
+         average_size, internal->active ());
+
+  // This is the magic constant in ProbSAT (also called 'CB'), which we pick
+  // according to the average size every second invocation and otherwise
+  // just the default '2.0', which turns into the base '0.5'.
+  //
+  const bool use_size_based_cb = (internal->stats.walk & 1);
+  const double cb = use_size_based_cb ? fitcbval (average_size) : 2.0;
+  assert (cb);
+  const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
+
+  double next = 1;
+  for (epsilon = next; next; next = epsilon * base)
+    table.push_back (epsilon = next);
+
+
+  while (!internal->terminated_asynchronously () && this->broken.size () >= broken_bound &&
+    ticks < limit) {
+#ifndef QUIET
+      flips++;
+#endif
+      internal->stats.walk_flips++;
+      internal->stats.walk_broken += (int64_t) broken;
+      unsigned pos = walk_probsat_pick_clause ();
+      DDFW_Counter info = clause_info (pos);
+      int lit;
+      if (info.binary) {
+        lit = walk_probsat_pick_lit (info.binary_clause);
+      } else {
+        lit = walk_probsat_pick_lit (info.clause);
+      }
+      walk_probsat_flip_lit (lit);
+      if (this->broken.empty ())
+        break;
+      push_flipped (lit);
+      broken = this->broken.size ();
+      LOG ("now have %zd broken clauses in total", broken);
+      if (broken >= minimum)
+        continue;
+      minimum = broken;
+      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips", minimum,
+        flips);
+      internal->walk_ddfw_save_minimum(*this);
+    }
+}
+
+inline void Walker_DDFW::walk_ddfw_loop (size_t &broken, int64_t &flips) {
+  const double sideways_percent = 0.15; // probability for sideways flips
+  const bool sideways_opt = (internal->opts.walkddfwstrat < 4);
+  while (!internal->terminated_asynchronously () && !this->broken.empty () &&
+         ticks < limit) {
+#ifndef QUIET
+    flips++;
+#endif
+#ifndef NDEBUG
+    // useful for debugging, but really really really expensive
+    if (internal->stats.walk_flips % 100 == 000)
+      check_all ();
+#endif
+
+    // first check if there is a weight reducing variable
+    auto result = find_weight_reducing_variable ();
+    int weight_reducing_lit = result.first;
+    double weight_reduction = result.second;
+
+    // we observed numerical instability issues that Tassat does not seem
+    // to have with literals being switch back and forth when the the
+    // weight was 0.0006 (so probably 0, but with inprecision
+    // accumulating, a non-zero value). We do not really know why Tassat
+    // would me more stable than CaDiCaL, but this could be due to how we
+    // calculate the weight transfer, with the configurable coefficients.
+    // We expect this to be more an issue for the Tassat strategy than for
+    // the others, because it transfers more weights at once (especially
+    // compared to the original ddfw).
+    if (weight_reducing_lit && weight_reduction > 0.1) {
+      ++internal->stats.walk_flips_reducing;
+      LOG ("flipping one literal");
+      walk_ddfw_flip_lit (weight_reducing_lit);
+      push_flipped (weight_reducing_lit);
+      internal->stats.walk_flips++;
+      internal->stats.walk_ddfw_flips++;
+      internal->stats.walk_broken += broken;
+      broken = this->broken.size ();
+      LOG ("now have %zd broken clauses in total", broken);
+      if (broken < minimum) {
+        minimum = broken;
+        VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
+                 minimum, flips);
+        internal->walk_ddfw_save_minimum (*this);
+      }
+
+      continue;
+    }
+    // otherwise, do a sideways flip with low probability
+    if (sideways_opt) {
+      double perc = random.generate_double ();
+      if (!no_gain_literals.empty () && perc < sideways_percent) {
+        LOG ("sideways flip");
+        do_sideways_jump ();
+        broken = this->broken.size ();
+        LOG ("now have %zd broken clauses in total", broken);
+        if (broken < minimum) {
+          minimum = broken;
+          VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
+                   minimum, flips);
+          internal->walk_ddfw_save_minimum (*this);
+        }
+
+        continue;
+      }
+    }
+    // transfer weights
+    transfer_weights ();
+  }
+}
 /*------------------------------------------------------------------------*/
 
 int Internal::walk_ddfw_round (int64_t limit, bool prev) {
@@ -1276,72 +1646,9 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 #ifndef QUIET
     int64_t flips = 0;
 #endif
-    const double sideways_percent = 0.15; // probability for sideways flips
-    const bool sideways_opt = (internal->opts.walkddfwstrat < 4);
-    while (!terminated_asynchronously () && !walker.broken.empty () &&
-           walker.ticks < walker.limit) {
-#ifndef QUIET
-      flips++;
-#endif
-#ifndef NDEBUG
-      // useful for debugging, but really really really expensive
-      if (internal->stats.walk_flips % 100 == 000)
-        walker.check_all ();
-#endif
-
-      // first check if there is a weight reducing variable
-      auto result = walker.find_weight_reducing_variable ();
-      int weight_reducing_lit = result.first;
-      double weight_reduction = result.second;
-
-      // we observed numerical instability issues that Tassat does not seem
-      // to have with literals being switch back and forth when the the
-      // weight was 0.0006 (so probably 0, but with inprecision
-      // accumulating, a non-zero value). We do not really know why Tassat
-      // would me more stable than CaDiCaL, but this could be due to how we
-      // calculate the weight transfer, with the configurable coefficients.
-      // We expect this to be more an issue for the Tassat strategy than for
-      // the others, because it transfers more weights at once (especially
-      // compared to the original ddfw).
-      if (weight_reducing_lit && weight_reduction > 0.1) {
-        ++stats.walk_flips_reducing;
-        LOG ("flipping one literal");
-        walker.walk_ddfw_flip_lit (weight_reducing_lit);
-        walker.push_flipped (weight_reducing_lit);
-        stats.walk_flips++;
-        stats.walk_broken += broken;
-        broken = walker.broken.size ();
-        LOG ("now have %zd broken clauses in total", broken);
-        if (broken < minimum) {
-          minimum = broken;
-          VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
-                   minimum, flips);
-          walk_ddfw_save_minimum (walker);
-        }
-
-        continue;
-      }
-      // otherwise, do a sideways flip with low probability
-      if (sideways_opt) {
-        double perc = walker.random.generate_double ();
-        if (!walker.no_gain_literals.empty () && perc < sideways_percent) {
-          LOG ("sideways flip");
-          walker.do_sideways_jump ();
-          broken = walker.broken.size ();
-          LOG ("now have %zd broken clauses in total", broken);
-          if (broken < minimum) {
-            minimum = broken;
-            VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
-                     minimum, flips);
-            walk_ddfw_save_minimum (walker);
-          }
-
-          continue;
-        }
-      }
-      // transfer weights
-      walker.transfer_weights ();
-    }
+    if (opts.walkprobsatddfw)
+      walker.walk_probsat_loop (broken, flips);
+    walker.walk_ddfw_loop (broken, flips);
 
     walker.save_final_minimum (initial_minimum);
 #ifndef QUIET
