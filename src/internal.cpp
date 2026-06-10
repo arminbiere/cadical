@@ -376,7 +376,7 @@ void Internal::propagate_conflicts () {
       break;
     int tmp = decide ();
     if (tmp == 20) {
-      LOG ("assumption %d already satisfied", lit);
+      LOG ("assumption or constraint on level %d already falsified", level);
       new_trail_level (0);
       LOG ("added pseudo decision level");
       notify_decision ();
