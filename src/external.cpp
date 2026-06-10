@@ -627,6 +627,21 @@ void External::conclude_unknown () {
   internal->proof->conclude_unknown (trail);
 }
 
+void External::analyze_all (std::vector<int> &cores) {
+  std::vector<int> ilit_cores;
+  internal->implied (ilit_cores);
+
+  cores.clear ();
+
+  for (const auto &ilit : ilit_cores) {
+    if (ilit) {
+      const int elit = internal->externalize (ilit);
+      cores.push_back (elit);
+    } else
+      cores.push_back (0);
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 // Internal checker if 'solve' claims the formula to be satisfiable.

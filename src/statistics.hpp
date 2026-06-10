@@ -24,6 +24,8 @@
   STATISTIC (api_reset_assumptions,     3, NOTHING, 0, 0) \
   STATISTIC (api_propagate_assumptions, 3, NOTHING, 0, 0) \
   STATISTIC (api_implied,               3, NOTHING, 0, 0) \
+  STATISTIC (api_propagate_conflicts,   3, NOTHING, 0, 0) \
+  STATISTIC (api_analyze_all,           3, NOTHING, 0, 0) \
   STATISTIC (api_solve,                 3, NOTHING, 0, 0) \
   STATISTIC (api_simplify,              3, NOTHING, 0, 0) \
   STATISTIC (api_flip,                  3, NOTHING, 0, 0) \

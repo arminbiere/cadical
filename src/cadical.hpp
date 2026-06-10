@@ -521,7 +521,7 @@ public:
   // 'implicates' lists will contain all assigned literals, which is a
   // model. If ILB is on, propagate might also return SAT. In this
   // case, 'implicates' will still only contain the implied literals.
-
+  //
   // Returns
   //
   //    0 = UNKNOWN
@@ -543,6 +543,24 @@ public:
   //   ensure (INCONCLUSIVE)
   //
   void implied (std::vector<int> &implicates);
+
+  // When the solver reaches the 'UNSATISFIED' state due to assumptions,
+  // this collects potential additional conflicts which can be analyzed
+  // through 'analyze_all'. This way, more then just one core can be
+  // extracted at the same time.
+  //
+  //   require (UNSATISFIED)
+  //   ensure (UNSATISFIED)
+  //
+  void propagate_conflicts ();
+
+  // Analyzes all conflicts (collected with 'propagate_conflicts') and
+  // returns a 0-terminated list of cores.
+  //
+  //   require (UNSATISFIED)
+  //   ensure (UNSATISFIED)
+  //
+  void analyze_all (std::vector<int> &cores);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be

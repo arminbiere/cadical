@@ -365,6 +365,16 @@ int Internal::cdcl_loop_with_inprocessing () {
   return res;
 }
 
+void Internal::propagate_conflicts () {
+  if (unsat)
+    return;
+  int last_assumption_level = assumptions.size ();
+  if (constraint.size ())
+    last_assumption_level++;
+  if (level >= last_assumption_level)
+    return;
+}
+
 int Internal::propagate_assumptions () {
   activating_all_new_imported_literals ();
   if (proof)

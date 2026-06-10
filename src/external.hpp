@@ -405,6 +405,8 @@ struct External {
   void implied (std::vector<int> &entrailed);
   void conclude_unknown ();
 
+  void analyze_all (std::vector<int> &cores);
+
   /*----------------------------------------------------------------------*/
   int lookahead ();
   CaDiCaL::CubesWithStatus generate_cubes (int, int);

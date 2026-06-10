@@ -790,6 +790,26 @@ void Solver::reset_assumptions () {
 }
 
 /*------------------------------------------------------------------------*/
+void Solver::propagate_conflicts () {
+  TRACE (propagate_conflicts, "propagate_conflicts");
+  REQUIRE (state () == UNSATISFIED,
+           "'propagate_conflicts' requires unsatisfied state");
+  internal->propagate_conflicts ();
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
+  LOG_API_CALL_END ("propagate_conflicts");
+  assert (state () == UNSATISFIED);
+}
+
+void Solver::analyze_all (std::vector<int> &cores) {
+  TRACE (analyze_all, "analyze_all");
+  REQUIRE (state () == UNSATISFIED,
+           "'analyze_all' requires unsatisfied state");
+  external->analyze_all (cores);
+  // LOG_API_CALL_END ("analyze_all");
+  LOG_API_CALL_RETURNS ("analyze_all", (int) cores.size ());
+  assert (state () == UNSATISFIED);
+}
 
 int Solver::propagate () {
   TRACE (propagate_assumptions, "propagate_assumptions");
