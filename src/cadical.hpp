@@ -546,7 +546,7 @@ public:
 
   // When the solver reaches the 'UNSATISFIED' state due to assumptions,
   // this collects potential additional conflicts which can be analyzed
-  // through 'analyze_all'. This way, more then just one core can be
+  // through 'get_cores'. This way, more then just one core can be
   // extracted at the same time.
   //
   //   require (UNSATISFIED)
@@ -555,12 +555,14 @@ public:
   void propagate_conflicts ();
 
   // Analyzes all conflicts (collected with 'propagate_conflicts') and
-  // returns a 0-terminated list of cores.
+  // returns a 0-terminated list of cores. Also works independent from
+  // 'propagate_conflicts' but then will only return one core.
+  // Ignores constraints ('constrain').
   //
   //   require (UNSATISFIED)
   //   ensure (UNSATISFIED)
   //
-  void analyze_all (std::vector<int> &cores);
+  void get_cores (std::vector<int> &cores);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be

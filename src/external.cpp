@@ -627,9 +627,9 @@ void External::conclude_unknown () {
   internal->proof->conclude_unknown (trail);
 }
 
-void External::analyze_all (std::vector<int> &cores) {
+void External::get_cores (std::vector<int> &cores) {
   std::vector<int> ilit_cores;
-  internal->implied (ilit_cores);
+  internal->get_cores (ilit_cores);
 
   cores.clear ();
 

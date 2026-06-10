@@ -366,13 +366,29 @@ int Internal::cdcl_loop_with_inprocessing () {
 }
 
 void Internal::propagate_conflicts () {
-  if (unsat)
-    return;
+  if (proof)
+    proof->solve_query ();
   int last_assumption_level = assumptions.size ();
   if (constraint.size ())
     last_assumption_level++;
-  if (level >= last_assumption_level)
-    return;
+  while (level < last_assumption_level) {
+    if (unsat || terminated_asynchronously ())
+      break;
+    int tmp = decide ();
+    if (tmp == 20) {
+      LOG ("assumption %d already satisfied", lit);
+      new_trail_level (0);
+      LOG ("added pseudo decision level");
+      notify_decision ();
+      continue;
+    }
+    assert (!conflict);
+    while (!propagate ())
+      analyze ();
+  }
+  finalize (20);
+  reset_solving ();
+  report_solving (20);
 }
 
 int Internal::propagate_assumptions () {
@@ -1082,6 +1098,7 @@ int Internal::already_solved () {
   }
   return res;
 }
+
 void Internal::report_solving (int res) {
   if (res == 10)
     report ('1');

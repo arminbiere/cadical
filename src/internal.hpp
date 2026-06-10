@@ -248,7 +248,7 @@ struct Internal {
   vector<uint64_t> ntab;        // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
-  vector<Clause *> conflicts;   // for 'propagate_conflicts', 'analyze_all'
+  vector<Clause *> conflicts;   // for 'propagate_conflicts', 'get_cores'
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *dummy_binary;         // Dummy binary clause for subsumption
@@ -1530,7 +1530,7 @@ struct Internal {
   // Propagate the current set of assumptions and return
   // all cores
   void propagate_conflicts ();
-  void analyze_all (std::vector<int> &cores);
+  void get_cores (std::vector<int> &cores);
 
   // Forcing decision variables to a certain phase.
   //

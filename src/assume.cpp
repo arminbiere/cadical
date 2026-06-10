@@ -458,6 +458,41 @@ bool Internal::failed (int lit) {
   return (f.failed & bit) != 0;
 }
 
+void Internal::get_cores (std::vector<int> &cores) {
+  if (!marked_failed) {
+    if (!conflict_id)
+      failing ();
+    marked_failed = true;
+  }
+  for (auto &lit : assumptions) {
+    if (val (lit) >= 0)
+      continue;
+    const Var &v = var (lit);
+    if (!v.level) {
+      // unit reason
+      cores.push_back (lit), cores.push_back (0);
+      continue;
+    }
+    if (!v.reason) {
+      // tautological (clashing) reason
+      cores.push_back (lit), cores.push_back (-lit), cores.push_back (0);
+      continue;
+    }
+    assert (clause.empty ());
+    assert (v.reason);
+    assert (v.reason != external_reason);
+    clause.push_back (-lit);
+    assume_analyze_reason (-lit, v.reason);
+    for (auto &other : clause) {
+      cores.push_back (-other);
+    }
+    cores.push_back (0);
+    clear_analyzed_literals ();
+    lrat_chain.clear ();
+    clause.clear ();
+  }
+}
+
 void Internal::conclude_unsat () {
   if (!proof || concluded)
     return;
