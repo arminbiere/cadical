@@ -1610,7 +1610,7 @@ struct Internal {
   int preprocess (bool always);
   int local_search_round (int round);
   int local_search ();
-  int lucky_phases ();
+  int lucky_phases (bool update_limit);
   int cdcl_loop_with_inprocessing ();
   void reset_solving ();
   int solve (bool preprocess_only = false);

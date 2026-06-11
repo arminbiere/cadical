@@ -291,8 +291,6 @@ void App::print_witness (FILE *file) {
       const int ilit = eilit.second;
       if (!c)
         fputc ('v', file), c = 1;
-      if (!ilit)
-        continue;
       assert (elit);
       if (solver->external->ervars[elit])
         continue;
