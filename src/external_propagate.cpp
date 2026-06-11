@@ -230,6 +230,7 @@ void Internal::renotify_full_trail_between_trail_pos (
       LOG_INTERACTION_END (notify_assignment);
     }
     assigned.clear ();
+    notified_level++;
     LOG_INTERACTION_START (notify_new_decision_level);
     external->propagator->notify_new_decision_level ();
     LOG_INTERACTION_END (notify_new_decision_level);
@@ -1309,6 +1310,7 @@ void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   size_t level_now = notified_level;
+  assert ((size_t) notified_level > new_level);
   if (!opts.extnbacktrack)
     level_now = new_level + 1;
   while (level_now > new_level) {
