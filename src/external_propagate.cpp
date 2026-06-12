@@ -276,7 +276,8 @@ void Internal::renotify_full_trail () {
   if (level) {
     notified = 0; // TODO: save the last notified root-level position
                   // somewhere and use it here
-    notify_backtrack (0);
+    if (notified_level)
+      notify_backtrack (0);
   }
   std::vector<int> assigned;
 
