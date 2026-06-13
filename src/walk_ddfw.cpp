@@ -1457,7 +1457,7 @@ inline void Walker_DDFW::walk_probsat_loop (size_t &broken, int64_t &flips) {
 
 inline void Walker_DDFW::walk_ddfw_loop (size_t &broken, int64_t &flips) {
   const double sideways_percent = 0.15; // probability for sideways flips
-  const bool sideways_opt = (internal->opts.walkddfwstrat < 4);
+  const bool sideways_opt = (internal->opts.walkddfwstrat < 4 || internal->opts.walksideways);
   while (!internal->terminated_asynchronously () && !this->broken.empty () &&
          ticks < limit) {
 #ifndef QUIET
