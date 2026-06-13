@@ -1015,6 +1015,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
   int weight_reducing_var = 0;
   double best_new_satisfied = 0.0;
   int loop_iterations = 0;
+  int64_t remaining_uwr_to_test = internal->opts.walkweightred ? internal->opts.walkweightred : std::numeric_limits<int64_t>::max ();
   const bool sideways_opt = (internal->opts.walkddfwstrat < 4 ||internal->opts.walksideways);
   if (sideways_opt)
     no_gain_literals.clear ();
@@ -1025,7 +1026,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
           ? vars_in_broken.begin () + last_searched_vars_in_broken
           : vars_in_broken.end ();
 
-  for (auto it = mid; it != end; ++it) {
+  for (auto it = mid; it != end && remaining_uwr_to_test; ++it) {
     const int idx = *it;
     const int lit = internal->val (idx) > 0 ? -idx : idx;
     // number of new satisfied clauses: the old unsat now sat - the new
@@ -1042,12 +1043,13 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
       ++loop_iterations;
       last_searched_vars_in_broken = std::distance (begin, it);
       assert (begin <= it);
+      --remaining_uwr_to_test;
     } else if (sideways_opt && flip_gain == 0) {
       no_gain_literals.push_back (lit);
     }
   }
 
-  for (auto it = vars_in_broken.begin (); it != mid; ++it) {
+  for (auto it = vars_in_broken.begin (); it != mid && remaining_uwr_to_test; ++it) {
     const int idx = *it;
     const int lit = internal->val (idx) > 0 ? -idx : idx;
     double flip_gain =
@@ -1061,6 +1063,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
       ++loop_iterations;
       last_searched_vars_in_broken = std::distance (begin, it);
       assert (begin <= it);
+      --remaining_uwr_to_test;
     } else if (sideways_opt && flip_gain == 0) {
       no_gain_literals.push_back (lit);
     }
