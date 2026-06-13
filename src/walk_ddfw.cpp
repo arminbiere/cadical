@@ -1770,7 +1770,6 @@ void Internal::walk_ddfw () {
   int res = 0;
   if (opts.warmup)
     res = warmup ();
-  opts.log = false;
   if (res) {
     LOG ("stopping walk due to warmup");
     STOP_INNER_WALK ();
@@ -1794,7 +1793,6 @@ void Internal::walk_ddfw () {
     limit = 1e3 * opts.walkmaxeff;
   }
   (void) walk_ddfw_round (limit, false);
-  opts.log = false;
   STOP_INNER_WALK ();
 }
 
