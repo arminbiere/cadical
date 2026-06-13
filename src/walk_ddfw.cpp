@@ -1463,6 +1463,7 @@ inline void Walker_DDFW::walk_probsat_loop (size_t &broken, int64_t &flips) {
   double next = 1;
   for (epsilon = next; next; next = epsilon * base)
     table.push_back (epsilon = next);
+  size_t minimum = broken;
 
 
   while (!internal->terminated_asynchronously () && this->broken.size () >= broken_bound &&
@@ -1498,6 +1499,7 @@ inline void Walker_DDFW::walk_probsat_loop (size_t &broken, int64_t &flips) {
 inline void Walker_DDFW::walk_ddfw_loop (size_t &broken, int64_t &flips) {
   const double sideways_percent = 0.15; // probability for sideways flips
   const bool sideways_opt = (internal->opts.walkddfwstrat < 4 || internal->opts.walksideways);
+  size_t minimum = broken;
   while (!internal->terminated_asynchronously () && !this->broken.empty () &&
          ticks < limit) {
 #ifndef QUIET
@@ -1768,6 +1770,7 @@ void Internal::walk_ddfw () {
   int res = 0;
   if (opts.warmup)
     res = warmup ();
+  opts.log = false;
   if (res) {
     LOG ("stopping walk due to warmup");
     STOP_INNER_WALK ();
@@ -1791,6 +1794,7 @@ void Internal::walk_ddfw () {
     limit = 1e3 * opts.walkmaxeff;
   }
   (void) walk_ddfw_round (limit, false);
+  opts.log = false;
   STOP_INNER_WALK ();
 }
 
