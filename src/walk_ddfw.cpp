@@ -1,4 +1,3 @@
-#include "congruence.hpp"
 #include "internal.hpp"
 
 #include <cstddef>
@@ -179,6 +178,7 @@ struct Walker_DDFW {
   // for sideways jumps, we remember all the literals that have no impact on
   // the overall cost
   std::vector<int> no_gain_literals;
+  std::vector<int> uwr_candidates;
 
   // the core part: the weights
   std::vector<DDFW_Counter> weight_clause_info;
@@ -1017,8 +1017,11 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
   int loop_iterations = 0;
   int64_t remaining_uwr_to_test = internal->opts.walkweightred ? internal->opts.walkweightred : std::numeric_limits<int64_t>::max ();
   const bool sideways_opt = (internal->opts.walkddfwstrat < 4 ||internal->opts.walksideways);
+  const bool proba_uwr = internal->opts.walkweightredprob;
   if (sideways_opt)
     no_gain_literals.clear ();
+  assert (uwr_candidates.empty ());
+  int64_t sum = 0;
   const auto begin = vars_in_broken.begin ();
   const auto end = vars_in_broken.end ();
   const auto mid =
@@ -1047,6 +1050,11 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     } else if (sideways_opt && flip_gain == 0) {
       no_gain_literals.push_back (lit);
     }
+    if (proba_uwr && flip_gain > 0) {
+      uwr_candidates.push_back (lit);
+      scores.push_back (flip_gain);
+      sum += flip_gain;
+    }
   }
 
   for (auto it = vars_in_broken.begin (); it != mid && remaining_uwr_to_test; ++it) {
@@ -1067,9 +1075,36 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     } else if (sideways_opt && flip_gain == 0) {
       no_gain_literals.push_back (lit);
     }
+    if (proba_uwr && flip_gain > 0) {
+      uwr_candidates.push_back (lit);
+      scores.push_back (flip_gain);
+      sum += flip_gain;
+    }
   }
   ticks += internal->cache_lines (vars_in_broken.size (), sizeof (int)) +
            loop_iterations / 64;
+
+  if (proba_uwr && weight_reducing_var) {
+    // probabilistic selection among the candidates instead of eager selection
+    assert (!scores.empty());
+    assert (uwr_candidates.size () == scores.size ());
+    const double lim = sum * random.generate_double ();
+    const auto end = uwr_candidates.end ();
+    auto i = uwr_candidates.begin ();
+    auto j = scores.begin ();
+    LOG ("found %zd candidates to check from", scores.size ());
+    while (sum <= lim && i != end) {
+      weight_reducing_var = *i++;
+      assert (internal->var (weight_reducing_var).level == 2);
+      sum += *j++;
+    }
+    scores.clear ();
+    uwr_candidates.clear ();
+    assert (weight_reducing_var);
+  }
+
+  assert (scores.empty());
+
   if (weight_reducing_var && internal->val (weight_reducing_var) > 0)
     weight_reducing_var = -weight_reducing_var;
 
@@ -1079,6 +1114,8 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
   else
     LOG ("no literal to flip");
   STOP (walkwrv);
+  assert (scores.empty());
+  assert (uwr_candidates.empty());
   return make_pair (weight_reducing_var, best_new_satisfied);
 }
 /*------------------------------------------------------------------------*/
