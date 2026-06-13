@@ -1015,7 +1015,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
   int weight_reducing_var = 0;
   double best_new_satisfied = 0.0;
   int loop_iterations = 0;
-  const bool sideways_opt = (internal->opts.walkddfwstrat < 4);
+  const bool sideways_opt = (internal->opts.walkddfwstrat < 4 ||internal->opts.walksideways);
   if (sideways_opt)
     no_gain_literals.clear ();
   const auto begin = vars_in_broken.begin ();
