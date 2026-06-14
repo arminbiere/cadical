@@ -4674,6 +4674,7 @@ static bool is_basic (Call *c) {
   case Call::PROPAGATE:
   case Call::PROPAGATE_ASSUMPTIONS:
   case Call::PROPAGATE_CONFLICTS:
+  case Call::GET_CORES:
   case Call::VARS:
   case Call::ACTIVE:
   case Call::REDUNDANT:
