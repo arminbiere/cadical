@@ -366,6 +366,15 @@ int Internal::cdcl_loop_with_inprocessing () {
 }
 
 void Internal::propagate_conflicts () {
+  if (!unsat) {
+    for (const auto &lit : assumptions) {
+      Flags &f = flags (lit);
+      const unsigned char bit = bign (lit);
+      f.failed &= ~bit;
+    }
+    conclusion.clear ();
+    marked_failed = true;
+  }
   if (proof)
     proof->solve_query ();
   int last_assumption_level = assumptions.size ();
@@ -383,7 +392,7 @@ void Internal::propagate_conflicts () {
       continue;
     }
     assert (!conflict);
-    while (!propagate ())
+    while (!unsat && !propagate ())
       analyze ();
   }
   finalize (20);

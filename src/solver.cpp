@@ -807,7 +807,7 @@ void Solver::get_cores (std::vector<int> &cores) {
            "'get_cores' requires unsatisfied state");
   external->get_cores (cores);
   // LOG_API_CALL_END ("get_cores");
-  LOG_API_CALL_RETURNS ("get_cores", (int) cores.size ());
+  LOG_API_CALL_END ("get_cores");
   assert (state () == UNSATISFIED);
 }
 
@@ -838,7 +838,7 @@ void Solver::implied (std::vector<int> &entrailed) {
   external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("implied", (int) entrailed.size ());
+  LOG_API_CALL_END ("implied");
 }
 
 /*------------------------------------------------------------------------*/

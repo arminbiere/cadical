@@ -1253,6 +1253,8 @@ class Mobical : public Handler {
   friend struct ValCall;
   friend struct FlipCall;
   friend struct ImpliedCall;
+  friend struct PropagateConflictsCall;
+  friend struct GetCoresCall;
   friend struct FlippableCall;
   friend struct MeltCall;
   friend class MockPropagator;
@@ -1573,6 +1575,8 @@ struct Call {
     RESET_OBSERVED = shift ( 48 ),
 
     RESERVE = shift ( 49 ),
+    PROPAGATE_CONFLICTS = shift ( 50 ),
+    GET_CORES = shift ( 51 ),
 
     // clang-format on
 
@@ -1590,7 +1594,8 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
-    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE |
+              PROPAGATE_ASSUMPTIONS,
     DURING = LEMMA | DECIDE | FORCE,
     CONNECTING = CONNECT | DISCONNECT,
     PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE |
@@ -1600,7 +1605,9 @@ struct Call {
               UNOBSERVE | OBSERVE | LEMMA | DECIDE | FORCE,
     EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_CONFLICTS |
+            GET_CORES,
+
   };
 
   Type type; // Explicit typing.
@@ -2105,11 +2112,38 @@ struct PropagateAssumptionsCall : public Call {
     s->propagate ();
     (void) (extendmap);
   }
-  void print (ostream &o) {
-    o << "propagate_assumptions " << arg << " " << res;
-  }
+  void print (ostream &o) { o << "propagate_assumptions " << res; }
   Call *copy () { return new PropagateAssumptionsCall (arg); }
   const char *keyword () { return "propagate_assumptions"; }
+};
+
+struct PropagateConflictsCall : public Call {
+  PropagateConflictsCall () : Call (PROPAGATE_CONFLICTS) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    if (mobical.donot.enforce)
+      s->propagate_conflicts ();
+    else if (s->state () == UNSATISFIED)
+      s->propagate_conflicts ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "propagate_conflicts"; }
+  Call *copy () { return new PropagateConflictsCall (); }
+  const char *keyword () { return "propagate_conflicts"; }
+};
+
+struct GetCoresCall : public Call {
+  GetCoresCall () : Call (GET_CORES) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    std::vector<int> cores;
+    if (mobical.donot.enforce)
+      s->get_cores (cores);
+    else if (s->state () == UNSATISFIED)
+      s->get_cores (cores);
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "get_cores"; }
+  Call *copy () { return new GetCoresCall (); }
+  const char *keyword () { return "get_cores"; }
 };
 
 struct ImpliedCall : public Call {
@@ -2881,13 +2915,13 @@ private:
   void generate_conclude (Random &);
   void generate_freeze (Random &, int vars);
   void generate_melt (Random &);
+  void generate_propagate_conflicts (Random &);
 
   void generate_propagator (Random &, int minvars, int maxvars);
   void generate_lemmas (Random &);
   void generate_forces (Random &, int minvars, int maxvars);
 
   void generate_propagate (Random &);
-  void generate_implied (Random &);
 
   void generate_limits (Random &);
 };
@@ -3212,18 +3246,13 @@ void Trace::generate_declare_one_more_variable (Random &random) {
 
 /*------------------------------------------------------------------------*/
 
-void Trace::generate_implied (Random &random) {
-  if (random.generate_double () > 0.01)
-    return;
-  push_back (new ImpliedCall ());
-}
-
-/*------------------------------------------------------------------------*/
-
 void Trace::generate_propagate (Random &random) {
   if (random.generate_double () > 0.01)
     return;
-  push_back (new PropagateCall ());
+  push_back (new PropagateAssumptionsCall ());
+  if (random.generate_double () > 0.5)
+    return;
+  push_back (new ImpliedCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -3551,6 +3580,14 @@ void Trace::generate_flipped (Random &random, int vars) {
       push_back (new FlipCall (lit));
   }
 }
+void Trace::generate_propagate_conflicts (Random &random) {
+  if (random.generate_double () < 0.75)
+    return;
+  push_back (new PropagateConflictsCall ());
+  if (random.generate_double () < 0.1)
+    return;
+  push_back (new GetCoresCall ());
+}
 
 void Trace::generate_failed (Random &random, int vars) {
   if (random.generate_double () < 0.05)
@@ -3807,7 +3844,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
       generate_queries (random), generate_resize (random, maxvars),
           generate_declare_more_variables (random),
           generate_declare_one_more_variable (random),
-          generate_implied (random), generate_propagate (random),
+          generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
     generate_propagator (random, minvars, maxvars);
@@ -3826,6 +3863,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_values (random, maxvars);
     if (!in_connection)
       generate_flipped (random, maxvars);
+    generate_propagate_conflicts (random);
     generate_failed (random, maxvars);
     generate_conclude (random);
     generate_frozen (random, maxvars);
@@ -4634,6 +4672,8 @@ static bool is_basic (Call *c) {
   case Call::LOOKAHEAD:
   case Call::CUBING:
   case Call::PROPAGATE:
+  case Call::PROPAGATE_ASSUMPTIONS:
+  case Call::PROPAGATE_CONFLICTS:
   case Call::VARS:
   case Call::ACTIVE:
   case Call::REDUNDANT:
@@ -5563,9 +5603,9 @@ void Reader::parse () {
       solved++;
     } else if (!strcmp (keyword, "propagate")) {
       if (first && !parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'solve'", first);
+        error ("invalid argument '%s' to 'propagate'", first);
       if (first && lit != 0 && lit != 10 && lit != 20)
-        error ("invalid result argument '%d' to 'solve'", lit);
+        error ("invalid result argument '%d' to 'propagate'", lit);
       assert (!second);
       if (first)
         c = new PropagateCall (lit);
@@ -5737,13 +5777,25 @@ void Reader::parse () {
       c = new TerminateCall (val);
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
-      if (first)
-        error ("additional argument to 'propagate_assumptions'");
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'propagate_assumptions'", first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'propagate_assumptions'",
+               lit);
+      assert (!second);
       c = new PropagateAssumptionsCall ();
     } else if (!strcmp (keyword, "implied")) {
       if (first)
         error ("additional argument to 'implied'");
       c = new ImpliedCall ();
+    } else if (!strcmp (keyword, "propagate_conflicts")) {
+      if (first)
+        error ("additional argument to 'propagate_conflicts'");
+      c = new PropagateConflictsCall ();
+    } else if (!strcmp (keyword, "get_cores")) {
+      if (first)
+        error ("additional argument to 'get_cores'");
+      c = new GetCoresCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       if (first)
         error ("additional argument to 'reset_assumptions'");

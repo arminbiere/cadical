@@ -41,8 +41,10 @@ void Internal::assume_analyze_literal (int lit) {
   }
   assert (v.reason != external_reason);
   if (!v.level) {
-    int64_t id = unit_id (-lit);
-    lrat_chain.push_back (id);
+    if (lrat) {
+      int64_t id = unit_id (-lit);
+      lrat_chain.push_back (id);
+    }
     return;
   }
   if (v.reason) {
@@ -51,7 +53,8 @@ void Internal::assume_analyze_literal (int lit) {
     for (const auto &other : *v.reason) {
       assume_analyze_literal (other);
     }
-    lrat_chain.push_back (v.reason->id);
+    if (lrat)
+      lrat_chain.push_back (v.reason->id);
     return;
   }
   assert (assumed (-lit));
@@ -63,11 +66,12 @@ void Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
   assert (reason != external_reason);
-  assert (lrat);
+  // assert (lrat);
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
-  lrat_chain.push_back (reason->id);
+  if (lrat)
+    lrat_chain.push_back (reason->id);
 }
 
 // Find all failing assumptions starting from the one on the assumption
@@ -459,11 +463,14 @@ bool Internal::failed (int lit) {
 }
 
 void Internal::get_cores (std::vector<int> &cores) {
+  if (unsat)
+    return;
   if (!marked_failed) {
     if (!conflict_id)
       failing ();
     marked_failed = true;
   }
+  int num_cores = 0;
   for (auto &elit : external->assumptions) {
     int lit = external->e2i[abs (elit)];
     if (elit < 0)
@@ -473,12 +480,16 @@ void Internal::get_cores (std::vector<int> &cores) {
     const Var &v = var (lit);
     if (!v.level) {
       // unit reason
-      cores.push_back (elit), cores.push_back (0);
+      cores.push_back (lit), cores.push_back (0);
+      LOG ("root-level falsified assumption %d", lit);
+      num_cores++;
       continue;
     }
     if (!v.reason) {
       // tautological (clashing) reason
-      cores.push_back (elit), cores.push_back (-elit), cores.push_back (0);
+      cores.push_back (lit), cores.push_back (-lit), cores.push_back (0);
+      LOG ("clashing assumption %d, %d", lit, -lit);
+      num_cores++;
       continue;
     }
     assert (clause.empty ());
@@ -487,14 +498,18 @@ void Internal::get_cores (std::vector<int> &cores) {
     clause.push_back (-lit);
     assume_analyze_reason (-lit, v.reason);
     for (auto &other : clause) {
-      int ether = externalize (lit);
-      cores.push_back (-ether);
+      cores.push_back (-other);
     }
+    LOG (clause, "failed assumption %d core:", lit);
+    num_cores++;
     cores.push_back (0);
     clear_analyzed_literals ();
     lrat_chain.clear ();
     clause.clear ();
   }
+  LOG (cores, "cores[%d]:", num_cores);
+  // assert (num_cores < 2);
+  (void) num_cores;
 }
 
 void Internal::conclude_unsat () {
