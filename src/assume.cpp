@@ -464,18 +464,21 @@ void Internal::get_cores (std::vector<int> &cores) {
       failing ();
     marked_failed = true;
   }
-  for (auto &lit : assumptions) {
+  for (auto &elit : external->assumptions) {
+    int lit = external->e2i[abs (elit)];
+    if (elit < 0)
+      lit = -lit;
     if (val (lit) >= 0)
       continue;
     const Var &v = var (lit);
     if (!v.level) {
       // unit reason
-      cores.push_back (lit), cores.push_back (0);
+      cores.push_back (elit), cores.push_back (0);
       continue;
     }
     if (!v.reason) {
       // tautological (clashing) reason
-      cores.push_back (lit), cores.push_back (-lit), cores.push_back (0);
+      cores.push_back (elit), cores.push_back (-elit), cores.push_back (0);
       continue;
     }
     assert (clause.empty ());
@@ -484,7 +487,8 @@ void Internal::get_cores (std::vector<int> &cores) {
     clause.push_back (-lit);
     assume_analyze_reason (-lit, v.reason);
     for (auto &other : clause) {
-      cores.push_back (-other);
+      int ether = externalize (lit);
+      cores.push_back (-ether);
     }
     cores.push_back (0);
     clear_analyzed_literals ();
