@@ -55,7 +55,7 @@ bool Internal::assume_analyze_literal (int lit) {
     }
     if (lrat)
       lrat_chain.push_back (v.reason->id);
-    return assumed (-lit);
+    return assumed (lit);
   }
   assert (assumed (-lit));
   LOG ("failed assumption %d", -lit);
@@ -72,7 +72,7 @@ bool Internal::assume_analyze_reason (int lit, Clause *reason) {
   for (const auto &other : *reason) {
     if (other != lit) {
       res = assume_analyze_literal (other);
-      if (opts.coreskip && res)
+      if (opts.coreskip && res && constraint.empty ())
         break;
     }
   }
@@ -111,6 +111,7 @@ void Internal::failing () {
     int failed_clashing = 0;
     int first_failed = 0;
     int failed_level = INT_MAX;
+    int failed_trail = INT_MAX;
     int efailed = 0;
 
     for (auto &elit : external->assumptions) {
@@ -156,10 +157,12 @@ void Internal::failing () {
       if (!v.reason) {
         failed_clashing = lit;
         efailed = elit;
-      } else if (!first_failed || v.level < failed_level) {
+      } else if (!first_failed || v.level < failed_level ||
+                 v.trail < failed_trail) {
         first_failed = lit;
         efailed = elit;
         failed_level = v.level;
+        failed_trail = v.trail;
       }
     }
 

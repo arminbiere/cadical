@@ -377,14 +377,23 @@ void Internal::propagate_conflicts () {
   }
   if (proof)
     proof->solve_query ();
+  init_search_limits ();
   int last_assumption_level = assumptions.size ();
   if (constraint.size ())
     last_assumption_level++;
+  // assert (level || unsat);
+  // assert (unsat || val (assumptions[level] < 0));
+  // const int starting_level = level;
+  int core_level = level;
   while (level < last_assumption_level) {
-    if (unsat || terminated_asynchronously ())
+    if (terminated_asynchronously () || unsat)
+      break;
+    if (core_level != -1 && search_limits_hit ())
       break;
     int tmp = decide ();
     if (tmp == 20) {
+      if (!core_level)
+        core_level = level;
       LOG ("assumption or constraint on level %d already falsified", level);
       new_trail_level (0);
       LOG ("added pseudo decision level");
@@ -394,6 +403,8 @@ void Internal::propagate_conflicts () {
     assert (!conflict);
     while (!unsat && !propagate ())
       analyze ();
+    if (level < core_level)
+      core_level = -1;
   }
   finalize (20);
   reset_solving ();
