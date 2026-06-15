@@ -392,7 +392,7 @@ void Internal::propagate_conflicts () {
       break;
     int tmp = decide ();
     if (tmp == 20) {
-      if (!core_level)
+      if (core_level == -1)
         core_level = level;
       LOG ("assumption or constraint on level %d already falsified", level);
       new_trail_level (0);
