@@ -627,9 +627,9 @@ void External::conclude_unknown () {
   internal->proof->conclude_unknown (trail);
 }
 
-void External::get_cores (std::vector<int> &cores) {
+int External::get_cores (std::vector<int> &cores, bool coreskip) {
   cores.clear ();
-  internal->get_cores (cores);
+  return internal->get_cores (cores, coreskip);
 }
 
 /*------------------------------------------------------------------------*/

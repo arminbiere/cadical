@@ -1501,7 +1501,8 @@ struct Internal {
   // Assumption handling.
   //
   bool assume_analyze_literal (int lit);
-  bool assume_analyze_reason (int lit, Clause *reason);
+  bool assume_analyze_reason (int lit, Clause *reason,
+                              bool coreskip = false);
   void assume (int);                  // New assumption literal.
   bool failed (int lit);              // Literal failed assumption?
   void reset_assumptions ();          // Reset after 'solve' call.
@@ -1530,7 +1531,7 @@ struct Internal {
   // Propagate the current set of assumptions and return
   // all cores
   void propagate_conflicts ();
-  void get_cores (std::vector<int> &cores);
+  int get_cores (std::vector<int> &cores, bool coreskip);
 
   // Forcing decision variables to a certain phase.
   //

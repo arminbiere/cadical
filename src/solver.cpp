@@ -801,14 +801,15 @@ void Solver::propagate_conflicts () {
   assert (state () == UNSATISFIED);
 }
 
-void Solver::get_cores (std::vector<int> &cores) {
+int Solver::get_cores (std::vector<int> &cores, bool coreskip) {
   TRACE (get_cores, "get_cores");
   REQUIRE (state () == UNSATISFIED,
            "'get_cores' requires unsatisfied state");
-  external->get_cores (cores);
+  const int res = external->get_cores (cores, coreskip);
   // LOG_API_CALL_END ("get_cores");
-  LOG_API_CALL_END ("get_cores");
+  LOG_API_CALL_RETURNS ("get_cores", res);
   assert (state () == UNSATISFIED);
+  return res;
 }
 
 int Solver::propagate () {

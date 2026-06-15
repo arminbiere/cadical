@@ -555,14 +555,14 @@ public:
   void propagate_conflicts ();
 
   // Analyzes all conflicts (collected with 'propagate_conflicts') and
-  // returns a 0-terminated list of cores. Also works independent from
-  // 'propagate_conflicts' but then will only return one core.
-  // Ignores constraints ('constrain').
+  // returns a 0-terminated list of cores and the number of cores. Also
+  // works independent from 'propagate_conflicts' but then will only return
+  // one core. Ignores constraints ('constrain').
   //
   //   require (UNSATISFIED)
   //   ensure (UNSATISFIED)
   //
-  void get_cores (std::vector<int> &cores);
+  int get_cores (std::vector<int> &cores, bool coreskip = false);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be

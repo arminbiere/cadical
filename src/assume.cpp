@@ -63,7 +63,8 @@ bool Internal::assume_analyze_literal (int lit) {
   return false;
 }
 
-bool Internal::assume_analyze_reason (int lit, Clause *reason) {
+bool Internal::assume_analyze_reason (int lit, Clause *reason,
+                                      bool coreskip) {
   assert (reason);
   assert (lrat_chain.empty ());
   assert (reason != external_reason);
@@ -72,7 +73,7 @@ bool Internal::assume_analyze_reason (int lit, Clause *reason) {
   for (const auto &other : *reason) {
     if (other != lit) {
       res = assume_analyze_literal (other);
-      if (opts.coreskip && res && constraint.empty ())
+      if (coreskip && res && constraint.empty ())
         break;
     }
   }
@@ -472,9 +473,9 @@ bool Internal::failed (int lit) {
   return (f.failed & bit) != 0;
 }
 
-void Internal::get_cores (std::vector<int> &cores) {
+int Internal::get_cores (std::vector<int> &cores, bool coreskip) {
   if (unsat)
-    return;
+    return 0;
   if (!marked_failed) {
     if (!conflict_id)
       failing ();
@@ -506,8 +507,8 @@ void Internal::get_cores (std::vector<int> &cores) {
     assert (v.reason);
     assert (v.reason != external_reason);
     clause.push_back (-lit);
-    bool skip = assume_analyze_reason (-lit, v.reason);
-    if (!opts.coreskip || !skip) {
+    bool skip = assume_analyze_reason (-lit, v.reason, coreskip);
+    if (!coreskip || !skip) {
       for (auto &other : clause) {
         const int ext_other = externalize (other);
         cores.push_back (-ext_other);
@@ -522,7 +523,7 @@ void Internal::get_cores (std::vector<int> &cores) {
   }
   LOG (cores, "cores[%d]:", num_cores);
   // assert (num_cores < 2);
-  (void) num_cores;
+  return num_cores;
 }
 
 void Internal::conclude_unsat () {

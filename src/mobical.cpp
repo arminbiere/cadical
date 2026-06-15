@@ -2113,7 +2113,7 @@ struct PropagateAssumptionsCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << "propagate_assumptions " << res; }
-  Call *copy () { return new PropagateAssumptionsCall (arg); }
+  Call *copy () { return new PropagateAssumptionsCall (res); }
   const char *keyword () { return "propagate_assumptions"; }
 };
 
@@ -2132,7 +2132,7 @@ struct PropagateConflictsCall : public Call {
 };
 
 struct GetCoresCall : public Call {
-  GetCoresCall () : Call (GET_CORES) {}
+  GetCoresCall (int r) : Call (GET_CORES, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     std::vector<int> cores;
     if (mobical.donot.enforce)
@@ -2141,8 +2141,8 @@ struct GetCoresCall : public Call {
       s->get_cores (cores);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "get_cores"; }
-  Call *copy () { return new GetCoresCall (); }
+  void print (ostream &o) { o << "get_cores " << res; }
+  Call *copy () { return new GetCoresCall (res); }
   const char *keyword () { return "get_cores"; }
 };
 
@@ -2156,7 +2156,7 @@ struct ImpliedCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << "implied"; }
-  Call *copy () { return new ImpliedCall (arg); }
+  Call *copy () { return new ImpliedCall (res); }
   const char *keyword () { return "implied"; }
 };
 
@@ -5794,9 +5794,10 @@ void Reader::parse () {
         error ("additional argument to 'propagate_conflicts'");
       c = new PropagateConflictsCall ();
     } else if (!strcmp (keyword, "get_cores")) {
-      if (first)
-        error ("additional argument to 'get_cores'");
-      c = new GetCoresCall ();
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'get_cores'", first);
+      assert (!second);
+      c = new GetCoresCall (first);
     } else if (!strcmp (keyword, "reset_assumptions")) {
       if (first)
         error ("additional argument to 'reset_assumptions'");

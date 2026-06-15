@@ -405,7 +405,7 @@ struct External {
   void implied (std::vector<int> &entrailed);
   void conclude_unknown ();
 
-  void get_cores (std::vector<int> &cores);
+  int get_cores (std::vector<int> &cores, bool coreskip);
 
   /*----------------------------------------------------------------------*/
   int lookahead ();
