@@ -1500,8 +1500,8 @@ struct Internal {
 
   // Assumption handling.
   //
-  void assume_analyze_literal (int lit);
-  void assume_analyze_reason (int lit, Clause *reason);
+  bool assume_analyze_literal (int lit);
+  bool assume_analyze_reason (int lit, Clause *reason);
   void assume (int);                  // New assumption literal.
   bool failed (int lit);              // Literal failed assumption?
   void reset_assumptions ();          // Reset after 'solve' call.

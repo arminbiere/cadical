@@ -26,11 +26,11 @@ void Internal::assume (int lit) {
 // for LRAT we actually need to implement recursive DFS
 // for non-lrat use BFS. TODO: maybe derecursify to avoid stack overflow
 //
-void Internal::assume_analyze_literal (int lit) {
+bool Internal::assume_analyze_literal (int lit) {
   assert (lit);
   Flags &f = flags (lit);
   if (f.seen)
-    return;
+    return false;
   f.seen = true;
   analyzed.push_back (lit);
   Var &v = var (lit);
@@ -45,7 +45,7 @@ void Internal::assume_analyze_literal (int lit) {
       int64_t id = unit_id (-lit);
       lrat_chain.push_back (id);
     }
-    return;
+    return false;
   }
   if (v.reason) {
     assert (v.level);
@@ -55,23 +55,30 @@ void Internal::assume_analyze_literal (int lit) {
     }
     if (lrat)
       lrat_chain.push_back (v.reason->id);
-    return;
+    return assumed (-lit);
   }
   assert (assumed (-lit));
   LOG ("failed assumption %d", -lit);
   clause.push_back (lit);
+  return false;
 }
 
-void Internal::assume_analyze_reason (int lit, Clause *reason) {
+bool Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
   assert (reason != external_reason);
   // assert (lrat);
-  for (const auto &other : *reason)
-    if (other != lit)
-      assume_analyze_literal (other);
+  bool res = false;
+  for (const auto &other : *reason) {
+    if (other != lit) {
+      res = assume_analyze_literal (other);
+      if (opts.coreskip && res)
+        break;
+    }
+  }
   if (lrat)
     lrat_chain.push_back (reason->id);
+  return res;
 }
 
 // Find all failing assumptions starting from the one on the assumption
@@ -496,14 +503,16 @@ void Internal::get_cores (std::vector<int> &cores) {
     assert (v.reason);
     assert (v.reason != external_reason);
     clause.push_back (-lit);
-    assume_analyze_reason (-lit, v.reason);
-    for (auto &other : clause) {
-      const int ext_other = externalize (other);
-      cores.push_back (-ext_other);
+    bool skip = assume_analyze_reason (-lit, v.reason);
+    if (!opts.coreskip || !skip) {
+      for (auto &other : clause) {
+        const int ext_other = externalize (other);
+        cores.push_back (-ext_other);
+      }
+      LOG (clause, "failed assumption %d core:", elit);
+      num_cores++;
+      cores.push_back (0);
     }
-    LOG (clause, "failed assumption %d core:", elit);
-    num_cores++;
-    cores.push_back (0);
     clear_analyzed_literals ();
     lrat_chain.clear ();
     clause.clear ();
