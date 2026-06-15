@@ -3586,7 +3586,7 @@ void Trace::generate_propagate_conflicts (Random &random) {
   push_back (new PropagateConflictsCall ());
   if (random.generate_double () < 0.1)
     return;
-  push_back (new GetCoresCall ());
+  push_back (new GetCoresCall (0));
 }
 
 void Trace::generate_failed (Random &random, int vars) {
@@ -5797,7 +5797,7 @@ void Reader::parse () {
       if (first && !parse_int_str (first, lit))
         error ("invalid argument '%s' to 'get_cores'", first);
       assert (!second);
-      c = new GetCoresCall (first);
+      c = new GetCoresCall (lit);
     } else if (!strcmp (keyword, "reset_assumptions")) {
       if (first)
         error ("additional argument to 'reset_assumptions'");
