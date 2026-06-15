@@ -480,15 +480,15 @@ void Internal::get_cores (std::vector<int> &cores) {
     const Var &v = var (lit);
     if (!v.level) {
       // unit reason
-      cores.push_back (lit), cores.push_back (0);
-      LOG ("root-level falsified assumption %d", lit);
+      cores.push_back (elit), cores.push_back (0);
+      LOG ("root-level falsified assumption %d", elit);
       num_cores++;
       continue;
     }
     if (!v.reason) {
       // tautological (clashing) reason
-      cores.push_back (lit), cores.push_back (-lit), cores.push_back (0);
-      LOG ("clashing assumption %d, %d", lit, -lit);
+      cores.push_back (elit), cores.push_back (-elit), cores.push_back (0);
+      LOG ("clashing assumption %d, %d", elit, -elit);
       num_cores++;
       continue;
     }
@@ -498,9 +498,10 @@ void Internal::get_cores (std::vector<int> &cores) {
     clause.push_back (-lit);
     assume_analyze_reason (-lit, v.reason);
     for (auto &other : clause) {
-      cores.push_back (-other);
+      const int ext_other = externalize (other);
+      cores.push_back (-ext_other);
     }
-    LOG (clause, "failed assumption %d core:", lit);
+    LOG (clause, "failed assumption %d core:", elit);
     num_cores++;
     cores.push_back (0);
     clear_analyzed_literals ();

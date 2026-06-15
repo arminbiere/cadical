@@ -628,18 +628,8 @@ void External::conclude_unknown () {
 }
 
 void External::get_cores (std::vector<int> &cores) {
-  std::vector<int> ilit_cores;
-  internal->get_cores (ilit_cores);
-
   cores.clear ();
-
-  for (const auto &ilit : ilit_cores) {
-    if (ilit) {
-      const int elit = internal->externalize (ilit);
-      cores.push_back (elit);
-    } else
-      cores.push_back (0);
-  }
+  internal->get_cores (cores);
 }
 
 /*------------------------------------------------------------------------*/
