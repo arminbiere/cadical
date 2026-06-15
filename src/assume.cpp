@@ -507,6 +507,14 @@ int Internal::get_cores (std::vector<int> &cores, bool coreskip) {
     assert (v.reason);
     assert (v.reason != external_reason);
     clause.push_back (-lit);
+    // 'assume_analyze_reason' can abort early if we get to an
+    // assumption reason that we have already analyzed. This will
+    // then skip the core:
+    // Let a be a failing assumption and (a1, ..., an, a) its core,
+    // Then if we analyze another assumption b and get to -a during
+    // the analysis we know that the core of b will include (a1, ..., an)
+    // In that case we do not finish the analysis and do not record the
+    // core.
     bool skip = assume_analyze_reason (-lit, v.reason, coreskip);
     if (!coreskip || !skip) {
       for (auto &other : clause) {
