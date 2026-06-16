@@ -309,7 +309,7 @@ OPTION( walkprobsatddfw,   0, 0,  2e9,1,0,1, "run probsat before ddfw until brok
 OPTION( walkredundant,     0,  0,  2,0,0,1, "walk redundant clauses too [0 = none, 1 = binary nonyhyper, 2=all]") \
 OPTION( walksideways,      0,  0,  1,0,0,1, "force sideways in tassat mode") \
 OPTION( walkweightred,     0,  0, 2e9,0,0,1, "number of probed uwr in tassat [0=all, n=at most n]") \
-OPTION( walkweightredprob, 0,  0,   1,0,0,1, "probablity amoung uwr candidates") \
+OPTION( walkweightredprob, 0,  0,   1,0,0,1, "probablity among uwr candidates") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!

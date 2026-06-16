@@ -50,9 +50,15 @@ namespace CaDiCaL {
 // not default, so we implemented them here:
 //
 // - starting with probsat instead of ddfw until few enough clauses are
-// satisfied.
-// - TODO probabilistic weight reducing variable (in the yal-lin paper)
-// - TODO don't check all weight reducing variables, only the first 100
+// satisfied. -> Did not seem to make a big difference. (Due to warm-up and
+// CDCL?), nearly 90% of the jumps are TaSSAT anyway.
+//
+// - probabilistic weight reducing variable (in the yal-lin paper)
+//
+// - don't check all weight reducing variables, only probe the first 100
+// (controlled by option `walkweightredprob`)
+//
+//
 using position_type = uint32_t;
 
 // This is the core structure representing positions in the array of values.
@@ -1052,7 +1058,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      scores.push_back (flip_gain);
+      scores.push_back (this->score (flip_gain));
       sum += flip_gain;
     }
   }
@@ -1077,7 +1083,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      scores.push_back (flip_gain);
+      scores.push_back (this->score (flip_gain));
       sum += flip_gain;
     }
   }
@@ -1370,28 +1376,6 @@ int Walker_DDFW::walk_probsat_pick_lit (DDFWCompactBinary c) {
   return res;
 }
 
-void Walker_DDFW::walk_probsat_flip_lit (int lit) {
-
-  internal->require_mode (internal->WALK);
-  LOG ("flipping assign %d", lit);
-  assert (internal->val (lit) < 0);
-  const int64_t old = ticks;
-
-  // First flip the literal value.
-  //
-  const signed char tmp = sign (lit);
-  const int idx = abs (lit);
-  internal->set_val (idx, tmp);
-  assert (internal->val (lit) > 0);
-
-  make_clauses (lit);
-  break_clauses (-lit);
-
-  if (!broken.empty ())
-    check_all ();
-  internal->stats.ticks_walk_flip += ticks - old;
-}
-
 static constexpr double cbvals[][2] = {
     {0.0, 2.00}, {3.0, 2.50}, {4.0, 2.85}, {5.0, 3.70},
     {6.0, 5.10}, {7.0, 7.40}, // Adrian has '5.4', but '7.4' looks better.
@@ -1481,7 +1465,7 @@ inline void Walker_DDFW::walk_probsat_loop (size_t &broken, int64_t &flips) {
       } else {
         lit = walk_probsat_pick_lit (info.clause);
       }
-      walk_probsat_flip_lit (lit);
+      walk_ddfw_flip_lit (lit);
       if (this->broken.empty ())
         break;
       push_flipped (lit);
@@ -1500,6 +1484,36 @@ inline void Walker_DDFW::walk_ddfw_loop (size_t &broken, int64_t &flips) {
   const double sideways_percent = 0.15; // probability for sideways flips
   const bool sideways_opt = (internal->opts.walkddfwstrat < 4 || internal->opts.walksideways);
   size_t minimum = broken;
+
+  if (internal->opts.walkweightredprob) {
+    double size = 0;
+    int64_t n = 0;
+    for (const auto c : internal->clauses) {
+      if (c->garbage)
+        continue;
+      if (c->redundant) {
+        if (!internal->opts.walkredundant)
+          continue;
+        if (!internal->likely_to_be_kept_clause (c))
+          continue;
+      }
+      size += c->size;
+      n++;
+    }
+    double average_size = relative (size, n);
+    PHASE ("walk", internal->stats.walk,
+           "%" PRId64 " clauses average size %.2f over %d variables", n,
+           average_size, internal->active ());
+
+    const double cb = 2.0;
+    assert (cb);
+    const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
+
+    double next = 1;
+    table.clear ();
+    for (epsilon = next; next; next = epsilon * base)
+      table.push_back (epsilon = next);
+  }
   while (!internal->terminated_asynchronously () && !this->broken.empty () &&
          ticks < limit) {
 #ifndef QUIET
