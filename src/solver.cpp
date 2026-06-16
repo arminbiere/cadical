@@ -794,7 +794,7 @@ void Solver::propagate_conflicts () {
   TRACE (propagate_conflicts, "propagate_conflicts");
   REQUIRE (state () == UNSATISFIED,
            "'propagate_conflicts' requires unsatisfied state");
-  internal->propagate_conflicts ();
+  external->propagate_conflicts ();
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
   LOG_API_CALL_END ("propagate_conflicts");

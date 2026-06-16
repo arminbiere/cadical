@@ -405,6 +405,7 @@ struct External {
   void implied (std::vector<int> &entrailed);
   void conclude_unknown ();
 
+  void propagate_conflicts ();
   int get_cores (std::vector<int> &cores, bool coreskip);
 
   /*----------------------------------------------------------------------*/

@@ -627,6 +627,12 @@ void External::conclude_unknown () {
   internal->proof->conclude_unknown (trail);
 }
 
+void External::propagate_conflicts () {
+  internal->propagate_conflicts ();
+  check_solve_result (20);
+  reset_limits ();
+}
+
 int External::get_cores (std::vector<int> &cores, bool coreskip) {
   cores.clear ();
   return internal->get_cores (cores, coreskip);
