@@ -1058,8 +1058,9 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      scores.push_back (this->score (flip_gain));
-      sum += flip_gain;
+      double s = this->score (flip_gain);
+      scores.push_back (s);
+      sum += s;
     }
   }
 
@@ -1083,8 +1084,9 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      scores.push_back (this->score (flip_gain));
-      sum += flip_gain;
+      double s = this->score (flip_gain);
+      scores.push_back (s);
+      sum += s;
     }
   }
   ticks += internal->cache_lines (vars_in_broken.size (), sizeof (int)) +
