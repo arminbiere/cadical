@@ -4566,7 +4566,13 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           tmp_notify = &tmp2;
         }
       }
+      // TODO: Here may be a good position to check for signals. 
+      // The attempt should be finished and in a valid state.
+      if (Signal::interrupted ()) // REVIEW
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -4689,6 +4695,8 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('p');
   size_t l;
   for (l = 1; l < size () && config_type (calls[l]->type); l++)
@@ -4723,6 +4731,8 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('c');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
@@ -4741,6 +4751,8 @@ bool Trace::shrink_clauses (int expected) {
 
 bool Trace::shrink_lemmas (int expected) {
   if (mobical.donot.shrink.lemmas)
+    return false;
+  if (Signal::interrupted ())
     return false;
   notify ('u');
   Segments segments;
@@ -4774,6 +4786,8 @@ static bool is_lit_type (Call *c) {
 //
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
+    return false;
+  if (Signal::interrupted ())
     return false;
   notify ('l');
   Segments segments;
@@ -4839,6 +4853,8 @@ static bool is_basic (Call *c) {
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('e');
   Trace simplified;
   size_t connected = 0;
@@ -4895,6 +4911,8 @@ bool Trace::shrink_propagator (int expected) {
       reduced = true;
       progress ();
     }
+    if (Signal::interrupted ()) // REVIEW
+      break;
   }
   while (connected--) {
     bool remove_next_disconnect = false;
@@ -4922,6 +4940,8 @@ bool Trace::shrink_propagator (int expected) {
       simplified.clear ();
       progress ();
     }
+    if (Signal::interrupted ()) // REVIEW
+      break;
   }
   notify ();
   return reduced;
@@ -4929,6 +4949,8 @@ bool Trace::shrink_propagator (int expected) {
 
 bool Trace::shrink_basic (int expected) {
   if (mobical.donot.shrink.basic)
+    return false;
+  if (Signal::interrupted ())
     return false;
   notify ('b');
   Segments segments;
@@ -4995,6 +5017,8 @@ bool Trace::shrink_disable (int expected) {
 
   if (mobical.donot.disable)
     return false;
+  if (Signal::interrupted ())
+    return false;
   const int max_var = vars ();
 
   notify ('d');
@@ -5048,7 +5072,11 @@ bool Trace::shrink_disable (int expected) {
           c->val = saved[j];
         }
       }
+      if (Signal::interrupted ())
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -5063,13 +5091,18 @@ bool Trace::reduce_values (int expected) {
 
   if (mobical.donot.reduce)
     return false;
-
+  if (Signal::interrupted ())
+    return false;
   notify ('r');
 
   assert (size ());
 
   bool changed = false, res = false;
   do {
+    if (Signal::interrupted ()) {
+      res = false; // Otherwise we do another round
+      break;
+    }
     if (changed)
       res = true;
     changed = false;
@@ -5123,12 +5156,19 @@ bool Trace::reduce_values (int expected) {
       int old_val = c->val;
       c->val = lo;
       progress ();
-      if (fork_and_execute () == expected) {
+
+      bool success = fork_and_execute () == expected; // REVIEW <-v
+      if (success) {
         assert (c->val != old_val);
         changed = true;
+      } else 
+        c->val = old_val;
+
+      if (Signal::interrupted ()) // REVIEW
+        break;
+
+      if (success)
         continue;
-      }
-      c->val = old_val;
 
       // Then try to limit to the high value if current value too large.
       //
@@ -5136,13 +5176,17 @@ bool Trace::reduce_values (int expected) {
         int old_val = c->val;
         c->val = hi;
         progress ();
-        if (fork_and_execute () == expected) {
+        success = fork_and_execute () == expected;
+        if (success) {
           assert (c->val != old_val);
           changed = true;
         } else {
           c->val = old_val;
-          continue;
         }
+        if (Signal::interrupted ())
+          break;
+        if (!success)
+          continue;
       }
 
       // Now we do a delta-debugging inspired binary search for the
@@ -5165,6 +5209,8 @@ bool Trace::reduce_values (int expected) {
           changed = true;
         } else
           c->val = old_val;
+        if (Signal::interrupted ())
+          break;
       }
     }
   } while (changed);
@@ -5180,6 +5226,8 @@ static bool has_lit_arg_type (Call *c) { return c->type & Call::LITTYPE; }
 
 void Trace::map_variables (int expected) {
   if (mobical.donot.map)
+    return;
+  if (Signal::interrupted ()) // REVIEW
     return;
   for (int with_gaps = 0; with_gaps <= 1; with_gaps++) {
     notify ('m');
@@ -5239,6 +5287,8 @@ void Trace::map_variables (int expected) {
       with_gaps = 2;
     }
     notify ();
+    if (Signal::interrupted ()) // REVIEW
+      break;
   }
 }
 
@@ -5248,7 +5298,8 @@ void Trace::shrink_options (int expected) {
 
   if (mobical.donot.shrink.options)
     return;
-
+  if (Signal::interrupted ())
+    return;
   notify ('o');
   Segments segments;
   for (size_t i = 0; i < size (); i++) {
@@ -5307,7 +5358,8 @@ void Trace::shrink (int expected) {
   shrink_options (expected);
   // Execute one last time to get accurate results when memory fuzzing
   // is enabled.
-  fork_and_execute ();
+  if (!Signal::interrupted ()) // REVIEW
+    fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
 }
@@ -6156,13 +6208,15 @@ Mobical::~Mobical () {
     delete mock_pointer;
 }
 
-void Mobical::catch_signal (int) {
-  if ((terminal && (mode & RANDOM)) || shrinking || running)
-    cerr << endl;
-  terminal.reset ();
+void Mobical::catch_signal (int sig) {
+  Signal::set_received (sig); // REVIEW
+
+  //if ((terminal && (mode & RANDOM)) || shrinking || running) // REVIEW: Output still looks fine
+  //  cerr << endl;
+  //terminal.reset ();
   if (Trace::executed && !Trace::failed && !Trace::ok)
     assert (mode & (INPUT | SEED)), Trace::failed = 1;
-  print_statistics ();
+  //print_statistics (); // REVIEW
 }
 
 /*------------------------------------------------------------------------*/
@@ -6740,6 +6794,10 @@ END_OF_BANNER_AND_OPTIONS:
       if (Trace::failed >= bug_limit)
         break;
 
+      const int sig = Signal::received (); // REVIEW
+      if (sig == SIGINT || sig == SIGTERM) 
+        break;
+
       if (!quiet && !donot.seeds) {
         prefix ();
         cerr << ' ' << left << setw (15) << traces << ' ';
@@ -6833,10 +6891,14 @@ END_OF_BANNER_AND_OPTIONS:
     }
   }
 
+  const int sig = Signal::received (); 
+  const bool reraise = Signal::interrupted ();
   Signal::reset ();
-
   terminal.reset ();
   print_statistics ();
+
+  if (reraise)
+    raise (sig);
 
   return Trace::failed > 0;
 }

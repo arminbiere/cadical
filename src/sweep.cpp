@@ -388,7 +388,7 @@ static void save_core_clause (void *state, unsigned id, bool learned,
                               size_t size, const unsigned *lits) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
-  if (internal->unsat)
+  if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: TA added
     return;
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   sweep_proof_clause pc;
@@ -420,7 +420,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
                                         const unsigned *chain) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
-  if (internal->unsat)
+  if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: TA added
     return;
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   vector<Clause *> &clauses = sweeper->clauses;
@@ -614,10 +614,15 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
 }
 
 void Internal::save_add_clear_core (Sweeper &sweeper) {
-  save_core (sweeper, 0);
-  add_core (sweeper, 0);
-  clear_core (sweeper, 0);
-}
+  save_core (sweeper, 0); 
+  // REVIEW: now skip adding the core completely if TA is true. Else need to do 
+  // the full adding and clearing (including proof deletion steps)
+  if (!terminated_asynchronously ()) {
+    add_core (sweeper, 0);
+    clear_core (sweeper, 0);
+  } else 
+    sweeper.core[0].clear (); // just clear the (possibly partially) filled vec
+} 
 
 void Internal::init_backbone_and_partition (Sweeper &sweeper) {
   LOG ("initializing backbone and equivalent literals candidates");
@@ -1453,6 +1458,12 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   LOG ("second sweeping implication %d <- %d succeeded too", other, lit);
 
   save_core (sweeper, 1);
+  // REVIEW: TA added. Same argument as for the other call site of save_core...
+  if (terminated_asynchronously ()) { 
+    sweeper.core[0].clear ();
+    sweeper.core[1].clear ();
+    return false;
+  }
 
   LOG ("sweep equivalence %d = %d", lit, other);
 
@@ -1934,8 +1945,6 @@ bool Internal::sweep () {
          equivalences, units);
   unschedule_sweeping (*sweeper, swept, scheduled);
   delete_sweeper.free ();
-  //if (terminated_asynchronously ())
-  //  return false; // here before we build the watches. But this does not work because the solver has a bad state now for incremental. REVIEW: inserted TA 
   sweep_sparse_mode ();
 
   if (!unsat) {

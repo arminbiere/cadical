@@ -93,6 +93,7 @@ extern "C" {
 #include "reluctant.hpp"
 #include "resources.hpp"
 #include "score.hpp"
+#include "signal.hpp"
 #include "stats.hpp"
 #include "sweep.hpp"
 #include "terminal.hpp"
@@ -1925,6 +1926,14 @@ inline bool Internal::terminated_asynchronously (int factor) {
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");
+    return true;
+  }
+
+  // REVIEW: Here we check whether a signal was caught. 
+  // We set termination_forced and higher up (at the top) we will reraise.
+  if (Signal::received ()) {
+    LOG ("signal %d received", Signal::received ());
+    termination_forced = true;
     return true;
   }
 

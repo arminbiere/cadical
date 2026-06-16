@@ -1002,7 +1002,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   }
   // mini_chain contains the relevant ids.
   // add simplified clauses.
-  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) {
+  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) { // REVIEW: This can be long but i think it is unskippable.
     Clause *c = q->qlauses[2 * idx];
     Clause *d = q->qlauses[2 * idx + 1];
     // resolve tells us wether we matched on second or third.

@@ -19,6 +19,7 @@ extern "C" {
 
 namespace CaDiCaL {
 
+static volatile sig_atomic_t signal_value = 0;
 static volatile bool caught_signal = false;
 static Handler *signal_handler;
 
@@ -69,6 +70,7 @@ void Signal::reset () {
   reset_alarm ();
 #endif
   caught_signal = false;
+  signal_value = 0;
 }
 
 const char *Signal::name (int sig) {
@@ -101,14 +103,25 @@ static void catch_signal (int sig) {
     Signal::reset_alarm ();
   } else
 #endif
-  {
+  { // REVIEW: For the "bad" signals we do not want to return control
+    switch (sig) {
+    case SIGABRT:
+    case SIGSEGV:
+      Signal::reset ();
+      ::raise (sig);
+    default:
+      break;
+    }
+
     if (!caught_signal) {
       caught_signal = true;
       if (signal_handler)
         signal_handler->catch_signal (sig);
     }
-    Signal::reset ();
-    ::raise (sig);
+    // temporarily remove: Reraising should happen after the graceful exit (or directly before returning 0)
+    // at least for SIGINT and SIGTERM for the others we can probably reraise directly because it is not safe return control
+    // Signal::reset (); 
+    // ::raise (sig);
   }
 }
 
@@ -132,5 +145,19 @@ void Signal::alarm (int seconds) {
 }
 
 #endif
+
+// REVIEW: added functionality to set and get the signal value
+void Signal::set_received (int sig) {
+  signal_value = sig;
+}
+
+int Signal::received () {
+  return signal_value;
+}
+// Signals for which doing a graceful exit is sensible
+bool Signal::interrupted () {
+  const int sig = received ();
+  return sig == SIGINT || sig == SIGTERM;
+}
 
 } // namespace CaDiCaL

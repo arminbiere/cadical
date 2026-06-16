@@ -1010,6 +1010,8 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
+  Signal::set_received (sig);
+/* // REVIEW: removed non-async-safe code from the signal handler
 #ifndef QUIET
   if (!get ("quiet")) {
     solver->message ();
@@ -1024,6 +1026,7 @@ void App::catch_signal (int sig) {
 #else
   (void) sig;
 #endif
+*/
 }
 
 void App::catch_alarm () {
@@ -1046,7 +1049,27 @@ void App::catch_alarm () {
 // options table 'Options::table'.  All are shared among solvers.
 
 int main (int argc, char **argv) {
+
+  // REVIEW: added reraising logic and made sure app is destructed correctly
+  // Here we may use the old variant with just reraising.
+  // We could also make sure the desctructor runs first. Is there any benefit to this?
+  // int res;
+  // int sig;
+  // {
+  //  CaDiCaL::App app;  
+  //  res = app.main (argc, argv);
+  //  sig = Signal::received ();
+  // }
+
   CaDiCaL::App app;
+  
   int res = app.main (argc, argv);
+  const int sig = CaDiCaL::Signal::received ();
+
+  if (sig) {
+    CaDiCaL::Signal::reset (); // Disconnects signal handler
+    raise (sig);
+  }
+  
   return res;
 }
