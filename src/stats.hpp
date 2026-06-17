@@ -87,8 +87,7 @@ struct Stats {
 
   void print (Internal *);
 #ifndef QUIET
-  void print_old (Internal *);
-  void print_new (Internal *);
+  void print_internal_stats (Internal *);
 #endif
 };
 
