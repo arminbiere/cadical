@@ -3862,7 +3862,7 @@ void Mobical::add_statistics (Solver *solver) {
   shared->stats_sum.NAME += solver->internal->stats.NAME;
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
-  shared->stats_sum.NAME += solver->internal->stats.NAME;
+  STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
 #else
 #define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
 #endif
@@ -3877,8 +3877,7 @@ void Mobical::add_statistics (Solver *solver) {
     shared->stats_count.NAME++;
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
-  if (solver->internal->stats.NAME.val) \
-   shared->stats_count.NAME++;
+  STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
 #else
 #define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
 #endif
@@ -3947,7 +3946,7 @@ void Mobical::print_statistics () {
                 shared->executed);
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
-  PRINT_STATER (#NAME, shared->stats_sum.NAME.val, shared->stats_count.NAME.val, \
+  PRINT_STATER (#NAME, (int64_t)shared->stats_sum.NAME, (int64_t)shared->stats_count.NAME, \
     shared->executed);
 #else
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL)

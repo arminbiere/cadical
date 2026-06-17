@@ -35,6 +35,7 @@ struct Metric {
     return *this;
   }
   explicit operator int64_t () const {return val;}
+  explicit operator bool () const {return val;}
 };
 #else
 struct Metric {
@@ -55,6 +56,7 @@ struct Metric {
     return *this;
   }
   explicit operator int64_t () const {return 0;}
+  explicit operator bool () const {return 0;}
 };
 #endif
 
