@@ -1027,7 +1027,6 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
   if (sideways_opt)
     no_gain_literals.clear ();
   assert (uwr_candidates.empty ());
-  int64_t sum = 0;
   const auto begin = vars_in_broken.begin ();
   const auto end = vars_in_broken.end ();
   const auto mid =
@@ -1058,9 +1057,8 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      double s = this->score (flip_gain);
+      double s = (flip_gain);
       scores.push_back (s);
-      sum += s;
     }
   }
 
@@ -1084,9 +1082,8 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     }
     if (proba_uwr && flip_gain > 0) {
       uwr_candidates.push_back (lit);
-      double s = this->score (flip_gain);
+      double s = (flip_gain);
       scores.push_back (s);
-      sum += s;
     }
   }
   ticks += internal->cache_lines (vars_in_broken.size (), sizeof (int)) +
@@ -1096,11 +1093,19 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
     // probabilistic selection among the candidates instead of eager selection
     assert (!scores.empty());
     assert (uwr_candidates.size () == scores.size ());
+    int64_t sum = 0;
+    for (auto &s : scores) {
+      assert (s <= best_new_satisfied);
+      s = score (best_new_satisfied - s);
+      sum += s;
+    }
+    printf ("\n");
     const double lim = sum * random.generate_double ();
     const auto end = uwr_candidates.end ();
     auto i = uwr_candidates.begin ();
     auto j = scores.begin ();
     LOG ("found %zd candidates to check from", scores.size ());
+    sum = 0;
     while (sum <= lim && i != end) {
       weight_reducing_var = *i++;
       assert (internal->var (weight_reducing_var).level == 2);
