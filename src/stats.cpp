@@ -84,6 +84,15 @@ void Stats::print_internal_stats (Internal *internal) {
 
 #undef STATISTIC
 #undef METRIC
+
+#ifndef QUIET
+  int all = internal->opts.verbose > 0 || internal->opts.stats;
+  if (internal->profiles.walk.value > 0)
+    PRT ("walk_flips:         %15" PRId64 "   %10.2f M  per second",
+      stats.walk_flips,
+      relative (1e-6 * stats.walk_flips,
+        internal->profiles.walk.value));
+#endif
 }
 #endif
 
@@ -99,6 +108,7 @@ void Stats::print (Internal *internal) {
   SECTION ("statistics");
 
   print_internal_stats (internal);
+
 
   LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",
