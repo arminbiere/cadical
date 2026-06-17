@@ -324,6 +324,10 @@ void Walker::save_final_minimum (size_t old_init_minimum) {
 #ifdef NDEBUG
   (void) old_init_minimum;
 #endif
+  if (minimum == old_init_minimum) {
+    LOG ("no improvement thus keeping saved clauses");
+    return;
+  }
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
