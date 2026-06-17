@@ -10,15 +10,66 @@ namespace CaDiCaL {
 
 struct Internal;
 
+#ifndef NMETRICS
+struct Metric {
+  int64_t val;
+  Metric (int64_t x) : val (x) {}
+  Metric operator += (int64_t x) {
+    val += x;
+    return *this;
+  }
+  Metric operator += (Metric x) {
+    val += x.val;
+    return *this;
+  }
+  Metric& operator ++ (int) {
+    val++;
+    return *this;
+  }
+  Metric& operator ++ () {
+    ++val;
+    return *this;
+  }
+  Metric &operator = (int64_t x) {
+    val = x;
+    return *this;
+  }
+  explicit operator int64_t () const {return val;}
+};
+#else
+struct Metric {
+  Metric (int64_t) {}
+  Metric operator += (int64_t) {
+    return *this;
+  }
+  Metric operator += (Metric) {
+    return *this;
+  }
+  Metric& operator ++ (int) {
+    return *this;
+  }
+  Metric& operator ++ () {
+    return *this;
+  }
+  Metric &operator = (int64_t) {
+    return *this;
+  }
+  explicit operator int64_t () const {return 0;}
+};
+#endif
+
+
 struct Stats {
 
   Internal *internal;
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) int64_t NAME = 0;
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) Metric NAME = 0;
 
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 
   struct {
     double real = 0;

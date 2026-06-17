@@ -55,7 +55,7 @@
   STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
   STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
-  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0) 
+  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
 
 #else
 #define CADICAL_API_STATISTICS
@@ -314,12 +314,12 @@
   STATISTIC (ticks_sweep,            2, percent, "%", ticks) \
   STATISTIC (ticks_ternary,          2, percent, "%", ticks) \
   STATISTIC (ticks_vivify,           2, percent, "%", ticks) \
-  STATISTIC (ticks_walk,             2, percent, "%", ticks) \
-  STATISTIC (ticks_walk_break,       2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip,        2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip_broke,  2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip_wl,     2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_pick,        2, percent, "%", ticks_walk) \
+  STATISTIC (ticks_walk,                2, percent, "%", ticks) \
+  METRIC (ticks_walk_break,          2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip,           2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip_broke,     2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip_wl,        2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_pick,           2, percent, "%", ticks_walk) \
   STATISTIC (transitive_clauses,     1, percent, "%", subsumed) \
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
@@ -367,12 +367,12 @@
   STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
   STATISTIC (vivified_tier3,         2, percent, "%", vivified) \
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
-  STATISTIC (vivify_decisions,       2, relative, "per", vivify_checks) \
+  METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
   STATISTIC (vivify_demote,          2, percent, "%", vivify_strength) \
   STATISTIC (vivify_flushed,         2, percent, "%", vivify_subsumed) \
   STATISTIC (vivify_implied,         2, percent, "%", vivify_checks) \
   STATISTIC (vivify_instantiated,    2, percent, "%", vivify_checks) \
-  STATISTIC (vivify_reused,          2, percent, "%", vivify_decisions) \
+  METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
   STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
   STATISTIC (vivify_strength,        2, percent, "%", strengthened) \
   STATISTIC (vivify_strength_irr,    2, percent, "%", vivify_strength) \
@@ -384,17 +384,17 @@
   STATISTIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
   STATISTIC (vivify_units,           2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
-  STATISTIC (walk_broken,            2, relative, "per", walk_flips) \
+  METRIC (walk_broken,               2, relative, "per", walk_flips) \
   STATISTIC (walk_flips,             2, relative, "per", walk) \
-  STATISTIC (walk_flips_reducing,    2, percent, "%", walk_flips) \
-  STATISTIC (walk_flips_sideways,    2, percent, "%", walk_flips) \
-  STATISTIC (walk_flips_transfer,    2, percent, "%", walk_flips) \
+  METRIC (walk_flips_reducing,       2, percent, "%", walk_flips) \
+  METRIC (walk_flips_sideways,       2, percent, "%", walk_flips) \
+  METRIC (walk_flips_transfer,       2, percent, "%", walk_flips) \
   STATISTIC (walk_improved,          2, relative, "per", walk) \
   STATISTIC (walk_warmup,            2, percent, "%", walk) \
-  STATISTIC (walk_warmup_conflicts,  2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_decision,   2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_dummy,      2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_conflicts,     2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_decision,      2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_dummy,         2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_propagate,     2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
   STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 

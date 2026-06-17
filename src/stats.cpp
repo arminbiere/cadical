@@ -731,19 +731,21 @@ void Stats::print_old (Internal *internal) {
        stats.ticks_vivify, percent (stats.ticks_vivify, searchticks));
   PRT ("   walkticks:    %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks_walk, percent (stats.ticks_walk, searchticks));
+#ifndef NMETRICS
   PRT ("   walkflipticks:%15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks_walk_flip, percent (stats.ticks_walk_flip, searchticks));
+       stats.ticks_walk_flip.val, percent (stats.ticks_walk_flip.val, searchticks));
   PRT ("   walkflipbrk:  %15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks_walk_flip_broke,
-       percent (stats.ticks_walk_flip_broke, searchticks));
+       stats.ticks_walk_flip_broke.val,
+       percent (stats.ticks_walk_flip_broke.val, searchticks));
   PRT ("   walkflipWL:   %15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks_walk_flip_wl,
-       percent (stats.ticks_walk_flip_wl, searchticks));
+       stats.ticks_walk_flip_wl.val,
+       percent (stats.ticks_walk_flip_wl.val, searchticks));
   PRT ("   walkpickticks:%15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks_walk_pick, percent (stats.ticks_walk_pick, searchticks));
+       stats.ticks_walk_pick.val, percent (stats.ticks_walk_pick.val, searchticks));
   PRT ("   walkbreak:    %15" PRId64 "   %10.2f %%  searchticks",
-       stats.ticks_walk_break,
-       percent (stats.ticks_walk_break, searchticks));
+       stats.ticks_walk_break.val,
+       percent (stats.ticks_walk_break.val, searchticks));
+#endif
   if (all) {
     PRT ("tier recomputed: %15" PRId64 "   %10.2f    interval",
          stats.recomputed_tiers,
@@ -823,30 +825,34 @@ void Stats::print_old (Internal *internal) {
     PRT ("  vivifydemote:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivify_demote,
          percent (stats.vivify_demote, stats.vivify_strength));
+#ifndef NMETRICS
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
-         stats.vivify_decisions,
-         relative (stats.vivify_decisions, stats.vivify_checks));
+         (int64_t)stats.vivify_decisions,
+         relative ((int64_t)stats.vivify_decisions, stats.vivify_checks));
     PRT ("  vivifyreused:  %15" PRId64
          "   %10.2f %%  per non-reused decision",
-         stats.vivify_reused,
-         percent (stats.vivify_reused, stats.vivify_decisions));
+         (int64_t)stats.vivify_reused,
+         percent ((int64_t)stats.vivify_reused, (int64_t)stats.vivify_decisions));
+#endif
   }
   if (all || stats.walk) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval", stats.walk,
          relative (stats.conflicts, stats.walk));
     if (all || stats.walk_warmup) {
+#ifndef NMETRICS
       PRT ("  prop-warmup:   %15" PRId64 "   %10.2f    per warmup",
-           stats.walk_warmup_propagate,
-           relative (stats.walk_warmup_propagate, stats.walk_warmup));
+           stats.walk_warmup_propagate.val,
+           relative (stats.walk_warmup_propagate.val, stats.walk_warmup));
       PRT ("  dec-warmup:    %15" PRId64 "   %10.2f    per warmup",
-           stats.walk_warmup_decision,
-           relative (stats.walk_warmup_decision, stats.walk_warmup));
+           stats.walk_warmup_decision.val,
+           relative (stats.walk_warmup_decision.val, stats.walk_warmup));
       PRT ("  dummydec-w:    %15" PRId64 "   %10.2f    per warmup",
-           stats.walk_warmup_dummy,
-           relative (stats.walk_warmup_dummy, stats.walk_warmup));
+           stats.walk_warmup_dummy.val,
+           relative (stats.walk_warmup_dummy.val, stats.walk_warmup));
       PRT ("  conflicts:     %15" PRId64 "   %10.2f    per warmup",
-           stats.walk_warmup_conflicts,
-           relative (stats.walk_warmup_conflicts, stats.walk_warmup));
+           stats.walk_warmup_conflicts.val,
+           relative (stats.walk_warmup_conflicts.val, stats.walk_warmup));
+#endif
       PRT ("  warmup:        %15" PRId64 "   %10.2f    per walk",
            stats.walk_warmup, relative (stats.walk_warmup, stats.walk));
     }
@@ -860,23 +866,25 @@ void Stats::print_old (Internal *internal) {
 #endif
       PRT ("  flips:         %15" PRId64 "   %10.2f    per walk",
            stats.walk_flips, relative (stats.walk_flips, stats.walk));
+#ifndef NMETRICS
     if (stats.walk_minimum < INT64_MAX)
       PRT ("  minimum:       %15" PRId64 "   %10.2f %%  clauses",
            stats.walk_minimum,
            percent (stats.walk_minimum, stats.clauses_irredundant));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
-         stats.walk_broken, relative (stats.walk_broken, stats.walk_flips));
+         stats.walk_broken.val, relative (stats.walk_broken.val, stats.walk_flips));
+    PRT ("  wrv-flip:      %15" PRId64 "   %10.2f %% flip",
+         stats.walk_flips_reducing.val,
+         percent (stats.walk_flips_reducing.val, stats.walk_flips));
+    PRT ("  side-flip:     %15" PRId64 "   %10.2f %% flip",
+         stats.walk_flips_sideways.val,
+         percent (stats.walk_flips_sideways.val, stats.walk_flips));
+    PRT ("  wght-transfer: %15" PRId64 "   %10.2f %% flip",
+         stats.walk_flips_transfer.val,
+         percent (stats.walk_flips_transfer.val, stats.walk_flips));
+#endif
     PRT ("  improved:      %15" PRId64 "   %10.2f    per walk",
          stats.walk_improved, relative (stats.walk_improved, stats.walk));
-    PRT ("  wrv-flip:      %15" PRId64 "   %10.2f %% flip",
-         stats.walk_flips_reducing,
-         percent (stats.walk_flips_reducing, stats.walk_flips));
-    PRT ("  side-flip:     %15" PRId64 "   %10.2f %% flip",
-         stats.walk_flips_sideways,
-         percent (stats.walk_flips_sideways, stats.walk_flips));
-    PRT ("  wght-transfer: %15" PRId64 "   %10.2f %% flip",
-         stats.walk_flips_transfer,
-         percent (stats.walk_flips_transfer, stats.walk_flips));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
@@ -936,12 +944,17 @@ void Stats::print_new (Internal *internal) {
   double t = internal->solve_time ();
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
-  PRINT_STATER (#NAME, stats.NAME, VERBOSE, \
-                COMMAND (stats.NAME, stats.OTHER), SYMBOL, #OTHER);
-
+  PRINT_STATER (#NAME, (int64_t)stats.NAME, VERBOSE, \
+                COMMAND ((int64_t)stats.NAME, (int64_t)stats.OTHER), SYMBOL, #OTHER);
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
+#else
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
+#endif
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 }
 #endif
 

@@ -428,6 +428,11 @@ struct Shared {
   struct {
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) int64_t NAME = 0;
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) Metric NAME = 0;
+#else
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) ;
+#endif
 
     CADICAL_STATISTICS
 
@@ -438,6 +443,7 @@ struct Shared {
     CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 
   } stats_count;
 
@@ -3854,18 +3860,32 @@ void Mobical::add_statistics (Solver *solver) {
   assert (shared);
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
   shared->stats_sum.NAME += solver->internal->stats.NAME;
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  shared->stats_sum.NAME += solver->internal->stats.NAME;
+#else
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
+#endif
 
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
   if (solver->internal->stats.NAME) \
     shared->stats_count.NAME++;
-
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  if (solver->internal->stats.NAME.val) \
+   shared->stats_count.NAME++;
+#else
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
+#endif
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 }
 
 #define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY) \
@@ -3925,10 +3945,18 @@ void Mobical::print_statistics () {
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
                 shared->executed);
-
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
+  PRINT_STATER (#NAME, shared->stats_sum.NAME.val, shared->stats_count.NAME.val, \
+    shared->executed);
+#else
+#define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL)
+#endif
     CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
+
     section ("total");
   }
 
