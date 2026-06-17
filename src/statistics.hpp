@@ -362,27 +362,27 @@
   STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
   STATISTIC (vivified,               1, percent, "%", clauses) \
-  STATISTIC (vivified_irr,           2, percent, "%", vivified) \
-  STATISTIC (vivified_tier1,         2, percent, "%", vivified) \
-  STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
-  STATISTIC (vivified_tier3,         2, percent, "%", vivified) \
+  METRIC (vivified_irr,              2, percent, "%", vivified) \
+  METRIC (vivified_tier1,            2, percent, "%", vivified) \
+  METRIC (vivified_tier2,            2, percent, "%", vivified) \
+  METRIC (vivified_tier3,            2, percent, "%", vivified) \
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
   METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
-  STATISTIC (vivify_demote,          2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_flushed,         2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_implied,         2, percent, "%", vivify_checks) \
-  STATISTIC (vivify_instantiated,    2, percent, "%", vivify_checks) \
+  METRIC (vivify_demote,             2, percent, "%", vivify_strength) \
+  METRIC (vivify_flushed,           2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_implied,            2, percent, "%", vivify_checks) \
+  METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
   METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
   STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
-  STATISTIC (vivify_strength,        2, percent, "%", strengthened) \
-  STATISTIC (vivify_strength_irr,    2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier1,  2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier2,  2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier3,  2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_subsumed,        2, percent, "%", subsumed) \
-  STATISTIC (vivify_subsumed_irr,    2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_units,           2, percent, "%", vivify_checks) \
+  METRIC (vivify_strength,           2, percent, "%", strengthened) \
+  METRIC (vivify_strength_irr,       2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier1,     2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier2,     2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier3,     2, percent, "%", vivify_strength) \
+  METRIC (vivify_subsumed,           2, percent, "%", subsumed) \
+  METRIC (vivify_subsumed_irr,       2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_subsumed_red,       2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_units,              2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   METRIC (walk_broken,               2, relative, "per", walk_flips) \
   STATISTIC (walk_flips,             2, relative, "per", walk) \
