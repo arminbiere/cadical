@@ -579,7 +579,6 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
-  size_t forced_bt = 0;
   size_t level;
 
   struct Decisions {
@@ -642,13 +641,10 @@ private:
 
   // Next lemma to add
   size_t add_lemma_idx = 0;
-  size_t propagate_idx = 0;
 
   // Forced lemme addition (falsified lemma in model)
   bool must_add_clause = false;
   size_t must_add_idx;
-  // Next decision to make
-  size_t decision_loc = 0;
 
   // Observed variables and their current assignments
   std::deque<std::vector<int>> observed_trail;
@@ -658,7 +654,6 @@ private:
   size_t nof_clauses = 0;
   size_t nof_decide = 0;
   std::vector<int> clause;
-  bool new_ovars = false;
 
   size_t add_new_lemma (bool forgettable, LemmaType type, int delay) {
     assert (clause.size () <= (size_t) INT_MAX);

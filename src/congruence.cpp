@@ -1,11 +1,9 @@
 #include "congruence.hpp"
-#include "clause.hpp"
+
 #include "internal.hpp"
-#include "util.hpp"
-#include <algorithm>
+
 #include <cstdint>
 #include <iterator>
-#include <utility>
 #include <vector>
 
 namespace CaDiCaL {
@@ -194,7 +192,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
   g->marked = (false);
   g->size = (n);
   g->tag = Gate_Type::And_Gate;
-  g->degenerated_gate = Special_Gate::NORMAL; 
+  g->degenerated_gate = Special_Gate::NORMAL;
   auto u = begin;
   for (int i = 0; i < n; ++i, ++u) {
     assert (u < end);

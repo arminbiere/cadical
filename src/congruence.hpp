@@ -10,21 +10,18 @@
 #include <queue>
 #include <string>
 #include <sys/types.h>
-#include <unordered_set>
 #include <vector>
 
 #include "clause.hpp"
 #include "hash.hpp"
-#include "inttypes.hpp"
 #include "util.hpp"
-#include "watch.hpp"
 
 namespace CaDiCaL {
 
 typedef int64_t LRAT_ID;
 
 // This implements the clausal congruence algorithm from Biere at
-// al. [SAT 2024]. Wer refer to the paper for details, but in
+// al. [SAT 2024]. We refer to the paper for details, but in
 // essence, the idea is to detect gate definitions in the set of
 // clauses.
 //
