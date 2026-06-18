@@ -134,7 +134,7 @@ runExtraMobical () {
 ############################################################################
 
 begin=0
-end=36
+end=37
 
 m32=no
 undefined=no
@@ -248,10 +248,15 @@ map_and_run () {
     32) run -a -p -fsanitize=address;;
     33) run -a -fsanitize=undefined;;
     34) run -a -p -fsanitize=undefined;;
+
+    # all warnings
     35) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wswitch-enum -Wpointer-arith -Winline -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing -fno-common -fstrict-aliasing -Wno-format-nonliteral;;
 
+    # extra flags
+    36) run --no-metrics;;
+
     # memory fuzzing
-    36) runExtraMobical -a -p --memory-fuzzing
+    37) runExtraMobical -a -p --memory-fuzzing
 
       executed_last_configuration=yes # Keep this as part of last configuration!
 
