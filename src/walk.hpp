@@ -9,7 +9,7 @@
 namespace CaDiCaL {
 
 // Forward declarations
-class Internal;
+struct Internal;
 
 // We experimented with using
 //
