@@ -2706,6 +2706,8 @@ public:
     bool first = true;
     bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
+      if (Signal::interrupted ()) // REVIEW: Otherwise the trace will just continue
+        break;
       Call *c = calls[i];
       trace_call_index = i + 1;
 
@@ -2855,6 +2857,14 @@ public:
       }
     }
 #endif
+    // REVIEW: We need this for fork_and_execute () to signal that a termination
+    // signal is the reason for termination of execute
+    /*
+    if (Signal::interrupted ()) {
+      reset_child_signal_handlers ();
+      raise (SIGTSTP);
+    }
+    */
   }
 
   int vars () {
@@ -3188,6 +3198,12 @@ void Trace::generate_options (Random &random, Size size) {
     if (o.lo == o.hi)
       continue;
 
+#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
+    // No checkfailed with terminate delay fuzzing. The external terminator is
+    // when checking and therefore false positives will be found.
+    if (!strcmp (o.name, "checkfailed"))
+      continue;
+#endif
     // We ignore logging here and set it below to make mobical
     // deterministic
     if (!strcmp (o.name, "log"))
@@ -4169,7 +4185,6 @@ void Trace::child_signal_handler (int sig) {
     raise (SIGTSTP);
   }
 #endif
-
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
@@ -4222,7 +4237,7 @@ void Trace::account_terminate_delay_allocation () {
   }
   if (terminate_triggered) {
     mallocs_after_trigger++;
-    //printf ("NEW/MALLOC %lld AFTER TRIGGER\n", mallocs_after_trigger); // TODO: remove after being sure it works
+    //printf ("NEW/MALLOC %lld AFTER TRIGGER\n", mallocs_after_trigger); // TODO: remove
     if (mallocs_after_trigger > terminate_k && !terminate_delay_failed) {
       terminate_delay_failed = 1;
       hooks_uninstall ();
@@ -4234,15 +4249,15 @@ void Trace::account_terminate_delay_allocation () {
       hooks_install ();
       reset_child_signal_handlers ();
       if (mobical.add_set_log_to_true)
-        printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
+        //printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
       raise (SIGUSR2);
     }
   }
   if (terminate_budget > 0) {
-    //printf ("NEW/MALLOC CAUGHT, BUDGET: %lld\n", terminate_budget); // TODO: remove after being sure it works
+    //printf ("NEW/MALLOC CAUGHT, BUDGET: %lld\n", terminate_budget); // TODO: remove
     if (--terminate_budget <= 0 && !terminate_triggered) {
       if (mobical.add_set_log_to_true)
-        printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove after being sure it works
+        printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove
       terminate_triggered = 1;
       hooks_uninstall ();
       mobical.shared->limit_terminate.terminate_call_index = trace_call_index;

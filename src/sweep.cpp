@@ -648,8 +648,8 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
 
 void Internal::sweep_empty_clause (Sweeper &sweeper) {
   assert (!unsat);
-  save_add_clear_core (sweeper);
-  assert (unsat);
+  save_add_clear_core (sweeper); 
+  assert (unsat); // REVIEW: May be violated if terminated_asynchronously
 }
 
 void Internal::sweep_refine_partition (Sweeper &sweeper) {
@@ -873,9 +873,9 @@ bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
   }
 
   if (res == 20) {
-    LOG ("sweep unit %d", lit);
+    LOG ("sweep unit %d", lit); 
     save_add_clear_core (sweeper);
-    assert (val (lit));
+    assert (val (lit)); // REVIEW: May be violated if terminated_asynchronously
     stats.sweep_bb_solved_unsat++;
     return true;
   }
