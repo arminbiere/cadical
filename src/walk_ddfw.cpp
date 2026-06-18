@@ -1099,7 +1099,6 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
       s = score (best_new_satisfied - s);
       sum += s;
     }
-    printf ("\n");
     const double lim = sum * random.generate_double ();
     const auto end = uwr_candidates.end ();
     auto i = uwr_candidates.begin ();
