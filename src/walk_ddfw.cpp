@@ -539,7 +539,7 @@ void Walker_DDFW::save_final_minimum (size_t old_init_minimum) {
     LOG ("no improvement thus keeping saved clauses");
     return;
   }
-
+  VERBOSE (3, "saving the final walk minimum %zd", minimum);
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
@@ -957,6 +957,7 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
 #endif
 
   if (walker.best_trail_pos == -1) {
+    VERBOSE (3, "saving the new walk minimum %zd", broken);
     for (auto i : vars) {
       const signed char tmp = vals[i];
       if (tmp) {
