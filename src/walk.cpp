@@ -325,7 +325,6 @@ void Walker::save_final_minimum (size_t old_init_minimum) {
     LOG ("no improvement thus keeping saved clauses");
     return;
   }
-  VERBOSE (3, "saving the new walk minimum %zd", minimum);
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
