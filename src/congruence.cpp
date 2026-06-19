@@ -3401,7 +3401,7 @@ void Closure::extract_and_gates () {
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_and;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_and;
 #endif
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
@@ -4343,7 +4343,7 @@ void Closure::extract_xor_gates () {
     return;
   START (extractxors);
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_xor;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_xor;
 #endif
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
@@ -7789,7 +7789,7 @@ void Closure::extract_ite_gates () {
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_ite;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_ite;
 #endif
   init_ite_gate_extraction (candidates);
 

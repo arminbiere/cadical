@@ -30,9 +30,15 @@ struct Metric {
     ++val;
     return *this;
   }
+  int64_t operator - (int64_t t) {
+    return val - t;
+  }
   Metric &operator = (int64_t x) {
     val = x;
     return *this;
+  }
+  int64_t operator + (int64_t t) {
+    return t + val;
   }
   explicit operator int64_t () const {return val;}
   explicit operator bool () const {return val;}
@@ -55,8 +61,14 @@ struct Metric {
   Metric &operator = (int64_t) {
     return *this;
   }
+  int64_t operator - (int64_t) {
+    return 0;
+  }
+  int64_t operator + (int64_t) {
+    return 0;
+  }
   explicit operator int64_t () const {return 0;}
-  explicit operator bool () const {return 0;}
+  explicit operator bool () const {assert (false);return 0;}
 };
 #endif
 

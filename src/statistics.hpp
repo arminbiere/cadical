@@ -75,9 +75,10 @@
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
   STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
-  STATISTIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
-  STATISTIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
-  STATISTIC (clause_recompute_glue,  2, relative, "per", clauses_redundant) \
+  METRIC (clause_promoted_tier1,     2, relative, "per", clause_improved_glue) \
+  METRIC (clause_promoted_tier2,     2, relative, "per", clause_improved_glue) \
+  /* cannot be a metric due do stamping! */\
+  STATISTIC (clause_recompute_glue,      2, relative, "per", clauses_redundant) \
   STATISTIC (clauses,                0, NOTHING, 0, 0) \
   STATISTIC (clauses_irredundant,    2, percent, "%",  clauses) \
   STATISTIC (clauses_now_irr,        3, NOTHING, 0, 0) \
@@ -104,23 +105,23 @@
   STATISTIC (congruence_ands,        2, relative, "per", congruent) \
   STATISTIC (congruence_dummy_ands,  2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_gates,       2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_gates_and,   2, percent, "%", congruence_gates) \
-  STATISTIC (congruence_gates_ite,   2, percent, "%", congruence_gates) \
-  STATISTIC (congruence_gates_xor,   2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_and,      2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_ite,      2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_xor,      2, percent, "%", congruence_gates) \
   STATISTIC (congruence_ites,        2, relative, "per", congruent) \
   STATISTIC (congruence_rounds,      1, INTERVAL, "", interval) \
-  STATISTIC (congruence_rw_ands,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_rw_ites,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_rw_xors,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_simp_ands,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simp_ites,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simplified,  2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simp_xors,   2, relative, "per", congruence_rounds) \
+  METRIC (congruence_rw_ands,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_rw_ites,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_rw_xors,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_simp_ands,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simp_ites,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simplified,     2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simp_xors,      2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_subsumed,    2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_trite,       2, relative, "per", congruence_rounds) \
+  METRIC (congruence_trite,          2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_unary,       2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_unary_and,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_unary_ite,   2, relative, "per", congruence_rounds) \
+  METRIC (congruence_unary_and,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_unary_ite,      2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_units,       2, relative, "per", congruent) \
   STATISTIC (congruence_xors,        2, relative, "per", congruent) \
   STATISTIC (congruent,              1, relative, "per", congruence_rounds) \
@@ -330,19 +331,19 @@
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
-  STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
-  STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
-  STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
+  METRIC (up_cb_prop_assign,         2, percent, "%", up_cb_prop) \
+  METRIC (up_cb_prop_clash,          2, percent, "%", up_cb_prop) \
+  METRIC (up_cb_prop_explain,        2, percent, "%", up_cb_prop) \
   STATISTIC (up_learn,               1, percent, "%", clauses) \
-  STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
-  STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
-  STATISTIC (up_learn_empty,         2, percent, "%", up_learn) \
-  STATISTIC (up_learn_lazy_elevate,  2, percent, "%", up_learn) \
-  STATISTIC (up_learn_out_of_order,  2, percent, "%", up_learn) \
-  STATISTIC (up_learn_propagating,   2, percent, "%", up_learn) \
-  STATISTIC (up_learn_satisfied,     2, percent, "%", up_learn) \
-  STATISTIC (up_learn_unit,          2, percent, "%", up_learn) \
-  STATISTIC (variables_extension,    2, percent, "%", vars) \
+  METRIC (up_learn_conflict,         2, percent, "%", up_learn) \
+  METRIC (up_learn_elevating,        2, percent, "%", up_learn) \
+  METRIC (up_learn_empty,            2, percent, "%", up_learn) \
+  METRIC (up_learn_lazy_elevate,     2, percent, "%", up_learn) \
+  METRIC (up_learn_out_of_order,     2, percent, "%", up_learn) \
+  METRIC (up_learn_propagating,      2, percent, "%", up_learn) \
+  METRIC (up_learn_satisfied,        2, percent, "%", up_learn) \
+  METRIC (up_learn_unit,             2, percent, "%", up_learn) \
+  STATISTIC (variables_extension,       2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \
   STATISTIC (vars_active,            2, percent, "%", vars) \
