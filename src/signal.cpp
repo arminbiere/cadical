@@ -103,7 +103,10 @@ static void catch_signal (int sig) {
     Signal::reset_alarm ();
   } else
 #endif
-  { // REVIEW: For the "bad" signals we do not want to return control
+  { // REVIEW:
+    // Reraising should happen after the graceful exit (or directly before returning 0)
+    // at least for SIGINT and SIGTERM for the others we can probably 
+    // reraise directly because it is not safe return control
     switch (sig) {
     case SIGABRT:
     case SIGSEGV:
@@ -118,10 +121,7 @@ static void catch_signal (int sig) {
       if (signal_handler)
         signal_handler->catch_signal (sig);
     }
-    // temporarily remove: Reraising should happen after the graceful exit (or directly before returning 0)
-    // at least for SIGINT and SIGTERM for the others we can probably reraise directly because it is not safe return control
-    // Signal::reset (); 
-    // ::raise (sig);
+
   }
 }
 

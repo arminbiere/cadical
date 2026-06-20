@@ -2857,14 +2857,6 @@ public:
       }
     }
 #endif
-    // REVIEW: We need this for fork_and_execute () to signal that a termination
-    // signal is the reason for termination of execute
-    /*
-    if (Signal::interrupted ()) {
-      reset_child_signal_handlers ();
-      raise (SIGTSTP);
-    }
-    */
   }
 
   int vars () {
@@ -3155,6 +3147,11 @@ void Trace::generate_options (Random &random, Size size) {
 #else
   if (mobical.add_set_log_to_true)
     mobical.warning ("ignoring log option");
+#endif
+#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
+    // No checkfailed with terminate delay fuzzing. The external terminator is
+    // disconnected when checking and therefore false positives will be found.
+    push_back (new SetCall ("checkfailed", 0));
 #endif
   // In 10% of the cases do not change any options.
   //
@@ -3808,7 +3805,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int terminatecall = random.pick_int (0, 2);  
   int terminatecallsize = random.pick_log (1e1, 1e4);
   // terminate delay hack
-  int terminatedelaycall = random.pick_int (0, 2); // activate malloc/new count based termination
+  int terminatedelaycall = random.pick_int (0, 1); // activate malloc/new count based termination
   int terminatedelay_budget = random.pick_log (1, 5e4); // when to terminate
   int terminatedelay_k = random.pick_int (600, 1000); // maximum delay in number of mallocs/news before signal is raised
 
@@ -4249,7 +4246,7 @@ void Trace::account_terminate_delay_allocation () {
       hooks_install ();
       reset_child_signal_handlers ();
       if (mobical.add_set_log_to_true)
-        //printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
+        printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
       raise (SIGUSR2);
     }
   }
@@ -4454,12 +4451,18 @@ int Trace::fork_and_execute () {
     limit.rlim_max = 0;
     setrlimit(RLIMIT_CORE, &limit);
 #endif
-
-    int status, other = wait (&status);
+    //int status, other = wait (&status);
+    int status;
+    pid_t other = waitpid (child, &status, WUNTRACED); // WUNTRACED -> notify also TSTP
     if (other != child)
       res = 0;
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
+    else if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTSTP) { // before if !WIFSIGNALED
+      kill (child, SIGKILL); // fork is just suspended. Now kill it,
+      waitpid (child, nullptr, 0); // and reap it
+      res = 5;
+    }
     else if (!WIFSIGNALED (status))
       res = 0;
     else if (WTERMSIG (status) == SIGABRT)
@@ -4471,8 +4474,11 @@ int Trace::fork_and_execute () {
       res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
       res = 4; // Leaked allocation caused signal.
-    else if (WTERMSIG (status) == SIGTSTP)
+    /* 
+    REVIEW: I think this has always been a dead branch
+    else if (WTERMSIG (status) == SIGTSTP) 
       res = 5; // Termination caused signal.
+    */
     else
       res = 6;
 
@@ -4499,8 +4505,8 @@ int Trace::fork_and_execute () {
     dup2 (2, 4);
     int null = open ("/dev/null", O_WRONLY);
     assert (null);
-    dup2 (null, 1);
-    dup2 (null, 2);
+    dup2 (null, 1); 
+    dup2 (null, 2); 
     execute ();
     close (1);
     close (2);
@@ -4581,7 +4587,6 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           tmp_notify = &tmp2;
         }
       }
-      // TODO: Here may be a good position to check for signals. 
       // The attempt should be finished and in a valid state.
       if (Signal::interrupted ()) // REVIEW
         break;
