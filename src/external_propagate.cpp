@@ -1147,16 +1147,15 @@ bool Internal::get_merged_literals (std::vector<int> &eq_class) {
 
   if (!lit_level) {
     // Collect all the variables that are merged and mapped to that ilit
+    size_t e2i_size = external->e2i.size ();
     int ivar = abs (ilit);
-    for (auto id : external->e2i) {
-      int o_elit = id.second;
-      int o_ilit = id.first;
-      int other = abs (o_elit);
+    for (size_t i = 0; i < e2i_size; i++) {
+      int other = abs (external->e2i[i]);
       if (other == ivar) {
-        if (o_elit == ilit)
-          eq_class.push_back (o_ilit);
+        if (external->e2i[i] == ilit)
+          eq_class.push_back (i);
         else
-          eq_class.push_back (-o_ilit);
+          eq_class.push_back (-1 * i);
       }
     }
 
@@ -1178,9 +1177,10 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   if (!trail.size ())
     return;
 
-  for (auto id : external->e2i) {
-    int ilit = id.second;
-    int eidx = id.first;
+  int e2i_size = external->e2i.size ();
+  int ilit;
+  for (int eidx = 1; eidx < e2i_size; eidx++) {
+    ilit = external->e2i[eidx];
     if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {

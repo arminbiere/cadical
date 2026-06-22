@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 namespace CaDiCaL {
@@ -133,14 +132,6 @@ template <class T> static void reserve_at_least (vector<T> &v, size_t N) {
   v.reserve (new_size);
 }
 
-template <class K, class E>
-static K find_or_default (const std::unordered_map<K, E> &map, K key,
-                          E default_el) {
-  auto it = map.find (key);
-  if (it == map.end ())
-    return default_el;
-  return it->second;
-}
 // Clean-up class for bad_alloc error safety.
 
 template <typename T> struct DeferDeleteArray {
@@ -165,15 +156,14 @@ template <typename T> struct DeferDeletePtr {
   }
 };
 
-template <typename T, typename F = void (*)(T*&)>
-struct DeferDeleteFunc {
+template <typename T, typename F = void (*) (T *&)> struct DeferDeleteFunc {
   T *data;
   F func;
-  DeferDeleteFunc (T *t, F f) : data (t), func(f) {}
-  ~DeferDeleteFunc () { (*func)(data); }
+  DeferDeleteFunc (T *t, F f) : data (t), func (f) {}
+  ~DeferDeleteFunc () { (*func) (data); }
   void release () { data = nullptr; }
   void free () {
-    (*func)(data);
+    (*func) (data);
     data = nullptr;
   }
 };

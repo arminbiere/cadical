@@ -30,9 +30,10 @@ void External::enlarge (int new_max_var) {
 }
 
 int External::declare_var (int new_var, bool extension) {
-  int ilit = internal_lit (new_var);
-  if (!ilit) {
-    if (!internal->opts.varkeepname)
+  assert ((size_t) new_var < e2i.size ());
+  if (!e2i[new_var]) {
+    int ilit;
+    if (internal->opts.varkeepname)
       ilit = internal->max_var + 1;
     else {
       ilit = new_var;
@@ -65,20 +66,26 @@ void External::reserve (int new_max_var) {
   assert (max_var < new_max_var);
   internal->reserve_vars (new_max_var);
   reserve_at_least (ext_units, 2 * new_max_var + 2);
+  reserve_at_least (e2i, new_max_var + 1);
   reserve_at_least (ervars, new_max_var + 1);
   reserve_at_least (ext_flags, new_max_var + 1);
   reserve_at_least (internal->i2e, new_max_var + 1);
   if (!max_var) {
     assert (e2i.empty ());
+    e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
     ervars.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
+  } else {
+    assert (e2i.size () == (size_t) max_var + 1);
   }
   unsigned eidx;
   for (eidx = max_var + 1u; eidx <= (unsigned) new_max_var; eidx++) {
+    assert (e2i.size () == eidx);
+    e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
@@ -88,7 +95,6 @@ void External::reserve (int new_max_var) {
   assert (eidx == (size_t) new_max_var + 1);
   max_var = new_max_var;
 }
-
 void External::init (int new_max_var, bool extension) {
   assert (!extended);
   LOG ("%d external variables from %d", new_max_var, max_var);
@@ -101,6 +107,8 @@ void External::init (int new_max_var, bool extension) {
 
   LOG ("initialized %d external variables", new_max_var - max_var);
   reserve (new_max_var);
+  assert (internal->i2e.size () == (size_t) internal->max_var + 1);
+  assert (e2i.size () == (size_t) new_max_var + 1);
 
   declare_var (new_max_var, extension);
   if (internal->opts.checkfrozen)
@@ -1036,7 +1044,7 @@ void External::copy_flags (External &other) const {
   vector<Flags> &other_ftab = other.internal->ftab;
   const unsigned limit = min (max_var, other.max_var);
   for (unsigned eidx = 1; eidx <= limit; eidx++) {
-    const int this_ilit = internal_lit (eidx);
+    const int this_ilit = e2i[eidx];
     if (!this_ilit)
       continue;
     const int other_ilit = other.e2i[eidx];
