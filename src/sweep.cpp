@@ -399,7 +399,7 @@ static void save_core_clause (void *state, unsigned id, bool learned,
   } else {
     pc.sweep_id = id; // necessary
     assert (id < sweeper->clauses.size ());
-    pc.cad_id = sweeper->clauses[id]->id;
+    pc.cad_id = internal->allocate_lrat_id() ?  sweeper->clauses[id]->id : 1;
   }
   pc.kit_id = 0;
   pc.learned = learned;
@@ -1147,7 +1147,8 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
                                    lrat_chain);
         proof->delete_clause (c);
       }
-      c->id = new_id;
+      if (allocate_lrat_id())
+        c->id = new_id;
       lrat_chain.clear ();
       size_t l;
       int *literals = c->literals;

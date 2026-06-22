@@ -29,17 +29,9 @@ typedef const int *const_literal_iterator;
 
 #define USED_SIZE 5
 struct Clause {
-  union {
-    int64_t id;   // Used to create LRAT-style proofs
-    Clause *copy; // Only valid if 'moved', then that's where to.
-    //
-    // The 'copy' field is only valid for 'moved' clauses in the moving
-    // garbage collector 'copy_non_garbage_clauses' for keeping clauses
-    // compactly in a contiguous memory arena.  Otherwise, so almost all of
-    // the time, 'id' is valid.  See 'collect.cpp' for details.
-  };
-  unsigned used
-      : USED_SIZE;      // resolved in conflict analysis since last 'reduce'
+  int64_t id;   // Used to create LRAT-style proofs
+
+  unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
   bool conditioned : 1; // Tried for globally blocked clause elimination.
   bool covered : 1;  // Already considered for covered clause elimination.
   bool enqueued : 1; // Enqueued on backward queue.
@@ -91,11 +83,21 @@ struct Clause {
   // low glue) are always removed if they remain unused during one interval.
   // See 'mark_useless_redundant_clauses_as_garbage' in 'reduce.cpp' and
   // 'bump_clause' in 'analyze.cpp'.
-  //
   int glue;
 
-  int size; // Actual size of 'literals' (at least 2).
-  int pos;  // Position of last watch replacement [Gent'13].
+  union {
+    struct {
+      int pos;  // Position of last watch replacement [Gent'13].
+      int size; // Actual size of 'literals' (at least 2).
+    };
+    Clause *copy; // Only valid if 'moved', then that's where to.
+    //
+    // The 'copy' field is only valid for 'moved' clauses in the moving
+    // garbage collector 'copy_non_garbage_clauses' for keeping clauses
+    // compactly in a contiguous memory arena.  Otherwise, so almost all of
+    // the time, 'id' is valid.  See 'collect.cpp' for details.
+  };
+
 
   // This 'flexible array member' is of variadic 'size' (and actually
   // shrunken if strengthened) and keeps the literals close to the header of
@@ -132,7 +134,7 @@ struct Clause {
   const_literal_iterator begin () const { return literals; }
   const_literal_iterator end () const { return literals + size; }
 
-  static size_t bytes (int size) {
+  static size_t raw_bytes (int size) {
 
     // Memory sanitizer insists that clauses put into consecutive memory in
     // the arena are still 8 byte aligned.  We could also allocate 8 byte
@@ -152,7 +154,14 @@ struct Clause {
     return aligned_bytes;
   }
 
-  size_t bytes () const { return bytes (size); }
+  // size with or without space for the lrat id. Do not forget to offset the
+  // pointer!
+  static size_t bytes (int size, bool with_id) {
+    return raw_bytes (size) - (with_id ? 0 : sizeof (int64_t));
+  }
+
+  size_t bytes (bool with_id) const { return bytes (size, with_id); }
+  size_t raw_bytes () const { return raw_bytes (size); }
 
   // Check whether this clause is ready to be collected and deleted.  The
   // 'reason' flag is only there to protect reason clauses in 'reduce',
@@ -182,6 +191,29 @@ struct clause_lit_less_than {
     using namespace std;
     int s = abs (a), t = abs (b);
     return s < t || (s == t && a < b);
+  }
+};
+
+struct clause_flags_ordered_less_than {
+  bool operator() (Clause *a, Clause *b) const {
+    using namespace std;
+    assert (a->size == b->size);
+    assert (!a->moved);
+    assert (!b->moved);
+    if (a->glue < b->glue)
+      return true;
+    if (a->glue > b->glue)
+      return false;
+
+    if (a->pos < b->pos)
+      return true;
+    if (a->pos > b->pos)
+      return false;
+    if (a->used < b->used)
+      return true;
+    if (a->used > b->used)
+      return false;
+    return true;
   }
 };
 

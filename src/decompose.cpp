@@ -415,6 +415,7 @@ bool Internal::decompose_round () {
   vector<Clause*> frozen_binary_reasons;
   const size_t size = 2 * (1 + (size_t) max_var);
   decompose_ids.resize (size);
+  bool requires_id = allocate_lrat_id();
 
   for (auto idx : vars) {
     if (!substituted)
@@ -448,7 +449,7 @@ bool Internal::decompose_round () {
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
       c->gate = true;
-      id1 = c->id;
+      id1 = requires_id ? c->id : 0;
       frozen_binary_reasons.push_back(c);
     } else {
       id1 = ++clause_id;
@@ -458,7 +459,7 @@ bool Internal::decompose_round () {
       }
       external->push_binary_clause_on_extension_stack (id1, -idx, other);
     }
-    assert (id1);
+    assert (!requires_id || id1);
 
 
     decompose_ids[vlit (-idx)] = id1;
@@ -482,7 +483,7 @@ bool Internal::decompose_round () {
       Clause *c = new_clause (false, 1);
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
-      id2 = c->id;
+      id2 = requires_id ? c->id : 0;
       c->gate = true;
       frozen_binary_reasons.push_back(c);
     } else {
@@ -493,7 +494,7 @@ bool Internal::decompose_round () {
       }
       external->push_binary_clause_on_extension_stack (id2, idx, -other);
     }
-    assert (id2);
+    assert (!requires_id || id2);
     decompose_ids[vlit (idx)] = id2;
     for (auto &tracer : tracers) {
       const int eidx = externalize (idx);
@@ -643,7 +644,8 @@ bool Internal::decompose_round () {
         proof->add_derived_clause (++clause_id, c->redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
-        c->id = clause_id;
+        if (requires_id)
+          c->id = clause_id;
       }
       size_t l;
       int *literals = c->literals;

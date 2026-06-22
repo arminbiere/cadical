@@ -313,6 +313,7 @@ void Closure::extract_binaries () {
     return;
   START (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
+  bool requires_id = internal->allocate_lrat_id();
 
   // in kissat this is done during watch clearing. TODO: consider doing this
   // too.
@@ -328,7 +329,7 @@ void Closure::extract_binaries () {
     const int other = c->literals[1];
     const bool already_sorted =
         internal->vlit (lit) < internal->vlit (other);
-    binaries.push_back (CompactBinary (c, c->id,
+    binaries.push_back (CompactBinary (c, requires_id ? c->id : 0,
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));
   }
@@ -452,7 +453,7 @@ void Closure::unmark_all () {
 
 void Closure::set_mu1_reason (int lit, Clause *c) {
   assert (marked (lit) & 1);
-  LOG (c, "mu1 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu1 %d -> %" PRId64, lit, internal->allocate_lrat_id () ? c->id : 0);
   mu1_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -460,7 +461,7 @@ void Closure::set_mu2_reason (int lit, Clause *c) {
   assert (marked (lit) & 2);
   if (!internal->lrat)
     return;
-  LOG (c, "mu2 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu2 %d -> %" PRId64, lit, internal->allocate_lrat_id () ? c->id : 0);
   mu2_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -468,7 +469,7 @@ void Closure::set_mu4_reason (int lit, Clause *c) {
   assert (marked (lit) & 4);
   if (!internal->lrat)
     return;
-  LOG (c, "mu4 %d -> %" PRId64, lit, c->id);
+  LOG (c, "mu4 %d -> %" PRId64, lit, internal->allocate_lrat_id () ? c->id : 0);
   mu4_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -1006,11 +1007,16 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   const int size = (int) clause.size ();
   assert (size >= 2);
 
-  size_t bytes = Clause::bytes (size);
-  Clause *c = (Clause *) new char[bytes];
+  bool requires_id = internal->allocate_lrat_id();
+  size_t bytes = Clause::bytes (size, requires_id);
+  char* raw_clause = new char[bytes];
+  if (!requires_id)
+    raw_clause -= sizeof(int64_t);
+  Clause *c = (Clause*)raw_clause;
   DeferDeleteArray<char> clause_delete ((char *) c);
 
-  c->id = ++internal->clause_id;
+  if (requires_id)
+    c->id = ++internal->clause_id;
 
   c->conditioned = false;
   c->covered = false;
@@ -1041,7 +1047,7 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->bytes () == bytes);
+  assert (c->raw_bytes () == bytes);
   LOG (c, "new pointer %p", (void *) c);
 
   if (internal->proof)
@@ -1873,8 +1879,9 @@ inline void Closure::promote_clause (Clause *c) {
 bool Closure::merge_literals_from_clauses (int lit, int other, Clause *c1,
                                            Clause *c2) {
   assert (!internal->unsat);
-  LRAT_ID id1 = c1 ? c1->id : 0;
-  LRAT_ID id2 = c2 ? c2->id : 0;
+  bool requires_id = internal->allocate_lrat_id();
+  LRAT_ID id1 = requires_id && c1 ? c1->id : 0;
+  LRAT_ID id2 = requires_id && c2 ? c2->id : 0;
   if (internal->lrat) {
     assert (c1);
     assert (c2);
@@ -3079,8 +3086,8 @@ Clause *Closure::add_binary_clause (int a, int b) {
   Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (
       false, full_watching);
   const bool already_sorted = internal->vlit (a) < internal->vlit (b);
-  binaries.push_back (CompactBinary (res, res->id, already_sorted ? a : b,
-                                     already_sorted ? b : a));
+  binaries.push_back (CompactBinary (res, internal->allocate_lrat_id() ? res->id : 0,
+    already_sorted ? a : b, already_sorted ? b : a));
   if (!full_watching)
     new_unwatched_binary_clauses.push_back (res);
   LOG (res, "learning clause");

@@ -25,6 +25,7 @@ class Proof {
   std::vector<int> clause;          // of external literals
   std::vector<int64_t> proof_chain; // LRAT style proof chain of clause
   int64_t clause_id;                // id of added clause
+  bool requires_id;                 // wether ids are allocates or not
   bool redundant;
   int witness;
 
@@ -53,7 +54,7 @@ public:
   Proof (Internal *);
   ~Proof ();
 
-  void connect (Tracer *t) { tracers.push_back (t); }
+  void connect (Tracer *t, bool need_ids) { tracers.push_back (t); requires_id = (requires_id || need_ids); }
   void disconnect (Tracer *t);
   // Add original clauses to the proof (for online proof checking).
   //

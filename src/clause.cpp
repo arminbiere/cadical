@@ -85,11 +85,16 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (glue > size)
     glue = size;
 
-  size_t bytes = Clause::bytes (size);
-  Clause *c = (Clause *) new char[bytes];
-  DeferDeleteArray<char> clause_delete ((char *) c);
+  const bool with_lrat = allocate_lrat_id ();
+  size_t bytes = Clause::bytes (size, with_lrat);
+  char* raw_clause = new char[bytes];
+  if (!with_lrat)
+    raw_clause -= sizeof(int64_t);
+  Clause *c = (Clause*) raw_clause;
+  DeferDeleteArray<char> clause_delete (raw_clause);
 
-  c->id = ++clause_id;
+  if (with_lrat)
+    c->id = ++clause_id;
 
   c->conditioned = false;
   c->covered = false;
@@ -120,7 +125,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->bytes () == bytes);
+  assert (c->bytes (with_lrat) == bytes);
 
   stats.clauses_now_total++;
   stats.clauses++;
@@ -211,7 +216,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-  if (opts.check && is_external_forgettable (c->id))
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   assert (new_size >= 2);
   int old_size = c->size;
@@ -224,9 +229,9 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   if (c->pos >= new_size)
     c->pos = 2;
 
-  size_t old_bytes = c->bytes ();
+  size_t old_bytes = c->raw_bytes ();
   c->size = new_size;
-  size_t new_bytes = c->bytes ();
+  size_t new_bytes = c->raw_bytes ();
   size_t res = old_bytes - new_bytes;
 
   if (c->redundant)
@@ -250,7 +255,7 @@ void Internal::make_irredundant (Clause *subsuming) {
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (proof)
-    proof->strengthen (subsuming->id);
+    proof->strengthen (allocate_lrat_id() ? subsuming->id : 0);
   stats.clauses_now_irr++;
   stats.clauses_irredundant++;
   stats.irredundant_literals += subsuming->size;
@@ -267,6 +272,9 @@ void Internal::make_irredundant (Clause *subsuming) {
 
 void Internal::deallocate_clause (Clause *c) {
   char *p = (char *) c;
+  const bool with_lrat = allocate_lrat_id();
+  if (!with_lrat)
+    p += sizeof(int64_t);
   if (arena.contains (p))
     return;
   LOG (c, "deallocate pointer %p", (void *) c);
@@ -275,7 +283,7 @@ void Internal::deallocate_clause (Clause *c) {
 
 void Internal::delete_clause (Clause *c) {
   LOG (c, "delete pointer %p", (void *) c);
-  size_t bytes = c->bytes ();
+  size_t bytes = c->raw_bytes ();
   stats.collected += bytes;
   if (c->garbage) {
     assert (stats.garbage_bytes >= (int64_t) bytes);
@@ -331,13 +339,13 @@ void Internal::mark_garbage (Clause *c) {
   // Because of the internal model checking, external forgettable clauses
   // must be marked as removed already upon mark_garbage, can not wait until
   // actual deletion.
-  if (opts.check && is_external_forgettable (c->id))
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
 
   assert (stats.clauses_now_total > 0);
   stats.clauses_now_total--;
 
-  size_t bytes = c->bytes ();
+  size_t bytes = c->raw_bytes ();
   if (c->redundant) {
     assert (stats.clauses_now_red > 0);
     stats.clauses_now_red--;
@@ -459,7 +467,7 @@ void Internal::add_new_original_clause (int64_t id) {
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
 
-      if (opts.check && is_external_forgettable (id))
+      if (opts.check && opts.checkproof >= 2 && is_external_forgettable (id))
         mark_garbage_external_forgettable (id);
     }
     if (proof) {
@@ -483,7 +491,7 @@ void Internal::add_new_original_clause (int64_t id) {
         // The original form of the added clause is immediately forgotten
         // TODO: shall we save and check the simplified form? (one with
         // new_id)
-        if (opts.check && is_external_forgettable (id))
+        if (opts.check && opts.checkproof >= 2 && is_external_forgettable (id))
           mark_garbage_external_forgettable (id);
       }
     }
@@ -512,7 +520,8 @@ void Internal::add_new_original_clause (int64_t id) {
       assert (glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
-      c->id = new_id;
+      if (allocate_lrat_id())
+        c->id = new_id;
       clause_id--;
       original.clear ();
       handle_external_clause (c); // handle_external_clause uses clause
@@ -656,8 +665,6 @@ void Internal::decay_clauses_upon_incremental_clauses () {
     if (c->garbage)
       continue;
     if (!c->redundant)
-      continue;
-    if (c->id >= last.incremental_decay.last_id)
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition

@@ -16,7 +16,7 @@ Internal::Internal ()
       private_steps (false), out_of_order_level (-1),
       out_of_order_trail (-1), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      saved_decisions (0), concluded (false), lrat (false), frat (false),
+      saved_decisions (0), concluded (false), lrat (false), frat (false), requires_id (false),
       new_binary_since_dedup (true), level (0), vals (0), score_inc (1.0),
       scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
@@ -48,7 +48,7 @@ Internal::Internal ()
   // stack, which became incompatible with several compilers (see the
   // discussion on flexible array member in 'Clause.cpp').
 
-  size_t bytes = Clause::bytes (2);
+  size_t bytes = Clause::raw_bytes (2);
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
@@ -218,7 +218,9 @@ void Internal::add_original_lit (int lit) {
     if (internal->opts.check &&
         (internal->opts.checkwitness || internal->opts.checkfailed)) {
       bool forgettable = from_propagator && ext_clause_forgettable;
-      if (forgettable && opts.check) {
+      assert (allocate_lrat_id ());
+      if (forgettable) {
+        assert (id);
         assert (!original.size () || !external->eclause.empty ());
 
         // First integer is the presence-flag (even if the clause is empty)
@@ -997,6 +999,7 @@ int Internal::solve (bool preprocess_only) {
   stats.searches++;
   START (solve);
   activating_all_new_imported_literals ();
+  update_allocate_lrat_id ();
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {

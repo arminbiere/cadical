@@ -570,7 +570,8 @@ int Internal::lucky_phases (bool update_limit) {
   }
   STOP (lucky);
   STOP (search);
-
+  MSG ("require ids in clauses: %d, due to requires_id = %d, compressedclause = %d, checkwitness = %d, checkfailed = %d",
+    allocate_lrat_id(), requires_id, opts.compressedclause, opts.checkwitness, opts.checkfailed);
   return res;
 }
 

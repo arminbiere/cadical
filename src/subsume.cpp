@@ -143,7 +143,7 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
 // Candidate clause 'c' is strengthened by removing 'lit'.
 
 void Internal::strengthen_clause (Clause *c, int lit) {
-  if (opts.check && is_external_forgettable (c->id))
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   stats.strengthened++;
   assert (c->size > 2);
@@ -165,7 +165,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
 }
 
 void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
-  if (opts.check && is_external_forgettable (c->id))
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   stats.strengthened++;
   assert (c->size > 2);
@@ -528,6 +528,7 @@ bool Internal::subsume_round () {
     size_t minsize = 0;
     bool subsume = true;
     bool binary = (c->size == 2 && !c->redundant);
+    const bool requires_id = allocate_lrat_id();
 
     for (const auto &lit : *c) {
 
@@ -588,7 +589,7 @@ bool Internal::subsume_round () {
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
-      bins (minlit).push_back (Bin{other, c->id});
+      bins (minlit).push_back (Bin{other, requires_id ? c->id : 0});
     }
   }
 

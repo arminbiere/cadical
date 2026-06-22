@@ -181,6 +181,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 //
 struct deduplicate_flush_smaller {
 
+
   bool operator() (Clause *a, Clause *b) const {
 
     const auto eoa = a->end (), eob = b->end ();
@@ -192,7 +193,7 @@ struct deduplicate_flush_smaller {
         (j == eob && i != eoa) ||
         (j == eob && i == eoa && !a->redundant && b->redundant) ||
         (j == eob && i == eoa && (a->redundant == b->redundant) &&
-         b->id < a->id);
+          clause_flags_ordered_less_than () (a, b));
     return smaller;
   }
 };

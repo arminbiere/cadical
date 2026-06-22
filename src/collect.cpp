@@ -49,7 +49,7 @@ void Internal::remove_falsified_literals (Clause *c) {
   if (proof) {
     // Flush changes the clause id, external forgettables need to be
     // marked here (or the new id could be used instead of old one)
-    if (opts.check && is_external_forgettable (c->id))
+    if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
       mark_garbage_external_forgettable (c->id);
     proof->flush_clause (c);
   }
@@ -281,6 +281,7 @@ void Internal::delete_garbage_clauses () {
   LOG ("deleting garbage clauses");
 #ifndef QUIET
   int64_t collected_bytes = 0, collected_clauses = 0;
+  const bool with_lrat = allocate_lrat_id ();
 #endif
   const auto end = clauses.end ();
   auto j = clauses.begin (), i = j;
@@ -289,7 +290,7 @@ void Internal::delete_garbage_clauses () {
     if (!c->collect ())
       continue;
 #ifndef QUIET
-    collected_bytes += c->bytes ();
+    collected_bytes += c->bytes (with_lrat);
     collected_clauses++;
 #endif
     delete_clause (c);
@@ -313,11 +314,16 @@ void Internal::delete_garbage_clauses () {
 void Internal::copy_clause (Clause *c) {
   LOG (c, "moving");
   assert (!c->moved);
+  const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
-  char *q = arena.copy (p, c->bytes ());
+  if (!with_lrat_id)
+    p += sizeof (int64_t);
+  char *q = arena.copy (p, c->bytes (with_lrat_id));
+  if (!with_lrat_id)
+    q -= sizeof (int64_t);
   c->copy = (Clause *) q;
   c->moved = true;
-  LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, (void *) c,
+  LOG ("copied clause[%" PRId64 "] from %p to %p", internal->allocate_lrat_id () ? c->id : 0, (void *) c,
        (void *) c->copy);
 }
 
@@ -327,14 +333,15 @@ void Internal::copy_non_garbage_clauses () {
 
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t moved_clauses = 0, moved_bytes = 0;
+  const bool with_lrat_id = allocate_lrat_id ();
 
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
   for (const auto &c : clauses)
     if (!c->collect ())
-      moved_bytes += c->bytes (), moved_clauses++;
+      moved_bytes += c->bytes (with_lrat_id), moved_clauses++;
     else
-      collected_bytes += c->bytes (), collected_clauses++;
+      collected_bytes += c->bytes (with_lrat_id), collected_clauses++;
 
   PHASE ("collect", stats.collections,
          "moving %zd bytes %.0f%% of %zd non garbage clauses", moved_bytes,

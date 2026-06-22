@@ -77,6 +77,7 @@ CheckerClause *Checker::new_clause () {
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
 
   delete_res.release ();
+  LOG (simplified, "add clause with hash %zd", res->hash);
   return res;
 }
 
@@ -310,6 +311,7 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
 }
 
 uint64_t Checker::compute_hash () {
+  last_id = 0;
   unsigned j = last_id % num_nonces;
   uint64_t tmp = nonces[j] * last_id;
   return last_hash = tmp;

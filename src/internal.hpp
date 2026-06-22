@@ -223,6 +223,7 @@ struct Internal {
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
   bool frat;                    // finalize non-deleted clauses in proof
+  bool requires_id;             // finalize non-deleted clauses in proof
   bool new_binary_since_dedup;  // new binary clause has been learned since
                                 // last decompose round
   int level;                    // decision level ('control.size () - 1')
@@ -715,6 +716,19 @@ struct Internal {
   // these functions work on the global temporary 'clause'.
   //
   Clause *new_clause (bool red, int glue = 0);
+  bool update_allocate_lrat_id () {
+    if (requires_id)
+      return true;
+    if (!opts.compressedclause)
+      return (requires_id = true);
+    if (opts.check && (internal->opts.checkwitness || opts.checkfailed))
+      return (requires_id = true);
+    return
+      (requires_id = (lrat || (opts.check && opts.checkproof >= 2)));
+  }
+  bool allocate_lrat_id () const {
+    return (requires_id);
+  }
   void promote_clause (Clause *, int new_glue);
   void promote_clause_glue_only (Clause *, int new_glue);
   void make_irredundant (Clause *);
@@ -1758,13 +1772,13 @@ struct Internal {
   void check ();                         // Enable online proof checking.
 
   void connect_proof_tracer (Tracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (StatTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (FileTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);
