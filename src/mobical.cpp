@@ -495,7 +495,7 @@ struct ExtendMap {
     const int map_size = map.size ();
     bool already_declared = (abs_arg < map_size && abs_arg && map[abs_arg]);
     if (!abs_arg) {
-      assert (!map[abs_arg]);
+      assert (map.empty () || !map[abs_arg]);
       return 0;
     }
     if (already_declared) {
