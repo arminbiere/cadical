@@ -165,7 +165,6 @@ int External::internalize (int elit, bool extension) {
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->reserve_vars (ilit);
-      e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
       internal->i2e.push_back (eidx);
