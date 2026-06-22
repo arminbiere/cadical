@@ -432,6 +432,11 @@ struct Shared {
   struct {
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) int64_t NAME = 0;
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) Metric NAME = 0;
+#else
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) ;
+#endif
 
     CADICAL_STATISTICS
 
@@ -442,6 +447,7 @@ struct Shared {
     CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 
   } stats_count;
 
@@ -677,7 +683,6 @@ private:
   size_t nof_clauses = 0;
   size_t nof_decide = 0;
   std::vector<int> clause;
-  bool new_ovars = false;
 
   size_t add_new_lemma (bool forgettable, LemmaType type, int delay) {
     assert (clause.size () <= (size_t) INT_MAX);
@@ -1360,6 +1365,7 @@ class Mobical : public Handler {
 
   /*----------------------------------------------------------------------*/
 
+  friend struct Call;
   friend struct InitCall;
   friend struct FailedCall;
   friend struct ConcludeCall;
@@ -1790,7 +1796,13 @@ struct Call {
     return extendmap->map_arg (s, arg, declare_new_var);
   }
 
-  virtual void execute (Solver *&, ExtendMap *&extendmap) = 0;
+  virtual void execute (Solver *&, ExtendMap *&) {
+    if (mobical.verbose) {
+      std::cout << "c [mobical] executing call '";
+      print (std::cout);
+      std::cout << "'" << std::endl;
+    }
+  }
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
   virtual Call *copy () = 0;
@@ -1838,6 +1850,7 @@ static bool after_type (Call::Type t) {
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     assert (!s);
     assert (!extendmap);
     try {
@@ -1859,6 +1872,7 @@ struct InitCall : public Call {
 struct MaxAllocCall : public Call {
   MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     (void) s;
     (void) extendmap;
   }
@@ -1869,6 +1883,7 @@ struct MaxAllocCall : public Call {
 struct LeakAllocCall : public Call {
   LeakAllocCall () : Call (LEAKALLOC) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     (void) s;
     (void) extendmap;
   }
@@ -1882,6 +1897,7 @@ struct LeakAllocCall : public Call {
 struct TerminateCall : public Call {
   TerminateCall (int val) : Call (TERMINATE, 0, 0, 0, val) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     (void) s;
     (void) extendmap;
   }
@@ -1894,6 +1910,7 @@ struct TerminateCall : public Call {
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->vars ();
     (void) (extendmap);
   }
@@ -1905,6 +1922,7 @@ struct VarsCall : public Call {
 struct ActiveCall : public Call {
   ActiveCall () : Call (ACTIVE) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->active ();
     (void) (extendmap);
   }
@@ -1916,6 +1934,7 @@ struct ActiveCall : public Call {
 struct RedundantCall : public Call {
   RedundantCall () : Call (REDUNDANT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->redundant ();
     (void) (extendmap);
   }
@@ -1927,6 +1946,7 @@ struct RedundantCall : public Call {
 struct IrredundantCall : public Call {
   IrredundantCall () : Call (IRREDUNDANT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->irredundant ();
     (void) (extendmap);
   }
@@ -1938,6 +1958,7 @@ struct IrredundantCall : public Call {
 struct ResizeCall : public Call {
   ResizeCall (int max_var) : Call (RESIZE, max_var) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
 #ifndef NDEBUG
     bool has_effect = (s->vars () < arg && !arg);
 #endif
@@ -1957,6 +1978,7 @@ struct DeclareMoreVariablesCall : public Call {
     arg = max_var;
   }
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     extend_map_by (s, extendmap, arg);
 #ifndef NDEBUG
     int i =
@@ -1975,6 +1997,7 @@ struct DeclareMoreVariablesCall : public Call {
 struct DeclareOneMoreVariableCall : public Call {
   DeclareOneMoreVariableCall () : Call (RESIZE) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     extend_map_by (s, extendmap, 1);
 #ifndef NDEBUG
     int i =
@@ -1991,6 +2014,7 @@ struct DeclareOneMoreVariableCall : public Call {
 struct UnPhaseCall : public Call {
   UnPhaseCall (int max_var) : Call (UNPHASE, max_var) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     fflush (stdout);
     s->unphase (map_arg (s, extendmap, false));
   }
@@ -2002,6 +2026,7 @@ struct UnPhaseCall : public Call {
 struct PhaseCall : public Call {
   PhaseCall (int max_var) : Call (PHASE, max_var) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     fflush (stdout);
     s->phase (map_arg (s, extendmap));
   }
@@ -2013,6 +2038,7 @@ struct PhaseCall : public Call {
 struct SetCall : public Call {
   SetCall (const char *o, int v) : Call (SET, 0, 0, o, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->set (name, val);
     if (!strcmp (name, "factorcheck"))
       extendmap->factor_check = val;
@@ -2025,6 +2051,7 @@ struct SetCall : public Call {
 struct ConfigureCall : public Call {
   ConfigureCall (const char *o) : Call (CONFIGURE, 0, 0, o) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->configure (name);
     (void) (extendmap);
   }
@@ -2036,6 +2063,7 @@ struct ConfigureCall : public Call {
 struct LimitCall : public Call {
   LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->limit (name, val);
     (void) (extendmap);
   }
@@ -2047,6 +2075,7 @@ struct LimitCall : public Call {
 struct OptimizeCall : public Call {
   OptimizeCall (int v) : Call (OPTIMIZE, 0, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->optimize (val);
     (void) (extendmap);
   }
@@ -2058,6 +2087,7 @@ struct OptimizeCall : public Call {
 struct ResetCall : public Call {
   ResetCall () : Call (RESET) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     delete extendmap;
     delete s;
     s = 0;
@@ -2075,6 +2105,7 @@ struct ResetCall : public Call {
 struct AddCall : public Call {
   AddCall (int l) : Call (ADD, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     fflush (stdout);
     s->add (map_arg (s, extendmap));
   }
@@ -2086,6 +2117,7 @@ struct AddCall : public Call {
 struct ConstrainCall : public Call {
   ConstrainCall (int l) : Call (CONSTRAIN, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->constrain (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "constrain " << arg; }
@@ -2096,6 +2128,7 @@ struct ConstrainCall : public Call {
 struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     // clean up if there was already one mock propagator
     assert (!mobical.mock_pointer);
 #ifdef LOGGING
@@ -2122,6 +2155,7 @@ struct ConnectCall : public Call {
 struct UnObserveCall : public Call {
   UnObserveCall (int l) : Call (OBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2135,6 +2169,7 @@ struct UnObserveCall : public Call {
 struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2150,6 +2185,7 @@ struct MockForceCall : public Call {
   MockForceCall (int l, MockForceType t, int v)
       : Call (FORCE, l, 0, 0, v), forcetype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2167,6 +2203,7 @@ struct LemmaCall : public Call {
   LemmaCall (int l, LemmaType t, int v)
       : Call (LEMMA, l, 0, 0, v), lemmatype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2185,6 +2222,7 @@ struct LemmaCall : public Call {
 struct DecideCall : public Call {
   DecideCall (int l, int v) : Call (DECIDE, l, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2198,6 +2236,7 @@ struct DecideCall : public Call {
 struct DisconnectCall : public Call {
   DisconnectCall () : Call (DISCONNECT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2216,6 +2255,7 @@ struct DisconnectCall : public Call {
 struct AssumeCall : public Call {
   AssumeCall (int l) : Call (ASSUME, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->assume (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "assume " << arg; }
@@ -2226,6 +2266,7 @@ struct AssumeCall : public Call {
 struct SolveCall : public Call {
   SolveCall (int r = 0) : Call (SOLVE, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->solve ();
     (void) (extendmap);
   }
@@ -2237,6 +2278,7 @@ struct SolveCall : public Call {
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->simplify (arg);
     (void) (extendmap);
   }
@@ -2249,6 +2291,7 @@ struct PropagateAssumptionsCall : public Call {
   PropagateAssumptionsCall (int r = 0)
       : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->propagate ();
     (void) (extendmap);
   }
@@ -2262,6 +2305,7 @@ struct PropagateAssumptionsCall : public Call {
 struct ImpliedCall : public Call {
   ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     std::vector<int> entrailed;
     if (mobical.donot.enforce || s->state () == State::SATISFIED ||
         s->state () == State::INCONCLUSIVE)
@@ -2276,6 +2320,7 @@ struct ImpliedCall : public Call {
 struct ResetAssumptionsCall : public Call {
   ResetAssumptionsCall () : Call (RESET_ASSUMPTIONS) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->reset_assumptions ();
     (void) (extendmap);
   }
@@ -2287,6 +2332,7 @@ struct ResetAssumptionsCall : public Call {
 struct ResetObservedCall : public Call {
   ResetObservedCall () : Call (RESET_OBSERVED) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
@@ -2301,6 +2347,7 @@ struct ResetObservedCall : public Call {
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->lookahead ();
     (void) (extendmap);
   }
@@ -2312,6 +2359,7 @@ struct LookaheadCall : public Call {
 struct CubingCall : public Call {
   CubingCall (int r = 1) : Call (CUBING, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     (void) s->generate_cubes (arg);
     (void) (extendmap);
   }
@@ -2323,6 +2371,7 @@ struct CubingCall : public Call {
 struct PropagateCall : public Call {
   PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     (void) extendmap;
     int res = s->propagate ();
     if (!res) {
@@ -2338,6 +2387,7 @@ struct PropagateCall : public Call {
 struct ValCall : public Call {
   ValCall (int l, int r = 0) : Call (VAL, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce)
       res = s->val (map_arg (s, extendmap, false));
     else if (s->state () == SATISFIED)
@@ -2353,6 +2403,7 @@ struct ValCall : public Call {
 struct FlipCall : public Call {
   FlipCall (int l, int r = 0) : Call (FLIP, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce)
       res = s->flip (map_arg (s, extendmap, false));
     else if (s->state () == SATISFIED)
@@ -2368,6 +2419,7 @@ struct FlipCall : public Call {
 struct FlippableCall : public Call {
   FlippableCall (int l, int r = 0) : Call (FLIPPABLE, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce)
       res = s->flippable (map_arg (s, extendmap, false));
     else if (s->state () == SATISFIED)
@@ -2383,6 +2435,7 @@ struct FlippableCall : public Call {
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->fixed (map_arg (s, extendmap, false));
   }
   void print (ostream &o) { o << "fixed " << arg << ' ' << res; }
@@ -2393,6 +2446,7 @@ struct FixedCall : public Call {
 struct FailedCall : public Call {
   FailedCall (int l, int r = 0) : Call (FAILED, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce)
       res = s->failed (map_arg (s, extendmap, false));
     else if (s->state () == UNSATISFIED)
@@ -2408,6 +2462,7 @@ struct FailedCall : public Call {
 struct ConcludeCall : public Call {
   ConcludeCall () : Call (CONCLUDE) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce)
       s->conclude ();
     else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
@@ -2422,6 +2477,7 @@ struct ConcludeCall : public Call {
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->freeze (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "freeze " << arg; }
@@ -2432,6 +2488,7 @@ struct FreezeCall : public Call {
 struct MeltCall : public Call {
   MeltCall (int l) : Call (MELT, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
       s->melt (map_arg (s, extendmap));
   }
@@ -2443,6 +2500,7 @@ struct MeltCall : public Call {
 struct FrozenCall : public Call {
   FrozenCall (int l, int r = 0) : Call (FROZEN, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     res = s->frozen (map_arg (s, extendmap, false));
   }
   void print (ostream &o) { o << "frozen " << arg << ' ' << res; }
@@ -2453,6 +2511,7 @@ struct FrozenCall : public Call {
 struct DumpCall : public Call {
   DumpCall () : Call (DUMP) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->dump_cnf ();
     (void) (extendmap);
   }
@@ -2464,6 +2523,7 @@ struct DumpCall : public Call {
 struct StatsCall : public Call {
   StatsCall () : Call (STATS) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->statistics ();
     (void) (extendmap);
   }
@@ -2476,6 +2536,7 @@ struct TraceProofCall : public Call {
   std::string path;
   TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->trace_proof (path.c_str ());
     (void) (extendmap);
   }
@@ -2487,6 +2548,7 @@ struct TraceProofCall : public Call {
 struct FlushProofTraceCall : public Call {
   FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->flush_proof_trace ();
     (void) (extendmap);
   }
@@ -2498,6 +2560,7 @@ struct FlushProofTraceCall : public Call {
 struct CloseProofTraceCall : public Call {
   CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
+    Call::execute (s, extendmap);
     s->close_proof_trace ();
     (void) (extendmap);
   }
@@ -2794,7 +2857,7 @@ public:
 
       try {
         // They are (ideally) are executed already
-        if (c->type == Call::DURING)
+        if (during_type (c->type))
           continue;
         // if (c->type == Call::CONTINUE)
         //   continue;
@@ -2825,12 +2888,12 @@ public:
           if (mobical.mopts.get_fixed (c->name))
             continue;
         }
-        if (c->type == Call::SOLVE) {
+        if (process_type (c->type)) {
           // Look ahead and collect LemmaCalls to be executed
           // before solve is executed
           for (size_t j = i + 1; j < calls.size (); j++) {
             Call *next_c = calls[j];
-            if (next_c->type == Call::DURING)
+            if (during_type (next_c->type))
               next_c->execute (solver, extendmap);
             else
               break;
@@ -4008,18 +4071,31 @@ void Mobical::add_statistics (Solver *solver) {
   assert (shared);
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
   shared->stats_sum.NAME += solver->internal->stats.NAME;
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  STATISTIC (NAME, VERBOSE, REF, SYMBOL, PRINT)
+#else
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
+#endif
 
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
   if (solver->internal->stats.NAME) \
     shared->stats_count.NAME++;
-
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  STATISTIC (NAME, VERBOSE, REF, SYMBOL, PRINT)
+#else
+#define METRIC(NAME, VERBOSE, REF, SYMBOL, PRINT)
+#endif
   CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
 }
 
 #define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY) \
@@ -4079,10 +4155,18 @@ void Mobical::print_statistics () {
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
                 shared->executed);
-
+#ifndef NMETRICS
+#define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
+  PRINT_STATER (#NAME, (int64_t) shared->stats_sum.NAME, \
+                (int64_t) shared->stats_count.NAME, shared->executed);
+#else
+#define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL)
+#endif
     CADICAL_STATISTICS
 
 #undef STATISTIC
+#undef METRIC
+
     section ("total");
   }
 
@@ -4422,10 +4506,17 @@ int Trace::fork_and_execute () {
 
     // disable core dumps for faster delta-debugging.
 #ifndef _WIN32
+#ifdef __APPLE__
+    rlimit limit;
+    limit.rlim_cur = 0;
+    limit.rlim_max = 0;
+    setrlimit (RLIMIT_CORE, &limit);
+#else
     rlimit64 limit;
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
     setrlimit64 (RLIMIT_CORE, &limit);
+#endif
 #endif
 
     int status, other = wait (&status);

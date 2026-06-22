@@ -843,7 +843,8 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
 
   factor ();
 
-  elimfast ();
+  if (opts.fastelim)
+    elimfast ();
 
   // if (opts.fastelim)
   //  elimfast ();
@@ -1049,13 +1050,15 @@ int Internal::solve (bool preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
-  if (!preprocess_only && !res && !level && opts.luckyearly)
-    res = lucky_phases ();
+  bool run_lucky = stats.conflicts >= lim.lucky; // cannot be in lucky, because we run it twice
+  bool update_lucky_limits = !opts.luckylate; // update in the second run if there is any
+  if (!preprocess_only && !res && !level && opts.luckyearly && run_lucky)
+    res = lucky_phases (update_lucky_limits);
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level && opts.luckylate)
-      res = lucky_phases ();
+    if (!res && !level && opts.luckylate && run_lucky)
+      res = lucky_phases (true);
     if (!res && !level)
       res = local_search ();
     if (!res)

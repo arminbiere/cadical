@@ -403,9 +403,9 @@ int Internal::warmup () {
   int res = 0;
 
 #ifndef QUIET
-  const int64_t warmup_propagated = stats.walk_warmup_propagate;
-  const int64_t decision = stats.walk_warmup_decision;
-  const int64_t dummydecision = stats.walk_warmup_dummy;
+  const int64_t warmup_propagated = (int64_t)stats.walk_warmup_propagate;
+  const int64_t decision = (int64_t)stats.walk_warmup_decision;
+  const int64_t dummydecision = (int64_t)stats.walk_warmup_dummy;
 #endif
   LOG ("starting warmup");
 
@@ -448,9 +448,9 @@ int Internal::warmup () {
   VERBOSE (3,
            "warming-up needed %" PRIu64 " propagations including %" PRIu64
            " decisions (with %" PRIu64 " dummy ones)",
-           stats.walk_warmup_propagate - warmup_propagated,
-           stats.walk_warmup_decision - decision,
-           stats.walk_warmup_dummy - dummydecision);
+           (int64_t)stats.walk_warmup_propagate - warmup_propagated,
+           (int64_t)stats.walk_warmup_decision - decision,
+           (int64_t)stats.walk_warmup_dummy - dummydecision);
 #endif
 
   if (!res)

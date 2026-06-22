@@ -288,11 +288,8 @@ void App::print_witness (FILE *file) {
   } else {
     for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
       const int elit = eilit.first;
-      const int ilit = eilit.second;
       if (!c)
         fputc ('v', file), c = 1;
-      if (!ilit)
-        continue;
       assert (elit);
       if (solver->external->ervars[elit])
         continue;
@@ -563,8 +560,8 @@ int App::main (int argc, char **argv) {
       optimization_specified = argv[i];
       if (!parse_int_str (argv[i] + 2, optimize))
         APPERR ("invalid optimization option '%s'", argv[i]);
-      if (optimize < 0 || optimize > 31)
-        APPERR ("invalid argument in '%s' (expected '0..31')", argv[i]);
+      if (optimize < -31 || optimize > 31)
+        APPERR ("invalid argument in '%s' (expected '-31..31')", argv[i]);
     } else if (has_prefix (argv[i], "-P")) {
       if (preprocessing_specified)
         APPERR ("multiple preprocessing options '%s' and '%s'",
@@ -750,7 +747,7 @@ int App::main (int argc, char **argv) {
   }
 
   solver->section ("options");
-  if (optimize > 0) {
+  if (optimize) {
     solver->optimize (optimize);
     solver->message ();
   }

@@ -123,6 +123,7 @@ OPTION( exteagerreasons,   0,  0,  1,0,0,1, "eagerly ask for all reasons (0: onl
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( extnassign,        0,  0,  1,0,0,1, "notify assign literal by literal") \
 OPTION( extnbacktrack,     0,  0,  1,0,0,1, "notify backtrack level by level") \
+OPTION( exttracecalls,     0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,       1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,   0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
@@ -232,7 +233,7 @@ OPTION( shufflescores,     1,  0,  1,0,0,1, "shuffle variable scores") \
 OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
-OPTION( stats,             0,  0,  3,0,0,1, "print all statistics (2/3 = new format/more verbose)") \
+OPTION( stats,             0,  0,  3,0,0,1, "print all statistics (2 = more verbose)") \
 OPTION( stubbornIOfocused, 0,  0,  1,0,0,1, "force phases to I/O in focused mode every once in a while (requires rephase==2)") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \

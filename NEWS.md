@@ -1,4 +1,4 @@
-Version 3.0.X
+  Version 3.0.X
 -------------
 
 User Facing Changes:
@@ -26,6 +26,14 @@ User Facing Changes:
   LRAT with extended resolution (and therefore no interpolation) and
   `cover`, `instantiate` and `vivifyinst` which all require less strict
   LRAT checking where the antecedents subsume the learned clause.
+
+- Option '-O' accepts negative argument to decrease the amount of inprocessing.
+  Before only positive value were supported. Value '0' has no effect.
+
+- The output of the statistics has changed. `stats` now has 3 values, 0 (few
+  statistics as previously), 1 (more statistics), 2 (all statistics, similar to
+  old default). Related to this, you can now deactivate some metrics with
+  `./configure --no-metrics`. 
 
 New and Improved Techniques:
 

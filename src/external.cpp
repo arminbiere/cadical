@@ -98,15 +98,11 @@ void External::init (int new_max_var, bool extension) {
     declare_var (new_max_var, extension);
     return;
   }
-  int new_vars = new_max_var - max_var;
-  LOG ("initialized %d external variables", new_vars);
+
+  LOG ("initialized %d external variables", new_max_var - max_var);
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (extension)
-    internal->stats.variables_extension += new_vars;
-  else
-    internal->stats.variables_original += new_vars;
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
@@ -169,7 +165,6 @@ int External::internalize (int elit, bool extension) {
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->reserve_vars (ilit);
-      e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
       internal->i2e.push_back (eidx);

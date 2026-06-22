@@ -148,8 +148,7 @@ struct Walker_DDFW {
   int64_t ticks;              // ticks to approximate run time
   int64_t limit;              // limit on number of propagations
   vector<DDFW_Tagged> broken; // currently unsatisfied clauses
-  std::vector<double> var_critical_sat_weights;
-  std::vector<double> var_unsat_weights;
+  std::vector<std::pair<double,double>> var_weights; // unsat, sat
   std::vector<int>
       flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
@@ -193,21 +192,21 @@ struct Walker_DDFW {
   }
   const double &critical_sat_weight (int lit) const {
     assert ((size_t) internal->vidx (lit) <
-            var_critical_sat_weights.size ());
-    return var_critical_sat_weights[internal->vidx (lit)];
+            var_weights.size ());
+    return var_weights[internal->vidx (lit)].second;
   }
   double &critical_sat_weight (int lit) {
     assert ((size_t) internal->vidx (lit) <
-            var_critical_sat_weights.size ());
-    return var_critical_sat_weights[internal->vidx (lit)];
+            var_weights.size ());
+    return var_weights[internal->vidx (lit)].second;
   }
   const double &critical_unsat_weight (int lit) const {
-    assert ((size_t) internal->vidx (lit) < var_unsat_weights.size ());
-    return var_unsat_weights[internal->vidx (lit)];
+    assert ((size_t) internal->vidx (lit) < var_weights.size ());
+    return var_weights[internal->vidx (lit)].first;
   }
   double &critical_unsat_weight (int lit) {
-    assert ((size_t) internal->vidx (lit) < var_unsat_weights.size ());
-    return var_unsat_weights[internal->vidx (lit)];
+    assert ((size_t) internal->vidx (lit) < var_weights.size ());
+    return var_weights[internal->vidx (lit)].first;
   }
   const uint32_t &uvar_count (int lit) const {
     assert ((size_t) internal->vidx (lit) < noccs_vars_in_broken.size ());
@@ -536,9 +535,11 @@ void Walker_DDFW::save_walker_trail (bool keep) {
 // finally export the final minimum
 void Walker_DDFW::save_final_minimum (size_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
-#ifdef NDEBUG
-  (void) old_init_minimum;
-#endif
+  if (minimum == old_init_minimum) {
+    LOG ("no improvement thus keeping saved clauses");
+    return;
+  }
+  VERBOSE (3, "saving the final walk minimum %zd", minimum);
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
@@ -956,6 +957,7 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
 #endif
 
   if (walker.best_trail_pos == -1) {
+    VERBOSE (3, "saving the new walk minimum %zd", broken);
     for (auto i : vars) {
       const signed char tmp = vals[i];
       if (tmp) {
@@ -1057,8 +1059,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
 #ifdef LOGGING
   int64_t watched = 0;
 #endif
-  var_critical_sat_weights.resize (internal->max_var + 1, 0);
-  var_unsat_weights.resize (internal->max_var + 1, 0);
+  var_weights.resize (internal->max_var + 1, {0, 0});
   noccs_vars_in_broken.resize (internal->max_var + 1, 0);
   const size_t i = invalid_position; // I get a compilation error otherwise
   position_vars_in_broken.resize (internal->max_var + 1, i);

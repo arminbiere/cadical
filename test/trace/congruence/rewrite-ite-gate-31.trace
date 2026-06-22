@@ -59,7 +59,6 @@
 58 set ematrailslow 1
 59 set exteagerreasons 0
 60 set exteagerrecalc 0
-61 set externallrat 0
 62 set factorcandrounds 1
 63 set factordelay 1
 64 set factoreffort 2

@@ -19,7 +19,7 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
   assert (c->literals[0] == cother || c->literals[1] == cother);
 #endif
 
-#ifndef LOGGING
+#if !defined(LOGGING) || defined(NDEBUG)
   (void) c;
   (void) internal;
 #endif
@@ -52,16 +52,20 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
       return;
     }
   }
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 #if !defined(LOGGING) && defined(NDEBUG)
-  static_assert (sizeof (ClauseOrBinary) == 8);
+  static_assert (sizeof (ClauseOrBinary) == 8, "ClauseOrBinary compression does not work");
 #endif
 }
 
 ClauseOrBinary::ClauseOrBinary (Clause *c) {
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   assert (c->size != 2);
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
@@ -97,7 +101,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
     tagged.b.other = lit;
     return;
   }
+#if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+#endif
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
 
 }
@@ -315,9 +321,10 @@ void Walker::save_walker_trail (bool keep) {
 // finally export the final minimum
 void Walker::save_final_minimum (size_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
-#ifdef NDEBUG
-  (void) old_init_minimum;
-#endif
+  if (minimum == old_init_minimum) {
+    LOG ("no improvement thus keeping saved clauses");
+    return;
+  }
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");

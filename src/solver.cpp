@@ -1107,7 +1107,9 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
     disconnect_external_propagator ();
 
   external->propagator = propagator;
+#ifndef NTRACING
   external->trace_api_file = trace_api_file;
+#endif
   internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
