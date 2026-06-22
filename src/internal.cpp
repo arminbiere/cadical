@@ -933,7 +933,9 @@ int Internal::local_search_round (int round) {
   //
   int64_t limit = opts.walkmineffinit;
   limit *= round;
-  if (LONG_MAX / round > limit)
+  if (round > 10000)
+    limit = LONG_MAX;
+  else if (LONG_MAX / round > limit)
     limit *= round;
   else
     limit = LONG_MAX;
