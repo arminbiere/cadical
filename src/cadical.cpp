@@ -286,8 +286,7 @@ void App::print_witness (FILE *file) {
       c += l;
     }
   } else {
-    /*
-    for (auto  eilit : solver->external->e2i) {
+    for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
       const int elit = eilit.first;
       if (!c)
         fputc ('v', file), c = 1;
@@ -304,7 +303,6 @@ void App::print_witness (FILE *file) {
       fputs (str, file);
       c += l;
     }
-    */
   }
   if (c)
     fputs (" 0\n", file);

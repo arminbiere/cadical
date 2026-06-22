@@ -1893,7 +1893,7 @@ inline int External::fixed (int elit) const {
   int eidx = abs (elit);
   if (eidx > max_var)
     return 0;
-  int ilit = e2i[eidx];
+  int ilit = internal_lit (eidx);
   if (!ilit)
     return 0;
   if (elit < 0)
