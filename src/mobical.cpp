@@ -1246,6 +1246,7 @@ class Mobical : public Handler {
 
   /*----------------------------------------------------------------------*/
 
+  friend struct Call;
   friend struct InitCall;
   friend struct FailedCall;
   friend struct ConcludeCall;
@@ -1651,9 +1652,11 @@ struct Call {
   }
 
   virtual void execute (Solver *&, ExtendMap *&) {
-    std::cout << "c [mobical] executing call '";
-    print (std::cout);
-    std::cout << "'" << std::endl;
+    if (mobical.verbose) {
+      std::cout << "c [mobical] executing call '";
+      print (std::cout);
+      std::cout << "'" << std::endl;
+    }
   }
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
