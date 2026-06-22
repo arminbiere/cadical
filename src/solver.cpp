@@ -566,6 +566,7 @@ bool Solver::set (const char *arg, int val) {
         arg, val);
   }
   bool res = internal->opts.set (arg, val);
+  internal->update_allocate_lrat_id();
   LOG_API_CALL_END ("set", arg, val, res);
 
   return res;
