@@ -629,6 +629,7 @@ bool Solver::configure (const char *name) {
            "can only set configuration '%s' right after initialization",
            name);
   bool res = Config::set (internal->opts, name);
+  internal->update_allocate_lrat_id();
   LOG_API_CALL_END ("configure", name, res);
   return res;
 }

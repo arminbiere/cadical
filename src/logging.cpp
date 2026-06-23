@@ -50,11 +50,12 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
   vprintf (fmt, ap);
   va_end (ap);
   if (c) {
+    int size = c->moved ? c->copy ()-> size : c->size;
     if (c->redundant)
-      printf (" glue %d redundant", c->glue);
+      printf (" glue %d redundant", size == 2 ? 1 : c->glue);
     else
       printf (" irredundant");
-    printf (" size %d clause[%" PRId64 "]", c->size, internal->allocate_lrat_id () ? c->id : 0);
+    printf (" size %d clause[%" PRId64 "]", size, internal->allocate_lrat_id () ? c->id : 0);
     if (c->moved)
       printf (" ... (moved)");
     else {

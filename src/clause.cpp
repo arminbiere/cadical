@@ -85,15 +85,15 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (glue > size)
     glue = size;
 
-  const bool with_lrat = allocate_lrat_id ();
-  size_t bytes = Clause::bytes (size, with_lrat);
+  const bool with_id = allocate_lrat_id ();
+  size_t bytes = Clause::bytes (size, with_id);
   char* raw_clause = new char[bytes];
-  if (!with_lrat)
-    raw_clause -= sizeof(int64_t);
+  if (!with_id)
+    raw_clause -= Clause::offset (size == 2);
   Clause *c = (Clause*) raw_clause;
   DeferDeleteArray<char> clause_delete (raw_clause);
 
-  if (with_lrat)
+  if (with_id)
     c->id = ++clause_id;
 
   c->conditioned = false;
@@ -115,9 +115,12 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->vivify = false;
   c->used = 0;
 
-  c->glue = glue;
   c->size = size;
-  c->pos = 2;
+  c->allocated_as_binary = (size == 2);
+  if (with_id || c->size != 2){
+    c->glue = glue;
+    c->pos = 2;
+  }
 
   for (int i = 0; i < size; i++)
     c->literals[i] = clause[i];
@@ -125,7 +128,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->bytes (with_lrat) == bytes);
+  assert (c->bytes (with_id) == bytes);
 
   stats.clauses_now_total++;
   stats.clauses++;
@@ -143,7 +146,6 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   clauses.push_back (c);
   clause_delete.release ();
-  LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))
     mark_added (c);
@@ -162,6 +164,11 @@ void Internal::promote_clause (Clause *c, int new_glue) {
     return;
   if (c->hyper)
     return;
+  if (c->size == 2) {
+    c->glue = 1;
+    return;
+  }
+  assert (c->size != 2);
   int old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
@@ -186,6 +193,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   assert (new_glue);
   if (c->hyper)
     return;
+  assert (c->size != 2);
   int old_glue = c->glue;
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
@@ -234,8 +242,10 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   size_t new_bytes = c->raw_bytes ();
   size_t res = old_bytes - new_bytes;
 
-  if (c->redundant)
-    promote_clause_glue_only (c, min (c->size - 1, c->glue));
+  if (c->redundant) {
+    if (c->size != 2)
+      promote_clause_glue_only (c, min (c->size - 1, c->glue));
+  }
   else {
     int delta_size = old_size - new_size;
     assert (stats.irredundant_literals >= delta_size);
@@ -274,24 +284,26 @@ void Internal::deallocate_clause (Clause *c) {
   char *p = (char *) c;
   const bool with_lrat = allocate_lrat_id();
   if (!with_lrat)
-    p += sizeof(int64_t);
+    p += Clause::offset (c->allocated_as_binary);
   if (arena.contains (p))
     return;
-  LOG (c, "deallocate pointer %p", (void *) c);
+  LOG (c, "deallocate pointer %p, %s ID", (void *) c, with_lrat ? "with" : "without");
   delete[] p;
 }
 
 void Internal::delete_clause (Clause *c) {
-  LOG (c, "delete pointer %p", (void *) c);
-  size_t bytes = c->raw_bytes ();
+  LOG (c, "delete pointer %p with %zd", (void *) c, stats.garbage_bytes);
+  int size = c->moved ? c->copy ()->size : c->size;
+  bool garbage = c->moved ? false : c->garbage;
+  size_t bytes = c->raw_bytes (size);
   stats.collected += bytes;
-  if (c->garbage) {
+  if (garbage) {
     assert (stats.garbage_bytes >= (int64_t) bytes);
     stats.garbage_bytes -= bytes;
     assert (stats.garbage_clauses > 0);
     stats.garbage_clauses--;
-    assert (stats.garbage_literals >= c->size);
-    stats.garbage_literals -= c->size;
+    assert (stats.garbage_literals >= size);
+    stats.garbage_literals -= size;
 
     // See the discussion in 'propagate' on avoiding to eagerly trace binary
     // clauses as deleted (produce 'd ...' lines) as soon they are marked
@@ -301,7 +313,7 @@ void Internal::delete_clause (Clause *c) {
     // from the proof perspective is that the deletion of these binary
     // clauses occurs later in the proof file.
     //
-    if (proof && c->size == 2 && !c->flushed) {
+    if (proof && size == 2 && !c->flushed) {
       proof->delete_clause (c);
     }
   }
@@ -362,7 +374,7 @@ void Internal::mark_garbage (Clause *c) {
   c->garbage = true;
   c->used = 0;
 
-  LOG (c, "marked garbage pointer %p", (void *) c);
+  LOG (c, "marked garbage pointer %p with %zd", (void *) c, stats.garbage_bytes);
 }
 
 /*------------------------------------------------------------------------*/
@@ -628,7 +640,7 @@ Clause *Internal::new_clause_as (const Clause *orig) {
     proof->add_derived_clause (clause_id + 1, orig->redundant, clause,
                                lrat_chain);
   }
-  const int new_glue = orig->glue;
+  const int new_glue = orig->size == 2 ? 1 : orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
   assert (watching ());
   watch_clause (res);
@@ -665,6 +677,8 @@ void Internal::decay_clauses_upon_incremental_clauses () {
     if (c->garbage)
       continue;
     if (!c->redundant)
+      continue;
+    if (c->size == 2)
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition

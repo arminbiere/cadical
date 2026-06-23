@@ -88,8 +88,9 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
 #endif
   LOG (subsumed, "subsumed to be deleted");
   LOG (subsuming, "subsuming to be (un)deleted");
-  if (subsumed->redundant && subsuming->redundant &&
+  if (subsumed->redundant && subsuming->redundant && subsuming->size != 2 &&
       subsuming->glue < subsumed->glue) {
+    assert (subsumed->size != 2);
     promote_clause (subsuming, subsumed->glue);
   }
   if (subsumed->redundant) {
@@ -1397,6 +1398,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
       noccs (lit) += score;
     }
     LOG (c, "putting clause in candidates");
+    assert (c->size != 2);
     if (!c->redundant)
       vivifier.schedule_irred ().push_back (c),
           prioritized_irred += (c->vivify);

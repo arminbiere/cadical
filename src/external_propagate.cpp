@@ -893,7 +893,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     if (force_no_backtrack)
       did_external_prop = true;
     assert (level);
-    assert (new_id);
+    assert (!allocate_lrat_id() || new_id);
     const int idx = vidx (clause[0]);
     assert (val (clause[0]) >= 0);
     assert (!flags (idx).eliminated ());

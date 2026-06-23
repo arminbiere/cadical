@@ -999,7 +999,6 @@ int Internal::solve (bool preprocess_only) {
   stats.searches++;
   START (solve);
   activating_all_new_imported_literals ();
-  update_allocate_lrat_id ();
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {

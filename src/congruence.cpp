@@ -329,6 +329,7 @@ void Closure::extract_binaries () {
     const int other = c->literals[1];
     const bool already_sorted =
         internal->vlit (lit) < internal->vlit (other);
+    LOG ("%d", requires_id);
     binaries.push_back (CompactBinary (c, requires_id ? c->id : 0,
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));
@@ -1011,7 +1012,7 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   size_t bytes = Clause::bytes (size, requires_id);
   char* raw_clause = new char[bytes];
   if (!requires_id)
-    raw_clause -= sizeof(int64_t);
+    raw_clause -= Clause::offset (size == 2);
   Clause *c = (Clause*)raw_clause;
   DeferDeleteArray<char> clause_delete ((char *) c);
 

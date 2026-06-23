@@ -717,14 +717,24 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0);
   bool update_allocate_lrat_id () {
+    bool res;
     if (requires_id)
-      return true;
+      res = true;
     if (!opts.compressedclause)
-      return (requires_id = true);
-    if (opts.check && (internal->opts.checkwitness || opts.checkfailed))
-      return (requires_id = true);
-    return
-      (requires_id = (lrat || (opts.check && opts.checkproof >= 2)));
+      res = true;
+    if (res != requires_id)
+      LOG ("updating requires_id to %d due to compressedclause", res);
+    if (opts.check && (internal->opts.checkwitness || opts.checkfailed)) {
+      res = true;
+      if (res != requires_id)
+        LOG ("updating requires_id to %d due to checking", res);
+    }
+    else
+      res = res || (requires_id = (lrat || (opts.check && opts.checkproof >= 2)));
+    if (res != requires_id)
+      LOG ("updating requires_id to %d", res);
+    requires_id = res;
+    return res;
   }
   bool allocate_lrat_id () const {
     return (requires_id);
@@ -1107,8 +1117,11 @@ struct Internal {
   // variables are also marked as being 'added'.
   //
   bool likely_to_be_kept_clause (Clause *c) {
+    if (c->size == 2)
+      return true;
     if (!c->redundant)
       return true;
+    assert (c->size != 2);
     if (c->glue <= tier2[false])
       return true;
     if (c->glue > lim.keptglue)

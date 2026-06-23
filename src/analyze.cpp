@@ -235,6 +235,8 @@ int Internal::recompute_glue (Clause *c) {
 inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
   c->used = max_used;
+  if (c->size == 2)
+    return;
   if (c->hyper)
     return;
   if (!c->redundant)

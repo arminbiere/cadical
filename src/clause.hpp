@@ -31,25 +31,6 @@ typedef const int *const_literal_iterator;
 struct Clause {
   int64_t id;   // Used to create LRAT-style proofs
 
-  unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
-  bool conditioned : 1; // Tried for globally blocked clause elimination.
-  bool covered : 1;  // Already considered for covered clause elimination.
-  bool enqueued : 1; // Enqueued on backward queue.
-  bool frozen : 1;   // Temporarily frozen (in covered clause elimination).
-  bool garbage : 1;  // can be garbage collected unless it is a 'reason'
-  bool gate : 1;     // Clause part of a gate (function definition).
-  bool hyper : 1;    // redundant hyper binary or ternary resolved
-  bool instantiated : 1; // tried to instantiate
-  bool moved : 1;        // moved during garbage collector ('copy' valid)
-  bool reason : 1;       // reason / antecedent clause can not be collected
-  bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
-  bool transred : 1;     // already checked for transitive reduction
-  bool subsume : 1;      // not checked in last subsumption round
-  bool swept : 1;        // clause used to sweep equivalences
-  bool flushed : 1;      // garbage in proof deleted binaries
-  bool vivified : 1;     // clause already vivified
-  bool vivify : 1;       // clause scheduled to be vivified
-
   // The glucose level ('LBD' or short 'glue') is a heuristic value for the
   // expected usefulness of a learned clause, where smaller glue is consider
   // more useful.  During learning the 'glue' is determined as the number of
@@ -84,15 +65,42 @@ struct Clause {
   // See 'mark_useless_redundant_clauses_as_garbage' in 'reduce.cpp' and
   // 'bump_clause' in 'analyze.cpp'.
   int glue;
+  int pos;  // Position of last watch replacement [Gent'13].
+
 
   union {
     struct {
-      int pos;  // Position of last watch replacement [Gent'13].
+      bool moved : 1; // moved during garbage collector ('copy' valid)
+      bool garbage : 1;  // can be garbage collected unless it is a 'reason'
+      bool reason : 1;       // reason / antecedent clause can not be collected
+      bool allocated_as_binary : 1; // glue and pos not allocated
+      unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
+      bool conditioned : 1; // Tried for globally blocked clause elimination.
+      bool covered : 1;  // Already considered for covered clause elimination.
+      bool enqueued : 1; // Enqueued on backward queue.
+      bool frozen : 1;   // Temporarily frozen (in covered clause elimination).
+      bool gate : 1;     // Clause part of a gate (function definition).
+      bool hyper : 1;    // redundant hyper binary or ternary resolved
+      bool instantiated : 1; // tried to instantiate
+      bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
+      bool transred : 1;     // already checked for transitive reduction
+      bool subsume : 1;      // not checked in last subsumption round
+      bool swept : 1;        // clause used to sweep equivalences
+      bool flushed : 1;      // garbage in proof deleted binaries
+      bool vivified : 1;     // clause already vivified
+      bool vivify : 1;       // clause scheduled to be vivified
+
       int size; // Actual size of 'literals' (at least 2).
     };
-    Clause *copy; // Only valid if 'moved', then that's where to.
+    struct {
+      bool moved2 : 1; // moved during garbage collector ('copy' valid)
+      bool garbage2 : 1;  // can be garbage collected unless it is a 'reason'
+      bool reason2 : 1;       // reason / antecedent clause can not be collected
+      bool allocated_as_binary2 : 1; // glue and pos not allocated
+      uintptr_t raw_copy : 50; // Only valid if 'moved', then that's where to.
+    };
     //
-    // The 'copy' field is only valid for 'moved' clauses in the moving
+    // The 'raw_copy' field is only valid for 'moved' clauses in the moving
     // garbage collector 'copy_non_garbage_clauses' for keeping clauses
     // compactly in a contiguous memory arena.  Otherwise, so almost all of
     // the time, 'id' is valid.  See 'collect.cpp' for details.
@@ -133,6 +141,7 @@ struct Clause {
 
   const_literal_iterator begin () const { return literals; }
   const_literal_iterator end () const { return literals + size; }
+  Clause *copy () const {return reinterpret_cast<Clause*>(raw_copy);};
 
   static size_t raw_bytes (int size) {
 
@@ -154,14 +163,19 @@ struct Clause {
     return aligned_bytes;
   }
 
+  static size_t offset (bool binary) {
+    if (binary)
+      return sizeof (int64_t) + sizeof (int64_t);
+    return sizeof (int64_t);
+  }
   // size with or without space for the lrat id. Do not forget to offset the
   // pointer!
   static size_t bytes (int size, bool with_id) {
-    return raw_bytes (size) - (with_id ? 0 : sizeof (int64_t));
+    return raw_bytes (size) - (with_id ? 0 : offset (size == 2));
   }
 
   size_t bytes (bool with_id) const { return bytes (size, with_id); }
-  size_t raw_bytes () const { return raw_bytes (size); }
+  size_t raw_bytes () const { assert (!moved); return raw_bytes (size); }
 
   // Check whether this clause is ready to be collected and deleted.  The
   // 'reason' flag is only there to protect reason clauses in 'reduce',
@@ -200,9 +214,9 @@ struct clause_flags_ordered_less_than {
     assert (a->size == b->size);
     assert (!a->moved);
     assert (!b->moved);
-    if (a->glue < b->glue)
+    if (a->size > 2 && b->size > 2 && a->glue < b->glue)
       return true;
-    if (a->glue > b->glue)
+    if (a->size > 2 && b->size > 2 && a->glue > b->glue)
       return false;
 
     if (a->pos < b->pos)

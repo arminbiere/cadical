@@ -59,7 +59,7 @@ OPTION( compact,           1,  0,  1,0,1,1, "compact internal variables") \
 OPTION( compactint,      2e3,  1,2e9,0,0,1, "compacting interval") \
 OPTION( compactlim,      1e2,  0,1e3,0,0,1, "inactive limit per mille") \
 OPTION( compactmin,      1e2,  1,2e9,0,0,1, "minimum inactive limit") \
-OPTION( compressedclause,  1,  0,  1,0,1,1, "do not allocate lrat id if possible") \
+OPTION( compressedclause,  0,  0,  1,0,1,1, "do not allocate lrat id if possible") \
 OPTION( condition,         0,  0,  1,0,1,1, "globally blocked clause elim") \
 OPTION( conditioneffort, 100,  1,1e5,0,0,1, "relative efficiency per mille") \
 OPTION( conditionint,    1e4,  1,2e9,0,0,1, "initial conflict interval") \

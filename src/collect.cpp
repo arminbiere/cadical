@@ -80,6 +80,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
   LOG ("marking satisfied clauses and removing falsified literals");
 
+  check_clause_stats();
   for (const auto &c : clauses) {
     if (c->garbage)
       continue;
@@ -88,6 +89,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
       mark_garbage (c);
     else if (tmp < 0)
       remove_falsified_literals (c);
+    check_clause_stats();
   }
 }
 
@@ -182,7 +184,7 @@ size_t Internal::flush_occs (int lit) {
     c = *i;
     if (c->collect ())
       continue;
-    *j++ = c->moved ? c->copy : c;
+    *j++ = c->moved ? c->copy () : c;
     // assert (!c->redundant); // -> not true in sweeping
     res++;
   }
@@ -209,7 +211,7 @@ inline void Internal::flush_watches (int lit, Watches &saved) {
     if (c->collect ())
       continue;
     if (c->moved)
-      c = w.clause = c->copy;
+      c = w.clause = c->copy ();
     w.size = c->size;
     const int new_blit_pos = (c->literals[0] == lit);
     LOG (c, "clause in flush_watch starting from %d", lit);
@@ -258,7 +260,7 @@ void Internal::update_reason_references () {
     LOG (c, "updating assigned %d reason", lit);
     assert (c->reason);
     assert (c->moved);
-    Clause *d = c->copy;
+    Clause *d = c->copy ();
     v.reason = d;
 #ifdef LOGGING
     count++;
@@ -314,17 +316,18 @@ void Internal::delete_garbage_clauses () {
 void Internal::copy_clause (Clause *c) {
   LOG (c, "moving");
   assert (!c->moved);
+  assert (!c->garbage);
   const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
   if (!with_lrat_id)
-    p += sizeof (int64_t);
+    p += Clause::offset (c->allocated_as_binary);
   char *q = arena.copy (p, c->bytes (with_lrat_id));
   if (!with_lrat_id)
-    q -= sizeof (int64_t);
-  c->copy = (Clause *) q;
+    q -= Clause::offset (c->allocated_as_binary);
+  c->raw_copy = (uintptr_t) (Clause *) q;
   c->moved = true;
   LOG ("copied clause[%" PRId64 "] from %p to %p", internal->allocate_lrat_id () ? c->id : 0, (void *) c,
-       (void *) c->copy);
+       (void *) c->copy ());
 }
 
 // This is the moving garbage collector.
@@ -427,7 +430,7 @@ void Internal::copy_non_garbage_clauses () {
     if (c->collect ())
       delete_clause (c);
     else
-      assert (c->moved), *j++ = c->copy, deallocate_clause (c);
+      assert (c->moved), *j++ = c->copy (), deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity () / 2)
@@ -457,6 +460,7 @@ void Internal::copy_non_garbage_clauses () {
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
   int64_t irredundant = 0, redundant = 0, total = 0, irrlits = 0, garbagelits = 0, garbagecls = 0;
+  LOG ("stats.irredundant_literals: %zd", stats.irredundant_literals);
   for (const auto &c : clauses) {
     if (c->garbage) {
       ++garbagecls;

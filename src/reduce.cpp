@@ -44,9 +44,15 @@ void Internal::mark_clauses_to_be_flushed () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    if (c->glue <= tier1limit && used)
+    if (c->size == 2) {
+      if (!used)
+        mark_garbage(c);
       continue;
-    if (c->glue <= tier2limit && used >= max_used - 1)
+    }
+    int glue = c->glue;
+    if (glue <= tier1limit && used)
+      continue;
+    if (glue <= tier2limit && used >= max_used - 1)
       continue;
     mark_garbage (c); // flush unused clauses
     if (c->hyper)
@@ -73,6 +79,7 @@ void Internal::mark_clauses_to_be_flushed () {
 
 struct reduce_less_useful {
   bool operator() (const Clause *c, const Clause *d) const {
+    assert (c->size != 2);
     if (c->glue > d->glue)
       return true;
     if (c->glue < d->glue)
@@ -109,9 +116,10 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    if (c->glue <= tier1limit && used)
+    int glue = c->size == 2 ? 1 : c->glue;
+    if (glue <= tier1limit && used)
       continue;
-    if (c->glue <= tier2limit && used >= max_used - 1)
+    if (glue <= tier2limit && used >= max_used - 1)
       continue;
     if (c->hyper) {          // Hyper binary and ternary resolvents
       assert (c->size <= 3); // are only kept for one reduce round
@@ -119,6 +127,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
         mark_garbage (c); // unless
       continue;           //  used recently.
     }
+    if (c->size == 2)
+      continue;
     stack.push_back (c);
   }
 
@@ -152,6 +162,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     LOG (c, "keeping");
     if (c->size > lim.keptsize)
       lim.keptsize = c->size;
+    assert (c->size != 2);
     if (c->glue > lim.keptglue)
       lim.keptglue = c->glue;
   }
