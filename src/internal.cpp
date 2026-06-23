@@ -933,9 +933,7 @@ int Internal::local_search_round (int round) {
   //
   int64_t limit = opts.walkmineffinit;
   limit *= round;
-  if (round > 10000)
-    limit = LONG_MAX;
-  else if (LONG_MAX / round > limit)
+  if (LONG_MAX / round > limit)
     limit *= round;
   else
     limit = LONG_MAX;
@@ -974,8 +972,12 @@ int Internal::local_search () {
   assert (imports.empty ());
   assert (!level);
 
-  for (int i = 1; !res && i <= lim.localsearch; i++)
-    res = local_search_round (i);
+  if (lim.localsearch > 1000000) {
+    res = local_search_round (lim.localsearch);
+  } else {
+    for (int i = 1; !res && i <= lim.localsearch; i++)
+      res = local_search_round (i);
+  }
 
   if (res == 10) {
     LOG ("local search determined formula to be satisfiable");
