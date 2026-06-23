@@ -165,7 +165,6 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   if (c->hyper)
     return;
   if (c->size == 2) {
-    c->glue = 1;
     return;
   }
   assert (c->size != 2);
