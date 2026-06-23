@@ -309,18 +309,18 @@ int Internal::cdcl_loop_with_inprocessing () {
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate (); // report learned unit
-    else if (notifying_backtrack ())
+    else if (external_prop && notifying_backtrack ())
       continue; // notify_backtrack changed level
-    else if (notifying_assignments ())
+    else if (external_prop && notifying_assignments ())
       continue; // notify_assignments changed level
-    else if (external_propagate ()) {
+    else if (external_prop && external_propagate ()) {
       if (conflict && !unsat) // external propagation leads to conflict
         analyze_wrapper ();
-    } else if (external_adding_clauses ()) {
+    } else if (external_prop && external_adding_clauses ()) {
       if (conflict && !unsat) // external clauses lead to conflict
         analyze_wrapper ();
     } else if (satisfied ()) { // found model
-      if (external_check_solution ()) {
+      if (external_prop && external_check_solution ()) {
         if (conflict && !unsat)
           analyze ();
         continue;
@@ -354,7 +354,7 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
-    else if (notifying_decision ())
+    else if (external_prop && notifying_decision ())
       continue; // notify new decision changed level
     else if (pseudo_level ())
       res = decide_assumption ();
@@ -421,18 +421,19 @@ int Internal::propagate_assumptions () {
       else if (!propagate ()) {
         // let analyze run to get failed assumptions
         analyze ();
-      } else if (notifying_backtrack ())
+      } else if (external_prop && notifying_backtrack ())
         continue; // notify_backtrack changed level
-      else if (notifying_assignments ())
-        continue;                       // notify_assignments changed level
-      else if (external_propagate ()) { // external propagation
+      else if (external_prop && notifying_assignments ())
+        continue; // notify_assignments changed level
+      else if (external_prop &&
+               external_propagate ()) { // external propagation
         if (conflict && !unsat)
           analyze ();
-      } else if (external_adding_clauses ()) {
+      } else if (external_prop && external_adding_clauses ()) {
         if (conflict && !unsat) // external clauses lead to conflict
           analyze ();
       } else if (satisfied ()) { // found model
-        if (external_check_solution ()) {
+        if (external_prop && external_check_solution ()) {
           if (conflict && !unsat) // check solution added a conflict
             analyze ();
           continue;
@@ -448,7 +449,7 @@ int Internal::propagate_assumptions () {
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated
         break;
-      else if (pseudo_level () && notifying_decision ())
+      else if (external_prop && pseudo_level () && notifying_decision ())
         continue; // notify new decision changed level
       else if (pseudo_level ())
         res = decide_assumption ();
@@ -1044,14 +1045,16 @@ int Internal::solve (bool preprocess_only) {
     if (!preprocess_only)
       init_search_limits ();
   }
-  if (!res)
+  if (!res && external_prop)
     notify_loop ();
   if (!preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
-  bool run_lucky = stats.conflicts >= lim.lucky; // cannot be in lucky, because we run it twice
-  bool update_lucky_limits = !opts.luckylate; // update in the second run if there is any
+  bool run_lucky = stats.conflicts >=
+                   lim.lucky; // cannot be in lucky, because we run it twice
+  bool update_lucky_limits =
+      !opts.luckylate; // update in the second run if there is any
   if (!preprocess_only && !res && !level && opts.luckyearly && run_lucky)
     res = lucky_phases (update_lucky_limits);
   if (!res && !level)

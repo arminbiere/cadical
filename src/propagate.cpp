@@ -56,8 +56,8 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
 
 // calculate lrat_chain
 //
-void Internal::build_chain_for_units (int lit, Clause *reason,
-                                      bool forced) {
+inline void Internal::inline_chain_for_units (int lit, Clause *reason,
+                                              bool forced) {
   if (!lrat)
     return;
   if (assignment_level (lit, reason) && !forced)
@@ -74,6 +74,10 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
+}
+void Internal::build_chain_for_units (int lit, Clause *reason,
+                                      bool forced) {
+  inline_chain_for_units (lit, reason, forced);
 }
 
 // same code as above but reason is assumed to be conflict and lit is not
@@ -289,7 +293,7 @@ bool Internal::propagate () {
         if (b < 0)
           conflict = w.clause; // but continue ...
         else {
-          build_chain_for_units (w.blit, w.clause, 0);
+          inline_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
           ticks++;
@@ -395,7 +399,7 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
-            build_chain_for_units (other, w.clause, 0);
+            inline_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
             ticks++;

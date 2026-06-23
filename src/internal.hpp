@@ -485,7 +485,7 @@ struct Internal {
   // INT32_MAX. Therefore the size is at most INT32_MAX. This is already
   // used implicitely in the code (like var (lit).trail). With the assertion
   // we document the invariant.
-  int get_trail_size () const {
+  inline int get_trail_size () const {
     assert (trail.size () <= INT32_MAX);
     return static_cast<int> (trail.size ());
   }
@@ -754,6 +754,7 @@ struct Internal {
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
   int assignment_level (int lit, Clause *);
+  void inline_chain_for_units (int lit, Clause *reason, bool forced);
   void build_chain_for_units (int lit, Clause *reason, bool forced);
   void build_chain_for_empty ();
   void search_assign (int lit, Clause *);
