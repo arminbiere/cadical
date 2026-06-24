@@ -368,16 +368,10 @@ void Internal::copy_non_garbage_clauses () {
 
   // Keep clauses in arena in the same order.
   //
-  if (opts.arenacompact) {
-    const bool with_lrat = allocate_lrat_id();
-    for (const auto &c : clauses) {
-      char *p = (char*)c;
-      if (!with_lrat)
-        p += Clause::offset (c->allocated_as_binary);
-      if (!c->collect () && arena.contains (p))
+  if (opts.arenacompact)
+    for (const auto &c : clauses)
+      if (!c->collect () && arena.contains (c))
         copy_clause (c);
-    }
-  }
 
   if (opts.arenatype == 1 || !watching ()) {
 

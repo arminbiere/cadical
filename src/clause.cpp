@@ -288,7 +288,7 @@ void Internal::deallocate_clause (Clause *c) {
   const bool with_lrat = allocate_lrat_id();
   if (!with_lrat)
     p += Clause::offset (c->allocated_as_binary);
-  if (arena.contains (p))
+  if (arena.contains (c))
     return;
   LOG (c, "deallocate pointer %p, %s ID", (void *) c, with_lrat ? "with" : "without");
   delete[] p;

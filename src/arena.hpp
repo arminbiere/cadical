@@ -4,6 +4,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "clause.hpp"
+
 namespace CaDiCaL {
 
 // This memory allocation arena provides fixed size pre-allocated memory for
@@ -82,6 +84,8 @@ public:
     return (from.start <= c && c < from.top) ||
            (to.start <= c && c < to.top);
   }
+  bool contains (Clause *p) const;
+
 
   // Allocate that amount of memory in 'to' space.  This assumes the 'to'
   // space has been prepared to hold enough memory with 'prepare'.  Then
