@@ -360,7 +360,6 @@ int Internal::cdcl_loop_with_inprocessing () {
       notifying_decision_wrapper (true);
       res = decide_assumption ();
     } else if (external_prop && ask_decision ()) {
-      notifying_decision_wrapper (true);
       continue; // notify new decision changed level
     } else if (external_prop && notifying_decision_wrapper (true))
       continue; // notify new decision changed level
