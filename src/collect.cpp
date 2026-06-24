@@ -348,7 +348,6 @@ void Internal::copy_non_garbage_clauses () {
 
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t moved_clauses = 0, moved_bytes = 0;
-  const bool with_lrat_id = allocate_lrat_id ();
 
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
