@@ -4,7 +4,6 @@
 /*------------------------------------------------------------------------*/
 
 #include "range.hpp"
-#include "util.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
@@ -71,7 +70,7 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
+  vector<int> e2i;   // External 'idx' to internal 'lit'.
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
@@ -176,9 +175,6 @@ struct External {
     return eidx > max_var || !ervars[eidx];
   }
 
-  inline int internal_lit (int elit) const {
-    return find_or_default (e2i, elit, 0);
-  }
   /*----------------------------------------------------------------------*/
 
   // The following five functions push individual literals or clauses on the

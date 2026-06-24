@@ -30,8 +30,9 @@ void External::enlarge (int new_max_var) {
 }
 
 int External::declare_var (int new_var, bool extension) {
-  int ilit = internal_lit (new_var);
-  if (!ilit) {
+  assert ((size_t) new_var < e2i.size ());
+  if (!e2i[new_var]) {
+    int ilit;
     if (!internal->opts.varkeepname)
       ilit = internal->max_var + 1;
     else {
@@ -65,20 +66,26 @@ void External::reserve (int new_max_var) {
   assert (max_var < new_max_var);
   internal->reserve_vars (new_max_var);
   reserve_at_least (ext_units, 2 * new_max_var + 2);
+  reserve_at_least (e2i, new_max_var + 1);
   reserve_at_least (ervars, new_max_var + 1);
   reserve_at_least (ext_flags, new_max_var + 1);
   reserve_at_least (internal->i2e, new_max_var + 1);
   if (!max_var) {
     assert (e2i.empty ());
+    e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
     ervars.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
+  } else {
+    assert (e2i.size () == (size_t) max_var + 1);
   }
   unsigned eidx;
   for (eidx = max_var + 1u; eidx <= (unsigned) new_max_var; eidx++) {
+    assert (e2i.size () == eidx);
+    e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
@@ -101,6 +108,9 @@ void External::init (int new_max_var, bool extension) {
 
   LOG ("initialized %d external variables", new_max_var - max_var);
   reserve (new_max_var);
+
+  assert (internal->i2e.size () == (size_t) internal->max_var + 1);
+  assert (e2i.size () == (size_t) new_max_var + 1);
 
   declare_var (new_max_var, extension);
   if (internal->opts.checkfrozen)
@@ -213,10 +223,10 @@ void External::add (int elit) {
         internal->from_propagator && internal->ext_clause_forgettable;
 
     // Forgettable clauses (coming from the external propagator) are not
-    // saved into the external 'original' stack. They are stored separately
-    // in external 'forgettable_original', from where they are deleted when
-    // the corresponding clause is deleted (actually deleted, not just
-    // marked as garbage).
+    // saved into the external 'original' stack. They are stored
+    // separately in external 'forgettable_original', from where they are
+    // deleted when the corresponding clause is deleted (actually deleted,
+    // not just marked as garbage).
     if (!forgettable)
       original.push_back (elit);
   }
@@ -435,8 +445,8 @@ void External::add_observed_var (int elit) {
     return;
 
   // In case this variable was already assigned (e.g. via unit clause) and
-  // got compacted to map to another (not observed) variable, it can not be
-  // unnasigned so it must be notified explicitly now.
+  // got compacted to map to another (not observed) variable, it can not
+  // be unnasigned so it must be notified explicitly now.
   const int tmp = fixed (elit);
   LOG ("checking newly observed %d fixed %d", elit, tmp);
   if (!tmp)
@@ -451,7 +461,8 @@ void External::add_observed_var (int elit) {
   internal->notified_trail = 0;
 
   internal->delay_notify_units.push_back (unit);
-  LOG ("delay notify propagator about fixed assignment upon observe for %d",
+  LOG ("delay notify propagator about fixed assignment upon observe for "
+       "%d",
        unit);
 }
 
@@ -639,10 +650,10 @@ void External::check_solve_result (int res) {
     check_unsatisfiable ();
 }
 
-// Prepare checking that completely molten literals are not used as argument
-// of 'add' or 'assume', which is invalid under freezing semantics.  This
-// case would be caught by our 'restore' implementation so is only needed
-// for checking the deprecated 'freeze' semantics.
+// Prepare checking that completely molten literals are not used as
+// argument of 'add' or 'assume', which is invalid under freezing
+// semantics.  This case would be caught by our 'restore' implementation
+// so is only needed for checking the deprecated 'freeze' semantics.
 
 void External::update_molten_literals () {
   if (!internal->opts.checkfrozen)
@@ -808,9 +819,10 @@ void External::check_assignment (int (External::*a) (int) const) {
 
   bool presence_flag;
   // Check those forgettable external clauses that are still present, but
-  // only if the external propagator is still connected (otherwise solution
-  // reconstruction is allowed to touch the previously observed variables so
-  // there is no guarantee that the final model will satisfy these clauses.)
+  // only if the external propagator is still connected (otherwise
+  // solution reconstruction is allowed to touch the previously observed
+  // variables so there is no guarantee that the final model will satisfy
+  // these clauses.)
   for (const auto &forgettables : forgettable_original) {
     if (!propagator)
       break;
@@ -906,8 +918,8 @@ void External::check_failing () {
   } else if (constraint.size ())
     LOG (constraint, "constraint satisfied and ignored");
 
-  // Add original clauses as last step, failing () and failed_constraint ()
-  // might add more external clauses (due to lazy explanation)
+  // Add original clauses as last step, failing () and failed_constraint
+  // () might add more external clauses (due to lazy explanation)
   for (const auto lit : original)
     checker->add (lit);
 
@@ -940,9 +952,10 @@ void External::check_failing () {
 // In principle we want to traverse the clauses of the simplified formula
 // only, particularly eliminated variables should be completely removed.
 // This poses the question what to do with unit clauses.  Should they be
-// considered part of the simplified formula or of the witness to construct
-// solutions for the original formula?  Ideally they should be considered
-// to be part of the witness only, i.e., as they have been simplified away.
+// considered part of the simplified formula or of the witness to
+// construct solutions for the original formula?  Ideally they should be
+// considered to be part of the witness only, i.e., as they have been
+// simplified away.
 
 // Therefore we distinguish frozen and non-frozen units during clause
 // traversal.  Frozen units are treated as unit clauses while non-frozen
@@ -951,35 +964,35 @@ void External::check_failing () {
 
 // Furthermore, eliminating units during 'compact' could be interpreted as
 // variable elimination, i.e., just add the resolvents (remove falsified
-// literals), then drop the clauses with the unit, and push the unit on the
-// extension stack.  This is of course only OK if the user did not freeze
-// that variable (even implicitly during assumptions).
+// literals), then drop the clauses with the unit, and push the unit on
+// the extension stack.  This is of course only OK if the user did not
+// freeze that variable (even implicitly during assumptions).
 
 // Thanks go to Fahiem Bacchus for asking why there is a necessity to
-// distinguish these two cases (frozen and non-frozen units).  The answer is
-// that it is not strictly necessary, and this distinction could be avoided
-// by always treating units as remaining unit clauses, thus only using the
-// first of the two following functions and dropping the 'if (!frozen (idx))
-// continue;' check in it.  This has however the down-side that those units
-// are still in the simplified formula and only as units.  I would not
-// consider such a formula as really being 'simplified'. On the other hand
-// if the user explicitly freezes a literal, then it should continue to be
-// in the simplified formula during traversal.  So also only using the
-// second function is not ideal.
+// distinguish these two cases (frozen and non-frozen units).  The answer
+// is that it is not strictly necessary, and this distinction could be
+// avoided by always treating units as remaining unit clauses, thus only
+// using the first of the two following functions and dropping the 'if
+// (!frozen (idx)) continue;' check in it.  This has however the down-side
+// that those units are still in the simplified formula and only as units.
+// I would not consider such a formula as really being 'simplified'. On
+// the other hand if the user explicitly freezes a literal, then it should
+// continue to be in the simplified formula during traversal.  So also
+// only using the second function is not ideal.
 
-// There is however a catch where this solution breaks down (in the sense of
-// producing less optimal results - that is keeping units in the formula
-// which better would be witness clauses).  The problem is with compact
-// preprocessing which removes eliminated but also fixed internal variables.
-// One internal unit (fixed) variable is kept and all the other external
-// literals which became unit are mapped to that internal literal (negated
-// or positively).  Compact is called non-deterministically from the point
-// of the user and thus there is no control on when this happens.  If
-// compact happens those external units are mapped to a single internal
-// literal now and then all share the same 'frozen' counter.   So if the
-// user freezes one of them all in essence get frozen, which in turn then
-// makes a difference in terms of traversing such a unit as unit clause or
-// as unit witness.
+// There is however a catch where this solution breaks down (in the sense
+// of producing less optimal results - that is keeping units in the
+// formula which better would be witness clauses).  The problem is with
+// compact preprocessing which removes eliminated but also fixed internal
+// variables. One internal unit (fixed) variable is kept and all the other
+// external literals which became unit are mapped to that internal literal
+// (negated or positively).  Compact is called non-deterministically from
+// the point of the user and thus there is no control on when this
+// happens.  If compact happens those external units are mapped to a
+// single internal literal now and then all share the same 'frozen'
+// counter.   So if the user freezes one of them all in essence get
+// frozen, which in turn then makes a difference in terms of traversing
+// such a unit as unit clause or as unit witness.
 
 bool External::traverse_all_frozen_units_as_clauses (ClauseIterator &it) {
   if (internal->unsat)
@@ -1036,7 +1049,7 @@ void External::copy_flags (External &other) const {
   vector<Flags> &other_ftab = other.internal->ftab;
   const unsigned limit = min (max_var, other.max_var);
   for (unsigned eidx = 1; eidx <= limit; eidx++) {
-    const int this_ilit = internal_lit (eidx);
+    const int this_ilit = e2i[eidx];
     if (!this_ilit)
       continue;
     const int other_ilit = other.e2i[eidx];

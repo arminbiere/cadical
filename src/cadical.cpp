@@ -287,7 +287,7 @@ void App::print_witness (FILE *file) {
     }
   } else {
     for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
-      const int elit = eilit.first;
+      const int elit = eilit; // TODO: Is this correct?
       if (!c)
         fputc ('v', file), c = 1;
       assert (elit);
