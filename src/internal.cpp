@@ -354,11 +354,15 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
-    else if (external_prop && notifying_decision ())
+    else if (external_prop && notifying_decision_wrapper (false))
       continue; // notify new decision changed level
-    else if (pseudo_level ())
+    else if (pseudo_level ()) {
+      notifying_decision_wrapper (true);
       res = decide_assumption ();
-    else if (ask_decision ())
+    } else if (external_prop && ask_decision ()) {
+      notifying_decision_wrapper (true);
+      continue; // notify new decision changed level
+    } else if (external_prop && notifying_decision_wrapper (true))
       continue; // notify new decision changed level
     else
       decide (); // next decision

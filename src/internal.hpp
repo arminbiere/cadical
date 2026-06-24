@@ -848,6 +848,7 @@ struct Internal {
   bool notifying_assignments ();
   bool notifying_backtrack ();
   bool notifying_decision ();
+  bool notifying_decision_wrapper (bool);
   void force_backtrack (int new_level);
   bool ask_decision ();
   bool ask_external_clause ();
