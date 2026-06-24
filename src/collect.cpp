@@ -283,7 +283,6 @@ void Internal::delete_garbage_clauses () {
   LOG ("deleting garbage clauses");
 #ifndef QUIET
   int64_t collected_bytes = 0, collected_clauses = 0;
-  const bool with_lrat = allocate_lrat_id ();
 #endif
   const auto end = clauses.end ();
   auto j = clauses.begin (), i = j;
@@ -292,7 +291,7 @@ void Internal::delete_garbage_clauses () {
     if (!c->collect ())
       continue;
 #ifndef QUIET
-    collected_bytes += c->allocated_bytes (with_lrat);
+    collected_bytes += c->raw_bytes (c->size);
     collected_clauses++;
 #endif
     delete_clause (c);
@@ -355,9 +354,9 @@ void Internal::copy_non_garbage_clauses () {
   //
   for (const auto &c : clauses)
     if (!c->collect ())
-      moved_bytes += c->allocated_bytes (with_lrat_id), moved_clauses++;
+      moved_bytes += c->raw_bytes (c->size), moved_clauses++;
     else
-      collected_bytes += c->allocated_bytes (with_lrat_id), collected_clauses++;
+      collected_bytes += c->raw_bytes (c->size), collected_clauses++;
 
   PHASE ("collect", stats.collections,
          "moving %zd bytes %.0f%% of %zd non garbage clauses", moved_bytes,
@@ -370,10 +369,16 @@ void Internal::copy_non_garbage_clauses () {
 
   // Keep clauses in arena in the same order.
   //
-  if (opts.arenacompact)
-    for (const auto &c : clauses)
-      if (!c->collect () && arena.contains (c))
+  if (opts.arenacompact) {
+    const bool with_lrat = allocate_lrat_id();
+    for (const auto &c : clauses) {
+      char *p = (char*)c;
+      if (!with_lrat)
+        p += Clause::offset (c->allocated_as_binary);
+      if (!c->collect () && arena.contains (p))
         copy_clause (c);
+    }
+  }
 
   if (opts.arenatype == 1 || !watching ()) {
 

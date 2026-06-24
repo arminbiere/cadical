@@ -349,7 +349,6 @@ void Closure::extract_binaries () {
     const int other = c->literals[1];
     const bool already_sorted =
         internal->vlit (lit) < internal->vlit (other);
-    LOG ("%d", requires_id);
     binaries.push_back (CompactBinary (c, requires_id ? c->id () : 0,
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));

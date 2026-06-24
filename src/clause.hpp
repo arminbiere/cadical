@@ -74,7 +74,8 @@ struct Clause {
       bool garbage : 1;  // can be garbage collected unless it is a 'reason'
       bool reason : 1;       // reason / antecedent clause can not be collected
       bool allocated_as_binary : 1; // glue and pos not allocated
-#ifndef NDEBUG
+      bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
+#ifndef NDEBUGw
       bool has_id : 1;
 #endif
       unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
@@ -85,7 +86,6 @@ struct Clause {
       bool gate : 1;     // Clause part of a gate (function definition).
       bool hyper : 1;    // redundant hyper binary or ternary resolved
       bool instantiated : 1; // tried to instantiate
-      bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
       bool transred : 1;     // already checked for transitive reduction
       bool subsume : 1;      // not checked in last subsumption round
       bool swept : 1;        // clause used to sweep equivalences
@@ -101,6 +101,7 @@ struct Clause {
       bool garbage2 : 1;  // can be garbage collected unless it is a 'reason'
       bool reason2 : 1;       // reason / antecedent clause can not be collected
       bool allocated_as_binary2 : 1; // glue and pos not allocated
+      bool redundant2 : 1;    // aka 'learned' so not 'irredundant' (original)
 #ifndef NDEBUG
        bool has_id2 : 1;
 #endif
