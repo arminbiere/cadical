@@ -308,10 +308,12 @@ void Internal::delete_garbage_clauses () {
 
 /*------------------------------------------------------------------------*/
 
-// This is the start of the copying garbage collector using the arena.  At
-// the core is the following function, which copies a clause to the 'to'
-// space of the arena.  Be careful if this clause is a reason of an
-// assignment.  In that case update the reason reference.
+// This is the start of the copying garbage collector using the arena. At the
+// core is the following function, which copies a clause to the 'to' space of
+// the arena. Be careful if this clause is a reason of an assignment. In that
+// case update the reason reference. On the way, we transform non-binary clauses
+// of length 2 into binary clauses without the extra headers, reducing memory
+// usage.
 //
 void Internal::copy_clause (Clause *c) {
   LOG (c, "moving");
@@ -319,13 +321,16 @@ void Internal::copy_clause (Clause *c) {
   assert (!c->garbage || (c->size == 2 && c->reason));
   const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
+  bool binary = (c->size == 2);
   if (!with_lrat_id)
-    p += Clause::offset (c->allocated_as_binary);
+    p += Clause::offset (binary);
   char *q = arena.copy (p, c->allocated_bytes (with_lrat_id));
   if (!with_lrat_id)
-    q -= Clause::offset (c->allocated_as_binary);
+    q -= Clause::offset (binary);
   c->raw_copy = (uintptr_t) (Clause *) q;
   c->moved = true;
+  if (binary)
+    ((Clause *)q)->allocated_as_binary = true;
   LOG ("copied clause[%" PRId64 "] from %p to %p", internal->allocate_lrat_id () ? c->id : 0, (void *) c,
        (void *) c->copy ());
 }
