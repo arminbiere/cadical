@@ -10,14 +10,6 @@ namespace CaDiCaL {
   LOG (#NAME "(%d) on level %d START", VAL, level)
 
 static void trace_api_call (FILE *trace_api_file, Internal *internal,
-                            const char *s0) {
-  assert (trace_api_file);
-  LOG ("TRACE %s", s0);
-  (void) internal;
-  fprintf (trace_api_file, "%s\n", s0);
-  fflush (trace_api_file);
-}
-static void trace_api_call (FILE *trace_api_file, Internal *internal,
                             const char *s0, int i1) {
   assert (trace_api_file);
   LOG ("TRACE %s %d", s0, i1);
@@ -895,6 +887,17 @@ void Internal::connect_propagator () {
     backtrack_without_updating_phases ();
 }
 
+bool Internal::notifying_decision_wrapper (bool after) {
+  if ((bool) after != (bool) opts.extnlevel) {
+    LOG ("not notifying decision after(%d) != extnlevel(%d)", after,
+         opts.extnlevel);
+    return false;
+  }
+  LOG ("notifying decision after(%d) == extnlevel(%d)", after,
+       opts.extnlevel);
+  return notifying_decision ();
+}
+
 /*----------------------------------------------------------------------------*/
 //
 // Notify the external propagator that a new decision level is started.
@@ -968,18 +971,20 @@ bool Internal::ask_decision () {
   if (!external_prop || external_prop_is_lazy)
     return 0;
 
-  assert (notified_level == level + 1);
+  assert (notified_level == level + 1 - opts.extnlevel);
   assert (!unsat);
   assert (!conflict);
   stats.up_cb++;
   stats.up_cb_decide++;
 
+  const int level_before = level;
+
   LOG_INTERACTION_START (cb_decide);
   int elit = external->propagator->cb_decide ();
   LOG_INTERACTION_RETURN (cb_decide, elit);
 
-  assert (!level || level + 1 <= notified_level);
-  if (notified_level != level + 1)
+  assert (!level || level + 1 - opts.extnlevel <= notified_level);
+  if (level != level_before)
     return true;
   if (notified_trail != trail.size ())
     return true;
@@ -1008,7 +1013,7 @@ bool Internal::ask_decision () {
        elit, ilit, fixed (ilit), val (ilit));
 
   search_assume_decision (ilit);
-  assert (level == notified_level);
+  assert (level + opts.extnlevel == notified_level);
   return true;
 }
 
