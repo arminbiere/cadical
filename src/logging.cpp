@@ -51,6 +51,8 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
   va_end (ap);
   if (c) {
     int size = c->moved ? c->copy ()-> size : c->size;
+    if (c->garbage)
+      printf (" garbage");
     if (c->redundant)
       printf (" glue %d redundant", size == 2 ? 1 : c->glue);
     else

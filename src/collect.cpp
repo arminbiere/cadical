@@ -316,7 +316,7 @@ void Internal::delete_garbage_clauses () {
 void Internal::copy_clause (Clause *c) {
   LOG (c, "moving");
   assert (!c->moved);
-  assert (!c->garbage);
+  assert (!c->garbage || (c->size == 2 && c->reason));
   const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
   if (!with_lrat_id)

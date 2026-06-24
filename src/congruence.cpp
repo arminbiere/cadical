@@ -3194,7 +3194,7 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     ++matched;
     if (!(mark & 2)) {
       lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
-      LOG ("pushing %d -> %" PRId64, other, w.clause->id);
+      LOG (w.clause, "pushing %d ->" PRId64, other);
       continue;
     }
     LOG ("marking %d mu4", other);

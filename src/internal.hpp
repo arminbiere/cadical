@@ -717,22 +717,18 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0);
   bool update_allocate_lrat_id () {
-    bool res;
-    if (requires_id)
+    bool res = false;
+    if (requires_id) {
       res = true;
+      return res;
+    }
     if (!opts.compressedclause)
       res = true;
-    if (res != requires_id)
-      LOG ("updating requires_id to %d due to compressedclause", res);
     if (opts.check && (internal->opts.checkwitness || opts.checkfailed)) {
       res = true;
-      if (res != requires_id)
-        LOG ("updating requires_id to %d due to checking", res);
     }
     else
-      res = res || (requires_id = (lrat || (opts.check && opts.checkproof >= 2)));
-    if (res != requires_id)
-      LOG ("updating requires_id to %d", res);
+      res = (res || lrat || (opts.check && opts.checkproof >= 2));
     requires_id = res;
     return res;
   }

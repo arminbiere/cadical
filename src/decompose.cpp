@@ -415,7 +415,6 @@ bool Internal::decompose_round () {
   vector<Clause*> frozen_binary_reasons;
   const size_t size = 2 * (1 + (size_t) max_var);
   decompose_ids.resize (size);
-  bool requires_id = allocate_lrat_id();
 
   for (auto idx : vars) {
     if (!substituted)
