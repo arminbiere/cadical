@@ -322,6 +322,9 @@ void Internal::copy_clause (Clause *c) {
   const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
   bool binary = (c->size == 2);
+  // this is not the start of the allocated struct (that would be `::offset
+  // (c->allocated_as_binary)`), only the start of the part to copy, such that
+  // we can ignore the extra headers.
   if (!with_lrat_id)
     p += Clause::offset (binary);
   char *q = arena.copy (p, c->allocated_bytes (with_lrat_id));
