@@ -955,7 +955,6 @@ bool Internal::notifying_backtrack () {
   assert (notified_level >= level);
   if (notified_level == level)
     return false;
-  assert (false);
   stats.up_notify_forced++;
   return true;
 }
