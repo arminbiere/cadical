@@ -60,6 +60,8 @@ void Internal::factor_mode (bool redundant_only) {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
+    if (terminated_asynchronously ()) // REVIEW
+      return;
     if (c->garbage)
       continue;
     if (redundant_only && !c->redundant)
@@ -93,6 +95,8 @@ void Internal::factor_mode (bool redundant_only) {
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
   for (unsigned round = 1; !opts.factorxor && round <= rounds; round++) {
+    if (terminated_asynchronously ()) // REVIEW
+      return;
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
@@ -126,9 +130,12 @@ void Internal::factor_mode (bool redundant_only) {
   }
 
   // finally push remaining clause on the occurrence stack
-  for (const auto &c : candidates)
+  for (const auto &c : candidates) {
+    if (terminated_asynchronously ()) // REVIEW
+      return;
     for (const auto &lit : *c)
       occs (lit).push_back (c);
+  }
 
   PHASE ("factor", stats.factorings,
          "initialized %zd clauses using %" PRId64 " ticks",

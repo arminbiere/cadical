@@ -360,12 +360,14 @@ int Internal::elimfast_round (bool &completed,
 
   // Connect irredundant clauses.
   //
-  for (const auto &c : clauses)
+  for (const auto &c : clauses) {
+    if (terminated_asynchronously ()) // REVIEW: 
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-
+  }
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif

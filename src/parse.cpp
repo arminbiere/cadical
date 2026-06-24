@@ -264,10 +264,6 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
   int lit = 0;
   uint64_t parsed = 0;
   while ((ch = parse_char ()) != EOF) {
-    // REVIEW: here after every "token" or rather after every clause (i.e. !lit)
-    // Currently an error will be raised afterwards anyways.
-    if (internal->terminated_asynchronously ()) 
-      return "parsing interrupted";
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
       continue;
     if (ch == 'c') {
@@ -277,6 +273,10 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         break;
       continue;
     }
+    // REVIEW: here after every "token" or rather after every clause (i.e. !lit)
+    // Currently an error will be raised afterwards anyways.
+    if (internal->terminated_asynchronously ()) 
+      return "parsing interrupted";
     if (ch == 'a' && found_inccnf_header)
       break;
     const char *err = parse_lit (ch, lit, vars, strict);
@@ -326,8 +326,6 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     if (!*parse_inccnf_too)
       *parse_inccnf_too = true;
     for (;;) {
-      if (internal->terminated_asynchronously ()) // REVIEW: as above
-        return "parsing interrupted";
       ch = parse_char ();
       if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
         continue;
@@ -338,6 +336,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
           break;
         continue;
       }
+      if (internal->terminated_asynchronously ()) // REVIEW: as above
+        return "parsing interrupted";
       const char *err = parse_lit (ch, lit, vars, strict);
       if (err == cube_token)
         PER ("two 'a' in a row");

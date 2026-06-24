@@ -7,7 +7,6 @@
 #include <iterator>
 #include <utility>
 #include <vector>
-
 namespace CaDiCaL {
 
 Closure::Closure (Internal *i)
@@ -4122,6 +4121,8 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   }
 
   for (auto c : candidates) {
+    if (internal->terminated_asynchronously ()) // REVIEW
+      return;
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
   }
@@ -7328,6 +7329,8 @@ void Closure::init_ite_gate_extraction (
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
+    if (internal->terminated_asynchronously ())
+      break;
     unsigned positive = 0, negative = 0, twice = 0;
     for (auto lit : *c) {
       if (internal->val (lit))
@@ -7806,7 +7809,6 @@ void Closure::extract_gates () {
     STOP (extract);
     return;
   }
-
   if (internal->lrat) { // save some memory
     mu2_ids.clear ();
     shrink_vector (mu2_ids);

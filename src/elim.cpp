@@ -864,13 +864,15 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
          scheduled, percent (scheduled, active ()));
 
   // Connect irredundant clauses.
-  // REVIEW: What should we do here? This takes some time
-  for (const auto &c : clauses)
+  // REVIEW: What should we do here? This takes some time // TA inserted
+  for (const auto &c : clauses) {
+    if (terminated_asynchronously ())
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-
+  }
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif

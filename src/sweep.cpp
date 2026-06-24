@@ -94,6 +94,9 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses) {
+    // TODO: ta here 
+    if (terminated_asynchronously ()) // REVIEW
+      break;
     if (!c->garbage) {
       for (const auto &lit : *c)
         if (active (lit))
@@ -1895,7 +1898,7 @@ bool Internal::sweep () {
   delaying_sweep.bumpreasons.bypass_delay ();
   SET_EFFORT_LIMIT (tickslimit, sweep, !opts.sweepcomplete);
   delaying_sweep.bumpreasons.unbypass_delay ();
-
+  
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweepings++;
@@ -1903,7 +1906,7 @@ bool Internal::sweep () {
   uint64_t units = stats.sweep_units;
   Sweeper *sweeper = new Sweeper (this);
   DeferDeletePtr<Sweeper> delete_sweeper (sweeper);
-  init_sweeper (*sweeper);
+  init_sweeper (*sweeper); // <---- TODO: 
   if (opts.sweepcomplete)
     sweeper->limit.ticks = INT64_MAX;
   else
