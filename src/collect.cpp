@@ -292,7 +292,7 @@ void Internal::delete_garbage_clauses () {
     if (!c->collect ())
       continue;
 #ifndef QUIET
-    collected_bytes += c->bytes (with_lrat);
+    collected_bytes += c->allocated_bytes (with_lrat);
     collected_clauses++;
 #endif
     delete_clause (c);
@@ -321,7 +321,7 @@ void Internal::copy_clause (Clause *c) {
   char *p = (char *) c;
   if (!with_lrat_id)
     p += Clause::offset (c->allocated_as_binary);
-  char *q = arena.copy (p, c->bytes (with_lrat_id));
+  char *q = arena.copy (p, c->allocated_bytes (with_lrat_id));
   if (!with_lrat_id)
     q -= Clause::offset (c->allocated_as_binary);
   c->raw_copy = (uintptr_t) (Clause *) q;
@@ -342,9 +342,9 @@ void Internal::copy_non_garbage_clauses () {
   //
   for (const auto &c : clauses)
     if (!c->collect ())
-      moved_bytes += c->bytes (with_lrat_id), moved_clauses++;
+      moved_bytes += c->allocated_bytes (with_lrat_id), moved_clauses++;
     else
-      collected_bytes += c->bytes (with_lrat_id), collected_clauses++;
+      collected_bytes += c->allocated_bytes (with_lrat_id), collected_clauses++;
 
   PHASE ("collect", stats.collections,
          "moving %zd bytes %.0f%% of %zd non garbage clauses", moved_bytes,

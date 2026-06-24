@@ -1009,7 +1009,7 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   assert (size >= 2);
 
   bool requires_id = internal->allocate_lrat_id();
-  size_t bytes = Clause::bytes (size, requires_id);
+  size_t bytes = Clause::bytes_to_allocate (size, requires_id);
   char* raw_clause = new char[bytes];
   if (!requires_id)
     raw_clause -= Clause::offset (size == 2);

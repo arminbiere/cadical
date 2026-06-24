@@ -86,7 +86,7 @@ Clause *Internal::new_clause (bool red, int glue) {
     glue = size;
 
   const bool with_id = allocate_lrat_id ();
-  size_t bytes = Clause::bytes (size, with_id);
+  size_t bytes = Clause::bytes_to_allocate (size, with_id);
   char* raw_clause = new char[bytes];
   if (!with_id)
     raw_clause -= Clause::offset (size == 2);
@@ -128,7 +128,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->bytes (with_id) == bytes);
+  assert (c->allocated_bytes (with_id) == bytes);
 
   stats.clauses_now_total++;
   stats.clauses++;

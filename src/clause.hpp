@@ -170,11 +170,13 @@ struct Clause {
   }
   // size with or without space for the lrat id. Do not forget to offset the
   // pointer!
-  static size_t bytes (int size, bool with_id) {
+  static size_t bytes_to_allocate (int size, bool with_id) {
     return raw_bytes (size) - (with_id ? 0 : offset (size == 2));
   }
 
-  size_t bytes (bool with_id) const { return bytes (size, with_id); }
+  size_t allocated_bytes (bool with_id) const {
+    return raw_bytes (size) - (with_id ? 0 : offset (allocated_as_binary));
+  }
   size_t raw_bytes () const { assert (!moved); return raw_bytes (size); }
 
   // Check whether this clause is ready to be collected and deleted.  The
