@@ -1321,8 +1321,7 @@ public:
     level++;
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
-    // opts.extnlevel can break this
-    // check_trail ();
+    check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_NEW_DECISION_LEVEL);
   }

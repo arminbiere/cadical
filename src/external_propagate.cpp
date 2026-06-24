@@ -55,7 +55,7 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
   } while (0)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   do { \
-    LOG (#NAME "returns %d on level %d END", VAL, level); \
+    LOG (#NAME " returns %d on level %d END", VAL, level); \
     if (!opts.exttracecalls) \
       break; \
     if (!external->trace_api_file) \
@@ -905,19 +905,16 @@ bool Internal::notifying_decision_wrapper (bool after) {
 bool Internal::notifying_decision () {
   if (!external_prop || external_prop_is_lazy)
     return false;
-  assert (notified_level == level || notified_level == level - 1);
-  assert (notified_trail == trail.size () ||
-          notified_trail == trail.size () - 1);
+  assert (notified_level == level);
+  assert (notified_trail == trail.size ());
   stats.up_notify++;
   stats.up_notify_decision++;
   notified_level++;
   const int new_level = notified_level;
-  const int current_level = level;
   LOG_INTERACTION_FOR (notify_new_decision_level, new_level);
   external->propagator->notify_new_decision_level ();
   LOG_INTERACTION_END_FOR (notify_new_decision_level, new_level);
-  if (level < current_level || notified_level < new_level ||
-      notified_trail < trail.size ()) {
+  if (level < notified_level || notified_trail < trail.size ()) {
     notify_loop ();
     stats.up_notify_forced++;
     return true;
@@ -972,7 +969,7 @@ bool Internal::ask_decision () {
   if (!external_prop || external_prop_is_lazy)
     return 0;
 
-  assert (notified_level == level + 1 - opts.extnlevel);
+  assert (notified_level == level + 1);
   assert (!unsat);
   assert (!conflict);
   stats.up_cb++;
@@ -984,7 +981,7 @@ bool Internal::ask_decision () {
   int elit = external->propagator->cb_decide ();
   LOG_INTERACTION_RETURN (cb_decide, elit);
 
-  assert (!level || level + 1 - opts.extnlevel <= notified_level);
+  assert (!level || level + 1 <= notified_level);
   if (level != level_before)
     return true;
   if (notified_trail != trail.size ())
@@ -1002,6 +999,9 @@ bool Internal::ask_decision () {
     FATAL (
         "external decisions are only allowed over unassigned variables.");
 
+  if (notifying_decision_wrapper (true))
+    return true;
+
   assert (external->is_observed[abs (elit)]);
 
   // TODO: double-check side-effects of internalize.
@@ -1014,7 +1014,7 @@ bool Internal::ask_decision () {
        elit, ilit, fixed (ilit), val (ilit));
 
   search_assume_decision (ilit);
-  assert (level - opts.extnlevel == notified_level);
+  assert (level == notified_level);
   return true;
 }
 
