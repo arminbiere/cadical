@@ -413,7 +413,7 @@ struct my_dummy_optional {
 // code, because all binary irredundant.
 struct Gate {
 #ifdef LOGGING
-  uint64_t id;
+  uint64_t raw_id;
 #endif
   struct LRAT_Reasons {
     vector<LitClausePair> pos_lhs_ids;
@@ -425,6 +425,7 @@ struct Gate {
   bool garbage : 1;
   bool indexed : 1;
   bool marked : 1;
+  bool with_id : 1;
   int8_t degenerated_gate = Special_Gate::NORMAL;
   int size;
 #ifndef NFLEXIBLE
@@ -433,6 +434,13 @@ struct Gate {
   int rhs[2];
 #endif
   int arity () const { return size; }
+#ifdef LOGGING
+  uint64_t &id () {assert (with_id); return raw_id;};
+  uint64_t id () const {if (with_id) return raw_id; else return 0;};
+#endif
+  bool has_reasons () {
+    return with_id && lrat_reasons;
+  }
 
   bool operator== (Gate const &lhs) {
     if (tag != lhs.tag)
@@ -454,7 +462,7 @@ struct Gate {
     assert (size >= 2);
   }
 
-  static size_t bytes (int size) {
+  static size_t raw_bytes (int size) {
     assert (size > 1);
     const size_t header_bytes = sizeof (Gate);
     const size_t actual_literal_bytes = size * sizeof (int);
@@ -466,7 +474,14 @@ struct Gate {
     size_t aligned_bytes = align (combined_bytes, 8);
     return aligned_bytes;
   }
-  size_t bytes () const { return bytes (size); }
+  static size_t bytes_to_allocate (int size, bool with_id) { return raw_bytes (size) - (with_id ? 0 : offset ()); }
+  static size_t offset () {
+#ifndef LOGGING
+    return sizeof (LRAT_Reasons*);
+#else
+    return sizeof (uint64_t) + sizeof (LRAT_Reasons*);
+#endif
+  }
 
   // creation of a gate with either the size or of the right-hand side
   static Gate *new_gate (size_t n, bool lrat);

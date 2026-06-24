@@ -49,8 +49,8 @@ void Internal::remove_falsified_literals (Clause *c) {
   if (proof) {
     // Flush changes the clause id, external forgettables need to be
     // marked here (or the new id could be used instead of old one)
-    if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
-      mark_garbage_external_forgettable (c->id);
+    if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
+      mark_garbage_external_forgettable (c->id ());
     proof->flush_clause (c);
   }
   literal_iterator j = c->begin ();
@@ -332,10 +332,15 @@ void Internal::copy_clause (Clause *c) {
     q -= Clause::offset (binary);
   c->raw_copy = (uintptr_t) (Clause *) q;
   c->moved = true;
-  if (binary)
+  if (!with_lrat_id && binary)
     ((Clause *)q)->allocated_as_binary = true;
-  LOG ("copied clause[%" PRId64 "] from %p to %p", internal->allocate_lrat_id () ? c->id : 0, (void *) c,
+  assert (!with_lrat_id || c->has_id);
+  if (internal->allocate_lrat_id ())
+    LOG ("copied clause[%" PRId64 "] from %p to %p", c->id (), (void *) c,
        (void *) c->copy ());
+  else
+    LOG ("copied clause[%" PRId64 "] from %p to %p", (int64_t) 0, (void *) c,
+     (void *) c->copy ());
 }
 
 // This is the moving garbage collector.

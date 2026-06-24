@@ -518,7 +518,7 @@ int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
 
 int Internal::walk_pick_lit (Walker &walker, const ClauseOrBinary::clause_or_binary::TaggedBinary c) {
   LOG ("picking literal by break-count on binary clause [%" PRIu64 "]%s %s",
-       c.d->id, LOGLIT (c.lit (internal)), LOGLIT (c.other));
+       c.d->id (), LOGLIT (c.lit (internal)), LOGLIT (c.other));
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
   double sum = 0;

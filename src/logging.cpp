@@ -49,15 +49,24 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
-  if (c) {
+  if (c == Internal::external_reason) {
+    printf (" external reason");
+  }
+  else if (c == Internal::decision_reason) {
+    printf (" decision");
+  }
+  else if (c) {
     int size = c->moved ? c->copy ()-> size : c->size;
     if (c->garbage)
       printf (" garbage");
     if (c->redundant)
-      printf (" glue %d redundant", size == 2 ? 1 : c->glue);
+      printf (" glue %d redundant", size == 2 ? 1 : c->glue ());
     else
       printf (" irredundant");
-    printf (" size %d clause[%" PRId64 "]", size, internal->allocate_lrat_id () ? c->id : 0);
+    if (internal->allocate_lrat_id ())
+      printf (" size %d clause[%" PRId64 "]", size, c->id ());
+    else
+      printf (" size %d clause[0]", size);
     if (c->moved)
       printf (" ... (moved)");
     else {
@@ -93,7 +102,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
   if (g) {
     printf ("%s%s gate[%" PRIu64 "] (arity: %d) %s := %s",
             special_gate_str (g->degenerated_gate).c_str (),
-            g->garbage ? " garbage" : "", g->id, g->arity (),
+            g->garbage ? " garbage" : "", g->id (), g->arity (),
             loglit (internal, g->lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : *g) {

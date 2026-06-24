@@ -29,7 +29,7 @@ typedef const int *const_literal_iterator;
 
 #define USED_SIZE 5
 struct Clause {
-  int64_t id;   // Used to create LRAT-style proofs
+  int64_t raw_id;   // Used to create LRAT-style proofs
 
   // The glucose level ('LBD' or short 'glue') is a heuristic value for the
   // expected usefulness of a learned clause, where smaller glue is consider
@@ -64,8 +64,8 @@ struct Clause {
   // low glue) are always removed if they remain unused during one interval.
   // See 'mark_useless_redundant_clauses_as_garbage' in 'reduce.cpp' and
   // 'bump_clause' in 'analyze.cpp'.
-  int glue;
-  int pos;  // Position of last watch replacement [Gent'13].
+  int raw_glue;
+  int raw_pos;  // Position of last watch replacement [Gent'13].
 
 
   union {
@@ -74,6 +74,9 @@ struct Clause {
       bool garbage : 1;  // can be garbage collected unless it is a 'reason'
       bool reason : 1;       // reason / antecedent clause can not be collected
       bool allocated_as_binary : 1; // glue and pos not allocated
+#ifndef NDEBUG
+      bool has_id : 1;
+#endif
       unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
       bool conditioned : 1; // Tried for globally blocked clause elimination.
       bool covered : 1;  // Already considered for covered clause elimination.
@@ -90,6 +93,7 @@ struct Clause {
       bool vivified : 1;     // clause already vivified
       bool vivify : 1;       // clause scheduled to be vivified
 
+
       int size; // Actual size of 'literals' (at least 2).
     };
     struct {
@@ -97,6 +101,9 @@ struct Clause {
       bool garbage2 : 1;  // can be garbage collected unless it is a 'reason'
       bool reason2 : 1;       // reason / antecedent clause can not be collected
       bool allocated_as_binary2 : 1; // glue and pos not allocated
+#ifndef NDEBUG
+       bool has_id2 : 1;
+#endif
       uintptr_t raw_copy : 50; // Only valid if 'moved', then that's where to.
     };
     //
@@ -143,6 +150,31 @@ struct Clause {
   const_literal_iterator end () const { return literals + size; }
   Clause *copy () const {return reinterpret_cast<Clause*>(raw_copy);};
 
+  /*C++17 only: inline*/ int &glue () {
+    assert (has_id || !allocated_as_binary);
+    return raw_glue;
+  }
+  /*C++17 only:inline*/int &pos () {
+    assert (has_id || !allocated_as_binary);
+    return raw_pos;
+  }
+  /*C++17 only:inline*/int64_t &id () {
+    assert (has_id);
+    return raw_id;
+  }
+
+  /*C++17 only: inline*/int glue () const {
+    assert (has_id || !allocated_as_binary);
+    return raw_glue;
+  }
+  /*C++17 only: inline*/int pos () const {
+    assert (has_id || !allocated_as_binary);
+    return raw_pos;
+  }
+  /*C++17 only: inline*/int64_t id () const {
+    assert (has_id);
+    return raw_id;
+  }
   static size_t raw_bytes (int size) {
 
     // Memory sanitizer insists that clauses put into consecutive memory in
@@ -216,14 +248,14 @@ struct clause_flags_ordered_less_than {
     assert (a->size == b->size);
     assert (!a->moved);
     assert (!b->moved);
-    if (a->size > 2 && b->size > 2 && a->glue < b->glue)
+    if (a->size > 2 && a->glue () < b->glue ())
       return true;
-    if (a->size > 2 && b->size > 2 && a->glue > b->glue)
+    if (a->size > 2 && a->glue () > b->glue ())
       return false;
 
-    if (a->pos < b->pos)
+    if (a->size > 2 && a->pos () < b->pos ())
       return true;
-    if (a->pos > b->pos)
+    if (a->size > 2 && a->pos () > b->pos ())
       return false;
     if (a->used < b->used)
       return true;

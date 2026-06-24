@@ -191,7 +191,7 @@ public:
         ;
       else if (KeyEqual () (g.second, el)) {
         res = g.second;
-        MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);
+        MYPRINTF ("found id %zd at position %zd\n", g.second->id (), pos);
         break;
       }
       if (++pos == hash_size) {
@@ -229,7 +229,7 @@ public:
         ;
       else if (KeyEqual () (g.second, el)) {
         res = g.second;
-        MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);
+        MYPRINTF ("found id %zd at position %zd\n", g.second->id (), pos);
         break;
       }
       if (++pos == hash_size) {
@@ -274,7 +274,7 @@ public:
     }
     table[pos].second = el;
     table[pos].first = hash_val;
-    MYPRINTF ("insert %zd at position %zd with hash %zd\n", el->id, pos,
+    MYPRINTF ("insert %zd at position %zd with hash %zd\n", el->id (), pos,
               hash_val);
     return iterator (table.begin () + pos);
   }
@@ -357,7 +357,7 @@ private:
 #ifdef MYPRINTFLOGGING
       MYPRINTF (
           "inserting id %zd at position %zd was at %zd, with hash %zd\n",
-          el.second->id, new_pos, old_pos, el.first);
+          el.second->id (), new_pos, old_pos, el.first);
       ++old_pos;
 #endif
     }

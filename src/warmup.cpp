@@ -141,7 +141,7 @@ void Internal::warmup_propagate_beyond_conflict () {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const literal_iterator middle = lits + w.clause->pos;
+          const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
           signed char v = -1;
           int r = 0;
@@ -149,12 +149,12 @@ void Internal::warmup_propagate_beyond_conflict () {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
 #if 0 // my intuiton: does not make sense to update here
-          w.clause->pos = k - lits; // always save position
+          w.clause->pos () = k - lits; // always save position
 #endif
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 

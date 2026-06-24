@@ -5,6 +5,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 static Clause external_reason_clause;
+Clause *Internal::external_reason = &external_reason_clause;
 
 Internal::Internal ()
     : mode (SEARCH), unsat (false), iterating (false),
@@ -18,8 +19,7 @@ Internal::Internal ()
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
       saved_decisions (0), concluded (false), lrat (false), frat (false), requires_id (false),
       new_binary_since_dedup (true), level (0), vals (0), score_inc (1.0),
-      scores (this), conflict (0), ignore (0),
-      external_reason (&external_reason_clause), newest_clause (0),
+      scores (this), conflict (0), ignore (0), newest_clause (0),
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
@@ -52,6 +52,9 @@ Internal::Internal ()
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
+#ifndef NDEBUG
+  dummy_binary->has_id = true;
+#endif
 
   /*with C++17: static_*/ assert (max_used == (1 << USED_SIZE) - 1);
 }

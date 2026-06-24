@@ -805,11 +805,11 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
           }
         }
         if (match) {
-          lrat_chain.push_back (d->id);
+          lrat_chain.push_back (d->id ());
           break;
         }
       }
-      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (c->id ());
       assert (lrat_chain.size () == 2);
     }
     if (clause.size () > 1) {
@@ -923,7 +923,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
       assert (q->bid);
       unsigned idxtoo = idx;
       for (Quotient *p = q; p; p = p->prev) {
-        lrat_chain.push_back (p->qlauses[idxtoo]->id);
+        lrat_chain.push_back (p->qlauses[idxtoo]->id ());
         if (p->prev)
           idxtoo = p->matches[idx];
       }
@@ -1018,7 +1018,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
       else
         clause.push_back (-fresh);
       if (lrat) {
-        lrat_chain.push_back (c->id);
+        lrat_chain.push_back (c->id ());
         lrat_chain.push_back (mini_chain[resolve * 2]);
       }
       proof->add_derived_clause (first_tmp_id, true, clause, lrat_chain);
@@ -1034,7 +1034,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
       else
         clause.push_back (-fresh);
       if (lrat) {
-        lrat_chain.push_back (d->id);
+        lrat_chain.push_back (d->id ());
         lrat_chain.push_back (mini_chain[resolve * 2 + 1]);
       }
       proof->add_derived_clause (second_tmp_id, true, clause, lrat_chain);

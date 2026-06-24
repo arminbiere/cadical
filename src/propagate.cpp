@@ -73,7 +73,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->id ());
 }
 
 // same code as above but reason is assumed to be conflict and lit is not
@@ -91,7 +91,7 @@ void Internal::build_chain_for_empty () {
     int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (conflict->id);
+  lrat_chain.push_back (conflict->id ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -342,13 +342,13 @@ bool Internal::propagate () {
           // first non-watched literal until the saved position.
 
           const int size = w.clause->size;
-          const literal_iterator middle = lits + w.clause->pos;
+          const literal_iterator middle = lits + w.clause->pos ();
           const const_literal_iterator end = lits + size;
           literal_iterator k = middle;
 
           // Find replacement watch 'r' at position 'k' with value 'v'.
           assert (lits + 2 <= k);
-          LOG (w.clause, "search starting at %d", w.clause->pos);
+          LOG (w.clause, "search starting at %d", w.clause->pos ());
           int r = 0;
           signed char v = -1;
 
@@ -358,12 +358,12 @@ bool Internal::propagate () {
           if (v < 0) { // need second search starting at the head?
 
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
 
-          w.clause->pos = k - lits; // always save position
+          w.clause->pos () = k - lits; // always save position
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
@@ -542,7 +542,7 @@ void Internal::propergate () {
       assert (u < 0);
 
       const int size = w.clause->size;
-      const literal_iterator middle = lits + w.clause->pos;
+      const literal_iterator middle = lits + w.clause->pos ();
       const const_literal_iterator end = lits + size;
       literal_iterator k = middle;
 
@@ -554,13 +554,13 @@ void Internal::propergate () {
 
       if (v < 0) {
         k = lits + 2;
-        assert (w.clause->pos <= size);
+        assert (w.clause->pos () <= size);
         while (k != middle && (v = val (r = *k)) < 0)
           k++;
       }
 
       assert (lits + 2 <= k), assert (k <= w.clause->end ());
-      w.clause->pos = k - lits;
+      w.clause->pos () = k - lits;
 
       assert (v > 0);
 

@@ -160,10 +160,10 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
-        lrat_chain.push_back (c->id);
-        lrat_chain.push_back (d->id);
-        // LOG ("gates added id %" PRId64, c->id);
-        // LOG ("gates added id %" PRId64, d->id);
+        lrat_chain.push_back (c->id ());
+        lrat_chain.push_back (d->id ());
+        // LOG ("gates added id %" PRId64, c->id ());
+        // LOG ("gates added id %" PRId64, d->id ());
         clear_analyzed_literals ();
       }
       assign_unit (first);
@@ -258,11 +258,11 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
-        lrat_chain.push_back (c->id);
-        lrat_chain.push_back (d->id);
+        lrat_chain.push_back (c->id ());
+        lrat_chain.push_back (d->id ());
         clear_analyzed_literals ();
-        // LOG ("gates added id %" PRId64, c->id);
-        // LOG ("gates added id %" PRId64, d->id);
+        // LOG ("gates added id %" PRId64, c->id ());
+        // LOG ("gates added id %" PRId64, d->id ());
       }
       assign_unit (second);
       elim_propagate (eliminator, second);

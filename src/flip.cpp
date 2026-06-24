@@ -74,7 +74,7 @@ bool Internal::flip (int lit) {
         continue;
 
       const int size = w.clause->size;
-      const literal_iterator middle = lits + w.clause->pos;
+      const literal_iterator middle = lits + w.clause->pos ();
       const const_literal_iterator end = lits + size;
       literal_iterator k = middle;
 
@@ -84,7 +84,7 @@ bool Internal::flip (int lit) {
         k++;
       if (v < 0) {
         k = lits + 2;
-        assert (w.clause->pos <= size);
+        assert (w.clause->pos () <= size);
         while (k != middle && (v = val (r = *k)) < 0)
           k++;
       }
@@ -96,7 +96,7 @@ bool Internal::flip (int lit) {
 
       assert (v > 0);
       assert (lits + 2 <= k), assert (k <= w.clause->end ());
-      w.clause->pos = k - lits;
+      w.clause->pos () = k - lits;
       lits[0] = other, lits[1] = r, *k = lit;
       watch_literal (r, lit, w.clause);
       j--;
@@ -207,7 +207,7 @@ bool Internal::flippable (int lit) {
     }
 
     const int size = w.clause->size;
-    const literal_iterator middle = lits + w.clause->pos;
+    const literal_iterator middle = lits + w.clause->pos ();
     const const_literal_iterator end = lits + size;
     literal_iterator k = middle;
 
@@ -217,7 +217,7 @@ bool Internal::flippable (int lit) {
       k++;
     if (v < 0) {
       k = lits + 2;
-      assert (w.clause->pos <= size);
+      assert (w.clause->pos () <= size);
       while (k != middle && (v = val (r = *k)) < 0)
         k++;
     }
@@ -230,7 +230,7 @@ bool Internal::flippable (int lit) {
     assert (v > 0);
     assert (lits + 2 <= k);
     assert (k <= w.clause->end ());
-    w.clause->pos = k - lits;
+    w.clause->pos () = k - lits;
     i->blit = r;
   }
 

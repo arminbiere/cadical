@@ -164,7 +164,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     stack.pop_back ();
     if (idx < 0) {
       Var &v = var (idx);
-      mini_chain.push_back (v.reason->id);
+      mini_chain.push_back (v.reason->id ());
       continue;
     }
     assert (idx);

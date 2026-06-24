@@ -359,7 +359,7 @@ void Proof::delete_clause (Clause *c) {
   clause.clear (); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
   if (requires_id)
-    clause_id = c->id;
+    clause_id = c->id ();
   redundant = c->redundant;
   delete_clause (); // Increments 'statistics.deleted'.
 }
@@ -379,7 +379,7 @@ void Proof::weaken_minus (Clause *c) {
   assert (clause.empty ());
   add_literals (c);
   if (requires_id)
-    clause_id = c->id;
+    clause_id = c->id ();
   weaken_minus ();
 }
 
@@ -417,7 +417,7 @@ void Proof::finalize_clause (Clause *c) {
   assert (clause.empty ());
   add_literals (c);
   if (requires_id)
-    clause_id = c->id;
+    clause_id = c->id ();
   finalize_clause ();
 }
 
@@ -471,7 +471,7 @@ void Proof::flush_clause (Clause *c) {
     add_literal (internal_lit);
   }
   if (requires_id)
-    proof_chain.push_back (c->id);
+    proof_chain.push_back (c->id ());
   redundant = c->redundant;
   int64_t id = 0;
   if (requires_id) {
@@ -481,7 +481,7 @@ void Proof::flush_clause (Clause *c) {
   add_derived_clause ();
   delete_clause (c);
   if (requires_id)
-    c->id = id;
+    c->id () = id;
 }
 
 // While strengthening clauses, e.g., through self-subsuming resolutions,
@@ -509,7 +509,7 @@ void Proof::strengthen_clause (Clause *c, int remove,
   add_derived_clause ();
   delete_clause (c);
   if (requires_id)
-    c->id = id;
+    c->id () = id;
 }
 
 void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
@@ -526,9 +526,9 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   add_derived_clause ();
-  delete_clause (requires_id ? c->id : 0, c->redundant, old);
+  delete_clause (requires_id ? c->id () : 0, c->redundant, old);
   if (requires_id)
-    c->id = id;
+    c->id () = id;
 }
 
 void Proof::strengthen (int64_t id) {

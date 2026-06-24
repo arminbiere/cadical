@@ -115,7 +115,7 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const literal_iterator middle = lits + w.clause->pos;
+          const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
           signed char v = -1;
           int r = 0;
@@ -123,11 +123,11 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
-          w.clause->pos = k - lits;
+          w.clause->pos () = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0) {
             j[-1].blit = r;
@@ -231,7 +231,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
     assert (inst_chain.size ());
     Clause *reason = inst_chain.back ();
     inst_chain.pop_back ();
-    lrat_chain.push_back (reason->id);
+    lrat_chain.push_back (reason->id ());
     for (const auto &other : *reason) {
       Flags &f = flags (other);
       assert (!f.seen);
@@ -251,7 +251,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
       Flags &f = flags (other);
       if (f.seen) {
         Clause *reason = inst_chain.back ();
-        lrat_chain.push_back (reason->id);
+        lrat_chain.push_back (reason->id ());
         for (const auto &other : *reason) {
           Flags &f = flags (other);
           if (f.seen)
@@ -268,7 +268,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
   // post processing step for lrat
   if (!ok && lrat) {
     if (flags (lit).seen)
-      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (c->id ());
     for (const auto &other : *c) {
       Flags &f = flags (other);
       f.seen = false;

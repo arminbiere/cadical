@@ -252,7 +252,7 @@ struct Internal {
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *dummy_binary;         // Dummy binary clause for subsumption
-  Clause *external_reason;      // used as reason at external propagations
+  static Clause *external_reason;      // used as reason at external propagations
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
@@ -1118,9 +1118,9 @@ struct Internal {
     if (!c->redundant)
       return true;
     assert (c->size != 2);
-    if (c->glue <= tier2[false])
+    if (c->glue () <= tier2[false])
       return true;
-    if (c->glue > lim.keptglue)
+    if (c->glue () > lim.keptglue)
       return false;
     if (c->size > lim.keptsize)
       return false;

@@ -138,7 +138,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
     int64_t id = unit_id (other);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->id ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -368,7 +368,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (probe_reason->id);
+  lrat_chain.push_back (probe_reason->id ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -445,7 +445,7 @@ bool Internal::probe_propagate () {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const literal_iterator middle = lits + w.clause->pos;
+          const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
           int r = 0;
           signed char v = -1;
@@ -453,11 +453,11 @@ bool Internal::probe_propagate () {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
-          w.clause->pos = k - lits;
+          w.clause->pos () = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0)
             ws[j - 1].blit = r;

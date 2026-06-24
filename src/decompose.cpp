@@ -11,7 +11,7 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   if (!reason)
     return;
   assert (reason->size == 2);
-  mini_chain.push_back (reason->id);
+  mini_chain.push_back (reason->id ());
   int other = reason->literals[0];
   other = other == from ? -reason->literals[1] : -other;
   Flags &f = flags (other);
@@ -89,9 +89,9 @@ void Internal::build_lrat_for_clause (
       mark_decomposed (other);
       int implied = p->literals[0];
       implied = implied == other ? -p->literals[1] : -implied;
-      LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->id);
+      LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->id ());
       other = implied;
-      mini_chain.push_back (p->id);
+      mini_chain.push_back (p->id ());
       if (val (implied) <= 0)
         continue;
       if (marked_decomposed (implied))
@@ -448,7 +448,7 @@ bool Internal::decompose_round () {
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
       c->gate = true;
-      id1 = requires_id ? c->id : 0;
+      id1 = requires_id ? c->id () : 0;
       frozen_binary_reasons.push_back(c);
     } else {
       id1 = ++clause_id;
@@ -482,7 +482,7 @@ bool Internal::decompose_round () {
       Clause *c = new_clause (false, 1);
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
-      id2 = requires_id ? c->id : 0;
+      id2 = requires_id ? c->id () : 0;
       c->gate = true;
       frozen_binary_reasons.push_back(c);
     } else {
@@ -601,7 +601,7 @@ bool Internal::decompose_round () {
       }
     }
     if (lrat)
-      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (c->id ());
     clear_analyzed_literals ();
     LOG (lrat_chain, "lrat_chain:");
     if (satisfied) {
@@ -644,7 +644,7 @@ bool Internal::decompose_round () {
                                    lrat_chain);
         proof->delete_clause (c);
         if (requires_id)
-          c->id = clause_id;
+          c->id () = clause_id;
       }
       size_t l;
       int *literals = c->literals;

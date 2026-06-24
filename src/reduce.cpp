@@ -49,7 +49,7 @@ void Internal::mark_clauses_to_be_flushed () {
         mark_garbage(c);
       continue;
     }
-    int glue = c->glue;
+    int glue = c->glue ();
     if (glue <= tier1limit && used)
       continue;
     if (glue <= tier2limit && used >= max_used - 1)
@@ -80,9 +80,9 @@ void Internal::mark_clauses_to_be_flushed () {
 struct reduce_less_useful {
   bool operator() (const Clause *c, const Clause *d) const {
     assert (c->size != 2);
-    if (c->glue > d->glue)
+    if (c->glue () > d->glue ())
       return true;
-    if (c->glue < d->glue)
+    if (c->glue () < d->glue ())
       return false;
     return c->size > d->size;
   }
@@ -116,7 +116,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    int glue = c->size == 2 ? 1 : c->glue;
+    int glue = c->size == 2 ? 1 : c->glue ();
     if (glue <= tier1limit && used)
       continue;
     if (glue <= tier2limit && used >= max_used - 1)
@@ -163,8 +163,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->size > lim.keptsize)
       lim.keptsize = c->size;
     assert (c->size != 2);
-    if (c->glue > lim.keptglue)
-      lim.keptglue = c->glue;
+    if (c->glue () > lim.keptglue)
+      lim.keptglue = c->glue ();
   }
 
   erase_vector (stack);

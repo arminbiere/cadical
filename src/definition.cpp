@@ -108,7 +108,7 @@ static void traverse_one_sided_core_lemma_with_lrat (
     const size_t size_clauses0 = clauses0.size ();
     assert (size_clauses0 <= UINT_MAX);
     if (id < size_clauses0) {
-      pc.id = clauses0[id]->id;
+      pc.id = clauses0[id]->id ();
     } else {
       unsigned tmp = id - size_clauses0;
 #ifndef NDEBUG
@@ -116,7 +116,7 @@ static void traverse_one_sided_core_lemma_with_lrat (
       assert (size_clauses1 <= UINT_MAX);
       assert (tmp < size_clauses1);
 #endif
-      pc.id = clauses1[tmp]->id;
+      pc.id = clauses1[tmp]->id ();
     }
     proof_clauses.push_back (pc);
   } else { // actually add to proof

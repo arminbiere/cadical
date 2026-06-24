@@ -22,7 +22,7 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->id ());
 }
 
 inline bool Internal::backbone_propagate (int64_t &ticks) {
@@ -79,7 +79,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const literal_iterator middle = lits + w.clause->pos;
+          const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
           signed char v = -1;
           int r = 0;
@@ -87,11 +87,11 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
-          w.clause->pos = k - lits;
+          w.clause->pos () = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0)
             j[-1].blit = r;
@@ -227,7 +227,7 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
   flags (conflict->literals[1]).seen = true;
   LOG (conflict, "analyzing conflict");
   if (lrat)
-    lrat_chain.push_back (conflict->id);
+    lrat_chain.push_back (conflict->id ());
   conflict = nullptr;
 
   for (auto t = trail.rbegin ();;) {
@@ -243,7 +243,7 @@ int Internal::backbone_analyze (Clause *, int64_t &ticks) {
     const int other = reason->literals[0] ^ reason->literals[1] ^ lit;
     Flags &f_o = flags (other);
     if (lrat)
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->id ());
     if (!f_o.seen) {
       f_o.seen = true;
       analyzed.push_back (other);

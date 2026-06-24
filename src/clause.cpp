@@ -93,8 +93,11 @@ Clause *Internal::new_clause (bool red, int glue) {
   Clause *c = (Clause*) raw_clause;
   DeferDeleteArray<char> clause_delete (raw_clause);
 
+#ifndef NDEBUG
+    c->has_id = with_id;
+#endif
   if (with_id)
-    c->id = ++clause_id;
+    c->id () = ++clause_id;
 
   c->conditioned = false;
   c->covered = false;
@@ -117,9 +120,10 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   c->size = size;
   c->allocated_as_binary = (size == 2);
-  if (with_id || c->size != 2){
-    c->glue = glue;
-    c->pos = 2;
+
+  if (with_id || c->size != 2) {
+    c->glue () = glue;
+    c->pos () = 2;
   }
 
   for (int i = 0; i < size; i++)
@@ -168,7 +172,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
     return;
   }
   assert (c->size != 2);
-  int old_glue = c->glue;
+  int old_glue = c->glue ();
   if (new_glue >= old_glue)
     return;
   c->used = max_used;
@@ -183,7 +187,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
   stats.clause_improved_glue++;
-  c->glue = new_glue;
+  c->glue () = new_glue;
 }
 /*------------------------------------------------------------------------*/
 
@@ -193,7 +197,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   if (c->hyper)
     return;
   assert (c->size != 2);
-  int old_glue = c->glue;
+  int old_glue = c->glue ();
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
   if (new_glue >= old_glue)
@@ -209,7 +213,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
   stats.clause_improved_glue++;
-  c->glue = new_glue;
+  c->glue () = new_glue;
 }
 
 /*------------------------------------------------------------------------*/
@@ -223,8 +227,8 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
+    mark_garbage_external_forgettable (c->id ());
   assert (new_size >= 2);
   int old_size = c->size;
   assert (new_size < old_size);
@@ -233,8 +237,8 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
     c->literals[i] = 0;
 #endif
 
-  if (c->pos >= new_size)
-    c->pos = 2;
+  if (c->pos () >= new_size)
+    c->pos () = 2;
 
   size_t old_bytes = c->raw_bytes ();
   c->size = new_size;
@@ -243,7 +247,7 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
 
   if (c->redundant) {
     if (c->size != 2)
-      promote_clause_glue_only (c, min (c->size - 1, c->glue));
+      promote_clause_glue_only (c, min (c->size - 1, c->glue ()));
   }
   else {
     int delta_size = old_size - new_size;
@@ -264,7 +268,7 @@ void Internal::make_irredundant (Clause *subsuming) {
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   if (proof)
-    proof->strengthen (allocate_lrat_id() ? subsuming->id : 0);
+    proof->strengthen (allocate_lrat_id() ? subsuming->id () : 0);
   stats.clauses_now_irr++;
   stats.clauses_irredundant++;
   stats.irredundant_literals += subsuming->size;
@@ -350,8 +354,8 @@ void Internal::mark_garbage (Clause *c) {
   // Because of the internal model checking, external forgettable clauses
   // must be marked as removed already upon mark_garbage, can not wait until
   // actual deletion.
-  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
+    mark_garbage_external_forgettable (c->id ());
 
   assert (stats.clauses_now_total > 0);
   stats.clauses_now_total--;
@@ -532,7 +536,7 @@ void Internal::add_new_original_clause (int64_t id) {
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
       if (allocate_lrat_id())
-        c->id = new_id;
+        c->id () = new_id;
       clause_id--;
       original.clear ();
       handle_external_clause (c); // handle_external_clause uses clause
@@ -639,7 +643,7 @@ Clause *Internal::new_clause_as (const Clause *orig) {
     proof->add_derived_clause (clause_id + 1, orig->redundant, clause,
                                lrat_chain);
   }
-  const int new_glue = orig->size == 2 ? 1 : orig->glue;
+  const int new_glue = orig->size == 2 ? 1 : orig->glue ();
   Clause *res = new_clause (orig->redundant, new_glue);
   assert (watching ());
   watch_clause (res);
@@ -681,16 +685,16 @@ void Internal::decay_clauses_upon_incremental_clauses () {
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition
-      ++c->glue;
+      ++c->glue ();
       break;
     case 2: // Armin's idea
-      if (c->glue < tier1[false])
+      if (c->glue () < tier1[false])
         c->used = 1;
       break;
     case 3:
-      if (c->glue < tier1[false])
+      if (c->glue () < tier1[false])
         c->used = 1;
-      ++c->glue;
+      ++c->glue ();
       break;
     default:
       break;

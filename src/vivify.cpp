@@ -89,9 +89,9 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   LOG (subsumed, "subsumed to be deleted");
   LOG (subsuming, "subsuming to be (un)deleted");
   if (subsumed->redundant && subsuming->redundant && subsuming->size != 2 &&
-      subsuming->glue < subsumed->glue) {
+      subsuming->glue () < subsumed->glue ()) {
     assert (subsumed->size != 2);
-    promote_clause (subsuming, subsumed->glue);
+    promote_clause (subsuming, subsumed->glue ());
   }
   if (subsumed->redundant) {
     stats.subsumed_redundant++;
@@ -105,7 +105,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
     LOG (subsuming,
          "binary subsuming clause was already deleted, so undeleting");
     subsuming->garbage = false;
-    subsuming->glue = 1;
+    subsuming->glue () = 1;
     ++stats.clauses_now_total;
     if (subsuming->redundant)
       stats.clauses_now_red++;
@@ -140,7 +140,7 @@ inline void Internal::demote_clause (Clause *c) {
   stats.irredundant_literals -= c->size;
   stats.clauses_now_red++;
   stats.clauses_redundant++;
-  c->glue = c->size - 1;
+  c->glue () = c->size - 1;
   // ... and keep 'stats.clauses'.
 }
 
@@ -244,7 +244,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          literal_iterator k = lits + w.clause->pos;
+          literal_iterator k = lits + w.clause->pos ();
           const const_literal_iterator middle = k;
           signed char v = -1;
           int r = 0;
@@ -252,11 +252,11 @@ bool Internal::vivify_propagate (int64_t &ticks) {
             k++;
           if (v < 0) {
             k = lits + 2;
-            assert (w.clause->pos <= size);
+            assert (w.clause->pos () <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
-          w.clause->pos = k - lits;
+          w.clause->pos () = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0)
             j[-1].blit = r;
@@ -662,7 +662,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
     Var &w = var (uip);
     reason = w.reason;
     if (lrat && reason)
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->id ());
   }
   (void) candidate;
 }
@@ -697,7 +697,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     redundant = reason->redundant;
     LOG (reason, "resolving with");
     if (lrat)
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->id ());
     for (auto lit : *reason) {
       const Var &v = var (lit);
       Flags &f = flags (lit);
@@ -1231,7 +1231,7 @@ void Internal::vivify_build_lrat (
       continue;
     }
     if (finished) {
-      lrat_chain.push_back (reason->id);
+      lrat_chain.push_back (reason->id ());
       if (lit && reason) {
         Flags &f = flags (lit);
         f.seen = true;
@@ -1280,7 +1280,7 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
-  lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->id ());
 }
 
 namespace {
@@ -1402,10 +1402,10 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     if (!c->redundant)
       vivifier.schedule_irred ().push_back (c),
           prioritized_irred += (c->vivify);
-    else if (c->glue <= tier1)
+    else if (c->glue () <= tier1)
       vivifier.schedule_tier1 ().push_back (c),
           prioritized_tier1 += (c->vivify);
-    else if (c->glue <= tier2)
+    else if (c->glue () <= tier2)
       vivifier.schedule_tier2 ().push_back (c),
           prioritized_tier2 += (c->vivify);
     else

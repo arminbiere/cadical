@@ -242,11 +242,11 @@ inline void Internal::bump_clause (Clause *c) {
   if (!c->redundant)
     return;
   int new_glue = recompute_glue (c);
-  if (new_glue < c->glue)
+  if (new_glue < c->glue ())
     promote_clause (c, new_glue);
 
   const size_t glue =
-      std::min ((size_t) c->glue, stats.used[stable].size () - 1);
+      std::min ((size_t) c->glue (), stats.used[stable].size () - 1);
   ++stats.used[stable][glue];
   ++stats.bump_used[stable];
 }
@@ -332,7 +332,7 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
   assert (reason != external_reason);
   bump_clause (reason);
   if (lrat)
-    lrat_chain.push_back (reason->id);
+    lrat_chain.push_back (reason->id ());
   for (const auto &other : *reason)
     if (other != lit)
       analyze_literal (other, open, resolvent_size, antecedent_size);
@@ -850,7 +850,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     remove_watch (watches (other_init), new_conflict);
   remove_watch (watches (uip), new_conflict);
 
-  assert (!lrat || lrat_chain.back () == new_conflict->id);
+  assert (!lrat || lrat_chain.back () == new_conflict->id ());
   if (lrat) {
     assert (!lrat_chain.empty ());
     for (const auto &id : unit_chain) {

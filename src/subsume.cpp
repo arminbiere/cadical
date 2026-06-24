@@ -143,8 +143,8 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
 // Candidate clause 'c' is strengthened by removing 'lit'.
 
 void Internal::strengthen_clause (Clause *c, int lit) {
-  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
+    mark_garbage_external_forgettable (c->id ());
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
@@ -165,8 +165,8 @@ void Internal::strengthen_clause (Clause *c, int lit) {
 }
 
 void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
-  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id))
-    mark_garbage_external_forgettable (c->id);
+  if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
+    mark_garbage_external_forgettable (c->id ());
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d and units in", lit);
@@ -234,6 +234,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
     //
     if (!flags (lit).subsume)
       continue;
+    const bool requires_id = allocate_lrat_id();
 
     for (int sign = -1; !d && sign <= 1; sign += 2) {
 
@@ -276,7 +277,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
         // well as the code around 'strengthen_clause' uniform for both real
         // clauses and this special case for binary clauses
 
-        dummy_binary->id = bin.id;
+        if (requires_id)
+          dummy_binary->id () = bin.id;
         d = dummy_binary;
 
         break;
@@ -320,8 +322,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
     LOG (d, "strengthening");
     if (lrat) {
       assert (lrat_chain.empty ());
-      lrat_chain.push_back (c->id);
-      lrat_chain.push_back (d->id);
+      lrat_chain.push_back (c->id ());
+      lrat_chain.push_back (d->id ());
     }
     if (d->used > c->used)
       c->used = d->used;
@@ -589,7 +591,7 @@ bool Internal::subsume_round () {
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
-      bins (minlit).push_back (Bin{other, requires_id ? c->id : 0});
+      bins (minlit).push_back (Bin{other, requires_id ? c->id () : 0});
     }
   }
 

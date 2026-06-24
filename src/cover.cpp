@@ -134,7 +134,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
       else {
         const int size = w.clause->size;
         const const_literal_iterator end = lits + size;
-        const literal_iterator middle = lits + w.clause->pos;
+        const literal_iterator middle = lits + w.clause->pos ();
         literal_iterator k = middle;
         signed char v = -1;
         int r = 0;
@@ -142,11 +142,11 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
           k++;
         if (v < 0) {
           k = lits + 2;
-          assert (w.clause->pos <= size);
+          assert (w.clause->pos () <= size);
           while (k != middle && (v = val (r = *k)) < 0)
             k++;
         }
-        w.clause->pos = k - lits;
+        w.clause->pos () = k - lits;
         assert (lits + 2 <= k), assert (k <= w.clause->end ());
         if (v > 0)
           j[-1].blit = r;
@@ -402,7 +402,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           }
           if (proof && already_pushed) {
             if (lrat)
-              lrat_chain.push_back (c->id);
+              lrat_chain.push_back (c->id ());
             LOG ("LEARNING clause with id %" PRId64, last_id);
             proof->add_derived_clause (last_id, false, clause, lrat_chain);
             proof->weaken_plus (last_id, clause);
@@ -439,7 +439,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           }
         }
         if (lrat)
-          lrat_chain.push_back (c->id);
+          lrat_chain.push_back (c->id ());
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
         lrat_chain.clear ();

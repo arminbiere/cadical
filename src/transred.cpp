@@ -171,7 +171,7 @@ void Internal::transred () {
           else if (tmp < 0) {
             if (lrat) {
               parents.push_back (lit);
-              mini_chain.push_back (d->id);
+              mini_chain.push_back (d->id ());
               work.push_back (other);
             }
             LOG ("found both %d and %d reachable", -other, other);
@@ -179,7 +179,7 @@ void Internal::transred () {
           } else {
             if (lrat) {
               parents.push_back (lit);
-              mini_chain.push_back (d->id);
+              mini_chain.push_back (d->id ());
             }
             mark (other);
             work.push_back (other);
