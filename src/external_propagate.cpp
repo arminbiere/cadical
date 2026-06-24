@@ -905,17 +905,18 @@ bool Internal::notifying_decision_wrapper (bool after) {
 bool Internal::notifying_decision () {
   if (!external_prop || external_prop_is_lazy)
     return false;
-  assert (notified_level == level);
-  assert (notified_trail == trail.size ());
+  assert (notified_level == level || notified_level == level - 1);
+  assert (notified_trail == trail.size () ||
+          notified_trail == trail.size () - 1);
   stats.up_notify++;
   stats.up_notify_decision++;
   notified_level++;
-  const int new_level = level + 1;
-  assert (new_level == notified_level);
+  const int new_level = notified_level;
+  const int current_level = level;
   LOG_INTERACTION_FOR (notify_new_decision_level, new_level);
   external->propagator->notify_new_decision_level ();
   LOG_INTERACTION_END_FOR (notify_new_decision_level, new_level);
-  if (level < new_level - 1 || notified_level < new_level ||
+  if (level < current_level || notified_level < new_level ||
       notified_trail < trail.size ()) {
     notify_loop ();
     stats.up_notify_forced++;
@@ -1013,7 +1014,7 @@ bool Internal::ask_decision () {
        elit, ilit, fixed (ilit), val (ilit));
 
   search_assume_decision (ilit);
-  assert (level + opts.extnlevel == notified_level);
+  assert (level - opts.extnlevel == notified_level);
   return true;
 }
 
