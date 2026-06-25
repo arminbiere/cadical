@@ -914,7 +914,7 @@ bool Internal::notifying_decision () {
   LOG_INTERACTION_FOR (notify_new_decision_level, new_level);
   external->propagator->notify_new_decision_level ();
   LOG_INTERACTION_END_FOR (notify_new_decision_level, new_level);
-  if (level < notified_level || notified_trail < trail.size ()) {
+  if (level + 1 < notified_level || notified_trail < trail.size ()) {
     notify_loop ();
     stats.up_notify_forced++;
     return true;
@@ -969,7 +969,7 @@ bool Internal::ask_decision () {
   if (!external_prop || external_prop_is_lazy)
     return 0;
 
-  assert (notified_level == level + 1);
+  assert (notified_level == level + 1 - opts.extnlevel);
   assert (!unsat);
   assert (!conflict);
   stats.up_cb++;
@@ -981,7 +981,7 @@ bool Internal::ask_decision () {
   int elit = external->propagator->cb_decide ();
   LOG_INTERACTION_RETURN (cb_decide, elit);
 
-  assert (!level || level + 1 <= notified_level);
+  assert (!level || level + 1 - opts.extnlevel <= notified_level);
   if (level != level_before)
     return true;
   if (notified_trail != trail.size ())
