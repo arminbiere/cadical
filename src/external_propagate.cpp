@@ -866,6 +866,8 @@ bool Internal::notifying_assignments () {
       }
     }
   }
+  if (!delay_notify_units.empty ())
+    return true;
   if (notification_trail.empty ())
     return false;
   stats.up_notify++;
@@ -876,7 +878,8 @@ bool Internal::notifying_assignments () {
   LOG_INTERACTION_END_FOR (notify_assignment_batch,
                            (int) notification_trail.size ());
   notification_trail.clear ();
-  if (notified_level == level && notified_trail == trail.size ())
+  if (notified_level == level && notified_trail == trail.size () &&
+      delay_notify_units.empty ())
     return false;
   // Only here we actually changed the level or observed an already
   // assigned variable.
