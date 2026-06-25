@@ -159,6 +159,14 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   LOG ("reassigned %d literals %.0f%%", reassigned,
        percent (reassigned, unassigned + reassigned));
 
+  if (external_prop && !external_prop_is_lazy && opts.extnburst) {
+    notify_replay.push_back (new_level);
+    notify_replay.push_back (0);
+    for (size_t idx = assigned; idx < trail.size (); idx++) {
+      notify_replay.push_back (trail[idx]);
+    }
+  }
+
   if (propagated > assigned)
     propagated = assigned;
   if (propagated2 > assigned)

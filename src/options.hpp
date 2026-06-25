@@ -124,6 +124,7 @@ OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons re
 OPTION( extnassign,        0,  0,  1,0,0,1, "notify assign literal by literal") \
 OPTION( extnbacktrack,     0,  0,  1,0,0,1, "notify backtrack level by level") \
 OPTION( extnburst,         0,  0,  1,0,0,1, "notify bursts (periods of conflicts where no interaction is possible)") \
+OPTION( extnburstoooo,     0,  0,  1,0,0,1, "out-of-order only (closest to previous behaviour)") \
 OPTION( extnlevel,         0,  0,  1,0,0,1, "notify level after cb_decide (0=before)") \
 OPTION( exttracecalls,     0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \

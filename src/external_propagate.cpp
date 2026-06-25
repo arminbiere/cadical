@@ -808,7 +808,11 @@ bool Internal::notifying_assignments () {
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
 
-  for (auto &elit : delay_notify_units) {
+  // cannot do 'for (auto elit : delay_notify_units)' because
+  // notify_assignment might reallocate/resize delay_notify_units.
+  for (size_t delay_idx = 0; delay_idx < delay_notify_units.size ();
+       delay_idx++) {
+    const int elit = delay_notify_units[delay_idx];
     assert (!level);
     // already external.
     if (!external->observed (elit))
@@ -936,13 +940,16 @@ bool Internal::notifying_backtrack () {
   if (!external_prop || external_prop_is_lazy)
     return false;
   assert (notified_level >= level);
-  if (notified_level == level)
+  if (notified_level == level) {
+    // sanity check that we are not collecting too much stuff.
+    assert (notify_replay.empty ());
     return false;
+  }
+  const int level_now = level;
   // this call can potentially trigger an additional backtrack.
   stats.up_notify++;
   stats.up_notify_backtrack++;
   // force_no_backtrack = true;
-  const int level_now = level;
   if (!opts.extnbacktrack)
     notified_level = level_now + 1;
   while (notified_level > level_now) {
