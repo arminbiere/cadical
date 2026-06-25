@@ -941,8 +941,7 @@ bool Internal::notifying_backtrack () {
     return false;
   assert (notified_level >= level);
   if (notified_level == level) {
-    // sanity check that we are not collecting too much stuff.
-    assert (notify_replay.empty ());
+    notify_replay.clear ();
     return false;
   }
   const int level_now = level;
