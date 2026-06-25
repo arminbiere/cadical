@@ -15,19 +15,36 @@ typedef const int *const_literal_iterator;
 
 /*------------------------------------------------------------------------*/
 
-// The 'Clause' data structure is very important. There are usually many
-// clauses and accessing them is a hot-spot.  Thus we use common
-// optimizations to reduce memory and improve cache usage, even though this
-// induces some complexity in understanding the code.
+// The 'Clause' data structure is very important. There are usually many clauses
+// and accessing them is a hot-spot. Thus we use common optimizations to reduce
+// memory and improve cache usage, even though this induces some complexity in
+// understanding the code.
 //
 // The most important optimization is to 'embed' the actual literals in the
-// clause.  This requires a variadic size structure and thus strictly is not
-// 'C' conform, but supported by all compilers we used.  The alternative is
-// to store the actual literals somewhere else, which not only needs more
-// memory but more importantly also requires another memory access and thus
-// is very costly.
-
-#define USED_SIZE 5
+// clause. This requires a variadic size structure and thus strictly is not 'C'
+// conform, but supported by all compilers we used. The alternative is to store
+// the actual literals somewhere else, which not only needs more memory but more
+// importantly also requires another memory access and thus is very costly.
+//
+//
+// A second optimization we do is only allocate the fields we need to reduce the
+// size of the structure:
+//
+// - the id is only allocated if not used
+//
+// - the position and glue is only allocated for non-binary clauses or if the id
+// is allocated
+//
+// Not allocating those fields saves around ~7% memory on average (SC2025) but
+// on large instances, we have seen reductions of 15% for large (>20GB)
+// instances. Performance also slightly improves. In order to make the code
+// harder to misuse and make bugs easier to find, we force access to the field
+// via id (), pos (), and glue (), where we can check that they have been
+// allocated. Otherwise, only the sanitizer will complain and not the debugger.
+// Also in the union with either the flags or the pointer to moved, we rely on
+// the shared flags being at the same position.
+//
+#define USED_SIZE 5 // macro to limit the number of bits used by the used flag, see the "learn to unlearn" paper.
 struct Clause {
   int64_t raw_id;   // Used to create LRAT-style proofs
 
@@ -75,7 +92,7 @@ struct Clause {
       bool reason : 1;       // reason / antecedent clause can not be collected
       bool allocated_as_binary : 1; // glue and pos not allocated
       bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
-#ifndef NDEBUGw
+#ifndef NDEBUG
       bool has_id : 1;
 #endif
       unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'

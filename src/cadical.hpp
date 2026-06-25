@@ -933,13 +933,13 @@ public:
   //   ensure (CONFIGURING)
   //
   void connect_proof_tracer (Tracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (StatTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
   void connect_proof_tracer (FileTracer *tracer, bool antecedents,
-                             bool finalize_clauses = false);
+                             bool finalize_clauses = false, bool requires_id = true);
 
   // Triggers the conclusion of incremental proofs.  If the solver is
   // 'SATISFIED' it will trigger 'extend ()' and give the model to the proof

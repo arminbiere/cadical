@@ -35,6 +35,12 @@ User Facing Changes:
   old default). Related to this, you can now deactivate some metrics with
   `./configure --no-metrics`. 
 
+- Reduction of memory consumption by not allocating IDs if not used (either by
+  LRAT or by a connected tracer). `connect_proof_tracer` now has one more
+  argument, whether the IDs are needed or not. By default, when connecting a
+  tracer, the IDs are enables. Remark that once enable, IDs cannot be disabled
+  anymore.
+
 New and Improved Techniques:
 
 - Stronger congruence algorithm by taking more binary clauses into
