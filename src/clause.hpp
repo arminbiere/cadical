@@ -110,7 +110,6 @@ struct Clause {
       bool vivified : 1;     // clause already vivified
       bool vivify : 1;       // clause scheduled to be vivified
 
-
       int size; // Actual size of 'literals' (at least 2).
     };
     struct {
@@ -122,7 +121,12 @@ struct Clause {
 #ifndef NDEBUG
        bool has_id2 : 1;
 #endif
+#if ((ULONG_MAX) != (UINT_MAX)) // 64-bit detection
       uintptr_t raw_copy : 50; // Only valid if 'moved', then that's where to.
+#else
+      uintptr_t raw_copy : 32; // Only valid if 'moved', then that's where to.
+#endif
+
     };
     //
     // The 'raw_copy' field is only valid for 'moved' clauses in the moving
