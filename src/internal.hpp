@@ -192,6 +192,7 @@ struct Internal {
   bool external_prop_is_lazy; // true if the external propagator is lazy
   vector<int> notification_trail; // vector used for notifying assignments
   vector<int> notify_model_trail; // vector used for check model
+  vector<int> notify_replay;      // vector used for notifying bursts
   vector<int> tmp_elits;          // vector used for adding external clauses
   vector<int> tmp_eclause;        // vector used for adding external clauses
   vector<int> tmp_clause;         // vector used for adding external clauses

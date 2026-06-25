@@ -188,6 +188,8 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 void Internal::new_trail_level (int lit) {
   level++;
   control.push_back (Level (lit, trail.size ()));
+  // when inprocessing fills notify_replay we want to clear it.
+  notify_replay.clear ();
 }
 
 /*------------------------------------------------------------------------*/
