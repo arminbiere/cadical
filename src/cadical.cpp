@@ -286,7 +286,8 @@ void App::print_witness (FILE *file) {
       c += l;
     }
   } else {
-    for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
+    for (size_t i = 0;  i < solver->external->e2i.table.size (); ++i) {
+      auto eilit = std::pair<int, int>(i, solver->external->e2i[i]);
       const int elit = eilit.first;
       if (!c)
         fputc ('v', file), c = 1;

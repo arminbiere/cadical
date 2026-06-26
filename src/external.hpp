@@ -91,7 +91,8 @@ struct External {
     bool operator () (int a, int b) {return a == b;}
   };
 public:
-  CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
+  // CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
+  CaDiCaL::array_hashmap e2i;
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.

@@ -5,6 +5,7 @@
 #include <functional>
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 
 // for debugging (we cannot use LOG)
 // guard to avoid warnings.
@@ -250,6 +251,61 @@ public:
 
     delete[] old_table;
   }
+};
+
+
+
+using Key = int;
+using Element = int;
+class array_hashmap {
+public:
+  std::vector<Element> table;
+  size_t size = 0;
+  size_t capacity = 0;
+
+  void non_resizing_insert (Key k, Element el) {
+    table[k] = el;
+  }
+
+public:
+  std::pair<Key,Element> find (Key k) const {
+    if ((size_t)k >= table.size ())
+      return std::pair<int,int>(0,0);
+    return std::pair<int,int>(k, table[k]);
+  }
+
+  std::pair<Key,Element> find (Key k) {
+    if ((size_t)k >= table.size ())
+      return std::pair<int,int>(0,0);
+    return std::pair<int,int>(k, table[k]);
+  }
+
+  void insert (Key k, Element el) {
+    if ((size_t)k >= table.size ())
+      table.resize (k+1);
+    table[k] = el;
+  }
+
+  void update (Key k, Element el) {
+    non_resizing_insert (k, el);
+  }
+  bool empty () const {
+    return !size;
+  }
+
+  Element operator[] (Key k) const {
+    assert ((size_t)k < table.size ());
+    return table[k];
+  }
+
+  std::vector<int>::iterator begin () {
+    return table.begin();
+  }
+
+  std::vector<int>::iterator  end () {
+    return table.end ();
+  }
+
 };
 
 
