@@ -69,7 +69,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   assert (subsuming);
   assert (subsumed);
   assert (subsuming != subsumed);
-  assert (!subsumed->garbage);
+  assert (!subsumed->main.garbage);
   // size after removeing units;
   int real_size_subsuming = 0, real_size_subsumed = 0;
   for (auto lit : *subsuming) {
@@ -88,34 +88,34 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
 #endif
   LOG (subsumed, "subsumed to be deleted");
   LOG (subsuming, "subsuming to be (un)deleted");
-  if (subsumed->redundant && subsuming->redundant && subsuming->size != 2 &&
+  if (subsumed->main.redundant && subsuming->main.redundant && subsuming->size () != 2 &&
       subsuming->glue () < subsumed->glue ()) {
-    assert (subsumed->size != 2);
+    assert (subsumed->size () != 2);
     promote_clause (subsuming, subsumed->glue ());
   }
-  if (subsumed->redundant) {
+  if (subsumed->main.redundant) {
     stats.subsumed_redundant++;
     ++stats.vivify_subsumed_red;
   } else {
     stats.subsumed_irredundant++;
     ++stats.vivify_subsumed_irr;
   }
-  if (subsuming->garbage) {
-    assert (subsuming->size == 2);
+  if (subsuming->main.garbage) {
+    assert (subsuming->size () == 2);
     LOG (subsuming,
          "binary subsuming clause was already deleted, so undeleting");
-    subsuming->garbage = false;
+    subsuming->main.garbage = false;
     subsuming->glue () = 1;
     ++stats.clauses_now_total;
-    if (subsuming->redundant)
+    if (subsuming->main.redundant)
       stats.clauses_now_red++;
     else
       stats.clauses_now_irr++,
-          stats.irredundant_literals += subsuming->size;
-    stats.garbage_literals -= subsuming->size;
+          stats.irredundant_literals += subsuming->size ();
+    stats.garbage_literals -= subsuming->size ();
     --stats.garbage_clauses;
   }
-  if (subsumed->redundant || !subsuming->redundant) {
+  if (subsumed->main.redundant || !subsuming->main.redundant) {
     mark_garbage (subsumed);
     return;
   }
@@ -130,17 +130,17 @@ inline void Internal::demote_clause (Clause *c) {
   stats.subsumed++;
   stats.vivify_demote++;
   LOG (c, "demoting");
-  assert (!c->redundant);
+  assert (!c->main.redundant);
   mark_removed (c);
-  c->redundant = true;
+  c->main.redundant = true;
   assert (stats.clauses_now_irr > 0);
   stats.clauses_now_irr--;
   assert (stats.clauses_irredundant > 0);
   stats.clauses_irredundant--;
-  stats.irredundant_literals -= c->size;
+  stats.irredundant_literals -= c->size ();
   stats.clauses_now_red++;
   stats.clauses_redundant++;
-  c->glue () = c->size - 1;
+  c->glue () = c->size () - 1;
   // ... and keep 'stats.clauses'.
 }
 
@@ -232,7 +232,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
         if (val (w.blit) > 0)
           continue;
         ticks++;
-        if (w.clause->garbage) {
+        if (w.clause->main.garbage) {
           j--;
           continue;
         }
@@ -242,7 +242,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
         if (u > 0)
           j[-1].blit = other;
         else {
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const const_literal_iterator end = lits + size;
           literal_iterator k = lits + w.clause->pos ();
           const const_literal_iterator middle = k;
@@ -389,7 +389,7 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
   for (; i != end; i++) {
     ticks++;
     Clause *c = *j++ = *i;
-    if (!prev || c->size < prev->size) {
+    if (!prev || c->size () < prev->size ()) {
       prev = c;
       continue;
     }
@@ -401,9 +401,9 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
     if (k == eop) {
       LOG (c, "found subsumed");
       LOG (prev, "subsuming");
-      assert (!c->garbage);
-      assert (!prev->garbage);
-      assert (c->redundant || !prev->redundant);
+      assert (!c->main.garbage);
+      assert (!prev->main.garbage);
+      assert (c->main.redundant || !prev->main.redundant);
       mark_garbage (c);
       subsumed++;
       j--;
@@ -432,15 +432,15 @@ void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
 // only try to vivify them if they are likely to survive the next 'reduce'
 // operation, but this left the last schedule empty most of the time.
 bool Internal::consider_to_vivify_clause (Clause *c) {
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
-  if (opts.vivifyonce >= 1 && c->redundant && c->vivified)
+  if (opts.vivifyonce >= 1 && c->main.redundant && c->main.vivified)
     return false;
-  if (opts.vivifyonce >= 2 && !c->redundant && c->vivified)
+  if (opts.vivifyonce >= 2 && !c->main.redundant && c->main.vivified)
     return false;
-  if (!c->redundant)
+  if (!c->main.redundant)
     return true;
-  assert (c->redundant);
+  assert (c->main.redundant);
 
   // likely_to_be_kept_clause is too aggressive at removing tier-3 clauses
   return true;
@@ -590,8 +590,8 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
 
   while (i >= 0) {
     if (reason) {
-      redundant = (redundant || reason->redundant);
-      subsumes = (start != reason && reason->size <= start->size);
+      redundant = (redundant || reason->main.redundant);
+      subsumes = (start != reason && reason->size () <= start->size ());
       LOG (reason, "resolving on %d with", uip);
       for (auto other : *reason) {
         const Var v = var (other);
@@ -630,7 +630,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
         analyzed.push_back (other);
         f.seen = true;
       }
-      if (reason != start && reason->redundant) {
+      if (reason != start && reason->main.redundant) {
         const int new_glue = recompute_glue (reason);
         promote_clause (reason, new_glue);
       }
@@ -691,10 +691,10 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
   } else {
     reason = (conflict ? conflict : candidate);
     assert (reason);
-    assert (!reason->garbage || reason->size == 2);
+    assert (!reason->main.garbage || reason->size () == 2);
     mark2 (candidate);
     subsumes = (candidate != reason);
-    redundant = reason->redundant;
+    redundant = reason->main.redundant;
     LOG (reason, "resolving with");
     if (lrat)
       lrat_chain.push_back (reason->id ());
@@ -727,7 +727,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       analyzed.push_back (lit);
       f.seen = true;
     }
-    if (reason != candidate && reason->redundant) {
+    if (reason != candidate && reason->main.redundant) {
       const int new_glue = recompute_glue (reason);
       promote_clause (reason, new_glue);
     }
@@ -882,14 +882,14 @@ bool Internal::vivify_instantiate (
 
 bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
-  assert (c->size > 2); // see (NO-BINARY) below
+  assert (c->size () > 2); // see (NO-BINARY) below
   assert (analyzed.empty ());
   assert (!ignore);
 
-  c->vivify = false;  // mark as checked / tried
-  c->vivified = true; // and globally remember
+  c->main.vivify = false;  // mark as checked / tried
+  c->main.vivified = true; // and globally remember
 
-  assert (!c->garbage);
+  assert (!c->main.garbage);
 
   auto &lrat_stack = vivifier.lrat_stack;
   auto &ticks = vivifier.ticks;
@@ -1128,12 +1128,12 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     vivify_strengthen (c, ticks);
     found_units = false; // all units have already been removed
     res = true;
-  } else if (subsume && c->redundant) {
+  } else if (subsume && c->main.redundant) {
     LOG (c, "vivification implied");
     mark_garbage (c);
     ++stats.vivify_implied;
     res = true;
-  } else if ((conflict || subsume) && !c->redundant && !redundant) {
+  } else if ((conflict || subsume) && !c->main.redundant && !redundant) {
     if (opts.vivifydemote) {
       LOG ("demote clause from irredundant to redundant");
       demote_clause (c);
@@ -1148,7 +1148,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   } else if (subsume) {
     LOG (c, "no vivification instantiation with implied literal %d",
          subsume);
-    assert (!c->redundant);
+    assert (!c->main.redundant);
     assert (redundant);
     res = false;
     ++stats.vivify_implied;
@@ -1288,10 +1288,10 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
   LOG (c, "creating vivify_refs of clause");
   vivify_ref ref;
   ref.clause = c;
-  ref.size = c->size;
-  ref.vivify = c->vivify;
+  ref.size = c->size ();
+  ref.vivify = c->main.vivify;
   std::array<int, COUNTREF_COUNTS> lits = {0};
-  for (int i = 0; i != std::min (COUNTREF_COUNTS, c->size); ++i) {
+  for (int i = 0; i != std::min (COUNTREF_COUNTS, c->size ()); ++i) {
     int best = 0;
     unsigned best_count = 0;
     for (auto lit : *c) {
@@ -1338,7 +1338,7 @@ Internal::vivify_prioritize_leftovers (char tag, size_t prioritized,
     PHASE ("vivify", stats.vivifications,
            "[phase %c] prioritizing all clause", tag);
     for (auto c : schedule)
-      c->vivify = true;
+      c->main.vivify = true;
   }
 #ifdef QUIET
   (void) tag;
@@ -1348,7 +1348,7 @@ Internal::vivify_prioritize_leftovers (char tag, size_t prioritized,
     if (prioritized) {
       // put the left-overs first to be kept
       std::stable_partition (begin (schedule), end (schedule),
-                             [] (Clause *c) { return c->vivify; });
+                             [] (Clause *c) { return c->main.vivify; });
     }
     schedule.resize (max);
   }
@@ -1377,7 +1377,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
          prioritized_tier2 = 0, prioritized_tier3 = 0;
   for (const auto &c : clauses) {
     ++ticks;
-    if (c->size == 2)
+    if (c->size () == 2)
       continue; // see also (NO-BINARY) above
     if (!consider_to_vivify_clause (c))
       continue;
@@ -1392,25 +1392,25 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     // larger contribute '1' to the score, which allows us to use 'long'
     // numbers. See the example above (search for '@1').
     //
-    const int shift = 12 - c->size;
+    const int shift = 12 - c->size ();
     const uint64_t score = shift < 1 ? 1 : (1l << shift); // @4
     for (const auto lit : *c) {
       noccs (lit) += score;
     }
     LOG (c, "putting clause in candidates");
-    assert (c->size != 2);
-    if (!c->redundant)
+    assert (c->size () != 2);
+    if (!c->main.redundant)
       vivifier.schedule_irred ().push_back (c),
-          prioritized_irred += (c->vivify);
+          prioritized_irred += (c->main.vivify);
     else if (c->glue () <= tier1)
       vivifier.schedule_tier1 ().push_back (c),
-          prioritized_tier1 += (c->vivify);
+          prioritized_tier1 += (c->main.vivify);
     else if (c->glue () <= tier2)
       vivifier.schedule_tier2 ().push_back (c),
-          prioritized_tier2 += (c->vivify);
+          prioritized_tier2 += (c->main.vivify);
     else
       vivifier.schedule_tier3 ().push_back (c),
-          prioritized_tier3 += (c->vivify);
+          prioritized_tier3 += (c->main.vivify);
     ++ticks;
   }
 
@@ -1581,7 +1581,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     // be done first Kissat does this implicitely by going twice over all
     // clauses
     std::stable_partition (begin (schedule), end (schedule),
-                           [] (Clause *c) { return !c->vivify; });
+                           [] (Clause *c) { return !c->main.vivify; });
   }
 
   // Remember old values of counters to summarize after each round with
@@ -1619,7 +1619,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
          vivifier.ticks < limit) {
     Clause *c = schedule.back (); // Next candidate.
     schedule.pop_back ();
-    if (vivify_clause (vivifier, c) && !c->garbage && c->size > 2 &&
+    if (vivify_clause (vivifier, c) && !c->main.garbage && c->size () > 2 &&
         retry < opts.vivifyretry) {
       ++retry;
       schedule.push_back (c);
@@ -1641,14 +1641,14 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     // CaDiCaL had the first version before. If
     // commented out we go to the second version.
     for (auto c : schedule)
-      c->vivify = true;
+      c->main.vivify = true;
 #elif 1
     // if we have gone through all the leftovers (the next candidate
     // is not one), all the current clauses are leftovers for the next
     // round
-    if (!schedule.empty () && !schedule.back ()->vivify)
+    if (!schedule.empty () && !schedule.back ()->main.vivify)
       for (auto c : schedule)
-        c->vivify = true;
+        c->main.vivify = true;
 #else
     // do nothing like in kissat and use the candidates for next time.
 #endif

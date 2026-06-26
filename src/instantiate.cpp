@@ -27,11 +27,11 @@ void Internal::collect_instantiation_candidates (
         continue;
       Occs &os = occs (lit);
       for (const auto &c : os) {
-        if (c->garbage)
+        if (c->main.garbage)
           continue;
-        if (opts.instantiateonce && c->instantiated)
+        if (opts.instantiateonce && c->main.instantiated)
           continue;
-        if (c->size < opts.instantiateclslim)
+        if (c->size () < opts.instantiateclslim)
           continue;
         bool satisfied = false;
         int unassigned = 0;
@@ -51,7 +51,7 @@ void Internal::collect_instantiation_candidates (
              "instantiation candidate literal %d "
              "with %zu negative occurrences in",
              lit, negoccs);
-        instantiator.candidate (lit, c, c->size, negoccs);
+        instantiator.candidate (lit, c, c->size (), negoccs);
       }
     }
   }
@@ -113,7 +113,7 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
         if (u > 0)
           j[-1].blit = other;
         else {
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
@@ -175,7 +175,7 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
 
 bool Internal::instantiate_candidate (int lit, Clause *c) {
   stats.instantiate_tried++;
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
   assert (!level);
   bool found = false, satisfied = false, inactive = false;
@@ -208,8 +208,8 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
   assert (active (lit));
   assert (inst_chain.empty ());
   LOG (c, "trying to instantiate %d in", lit);
-  assert (!c->garbage);
-  c->instantiated = true;
+  assert (!c->main.garbage);
+  c->main.instantiated = true;
   assert (lrat_chain.empty ());
   level++;
   inst_assign (lit); // Assume 'lit' to true.
@@ -299,7 +299,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
   strengthen_clause (c, lit);
   watch_clause (c);
   lrat_chain.clear ();
-  assert (c->size > 1);
+  assert (c->size () > 1);
   LOG ("instantiation succeeded");
   stats.instantiated++;
   return true;

@@ -63,7 +63,7 @@ void Internal::remove_falsified_literals (Clause *c) {
     j--;
   }
   stats.collected += shrink_clause (c, j - c->begin ());
-  if (c->size == 2)
+  if (c->size () == 2)
     new_binary_since_dedup = true;
 }
 
@@ -82,7 +82,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
   check_clause_stats();
   for (const auto &c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     const int tmp = clause_contains_fixed_literal (c);
     if (tmp > 0)
@@ -122,8 +122,8 @@ void Internal::protect_reasons () {
     if (reason == external_reason)
       continue;
     LOG (reason, "protecting assigned %d reason %p", lit, (void *) reason);
-    assert (!reason->reason);
-    reason->reason = true;
+    assert (!reason->main.reason);
+    reason->main.reason = true;
 #ifdef LOGGING
     count++;
 #endif
@@ -156,8 +156,8 @@ void Internal::unprotect_reasons () {
       continue;
     LOG (reason, "unprotecting assigned %d reason %p", lit,
          (void *) reason);
-    assert (reason->reason);
-    reason->reason = false;
+    assert (reason->main.reason);
+    reason->main.reason = false;
 #ifdef LOGGING
     count++;
 #endif
@@ -184,8 +184,8 @@ size_t Internal::flush_occs (int lit) {
     c = *i;
     if (c->collect ())
       continue;
-    *j++ = c->moved ? c->copy () : c;
-    // assert (!c->redundant); // -> not true in sweeping
+    *j++ = c->main.moved ? c->copy () : c;
+    // assert (!c->main.redundant); // -> not true in sweeping
     res++;
   }
   os.resize (j - os.begin ());
@@ -210,9 +210,9 @@ inline void Internal::flush_watches (int lit, Watches &saved) {
     Clause *c = w.clause;
     if (c->collect ())
       continue;
-    if (c->moved)
+    if (c->main.moved)
       c = w.clause = c->copy ();
-    w.size = c->size;
+    w.size = c->size ();
     const int new_blit_pos = (c->literals[0] == lit);
     LOG (c, "clause in flush_watch starting from %d", lit);
     assert (c->literals[!new_blit_pos] == lit); /*FW1*/
@@ -258,8 +258,8 @@ void Internal::update_reason_references () {
     if (c == external_reason)
       continue;
     LOG (c, "updating assigned %d reason", lit);
-    assert (c->reason);
-    assert (c->moved);
+    assert (c->main.reason);
+    assert (c->main.moved);
     Clause *d = c->copy ();
     v.reason = d;
 #ifdef LOGGING
@@ -291,7 +291,7 @@ void Internal::delete_garbage_clauses () {
     if (!c->collect ())
       continue;
 #ifndef QUIET
-    collected_bytes += c->raw_bytes (c->size);
+    collected_bytes += c->raw_bytes (c->size ());
     collected_clauses++;
 #endif
     delete_clause (c);
@@ -316,24 +316,24 @@ void Internal::delete_garbage_clauses () {
 //
 void Internal::copy_clause (Clause *c) {
   LOG (c, "moving");
-  assert (!c->moved);
-  assert (!c->garbage || (c->size == 2 && c->reason));
+  assert (!c->main.moved);
+  assert (!c->main.garbage || (c->size () == 2 && c->main.reason));
   const bool with_lrat_id = allocate_lrat_id ();
   char *p = (char *) c;
-  bool binary = (c->size == 2);
+  bool binary = (c->size () == 2);
   // this is not the start of the allocated struct (that would be `::offset
-  // (c->allocated_as_binary)`), only the start of the part to copy, such that
+  // (c->allocated_as_binary ())`), only the start of the part to copy, such that
   // we can ignore the extra headers.
   if (!with_lrat_id)
     p += Clause::offset (binary);
   char *q = arena.copy (p, c->allocated_bytes (with_lrat_id));
   if (!with_lrat_id)
     q -= Clause::offset (binary);
-  c->raw_copy = (uintptr_t) (Clause *) q;
-  c->moved = true;
+  c->moved_clause.raw_copy = (uintptr_t) (Clause *) q;
+  c->moved_clause.moved2 = true;
   if (!with_lrat_id && binary)
-    ((Clause *)q)->allocated_as_binary = true;
-  assert (!with_lrat_id || c->has_id);
+    ((Clause *)q)->moved_clause.allocated_as_binary2 = true;
+  assert (!with_lrat_id || c->main.has_id);
   if (internal->allocate_lrat_id ())
     LOG ("copied clause[%" PRId64 "] from %p to %p", c->id (), (void *) c,
        (void *) c->copy ());
@@ -353,9 +353,9 @@ void Internal::copy_non_garbage_clauses () {
   //
   for (const auto &c : clauses)
     if (!c->collect ())
-      moved_bytes += c->raw_bytes (c->size), moved_clauses++;
+      moved_bytes += c->raw_bytes (c->size ()), moved_clauses++;
     else
-      collected_bytes += c->raw_bytes (c->size), collected_clauses++;
+      collected_bytes += c->raw_bytes (c->size ()), collected_clauses++;
 
   PHASE ("collect", stats.collections,
          "moving %zd bytes %.0f%% of %zd non garbage clauses", moved_bytes,
@@ -389,7 +389,7 @@ void Internal::copy_non_garbage_clauses () {
     // benefit due to better cache locality.
 
     for (const auto &c : clauses)
-      if (!c->moved && !c->collect ())
+      if (!c->main.moved && !c->collect ())
         copy_clause (c);
 
   } else if (opts.arenatype == 2) {
@@ -402,7 +402,7 @@ void Internal::copy_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2)
       for (auto idx : vars)
         for (const auto &w : watches (sign * likely_phase (idx)))
-          if (!w.clause->moved && !w.clause->collect ())
+          if (!w.clause->main.moved && !w.clause->collect ())
             copy_clause (w.clause);
 
   } else {
@@ -418,7 +418,7 @@ void Internal::copy_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2)
       for (int idx = queue.last; idx; idx = link (idx).prev)
         for (const auto &w : watches (sign * likely_phase (idx)))
-          if (!w.clause->moved && !w.clause->collect ())
+          if (!w.clause->main.moved && !w.clause->collect ())
             copy_clause (w.clause);
   }
 
@@ -426,7 +426,7 @@ void Internal::copy_non_garbage_clauses () {
   // a rare situation, and now is only left as defensive code.
   //
   for (const auto &c : clauses)
-    if (!c->collect () && !c->moved)
+    if (!c->collect () && !c->main.moved)
       copy_clause (c);
 
   flush_all_occs_and_watches ();
@@ -441,7 +441,7 @@ void Internal::copy_non_garbage_clauses () {
     if (c->collect ())
       delete_clause (c);
     else
-      assert (c->moved), *j++ = c->copy (), deallocate_clause (c);
+      assert (c->main.moved), *j++ = c->copy (), deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity () / 2)
@@ -473,17 +473,17 @@ void Internal::check_clause_stats () {
   int64_t irredundant = 0, redundant = 0, total = 0, irrlits = 0, garbagelits = 0, garbagecls = 0;
   LOG ("stats.irredundant_literals: %zd", stats.irredundant_literals);
   for (const auto &c : clauses) {
-    if (c->garbage) {
+    if (c->main.garbage) {
       ++garbagecls;
-      garbagelits += c->size;
+      garbagelits += c->size ();
       continue;
     }
-    if (c->redundant)
+    if (c->main.redundant)
       redundant++;
     else
       irredundant++;
-    if (!c->redundant)
-      irrlits += c->size;
+    if (!c->main.redundant)
+      irrlits += c->size ();
     total++;
   }
   assert (stats.clauses_now_irr == irredundant);
@@ -519,12 +519,12 @@ void Internal::remove_garbage_binaries () {
         Watch w = *i;
         *j++ = w;
         Clause *c = w.clause;
-        COVER (!w.binary () && c->size == 2);
+        COVER (!w.binary () && c->size () == 2);
         if (!w.binary ())
           continue;
-        if (c->reason && c->garbage) {
+        if (c->main.reason && c->main.garbage) {
           COVER (true);
-          assert (c->size == 2);
+          assert (c->size () == 2);
           backtrack_level =
               min (backtrack_level, var (c->literals[0]).level);
           LOG ("need to backtrack to before level %d", backtrack_level);

@@ -44,6 +44,9 @@ typedef const int *const_literal_iterator;
 // Also in the union with either the flags or the pointer to moved, we rely on
 // the shared flags being at the same position.
 //
+// In the union below, it is important that the shared bits are at the same
+// position. Sadly C++'s bitoffset does not exist yet and we cannot assert that
+// the fields have the same offset.
 #define USED_SIZE 5 // macro to limit the number of bits used by the used flag, see the "learn to unlearn" paper.
 struct Clause {
   int64_t raw_id;   // Used to create LRAT-style proofs
@@ -111,7 +114,7 @@ struct Clause {
       bool vivify : 1;       // clause scheduled to be vivified
 
       int size; // Actual size of 'literals' (at least 2).
-    };
+    } main;
     struct {
       bool moved2 : 1; // moved during garbage collector ('copy' valid)
       bool garbage2 : 1;  // can be garbage collected unless it is a 'reason'
@@ -119,7 +122,7 @@ struct Clause {
       bool allocated_as_binary2 : 1; // glue and pos not allocated
       bool redundant2 : 1;    // aka 'learned' so not 'irredundant' (original)
 #ifndef NDEBUG
-       bool has_id2 : 1;
+      bool has_id2 : 1;
 #endif
 #if ((ULONG_MAX) != (UINT_MAX)) // 64-bit detection
       uintptr_t raw_copy : 50; // Only valid if 'moved', then that's where to.
@@ -127,7 +130,7 @@ struct Clause {
       uintptr_t raw_copy : 32; // Only valid if 'moved', then that's where to.
 #endif
 
-    };
+    } moved_clause;
     //
     // The 'raw_copy' field is only valid for 'moved' clauses in the moving
     // garbage collector 'copy_non_garbage_clauses' for keeping clauses
@@ -166,35 +169,35 @@ struct Clause {
   // Supports simple range based for loops over clauses.
 
   literal_iterator begin () { return literals; }
-  literal_iterator end () { return literals + size; }
+  literal_iterator end () { return literals + main.size; }
 
   const_literal_iterator begin () const { return literals; }
-  const_literal_iterator end () const { return literals + size; }
-  Clause *copy () const {return reinterpret_cast<Clause*>(raw_copy);};
+  const_literal_iterator end () const { return literals + main.size; }
+  Clause *copy () const {return reinterpret_cast<Clause*>(moved_clause.raw_copy);};
 
   /*C++17 only: inline*/ int &glue () {
-    assert (has_id || !allocated_as_binary);
+    assert (main.has_id || !main.allocated_as_binary);
     return raw_glue;
   }
   /*C++17 only:inline*/int &pos () {
-    assert (has_id || !allocated_as_binary);
+    assert (main.has_id || !main.allocated_as_binary);
     return raw_pos;
   }
   /*C++17 only:inline*/int64_t &id () {
-    assert (has_id);
+    assert (main.has_id);
     return raw_id;
   }
 
   /*C++17 only: inline*/int glue () const {
-    assert (has_id || !allocated_as_binary);
+    assert (main.has_id || !main.allocated_as_binary);
     return raw_glue;
   }
   /*C++17 only: inline*/int pos () const {
-    assert (has_id || !allocated_as_binary);
+    assert (main.has_id || !main.allocated_as_binary);
     return raw_pos;
   }
   /*C++17 only: inline*/int64_t id () const {
-    assert (has_id);
+    assert (main.has_id);
     return raw_id;
   }
   static size_t raw_bytes (int size) {
@@ -229,9 +232,13 @@ struct Clause {
   }
 
   size_t allocated_bytes (bool with_id) const {
-    return raw_bytes (size) - (with_id ? 0 : offset (allocated_as_binary));
+    return raw_bytes (main.size) - (with_id ? 0 : offset (main.allocated_as_binary));
   }
-  size_t raw_bytes () const { assert (!moved); return raw_bytes (size); }
+  size_t raw_bytes () const { assert (!main.moved); return raw_bytes (main.size); }
+  int size () const {assert (!main.moved); return main.size;}
+  int used () const {assert (!main.moved); return main.used;}
+  bool allocated_as_binary () const {return main.allocated_as_binary;}
+  int garbage () const {assert (!main.moved); return main.garbage;}
 
   // Check whether this clause is ready to be collected and deleted.  The
   // 'reason' flag is only there to protect reason clauses in 'reduce',
@@ -240,12 +247,13 @@ struct Clause {
   // 'reason' is false for sure. We want to use the same garbage collection
   // code though for both situations and thus hide here this variance.
   //
-  bool collect () const { return !reason && garbage; }
+  bool collect () const { return !main.reason && main.garbage; }
+
 };
 
 struct clause_smaller_size {
   bool operator() (const Clause *a, const Clause *b) {
-    return a->size < b->size;
+    return a->size () < b->size ();
   }
 };
 
@@ -267,21 +275,21 @@ struct clause_lit_less_than {
 struct clause_flags_ordered_less_than {
   bool operator() (Clause *a, Clause *b) const {
     using namespace std;
-    assert (a->size == b->size);
-    assert (!a->moved);
-    assert (!b->moved);
-    if (a->size > 2 && a->glue () < b->glue ())
+    assert (a->size () == b->size ());
+    assert (!a->main.moved);
+    assert (!b->main.moved);
+    if (a->main.size > 2 && a->glue () < b->glue ())
       return true;
-    if (a->size > 2 && a->glue () > b->glue ())
+    if (a->main.size > 2 && a->glue () > b->glue ())
       return false;
 
-    if (a->size > 2 && a->pos () < b->pos ())
+    if (a->main.size > 2 && a->pos () < b->pos ())
       return true;
-    if (a->size > 2 && a->pos () > b->pos ())
+    if (a->main.size > 2 && a->pos () > b->pos ())
       return false;
-    if (a->used < b->used)
+    if (a->main.used < b->main.used)
       return true;
-    if (a->used > b->used)
+    if (a->main.used > b->main.used)
       return false;
     return true;
   }

@@ -90,7 +90,7 @@ bool Internal::ineliminating () {
 
 void Internal::elim_update_added_clause (Eliminator &eliminator,
                                          Clause *c) {
-  assert (!c->redundant);
+  assert (!c->main.redundant);
   ElimSchedule &schedule = eliminator.schedule;
   for (const auto &lit : *c) {
     if (!active (lit))
@@ -127,7 +127,7 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
 
 void Internal::elim_update_removed_clause (Eliminator &eliminator,
                                            Clause *c, int except) {
-  assert (!c->redundant);
+  assert (!c->main.redundant);
   for (const auto &lit : *c) {
     if (lit == except)
       continue;
@@ -153,7 +153,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
     assert (val (lit) > 0);
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
       int unit = 0, satisfied = 0;
       for (const auto &other : *c) {
@@ -192,7 +192,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
       break;
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
       LOG (c, "elimination propagation of %d produces satisfied", lit);
       elim_update_removed_clause (eliminator, c, lit);
@@ -268,14 +268,14 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
                                 int pivot, Clause *d,
                                 const bool propagate_eagerly) {
 
-  assert (!c->redundant);
-  assert (!d->redundant);
+  assert (!c->main.redundant);
+  assert (!d->main.redundant);
 
   stats.eliminate_resolved++;
 
-  if (c->garbage || d->garbage)
+  if (c->main.garbage || d->main.garbage)
     return false;
-  if (c->size > d->size) {
+  if (c->size () > d->size ()) {
     pivot = -pivot;
     swap (c, d);
   }
@@ -494,14 +494,14 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
-    assert (!c->redundant);
-    if (c->garbage)
+    assert (!c->main.redundant);
+    if (c->main.garbage)
       continue;
     for (const auto &d : ns) {
-      assert (!d->redundant);
-      if (d->garbage)
+      assert (!d->main.redundant);
+      if (d->main.garbage)
         continue;
-      if (!resolve_gates && substitute && c->gate == d->gate)
+      if (!resolve_gates && substitute && c->main.gate == d->main.gate)
         continue;
       stats.eliminate_tried_res++;
       if (resolve_clauses (eliminator, c, pivot, d, true)) {
@@ -581,14 +581,14 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
   for (auto &c : ps) {
     if (unsat)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     for (auto &d : ns) {
       if (unsat)
         break;
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
-      if (!resolve_gates && substitute && c->gate == d->gate)
+      if (!resolve_gates && substitute && c->main.gate == d->main.gate)
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
@@ -626,13 +626,13 @@ void Internal::mark_eliminated_clauses_as_garbage (
 #endif
   Occs &ps = occs (pivot);
   for (const auto &c : ps) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    assert (!c->redundant);
-    if (!substitute || c->gate) {
+    assert (!c->main.redundant);
+    if (!substitute || c->main.gate) {
       if (proof)
         proof->weaken_minus (c);
-      if (c->size == 2)
+      if (c->size () == 2)
         deleted_binary_clause = true;
       external->push_clause_on_extension_stack (c, pivot);
 #ifndef NDEBUG
@@ -648,13 +648,13 @@ void Internal::mark_eliminated_clauses_as_garbage (
 
   Occs &ns = occs (-pivot);
   for (const auto &d : ns) {
-    if (d->garbage)
+    if (d->main.garbage)
       continue;
-    assert (!d->redundant);
-    if (!substitute || d->gate) {
+    assert (!d->main.redundant);
+    if (!substitute || d->main.gate) {
       if (proof)
         proof->weaken_minus (d);
-      if (d->size == 2)
+      if (d->size () == 2)
         deleted_binary_clause = true;
       external->push_clause_on_extension_stack (d, -pivot);
 #ifndef NDEBUG
@@ -740,7 +740,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
 void Internal::
     mark_redundant_clauses_with_eliminated_variables_as_garbage () {
   for (const auto &c : clauses) {
-    if (c->garbage || !c->redundant)
+    if (c->main.garbage || !c->main.redundant)
       continue;
     bool clean = true;
     for (const auto &lit : *c) {
@@ -806,7 +806,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
-    if (c->garbage || c->redundant)
+    if (c->main.garbage || c->main.redundant)
       continue;
     bool satisfied = false, falsified = false;
     for (const auto &lit : *c) {
@@ -867,7 +867,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses)
-    if (!c->garbage && !c->redundant)
+    if (!c->main.garbage && !c->main.redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);

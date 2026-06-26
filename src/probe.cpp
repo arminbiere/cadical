@@ -219,7 +219,7 @@ int Internal::probe_dominator (int a, int b) {
 inline int Internal::hyper_binary_resolve (Clause *reason) {
   require_mode (PROBE);
   assert (level == 1);
-  assert (reason->size > 2);
+  assert (reason->size () > 2);
   const const_literal_iterator end = reason->end ();
   const int *lits = reason->literals;
   const_literal_iterator k;
@@ -232,7 +232,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
 #endif
   LOG (reason, "hyper binary resolving");
   stats.hbrs++;
-  stats.hbr_sizes += reason->size;
+  stats.hbr_sizes += reason->size ();
   const int lit = lits[1];
   int dom = -lit, non_root_level_literals = 0;
   for (k = lits + 2; k != end; k++) {
@@ -248,7 +248,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);
-    const bool red = !contained || reason->redundant;
+    const bool red = !contained || reason->main.redundant;
     if (red)
       stats.hbr_redundant++;
     LOG ("new %s hyper binary resolvent %d %d",
@@ -262,7 +262,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     Clause *c = new_hyper_binary_resolved_clause (red, 2);
     probe_reason = c;
     if (red)
-      c->hyper = true;
+      c->main.hyper = true;
     clause.clear ();
     lrat_chain.clear ();
     if (contained) {
@@ -434,7 +434,7 @@ bool Internal::probe_propagate () {
         if (b > 0)
           continue;
         ticks++;
-        if (w.clause->garbage)
+        if (w.clause->main.garbage)
           continue;
         const literal_iterator lits = w.clause->begin ();
         const int other = lits[0] ^ lits[1] ^ lit;
@@ -443,7 +443,7 @@ bool Internal::probe_propagate () {
         if (u > 0)
           ws[j - 1].blit = other;
         else {
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
@@ -597,7 +597,7 @@ void Internal::failed_literal (int failed) {
 
 bool Internal::is_binary_clause (Clause *c, int &a, int &b) {
   assert (!level);
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
   int first = 0, second = 0;
   for (const auto &lit : *c) {

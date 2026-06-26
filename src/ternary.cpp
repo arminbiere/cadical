@@ -32,7 +32,7 @@ bool Internal::ternary_find_binary_clause (int a, int b) {
   if (opts.ternaryocclim < (int) occs (lit).size ())
     return true;
   for (const auto &c : occs (lit)) {
-    if (c->size != 2)
+    if (c->size () != 2)
       continue;
     const int *lits = c->literals;
     if (lits[0] == a && lits[1] == b)
@@ -65,7 +65,7 @@ bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
     return true;
   for (const auto &d : occs (lit)) {
     const int *lits = d->literals;
-    if (d->size == 2) {
+    if (d->size () == 2) {
       if (lits[0] == a && lits[1] == b)
         return true;
       if (lits[0] == b && lits[1] == a)
@@ -79,7 +79,7 @@ bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
       if (lits[0] == c && lits[1] == b)
         return true;
     } else {
-      assert (d->size == 3);
+      assert (d->size () == 3);
       if (lits[0] == a && lits[1] == b && lits[2] == c)
         return true;
       if (lits[0] == a && lits[1] == c && lits[2] == b)
@@ -111,8 +111,8 @@ bool Internal::hyper_ternary_resolve (Clause *c, int pivot, Clause *d) {
   LOG (c, "1st antecedent");
   LOG (d, "2nd antecedent");
   stats.ternary_resolutions++;
-  assert (c->size == 3);
-  assert (d->size == 3);
+  assert (c->size () == 3);
+  assert (d->size () == 3);
   assert (clause.empty ());
   for (const auto &lit : *c)
     if (lit != pivot)
@@ -157,10 +157,10 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       break;
     if (htrs < 0)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size != 3) {
-      assert (c->size == 2);
+    if (c->size () != 3) {
+      assert (c->size () == 2);
       continue;
     }
     if (--steps < 0)
@@ -179,10 +179,10 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
         break;
       if (--steps < 0)
         break;
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
-      if (d->size != 3) {
-        assert (d->size == 2);
+      if (d->size () != 3) {
+        assert (d->size () == 2);
         continue;
       }
       for (const auto &lit : *d)
@@ -196,7 +196,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       htrs--;
       if (hyper_ternary_resolve (c, pivot, d)) {
         size_t size = clause.size ();
-        bool red = (size == 3 || (c->redundant && d->redundant));
+        bool red = (size == 3 || (c->main.redundant && d->main.redundant));
         if (lrat) {
           assert (lrat_chain.empty ());
           lrat_chain.push_back (c->id ());
@@ -204,7 +204,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
         }
         Clause *r = new_hyper_ternary_resolved_clause (red);
         if (red)
-          r->hyper = true;
+          r->main.hyper = true;
         lrat_chain.clear ();
         clause.clear ();
         LOG (r, "hyper ternary resolved");
@@ -218,7 +218,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
           stats.ternary_htrs_binary++;
           break;
         } else {
-          assert (r->size == 3);
+          assert (r->size () == 3);
           stats.ternary_htrs_ternary++;
         }
       } else {
@@ -278,9 +278,9 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
   steps_limit -= 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     steps_limit--;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size > 3)
+    if (c->size () > 3)
       continue;
     bool assigned = false, marked = false;
     for (const auto &lit : *c) {
@@ -293,12 +293,12 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
     }
     if (assigned)
       continue;
-    if (c->size == 2) {
+    if (c->size () == 2) {
 #ifndef QUIET
       bincon++;
 #endif
     } else {
-      assert (c->size == 3);
+      assert (c->size () == 3);
       if (!marked)
         continue;
 #ifndef QUIET

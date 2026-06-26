@@ -67,7 +67,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
         if (val (w.blit) > 0)
           continue;
         ticks++;
-        if (w.clause->garbage) {
+        if (w.clause->main.garbage) {
           j--;
           continue;
         }
@@ -77,7 +77,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
         if (u > 0)
           j[-1].blit = other;
         else {
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;
@@ -220,7 +220,7 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
 
 int Internal::backbone_analyze (Clause *, int64_t &ticks) {
   assert (conflict);
-  assert (conflict->size == 2);
+  assert (conflict->size () == 2);
   analyzed.push_back (std::abs (conflict->literals[0]));
   flags (conflict->literals[0]).seen = true;
   analyzed.push_back (std::abs (conflict->literals[1]));
@@ -297,7 +297,7 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
-  assert (reason == decision_reason || !reason || reason->size >= 2);
+  assert (reason == decision_reason || !reason || reason->size () >= 2);
   Var &v = var (idx);
   v.level = level;             // required to reuse decisions
   v.trail = get_trail_size (); // used in 'vivify_better_watch'
@@ -320,7 +320,7 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
-  assert (reason == decision_reason || !reason || reason->size == 2);
+  assert (reason == decision_reason || !reason || reason->size () == 2);
   Var &v = var (idx);
   v.level = level;             // required to reuse decisions
   v.trail = get_trail_size (); // used in 'vivify_better_watch'

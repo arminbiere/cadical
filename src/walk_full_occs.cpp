@@ -15,7 +15,7 @@ struct Tagged {
 #endif
   explicit Tagged () { assert (false); }
   explicit Tagged (Clause *d, unsigned pos)
-      : binary (d->size == 2), counter_pos (pos) {
+      : binary (d->size () == 2), counter_pos (pos) {
     assert ((pos & (1 << 31)) == 0);
 #ifndef NDEBUG
     c = d;
@@ -400,7 +400,7 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   (void) propagations; // TODO unused?
   LOG ("scored %zd literals", scores.size ());
   assert (!scores.empty ());
-  assert (this->scores.size () <= (size_t) c->size);
+  assert (this->scores.size () <= (size_t) c->size ());
   const double lim = sum * random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
 
@@ -674,15 +674,15 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
   double size = 0;
   int64_t n = 0;
   for (const auto c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant) {
+    if (c->main.redundant) {
       if (!opts.walkredundant)
         continue;
       if (!likely_to_be_kept_clause (c))
         continue;
     }
-    size += c->size;
+    size += c->size ();
     n++;
   }
   double average_size = relative (size, n);
@@ -757,9 +757,9 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 #endif
     for (const auto c : clauses) {
 
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      if (c->redundant) {
+      if (c->main.redundant) {
         if (!opts.walkredundant)
           continue;
         if (!likely_to_be_kept_clause (c))
@@ -770,7 +770,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
       int satisfied = 0;        // clause satisfied?
 
       int *lits = c->literals;
-      const int size = c->size;
+      const int size = c->size ();
 
       // Move to front satisfied literals and determine whether there
       // is at least one (non-assumed) literal that can be flipped.

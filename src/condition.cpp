@@ -144,7 +144,7 @@ inline void Internal::unmark_in_candidate_clause (int lit) {
 
 struct less_conditioned {
   bool operator() (Clause *a, Clause *b) {
-    return !a->conditioned && b->conditioned;
+    return !a->main.conditioned && b->main.conditioned;
   }
 };
 
@@ -285,9 +285,9 @@ long Internal::condition_round (long delta) {
   // negation of some of their literals to be conditional initially.
   //
   for (const auto &c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue; // Can already be ignored.
-    if (c->redundant)
+    if (c->main.redundant)
       continue; // Ignore redundant clauses too.
 
     // First determine the following numbers for the candidate clause
@@ -328,7 +328,7 @@ long Internal::condition_round (long delta) {
     if (positive > 0) {
       LOG (c, "found %d positive literals in candidate", positive);
       candidates.push_back (c);
-      if (c->conditioned)
+      if (c->main.conditioned)
         conditioned++;
       else
         unconditioned++;
@@ -457,8 +457,8 @@ long Internal::condition_round (long delta) {
            unconditioned, percent (unconditioned, candidates.size ()));
   } else if (conditioned && !unconditioned) {
     for (auto const &c : candidates) {
-      assert (c->conditioned);
-      c->conditioned = false; // Reset 'conditioned' bit.
+      assert (c->main.conditioned);
+      c->main.conditioned = false; // Reset 'conditioned' bit.
     }
     PHASE ("condition", stats.conditionings,
            "all %zd candidates tried before", conditioned);
@@ -486,7 +486,7 @@ long Internal::condition_round (long delta) {
     if (initial.autarky <= 0)
       break;
 
-    if (c->reason)
+    if (c->main.reason)
       continue;
 
     bool terminated_or_limit_hit = true;
@@ -506,11 +506,11 @@ long Internal::condition_round (long delta) {
 #ifndef QUIET
     untried--;
 #endif
-    assert (!c->garbage);
-    assert (!c->redundant);
+    assert (!c->main.garbage);
+    assert (!c->main.redundant);
 
     LOG (c, "candidate");
-    c->conditioned = 1; // Next time later.
+    c->main.conditioned = 1; // Next time later.
 
     // We watch an autarky literal in the clause, and can stop trying to
     // globally block the clause as soon it turns into a conditional

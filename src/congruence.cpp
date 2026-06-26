@@ -338,13 +338,13 @@ void Closure::extract_binaries () {
   // in kissat this is done during watch clearing. TODO: consider doing this
   // too.
   for (Clause *c : internal->clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant && c->size != 2)
+    if (c->main.redundant && c->size () != 2)
       continue;
-    if (c->size > 2)
+    if (c->size () > 2)
       continue;
-    assert (c->size == 2);
+    assert (c->size () == 2);
     const int lit = c->literals[0];
     const int other = c->literals[1];
     const bool already_sorted =
@@ -381,11 +381,11 @@ void Closure::extract_binaries () {
   for (size_t i = 0; i < size; ++i) {
     Clause *d = internal->clauses[i]; // binary clauses are appended, so
                                       // reallocation possible
-    if (d->garbage)
+    if (d->main.garbage)
       continue;
-    if (d->redundant)
+    if (d->main.redundant)
       continue;
-    if (d->size != 3)
+    if (d->size () != 3)
       continue;
     const int *lits = d->literals;
     const int a = lits[0];
@@ -714,7 +714,7 @@ int Closure::find_eager_representative_and_compress (int lit) {
     }
     eager_representative (lit) = res;
     Clause *equiv = add_tmp_binary_clause (-lit, res);
-    equiv->hyper = true;
+    equiv->main.hyper = true;
     if (internal->lrat) {
       eager_representative_id (lit) = equiv->id ();
       lrat_chain = std::move (tmp_lrat_chain);
@@ -1036,34 +1036,34 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   DeferDeleteArray<char> clause_delete ((char *) c);
 
 #ifndef NDEBUG
-  c->has_id = requires_id;
+  c->main.has_id = requires_id;
 #endif
   if (requires_id)
     c->id () = ++internal->clause_id;
 
-  c->conditioned = false;
-  c->covered = false;
-  c->enqueued = false;
-  c->frozen = false;
-  c->garbage = false;
-  c->gate = false;
-  c->hyper = false;
-  c->instantiated = false;
-  c->moved = false;
-  c->reason = false;
-  c->redundant = false;
-  c->transred = false;
-  c->subsume = false;
-  c->swept = false;
-  c->flushed = false;
-  c->vivified = false;
-  c->vivify = false;
-  c->used = 0;
-  c->allocated_as_binary = (size == 2);
+  c->main.conditioned = false;
+  c->main.covered = false;
+  c->main.enqueued = false;
+  c->main.frozen = false;
+  c->main.garbage = false;
+  c->main.gate = false;
+  c->main.hyper = false;
+  c->main.instantiated = false;
+  c->main.moved = false;
+  c->main.reason = false;
+  c->main.redundant = false;
+  c->main.transred = false;
+  c->main.subsume = false;
+  c->main.swept = false;
+  c->main.flushed = false;
+  c->main.vivified = false;
+  c->main.vivify = false;
+  c->main.used = 0;
+  c->main.allocated_as_binary = (size == 2);
 
-  if (requires_id || c->size != 2) {
+  if (requires_id || c->size () != 2) {
     c->glue () = size;
-    c->size = size;
+    c->main.size = size;
   }
   c->pos () = 2;
 
@@ -1882,15 +1882,15 @@ inline void Closure::promote_clause (Clause *c) {
     check_not_tmp_binary_clause (c);
   if (!c)
     return;
-  if (!c->redundant)
+  if (!c->main.redundant)
     return;
   LOG (c, "turning redundant subsuming clause into irredundant clause");
-  c->redundant = false;
+  c->main.redundant = false;
   if (internal->proof)
     internal->proof->strengthen (c->id ());
   internal->stats.clauses_now_irr++;
   internal->stats.clauses_irredundant++;
-  internal->stats.irredundant_literals += c->size;
+  internal->stats.irredundant_literals += c->size ();
   assert (internal->stats.clauses_now_red > 0);
   internal->stats.clauses_now_red--;
   assert (internal->stats.clauses_redundant > 0);
@@ -1911,8 +1911,8 @@ bool Closure::merge_literals_from_clauses (int lit, int other, Clause *c1,
   if (internal->lrat) {
     assert (c1);
     assert (c2);
-    assert (c1->size == 2);
-    assert (c2->size == 2);
+    assert (c1->size () == 2);
+    assert (c2->size () == 2);
     assert (c1->literals[0] == lit || c1->literals[1] == lit);
     assert (c2->literals[0] == other || c2->literals[1] == other);
     assert (c1->literals[0] == -other || c1->literals[1] == -other);
@@ -2123,13 +2123,13 @@ void Closure::init_closure () {
 void Closure::init_and_gate_extraction () {
   LOG ("[gate-extraction]");
   for (Clause *c : internal->clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant && c->size != 2)
+    if (c->main.redundant && c->size () != 2)
       continue;
-    if (c->size > 2)
+    if (c->size () > 2)
       continue;
-    assert (c->size == 2);
+    assert (c->size () == 2);
     const int lit = c->literals[0];
     const int other = c->literals[1];
     internal->noccs (lit)++;
@@ -2853,7 +2853,7 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
         continue;
       if ((*it)->tag != typ)
         continue;
-      if ((*it)->size != size)
+      if ((*it)->size () != size)
         continue;
       for (int i = 0; i < size; ++i)
         if ((*it)->rhs[i] != dummy_search_gate->rhs[i])
@@ -2923,7 +2923,7 @@ Gate *Closure::find_gate_lits (const_literal_iterator begin,
       assert (*it);
       assert (*it != dummy_search_gate);
       assert ((*it)->tag == typ);
-      assert ((*it)->size == size);
+      assert ((*it)->size () == size);
       LOG ((*it), "checking gate in the table");
       for (int i = 0; i < size; ++i)
         assert ((*it)->rhs[i] == dummy_search_gate->rhs[i]);
@@ -3037,7 +3037,7 @@ Gate *Closure::find_first_and_gate (Clause *base_clause, int lhs) {
   for (auto w : internal->watches (not_lhs)) {
     LOG (w.clause, "checking clause for candidates");
     assert (w.binary ());
-    assert (w.clause->size == 2);
+    assert (w.clause->size () == 2);
     assert (w.clause->literals[0] == -lhs || w.clause->literals[1] == -lhs);
     const int other = w.blit;
     signed char &mark = marked (other);
@@ -3134,7 +3134,7 @@ void Closure::check_not_tmp_binary_clause (Clause *c) {
   assert (internal->lrat);
   assert (internal->lrat_chain.empty ());
   assert (c);
-  assert (c->size == 2);
+  assert (c->size () == 2);
   // for kissat possible, but not for us...
   assert (!internal->val (c->literals[0]));
   assert (!internal->val (c->literals[1]));
@@ -3148,7 +3148,7 @@ void Closure::check_not_tmp_binary_clause (Clause *c) {
 Clause *Closure::maybe_promote_tmp_binary_clause (Clause *c) {
   assert (internal->lrat);
   assert (internal->lrat_chain.empty ());
-  assert (c->size == 2);
+  assert (c->size () == 2);
   LOG (c, "promoting tmp");
 #ifndef NDEBUG
   assert (std::find (begin (extra_clauses), end (extra_clauses), c) !=
@@ -3212,7 +3212,7 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
 #ifdef LOGGING
     Clause *c = w.clause;
     LOG (c, "checking");
-    assert (c->size == 2);
+    assert (c->size () == 2);
     assert (c->literals[0] == not_lhs || c->literals[1] == not_lhs);
 #endif
     const int other = w.blit;
@@ -3295,7 +3295,7 @@ struct congruence_occurrences_larger {
 };
 
 void Closure::extract_and_gates_with_base_clause (Clause *c) {
-  assert (!c->garbage);
+  assert (!c->main.garbage);
   assert (lrat_chain.empty ());
   LOG (c, "extracting and gates with clause");
   unsigned size = 0;
@@ -3390,7 +3390,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
     assert (lrat_chain.empty ());
     if (internal->unsat)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       break;
     const int lhs = lits[i];
     LOG ("trying LHS candidate literal %s with %" PRIu64
@@ -3445,13 +3445,13 @@ void Closure::extract_and_gates () {
     // we can learn new binary clauses, but so no for loop
     assert (lrat_chain.empty ());
     Clause *c = internal->clauses[i];
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size == 2)
+    if (c->size () == 2)
       continue;
-    if (c->hyper)
+    if (c->main.hyper)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
     extract_and_gates_with_base_clause (c);
     assert (lrat_chain.empty ());
@@ -4075,7 +4075,7 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
 
 #ifndef NDEBUG
   std::for_each (begin (xs), end (xs), [&xs] (const LitClausePair &x) {
-    assert (x.clause->size == xs[1].clause->size);
+    assert (x.clause->size () == xs[1].clause->size ());
   });
 #endif
 }
@@ -4088,11 +4088,11 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
 
   for (auto c : internal->clauses) {
     LOG (c, "considering clause for XOR");
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size < 3)
+    if (c->size () < 3)
       continue;
     unsigned size = 0;
     for (auto lit : *c) {
@@ -4209,10 +4209,10 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   LOG ("searching for size %zu", size_lits);
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
-    assert (c->size != 2); // TODO kissat has break
-    if (c->garbage)
+    assert (c->size () != 2); // TODO kissat has break
+    if (c->main.garbage)
       continue;
-    if ((size_t) c->size < size_lits)
+    if ((size_t) c->size () < size_lits)
       continue;
     size_t found = 0;
     for (auto other : *c) {
@@ -4222,7 +4222,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
       if (value > 0) {
         LOG (c, "found satisfied %d in", other);
         internal->mark_garbage (c);
-        assert (c->garbage);
+        assert (c->main.garbage);
         break;
       }
       if (marked (other))
@@ -4233,7 +4233,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
         break;
       }
     }
-    if (found == size_lits && !c->garbage) {
+    if (found == size_lits && !c->main.garbage) {
       res = c;
       break;
     } else {
@@ -4339,10 +4339,10 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
       Clause *d = find_large_xor_side_clause (lits);
       if (!d)
         return;
-      assert (!d->redundant);
+      assert (!d->main.redundant);
       glauses.push_back (LitClausePair (i, d));
     } else
-      assert (!c->redundant);
+      assert (!c->main.redundant);
     inc_lits (lits);
     ++found;
   }
@@ -4388,7 +4388,7 @@ void Closure::extract_xor_gates () {
   for (auto c : candidates) {
     if (internal->unsat)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     extract_xor_gates_with_base_clause (c);
   }
@@ -4912,9 +4912,9 @@ bool Closure::propagate_binary_clauses_in_and_gates () {
   for (auto c : internal->clauses) {
     if (internal->unsat)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size != 2)
+    if (c->size () != 2)
       continue;
     rhs[0] = find_eager_representative (-c->literals[0]);
     rhs[1] = find_eager_representative (-c->literals[1]);
@@ -5047,7 +5047,7 @@ void Closure::reset_closure () {
   if (internal->lrat) {
     assert (internal->proof);
     for (auto c : extra_clauses) {
-      assert (!c->garbage);
+      assert (!c->main.garbage);
       internal->proof->delete_clause (c);
       delete[] c;
     }
@@ -5112,11 +5112,11 @@ void Closure::forward_subsume_matching_clauses () {
   (void) potential;
 
   for (auto *c : internal->clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
-    if (c->size == 2)
+    if (c->size () == 2)
       continue;
     ++potential;
     assert (analyzed.empty ());
@@ -5153,7 +5153,7 @@ void Closure::forward_subsume_matching_clauses () {
     for (auto lit : analyzed)
       marked (lit) = 0;
     analyzed.clear ();
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     if (!contains_matchable) {
       LOG ("no matching variable");
@@ -5196,28 +5196,28 @@ void Closure::forward_subsume_matching_clauses () {
 // version from subsume
 
 void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
-  //  assert (!subsuming->redundant);
-  // assert (!subsumed->redundant);
+  //  assert (!subsuming->main.redundant);
+  // assert (!subsumed->main.redundant);
   auto &stats = internal->stats;
   stats.subsumed++;
-  assert (subsuming->size <= subsumed->size);
+  assert (subsuming->size () <= subsumed->size ());
   LOG (subsumed, "subsumed");
-  if (subsumed->redundant)
+  if (subsumed->main.redundant)
     stats.subsumed_redundant++;
   else
     stats.subsumed_irredundant++;
-  if (subsumed->redundant || !subsuming->redundant) {
+  if (subsumed->main.redundant || !subsuming->main.redundant) {
     internal->mark_garbage (subsumed);
     return;
   }
   LOG ("turning redundant subsuming clause into irredundant clause");
-  subsuming->redundant = false;
+  subsuming->main.redundant = false;
   if (internal->proof)
     internal->proof->strengthen (subsuming->id ());
   internal->mark_garbage (subsumed);
   stats.clauses_now_irr++;
   stats.clauses_irredundant++;
-  stats.irredundant_literals += subsuming->size;
+  stats.irredundant_literals += subsuming->size ();
   assert (stats.clauses_now_red > 0);
   stats.clauses_now_red--;
   assert (stats.clauses_redundant > 0);
@@ -5226,7 +5226,7 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
 }
 
 bool Closure::find_subsuming_clause (Clause *subsumed) {
-  assert (!subsumed->garbage);
+  assert (!subsumed->main.garbage);
   Clause *subsuming = nullptr;
   for (auto lit : *subsumed) {
     assert (internal->val (lit) <= 0);
@@ -5253,9 +5253,9 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
       least_occuring_lit = repr_lit;
     }
     for (auto d : internal->occs (repr_lit)) {
-      assert (!d->garbage);
+      assert (!d->main.garbage);
       assert (subsumed != d);
-      if (!subsumed->redundant && d->redundant)
+      if (!subsumed->main.redundant && d->main.redundant)
         continue;
       for (auto other : *d) {
         const signed char v = internal->val (other);
@@ -5665,7 +5665,7 @@ bool Closure::rewrite_ite_gate_to_and (
   assert (idx1 < g->pos_lhs_ids ().size ());
   assert (idx2 < g->pos_lhs_ids ().size ());
   Clause *c = g->pos_lhs_ids ()[idx1].clause;
-  assert (c->size == 2);
+  assert (c->size () == 2);
   Clause *d = g->pos_lhs_ids ()[idx2].clause;
   assert (c != d);
   assert (c);
@@ -5689,7 +5689,7 @@ bool Closure::rewrite_ite_gate_to_and (
 
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids ()), end (g->pos_lhs_ids ()),
-                    [] (LitClausePair l) { return l.clause->size == 3; });
+                    [] (LitClausePair l) { return l.clause->size () == 3; });
   assert (long_clause != end (g->pos_lhs_ids ()));
   LOG (long_clause->clause, "new long clause");
   g->neg_lhs_id () = *long_clause;
@@ -5715,7 +5715,7 @@ bool Closure::rewrite_ite_gate_to_and (
   }
   for (auto id : g->pos_lhs_ids ()) {
     LOG (id.clause, "clause after rewriting:");
-    assert (id.clause->size == 2);
+    assert (id.clause->size () == 2);
   }
 #endif
   return false;
@@ -6009,7 +6009,7 @@ bool Closure::rewrite_ite_gate_to_xor_or_and (Gate *g, Gate_Type new_tag,
 #ifndef NDEBUG
         std::for_each (begin (g->pos_lhs_ids ()), end (g->pos_lhs_ids ()),
                        [g] (LitClausePair l) {
-                         assert (l.clause->size == 1 + g->arity ());
+                         assert (l.clause->size () == 1 + g->arity ());
                        });
 #endif
       } else {
@@ -6020,7 +6020,7 @@ bool Closure::rewrite_ite_gate_to_xor_or_and (Gate *g, Gate_Type new_tag,
 #if defined(LOGGING) || !defined(NDEBUG)
         for (auto id : g->pos_lhs_ids ()) {
           LOG (id.clause, "clause after rewriting:");
-          assert (id.clause->size == 2);
+          assert (id.clause->size () == 2);
         }
 #endif
         assert (g->pos_lhs_ids ().size () == 2 ||
@@ -6030,7 +6030,7 @@ bool Closure::rewrite_ite_gate_to_xor_or_and (Gate *g, Gate_Type new_tag,
 #ifndef NDEBUG
         std::for_each (
             begin (g->pos_lhs_ids ()), end (g->pos_lhs_ids ()),
-            [] (LitClausePair l) { assert (l.clause->size == 2); });
+            [] (LitClausePair l) { assert (l.clause->size () == 2); });
 #endif
       }
     }
@@ -6508,7 +6508,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
     // the literal is not necessarily the same, so updating it
     g->pos_lhs_ids ()[0].current_lit =
         g->pos_lhs_ids ()[0].clause->literals[0];
-    assert (g->pos_lhs_ids ()[0].clause->size == 2);
+    assert (g->pos_lhs_ids ()[0].clause->size () == 2);
     g->neg_lhs_id ().content = {g->pos_lhs_ids ()[0]};
     g->pos_lhs_ids ().clear ();
     return false;
@@ -6566,7 +6566,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
     LOG ("%d -> %d", d->literals[1],
          find_eager_representative (d->literals[1]));
     LOG (d, "with reference %s at position %zd", LOGLIT (lit), new_idx1);
-    assert (d->size == 2);
+    assert (d->size () == 2);
     g->pos_lhs_ids ().clear ();
     g->pos_lhs_ids ().push_back ({lit, d});
     g->neg_lhs_id ().reset ();
@@ -6576,7 +6576,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   assert (new_idx1 < g->pos_lhs_ids ().size ());
   c = g->pos_lhs_ids ()[new_idx1].clause;
-  assert (c->size == 2);
+  assert (c->size () == 2);
   assert (c);
   assert (new_idx2 < g->pos_lhs_ids ().size ());
   assert (new_idx1 != new_idx2);
@@ -6600,7 +6600,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
 
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids ()), end (g->pos_lhs_ids ()),
-                    [] (LitClausePair l) { return l.clause->size == 3; });
+                    [] (LitClausePair l) { return l.clause->size () == 3; });
   assert (long_clause != end (g->pos_lhs_ids ()));
   LOG (long_clause->clause, "new long clause");
   g->neg_lhs_id () = *long_clause;
@@ -6613,7 +6613,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   for (auto &litId : g->pos_lhs_ids ()) {
     assert (litId.clause);
     if (internal->val (litId.current_lit)) {
-      assert (litId.clause->size == 2);
+      assert (litId.clause->size () == 2);
       int replacement_lit = 0;
       for (int i = 0; i < 2; ++i) {
         if (litId.clause->literals[i] == first_lit) {
@@ -7333,15 +7333,15 @@ void Closure::init_ite_gate_extraction (
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
   for (auto c : internal->clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
-    if (c->size < 3)
+    if (c->size () < 3)
       continue;
     unsigned size = 0;
 
-    assert (!c->garbage);
+    assert (!c->main.garbage);
     for (auto lit : *c) {
       const signed char v = internal->val (lit);
       if (v < 0)
@@ -7377,8 +7377,8 @@ void Closure::init_ite_gate_extraction (
   size_t connected = 0;
 #endif
   for (auto c : ternary) {
-    assert (!c->garbage);
-    assert (!c->redundant);
+    assert (!c->main.garbage);
+    assert (!c->main.redundant);
     unsigned positive = 0, negative = 0, twice = 0;
     for (auto lit : *c) {
       if (internal->val (lit))
@@ -7397,7 +7397,7 @@ void Closure::init_ite_gate_extraction (
     }
     if (twice < 2)
       goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
-    assert (c->size != 2);
+    assert (c->size () != 2);
 #ifndef QUIET
     connected++;
 #endif
@@ -7436,7 +7436,7 @@ void Closure::copy_conditional_equivalences (int lit,
                                              lit_implications &condbin) {
   assert (condbin.empty ());
   for (auto c : internal->occs (lit)) {
-    assert (c->size != 2);
+    assert (c->size () != 2);
     int first = 0, second = 0;
     for (auto other : *c) {
       if (internal->val (other))
@@ -7998,8 +7998,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     for (auto sgn = -1; sgn <= 1; sgn += 2) {
       const int lit = v * sgn;
       for (auto w : watches (lit)) {
-        assert (!w.binary () || !w.clause->garbage);
-        if (w.clause->garbage)
+        assert (!w.binary () || !w.clause->main.garbage);
+        if (w.clause->main.garbage)
           continue;
         ++watched;
         LOG (w.clause, "watched");
@@ -8009,7 +8009,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   LOG ("and now the clauses:");
   size_t nb_clauses = 0;
   for (auto c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     LOG (c, "watched");
     ++nb_clauses;

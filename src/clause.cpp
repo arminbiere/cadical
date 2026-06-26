@@ -41,7 +41,7 @@ void Internal::unmark_clause () {
 
 void Internal::mark_removed (Clause *c, int except) {
   LOG (c, "marking removed");
-  assert (!c->redundant);
+  assert (!c->main.redundant);
   for (const auto &lit : *c)
     if (lit != except)
       mark_removed (lit);
@@ -71,7 +71,7 @@ void Internal::mark_added (Clause *c) {
   LOG (c, "marking added");
   assert (likely_to_be_kept_clause (c));
   for (const auto &lit : *c)
-    mark_added (lit, c->size, c->redundant);
+    mark_added (lit, c->size (), c->main.redundant);
 }
 
 /*------------------------------------------------------------------------*/
@@ -94,34 +94,34 @@ Clause *Internal::new_clause (bool red, int glue) {
   DeferDeleteArray<char> clause_delete (raw_clause);
 
 #ifndef NDEBUG
-    c->has_id = with_id;
+    c->main.has_id = with_id;
 #endif
   if (with_id)
     c->id () = ++clause_id;
 
-  c->conditioned = false;
-  c->covered = false;
-  c->enqueued = false;
-  c->frozen = false;
-  c->garbage = false;
-  c->gate = false;
-  c->hyper = false;
-  c->instantiated = false;
-  c->moved = false;
-  c->reason = false;
-  c->redundant = red;
-  c->transred = false;
-  c->subsume = false;
-  c->swept = false;
-  c->flushed = false;
-  c->vivified = false;
-  c->vivify = false;
-  c->used = 0;
+  c->main.conditioned = false;
+  c->main.covered = false;
+  c->main.enqueued = false;
+  c->main.frozen = false;
+  c->main.garbage = false;
+  c->main.gate = false;
+  c->main.hyper = false;
+  c->main.instantiated = false;
+  c->main.moved = false;
+  c->main.reason = false;
+  c->main.redundant = red;
+  c->main.transred = false;
+  c->main.subsume = false;
+  c->main.swept = false;
+  c->main.flushed = false;
+  c->main.vivified = false;
+  c->main.vivify = false;
+  c->main.used = 0;
 
-  c->size = size;
-  c->allocated_as_binary = (size == 2);
+  c->main.size = size;
+  c->main.allocated_as_binary = (size == 2);
 
-  if (with_id || c->size != 2) {
+  if (with_id || c->size () != 2) {
     c->glue () = glue;
     c->pos () = 2;
   }
@@ -154,28 +154,33 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (likely_to_be_kept_clause (c))
     mark_added (c);
 
+  // assertions
+  assert (c->main.moved == c->moved_clause.moved2);
+  assert (c->main.garbage == c->moved_clause.garbage2);
+  assert (c->main.reason == c->moved_clause.reason2);
+  assert (c->main.redundant == c->moved_clause.redundant2);
   return c;
 }
 
 /*------------------------------------------------------------------------*/
 
 void Internal::promote_clause (Clause *c, int new_glue) {
-  assert (c->redundant);
+  assert (c->main.redundant);
   assert (new_glue);
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
-  if (!c->redundant)
+  if (!c->main.redundant)
     return;
-  if (c->hyper)
+  if (c->main.hyper)
     return;
-  if (c->size == 2) {
+  if (c->size () == 2) {
     return;
   }
-  assert (c->size != 2);
+  assert (c->size () != 2);
   int old_glue = c->glue ();
   if (new_glue >= old_glue)
     return;
-  c->used = max_used;
+  c->main.used = max_used;
   if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.clause_promoted_tier1++;
@@ -192,11 +197,11 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 /*------------------------------------------------------------------------*/
 
 void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
-  assert (c->redundant);
+  assert (c->main.redundant);
   assert (new_glue);
-  if (c->hyper)
+  if (c->main.hyper)
     return;
-  assert (c->size != 2);
+  assert (c->size () != 2);
   int old_glue = c->glue ();
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
@@ -230,10 +235,10 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
     mark_garbage_external_forgettable (c->id ());
   assert (new_size >= 2);
-  int old_size = c->size;
+  int old_size = c->size ();
   assert (new_size < old_size);
 #ifndef NDEBUG
-  for (int i = c->size; i < new_size; i++)
+  for (int i = c->size (); i < new_size; i++)
     c->literals[i] = 0;
 #endif
 
@@ -241,13 +246,13 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
     c->pos () = 2;
 
   size_t old_bytes = c->raw_bytes ();
-  c->size = new_size;
+  c->main.size = new_size;
   size_t new_bytes = c->raw_bytes ();
   size_t res = old_bytes - new_bytes;
 
-  if (c->redundant) {
-    if (c->size != 2)
-      promote_clause_glue_only (c, min (c->size - 1, c->glue ()));
+  if (c->main.redundant) {
+    if (c->size () != 2)
+      promote_clause_glue_only (c, min (c->size () - 1, c->glue ()));
   }
   else {
     int delta_size = old_size - new_size;
@@ -263,15 +268,15 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
 
 // Makes a redundant clause irredundant and update the statistics
 void Internal::make_irredundant (Clause *subsuming) {
-  assert (subsuming->redundant);
-  assert (!subsuming->garbage);
+  assert (subsuming->main.redundant);
+  assert (!subsuming->main.garbage);
   LOG ("turning redundant subsuming clause into irredundant clause");
-  subsuming->redundant = false;
+  subsuming->main.redundant = false;
   if (proof)
     proof->strengthen (allocate_lrat_id() ? subsuming->id () : 0);
   stats.clauses_now_irr++;
   stats.clauses_irredundant++;
-  stats.irredundant_literals += subsuming->size;
+  stats.irredundant_literals += subsuming->size ();
   assert (stats.clauses_now_red > 0);
   stats.clauses_now_red--;
   assert (stats.clauses_redundant > 0);
@@ -287,7 +292,7 @@ void Internal::deallocate_clause (Clause *c) {
   char *p = (char *) c;
   const bool with_lrat = allocate_lrat_id();
   if (!with_lrat)
-    p += Clause::offset (c->allocated_as_binary);
+    p += Clause::offset (c->allocated_as_binary ());
   if (arena.contains (c))
     return;
   LOG (c, "deallocate pointer %p, %s ID", (void *) c, with_lrat ? "with" : "without");
@@ -296,8 +301,8 @@ void Internal::deallocate_clause (Clause *c) {
 
 void Internal::delete_clause (Clause *c) {
   LOG (c, "delete pointer %p with %zd", (void *) c, stats.garbage_bytes);
-  int size = c->moved ? c->copy ()->size : c->size;
-  bool garbage = c->moved ? false : c->garbage;
+  int size = c->main.moved ? c->copy ()->size () : c->size ();
+  bool garbage = c->main.moved ? false : c->main.garbage;
   size_t bytes = c->raw_bytes (size);
   stats.collected += bytes;
   if (garbage) {
@@ -316,7 +321,7 @@ void Internal::delete_clause (Clause *c) {
     // from the proof perspective is that the deletion of these binary
     // clauses occurs later in the proof file.
     //
-    if (proof && size == 2 && !c->flushed) {
+    if (proof && size == 2 && !c->main.flushed) {
       proof->delete_clause (c);
     }
   }
@@ -341,13 +346,13 @@ void Internal::delete_clause (Clause *c) {
 //
 void Internal::mark_garbage (Clause *c) {
 
-  assert (!c->garbage);
+  assert (!c->main.garbage);
 
   // Delay tracing deletion of binary clauses.  See the discussion above in
   // 'delete_clause' and also in 'propagate'.
   //
-  if (proof && (c->size != 2 || !watching ())) {
-    c->flushed = true;
+  if (proof && (c->size () != 2 || !watching ())) {
+    c->main.flushed = true;
     proof->delete_clause (c);
   }
 
@@ -361,21 +366,21 @@ void Internal::mark_garbage (Clause *c) {
   stats.clauses_now_total--;
 
   size_t bytes = c->raw_bytes ();
-  if (c->redundant) {
+  if (c->main.redundant) {
     assert (stats.clauses_now_red > 0);
     stats.clauses_now_red--;
   } else {
     assert (stats.clauses_now_irr > 0);
     stats.clauses_now_irr--;
-    assert (stats.irredundant_literals >= c->size);
-    stats.irredundant_literals -= c->size;
+    assert (stats.irredundant_literals >= c->size ());
+    stats.irredundant_literals -= c->size ();
     mark_removed (c);
   }
   stats.garbage_bytes += bytes;
   stats.garbage_clauses++;
-  stats.garbage_literals += c->size;
-  c->garbage = true;
-  c->used = 0;
+  stats.garbage_literals += c->size ();
+  c->main.garbage = true;
+  c->main.used = 0;
 
   LOG (c, "marked garbage pointer %p with %zd", (void *) c, stats.garbage_bytes);
 }
@@ -640,11 +645,11 @@ Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
 Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
   if (proof) {
-    proof->add_derived_clause (clause_id + 1, orig->redundant, clause,
+    proof->add_derived_clause (clause_id + 1, orig->main.redundant, clause,
                                lrat_chain);
   }
-  const int new_glue = orig->size == 2 ? 1 : orig->glue ();
-  Clause *res = new_clause (orig->redundant, new_glue);
+  const int new_glue = orig->size () == 2 ? 1 : orig->glue ();
+  Clause *res = new_clause (orig->main.redundant, new_glue);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -677,11 +682,11 @@ void Internal::decay_clauses_upon_incremental_clauses () {
          lim.incremental_decay);
 
   for (auto c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (!c->redundant)
+    if (!c->main.redundant)
       continue;
-    if (c->size == 2)
+    if (c->size () == 2)
       continue;
     switch (opts.incdecay) {
     case 1: // my intuition
@@ -689,11 +694,11 @@ void Internal::decay_clauses_upon_incremental_clauses () {
       break;
     case 2: // Armin's idea
       if (c->glue () < tier1[false])
-        c->used = 1;
+        c->main.used = 1;
       break;
     case 3:
       if (c->glue () < tier1[false])
-        c->used = 1;
+        c->main.used = 1;
       ++c->glue ();
       break;
     default:

@@ -116,7 +116,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
     const signed char b = val (w.blit);
     if (b > 0)
       continue;
-    if (w.clause->garbage)
+    if (w.clause->main.garbage)
       j--;
     else if (w.binary ()) {
       if (b < 0) {
@@ -132,7 +132,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
       if (u > 0)
         j[-1].blit = other;
       else {
-        const int size = w.clause->size;
+        const int size = w.clause->size ();
         const const_literal_iterator end = lits + size;
         const literal_iterator middle = lits + w.clause->pos ();
         literal_iterator k = middle;
@@ -207,7 +207,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
   for (auto i = os.begin (); i != end; i++) {
 
     Clause *c = *i;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
 
     // First check whether clause is 'blocked', i.e., is double satisfied.
@@ -325,7 +325,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
 bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
   require_mode (COVER);
-  assert (!c->garbage);
+  assert (!c->main.garbage);
 
   LOG (c, "trying covered clauses elimination on");
   bool satisfied = false;
@@ -389,7 +389,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           if (already_pushed) {
             // add missing literals that are not needed for covering
             // but avoid RAT proofs
-            for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+            for (auto i = 0, j = 0; i < c->size (); ++i, ++j) {
               const int lit = c->literals[i];
               if (j >= (int) coveror.covered.size () ||
                   c->literals[i] != coveror.covered[j]) {
@@ -428,7 +428,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       if (proof) {
         // add missing literals that are not needed for covering
         // but avoid RAT proofs
-        for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+        for (auto i = 0, j = 0; i < c->size (); ++i, ++j) {
           const int lit = c->literals[i];
           if (j >= (int) coveror.covered.size () ||
               c->literals[i] != coveror.covered[j]) {
@@ -470,11 +470,11 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
 struct clause_covered_or_smaller {
   bool operator() (const Clause *a, const Clause *b) {
-    if (a->covered && !b->covered)
+    if (a->main.covered && !b->main.covered)
       return true;
-    if (!a->covered && b->covered)
+    if (!a->main.covered && b->main.covered)
       return false;
-    return a->size < b->size;
+    return a->size () < b->size ();
   }
 };
 
@@ -512,10 +512,10 @@ int64_t Internal::cover_round () {
 #endif
   //
   for (auto c : clauses) {
-    assert (!c->frozen);
-    if (c->garbage)
+    assert (!c->main.frozen);
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
     bool satisfied = false, allfrozen = true;
     for (const auto &lit : *c)
@@ -529,16 +529,16 @@ int64_t Internal::cover_round () {
       continue;
     }
     if (allfrozen) {
-      c->frozen = true;
+      c->main.frozen = true;
       continue;
     }
     for (const auto &lit : *c)
       occs (lit).push_back (c);
-    if (c->size < opts.coverminclslim)
+    if (c->size () < opts.coverminclslim)
       continue;
-    if (c->size > opts.covermaxclslim)
+    if (c->size () > opts.covermaxclslim)
       continue;
-    if (c->covered)
+    if (c->main.covered)
       continue;
     schedule.push_back (c);
 #ifndef QUIET
@@ -551,38 +551,38 @@ int64_t Internal::cover_round () {
     PHASE ("cover", stats.coverings, "no previously untried clause left");
 
     for (auto c : clauses) {
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      if (c->redundant)
+      if (c->main.redundant)
         continue;
-      if (c->frozen) {
-        c->frozen = false;
+      if (c->main.frozen) {
+        c->main.frozen = false;
         continue;
       }
-      if (c->size < opts.coverminclslim)
+      if (c->size () < opts.coverminclslim)
         continue;
-      if (c->size > opts.covermaxclslim)
+      if (c->size () > opts.covermaxclslim)
         continue;
-      assert (c->covered);
-      c->covered = false;
+      assert (c->main.covered);
+      c->main.covered = false;
       schedule.push_back (c);
     }
   } else { // Mix of tried and not tried clauses ....
 
     for (auto c : clauses) {
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      if (c->redundant)
+      if (c->main.redundant)
         continue;
-      if (c->frozen) {
-        c->frozen = false;
+      if (c->main.frozen) {
+        c->main.frozen = false;
         continue;
       }
-      if (c->size < opts.coverminclslim)
+      if (c->size () < opts.coverminclslim)
         continue;
-      if (c->size > opts.covermaxclslim)
+      if (c->size () > opts.covermaxclslim)
         continue;
-      if (!c->covered)
+      if (!c->main.covered)
         continue;
       schedule.push_back (c);
     }
@@ -618,7 +618,7 @@ int64_t Internal::cover_round () {
          stats.propagations_cover < limit) {
     Clause *c = schedule.back ();
     schedule.pop_back ();
-    c->covered = true;
+    c->main.covered = true;
     if (cover_clause (c, coveror))
       covered++;
   }

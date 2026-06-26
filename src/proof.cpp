@@ -360,7 +360,7 @@ void Proof::delete_clause (Clause *c) {
   add_literals (c);
   if (requires_id)
     clause_id = c->id ();
-  redundant = c->redundant;
+  redundant = c->main.redundant;
   delete_clause (); // Increments 'statistics.deleted'.
 }
 
@@ -459,7 +459,7 @@ void Proof::flush_clause (Clause *c) {
   LOG (c, "PROOF flushing falsified literals in");
   assert (clause.empty ());
   const bool antecedents = (internal->lrat || internal->frat);
-  for (int i = 0; i < c->size; i++) {
+  for (int i = 0; i < c->size (); i++) {
     int internal_lit = c->literals[i];
     if (internal->fixed (internal_lit) < 0) {
       if (antecedents) {
@@ -472,7 +472,7 @@ void Proof::flush_clause (Clause *c) {
   }
   if (requires_id)
     proof_chain.push_back (c->id ());
-  redundant = c->redundant;
+  redundant = c->main.redundant;
   int64_t id = 0;
   if (requires_id) {
      id = ++internal->clause_id;
@@ -494,7 +494,7 @@ void Proof::strengthen_clause (Clause *c, int remove,
                                const vector<int64_t> &chain) {
   LOG (c, "PROOF strengthen by removing %d in", remove);
   assert (clause.empty ());
-  for (int i = 0; i < c->size; i++) {
+  for (int i = 0; i < c->size (); i++) {
     int internal_lit = c->literals[i];
     if (internal_lit == remove)
       continue;
@@ -503,7 +503,7 @@ void Proof::strengthen_clause (Clause *c, int remove,
   int64_t id = ++internal->clause_id;
   if (requires_id)
     clause_id = id;
-  redundant = c->redundant;
+  redundant = c->main.redundant;
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   add_derived_clause ();
@@ -516,17 +516,17 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
                                     const vector<int64_t> &chain) {
   LOG (c, "PROOF otfs strengthen");
   assert (clause.empty ());
-  for (int i = 0; i < c->size; i++) {
+  for (int i = 0; i < c->size (); i++) {
     int internal_lit = c->literals[i];
     add_literal (internal_lit);
   }
   int64_t id = ++internal->clause_id;
   clause_id = id;
-  redundant = c->redundant;
+  redundant = c->main.redundant;
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   add_derived_clause ();
-  delete_clause (requires_id ? c->id () : 0, c->redundant, old);
+  delete_clause (requires_id ? c->id () : 0, c->main.redundant, old);
   if (requires_id)
     c->id () = id;
 }

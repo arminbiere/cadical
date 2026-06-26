@@ -25,7 +25,7 @@ int64_t Internal::flush_elimfast_occs (int lit) {
     if (c->collect ())
       continue;
     *j++ = c;
-    if (c->size > clslim) {
+    if (c->size () > clslim) {
       res = failed;
       break;
     }
@@ -95,12 +95,12 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
-    assert (!c->redundant);
-    if (c->garbage)
+    assert (!c->main.redundant);
+    if (c->main.garbage)
       continue;
     for (const auto &d : ns) {
-      assert (!d->redundant);
-      if (d->garbage)
+      assert (!d->main.redundant);
+      if (d->main.garbage)
         continue;
       if (resolve_clauses (eliminator, c, pivot, d, true)) {
         resolvents++;
@@ -155,12 +155,12 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
   for (auto &c : ps) {
     if (unsat)
       break;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     for (auto &d : ns) {
       if (unsat)
         break;
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
@@ -300,7 +300,7 @@ int Internal::elimfast_round (bool &completed,
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
-    if (c->garbage || c->redundant)
+    if (c->main.garbage || c->main.redundant)
       continue;
     bool satisfied = false, falsified = false;
     for (const auto &lit : *c) {
@@ -361,7 +361,7 @@ int Internal::elimfast_round (bool &completed,
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses)
-    if (!c->garbage && !c->redundant)
+    if (!c->main.garbage && !c->main.redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);

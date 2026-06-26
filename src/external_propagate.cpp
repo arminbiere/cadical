@@ -928,7 +928,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     return;
 
   assert (res);
-  assert (res->size >= 2);
+  assert (res->size () >= 2);
   const int pos0 = res->literals[0];
   const int pos1 = res->literals[1];
   const int l1 = var (pos1).level;

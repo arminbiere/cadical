@@ -78,13 +78,13 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
   // Only use 'subsumed' for these following assertion checks.  Otherwise we
   // only require that 'subsumed' has all its literals marked.
   //
-  assert (!subsumed->garbage);
-  assert (!subsuming->garbage);
+  assert (!subsumed->main.garbage);
+  assert (!subsuming->garbage ());
   assert (subsuming != subsumed);
-  assert (subsuming->size <= subsumed->size);
+  assert (subsuming->size () <= subsumed->size ());
 
   stats.subsume_checks++;
-  if (subsuming->size == 2)
+  if (subsuming->size () == 2)
     stats.subsume_checks_binary++;
 
   int flipped = 0, prev = 0;
@@ -124,13 +124,13 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
 
 inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.subsumed++;
-  assert (subsuming->size <= subsumed->size);
+  assert (subsuming->size () <= subsumed->size ());
   LOG (subsumed, "subsumed");
-  if (subsumed->redundant)
+  if (subsumed->main.redundant)
     stats.subsumed_redundant++;
   else
     stats.subsumed_irredundant++;
-  if (subsumed->redundant || !subsuming->redundant) {
+  if (subsumed->main.redundant || !subsuming->main.redundant) {
     mark_garbage (subsumed);
     return;
   }
@@ -146,21 +146,21 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
     mark_garbage_external_forgettable (c->id ());
   stats.strengthened++;
-  assert (c->size > 2);
+  assert (c->size () > 2);
   LOG (c, "removing %d in", lit);
   if (proof) {
     LOG (lrat_chain, "strengthening clause with chain");
     proof->strengthen_clause (c, lit, lrat_chain);
   }
-  if (!c->redundant)
+  if (!c->main.redundant)
     mark_removed (lit);
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
-  (void) shrink_clause (c, c->size - 1);
+  (void) shrink_clause (c, c->size () - 1);
   // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
-  if (c->size == 2)
+  if (c->size () == 2)
     new_binary_since_dedup = true;
 }
 
@@ -168,11 +168,11 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
   if (opts.check && opts.checkproof >= 2 && is_external_forgettable (c->id ()))
     mark_garbage_external_forgettable (c->id ());
   stats.strengthened++;
-  assert (c->size > 2);
+  assert (c->size () > 2);
   LOG (c, "removing %d and units in", lit);
   std::vector<int> clause;
   int j = 0;
-  for (int i = 0; i < c->size;) {
+  for (int i = 0; i < c->size ();) {
     int other = c->literals[i++];
     c->literals[j++] = other;
     clause.push_back (other);
@@ -190,17 +190,17 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
     LOG (lrat_chain, "strengthening clause with chain");
     proof->otfs_strengthen_clause (c, clause, lrat_chain);
   }
-  if (!c->redundant)
+  if (!c->main.redundant)
     mark_removed (lit);
   /*
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
-  (void) shrink_clause (c, c->size - 1);
+  (void) shrink_clause (c, c->size () - 1);
   */
   // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
-  if (c->size == 2)
+  if (c->size () == 2)
     new_binary_since_dedup = true;
 }
 
@@ -295,8 +295,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       //
       const Occs &os = occs (sign * lit);
       for (const auto &e : os) {
-        assert (!e->garbage); // sanity check
-        if (e->garbage)
+        assert (!e->main.garbage); // sanity check
+        if (e->main.garbage)
           continue; // defensive: not needed
         flipped = subsume_check (e, c);
         if (!flipped)
@@ -325,8 +325,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       lrat_chain.push_back (c->id ());
       lrat_chain.push_back (d->id ());
     }
-    if (d->used > c->used)
-      c->used = d->used;
+    if (d->main.used > c->main.used)
+      c->main.used = d->main.used;
     strengthen_clause (c, -flipped);
     lrat_chain.clear ();
     assert (likely_to_be_kept_clause (c));
@@ -415,9 +415,9 @@ bool Internal::subsume_round () {
 
   for (auto c : clauses) {
 
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size > opts.subsumeclslim)
+    if (c->size () > opts.subsumeclslim)
       continue;
     if (!likely_to_be_kept_clause (c))
       continue;
@@ -448,9 +448,9 @@ bool Internal::subsume_round () {
       continue;
     }
 
-    if (c->subsume)
+    if (c->main.subsume)
       left_over_from_last_subsumption_round++;
-    schedule.push_back (ClauseSize (c->size, c));
+    schedule.push_back (ClauseSize (c->size (), c));
     for (const auto &lit : *c)
       noccs (lit)++;
   }
@@ -462,8 +462,8 @@ bool Internal::subsume_round () {
 
   if (!left_over_from_last_subsumption_round)
     for (auto cs : schedule)
-      if (cs.clause->size > 2)
-        cs.clause->subsume = true;
+      if (cs.clause->size () > 2)
+        cs.clause->main.subsume = true;
 
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
@@ -495,7 +495,7 @@ bool Internal::subsume_round () {
       break;
 
     Clause *c = s.clause;
-    assert (!c->garbage);
+    assert (!c->main.garbage);
 
     checked++;
 
@@ -507,8 +507,8 @@ bool Internal::subsume_round () {
     // care. In the same (lazy) spirit we also ignore clauses with fixed
     // literals (false or true).
     //
-    if (c->size > 2 && c->subsume) {
-      c->subsume = false;
+    if (c->size () > 2 && c->main.subsume) {
+      c->main.subsume = false;
       const int tmp = try_to_subsume_clause (c, shrunken);
       if (tmp > 0) {
         subsumed++;
@@ -529,7 +529,7 @@ bool Internal::subsume_round () {
     uint64_t minoccs = 0;
     size_t minsize = 0;
     bool subsume = true;
-    bool binary = (c->size == 2 && !c->redundant);
+    bool binary = (c->size () == 2 && !c->main.redundant);
     const bool requires_id = allocate_lrat_id();
 
     for (const auto &lit : *c) {

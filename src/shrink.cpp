@@ -247,7 +247,7 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
     stats.ticks++;
   }
 
-  if (resolve_large_clauses || v.reason->size == 2) {
+  if (resolve_large_clauses || v.reason->size () == 2) {
     const Clause &c = *v.reason;
     LOG (v.reason, "resolving with reason");
     for (int lit : c) {

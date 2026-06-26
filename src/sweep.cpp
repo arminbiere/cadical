@@ -46,7 +46,7 @@ void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
 }
 
 void Internal::sweep_update_noccs (Clause *c) {
-  if (c->redundant)
+  if (c->main.redundant)
     return;
   for (const auto &lit : *c) {
     assert (noccs (lit));
@@ -55,11 +55,11 @@ void Internal::sweep_update_noccs (Clause *c) {
 }
 
 bool Internal::can_sweep_clause (Clause *c) {
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
-  if (!c->redundant)
+  if (!c->main.redundant)
     return true;
-  return c->size == 2; // && !c->hyper;  // could ignore hyper
+  return c->size () == 2; // && !c->main.hyper;  // could ignore hyper
 }
 
 // essentially do full occurence list as in elim.cpp
@@ -95,14 +95,14 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses) {
-    if (!c->garbage) {
+    if (!c->main.garbage) {
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-    } else if (c->size == 2) {
-      if (!c->flushed) {
+    } else if (c->size () == 2) {
+      if (!c->main.flushed) {
         if (proof) {
-          c->flushed = true;
+          c->main.flushed = true;
           proof->delete_clause (c);
         }
       }
@@ -176,9 +176,9 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
       ticks++;
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      // if (c->redundant)  // TODO I assume it does not hurt to mark
+      // if (c->main.redundant)  // TODO I assume it does not hurt to mark
       // everything here continue;
       LOG (c, "sweeping propagation of %d produces satisfied", lit);
       mark_garbage (c);
@@ -297,8 +297,8 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
   }
   sweeper.vars.clear ();
   for (auto c : sweeper.clauses) {
-    assert (c->swept);
-    c->swept = false;
+    assert (c->main.swept);
+    c->main.swept = false;
   }
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
@@ -359,7 +359,7 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
 }
 
 void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
-  if (c->swept)
+  if (c->main.swept)
     return;
   assert (can_sweep_clause (c));
   LOG (c, "sweeping[%u]", depth);
@@ -379,7 +379,7 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
     }
     sweeper.clause.push_back (lit);
   }
-  c->swept = true;
+  c->main.swept = true;
   sweep_add_clause (sweeper, depth);
   sweeper.clauses.push_back (c);
 }
@@ -518,7 +518,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
             else {
               id = cpc.cad_id;
               assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id ());
-              assert (!sweeper.clauses[cpc.sweep_id]->garbage);
+              assert (!sweeper.clauses[cpc.sweep_id]->main.garbage);
               // avoid duplicate ids of units with seen flags
               for (const auto &lit : cpc.literals) {
                 if (val (lit) >= 0)
@@ -1074,7 +1074,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
     while (p != end) {
       Clause *c = *q++ = *p++;
       ticks++;
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
       assert (clause.empty ());
       bool satisfied = false;
@@ -1138,12 +1138,12 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
         stats.sweep_units++;
         break;
       }
-      assert (c->size >= 2);
-      if (!c->redundant)
+      assert (c->size () >= 2);
+      if (!c->main.redundant)
         mark_removed (c);
       uint64_t new_id = ++clause_id;
       if (proof) {
-        proof->add_derived_clause (new_id, c->redundant, clause,
+        proof->add_derived_clause (new_id, c->main.redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
       }
@@ -1154,7 +1154,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       int *literals = c->literals;
       for (l = 0; l < clause.size (); l++)
         literals[l] = clause[l];
-      int flushed = c->size - (int) l;
+      int flushed = c->size () - (int) l;
       if (flushed) {
         LOG ("flushed %d literals", flushed);
         (void) shrink_clause (c, l);

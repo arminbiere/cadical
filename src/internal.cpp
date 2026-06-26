@@ -51,9 +51,9 @@ Internal::Internal ()
   size_t bytes = Clause::raw_bytes (2);
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
-  dummy_binary->size = 2;
+  dummy_binary->main.size = 2;
 #ifndef NDEBUG
-  dummy_binary->has_id = true;
+  dummy_binary->main.has_id = true;
 #endif
 
   /*with C++17: static_*/ assert (max_used == (1 << USED_SIZE) - 1);
@@ -1201,7 +1201,7 @@ void Internal::finalize (int res) {
     // See the discussion in 'propagate' on why garbage binary clauses stick
     // around.
     for (const auto &c : clauses)
-      if (!c->garbage || (c->size == 2 && !c->flushed))
+      if (!c->main.garbage || (c->size () == 2 && !c->main.flushed))
         proof->finalize_clause (c);
 
     // finalize conflict and proof
@@ -1242,7 +1242,7 @@ void Internal::dump () {
     if (fixed (idx))
       m++;
   for (const auto &c : clauses)
-    if (!c->garbage)
+    if (!c->main.garbage)
       m++;
   printf ("p cnf %d %" PRId64 "\n", max_var, m);
   for (auto idx : vars) {
@@ -1251,7 +1251,7 @@ void Internal::dump () {
       printf ("%d 0\n", tmp < 0 ? -idx : idx);
   }
   for (const auto &c : clauses)
-    if (!c->garbage)
+    if (!c->main.garbage)
       dump (c);
   for (const auto &lit : assumptions)
     printf ("%d 0\n", lit);
@@ -1293,9 +1293,9 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
   if (unsat)
     return it.clause (eclause);
   for (const auto &c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
     bool satisfied = false;
     for (const auto &ilit : *c) {
@@ -1387,7 +1387,7 @@ void Internal::activating_all_new_imported_literals () {
   check_var_stats ();
 #ifndef NDEBUG
   for (auto c : clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     for (auto lit : *c) {
       assert (flags (lit).active () || flags (lit).fixed () ||

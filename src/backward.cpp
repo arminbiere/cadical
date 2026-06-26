@@ -12,11 +12,11 @@ namespace CaDiCaL {
 void Eliminator::enqueue (Clause *c) {
   if (!internal->opts.elimbackward)
     return;
-  if (c->enqueued)
+  if (c->main.enqueued)
     return;
   LOG (c, "backward enqueue");
   backward.push (c);
-  c->enqueued = true;
+  c->main.enqueued = true;
 }
 
 Clause *Eliminator::dequeue () {
@@ -24,8 +24,8 @@ Clause *Eliminator::dequeue () {
     return 0;
   Clause *res = backward.front ();
   backward.pop ();
-  assert (res->enqueued);
-  res->enqueued = false;
+  assert (res->main.enqueued);
+  res->main.enqueued = false;
   LOG (res, "backward dequeue");
   return res;
 }
@@ -39,8 +39,8 @@ Eliminator::~Eliminator () {
 
 void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   assert (opts.elimbackward);
-  assert (!c->redundant);
-  if (c->garbage)
+  assert (!c->main.redundant);
+  if (c->main.garbage)
     return;
   LOG (c, "attempting backward subsumption and strengthening with");
   size_t len = UINT_MAX;
@@ -72,13 +72,13 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   } else {
     assert (len);
     LOG ("literal %d has smallest number of occurrences %zd", best, len);
-    LOG ("marked %d literals in clause of size %d", size, c->size);
+    LOG ("marked %d literals in clause of size %d", size, c->size ());
     for (auto &d : occs (best)) {
       if (d == c)
         continue;
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
-      if ((unsigned) d->size < size)
+      if ((unsigned) d->size () < size)
         continue;
       int negated = 0;
       unsigned found = 0;

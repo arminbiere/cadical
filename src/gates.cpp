@@ -19,7 +19,7 @@ namespace CaDiCaL {
 
 int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
                                                Clause *c, int first) {
-  assert (!c->garbage);
+  assert (!c->main.garbage);
   int second = 0;
   for (const auto &lit : *c) {
     if (lit == first)
@@ -44,7 +44,7 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
     return 0;
   assert (active (second));
 #ifdef LOGGING
-  if (c->size == 2)
+  if (c->size () == 2)
     LOG (c, "found binary");
   else
     LOG (c, "found actual binary %d %d", first, second);
@@ -57,7 +57,7 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
 // need a copy from above that does not care about garbage
 
 int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
-  if (c->garbage)
+  if (c->main.garbage)
     return 0;
   int second = 0;
   for (const auto &lit : *c) {
@@ -120,7 +120,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
 
   const Occs &os = occs (first);
   for (const auto &c : os) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     const int second =
         second_literal_in_binary_clause (eliminator, c, first);
@@ -217,7 +217,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
 
   for (const auto &c : occs (-pivot)) {
 
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
 
     const int second =
@@ -279,14 +279,14 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
     stats.eliminate_gates++;
 
     LOG (c, "first gate clause");
-    assert (!c->gate);
-    c->gate = true;
+    assert (!c->main.gate);
+    c->main.gate = true;
     eliminator.gates.push_back (c);
 
     Clause *d = 0;
     const Occs &ps = occs (pivot);
     for (const auto &e : ps) {
-      if (e->garbage)
+      if (e->main.garbage)
         continue;
       const int other =
           second_literal_in_binary_clause (eliminator, e, pivot);
@@ -298,8 +298,8 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
     assert (d);
 
     LOG (d, "second gate clause");
-    assert (!d->gate);
-    d->gate = true;
+    assert (!d->main.gate);
+    d->main.gate = true;
     eliminator.gates.push_back (d);
     eliminator.gatetype = EQUI;
 
@@ -336,9 +336,9 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
 
   for (const auto &c : occs (-pivot)) {
 
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size < 3)
+    if (c->size () < 3)
       continue;
 
     bool all_literals_marked = true;
@@ -399,8 +399,8 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
     eliminator.gatetype = AND;
 
     (void) arity;
-    assert (!c->gate);
-    c->gate = true;
+    assert (!c->main.gate);
+    c->main.gate = true;
     eliminator.gates.push_back (c);
     for (const auto &lit : *c) {
       if (lit == -pivot)
@@ -416,7 +416,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
 
     unsigned count = 0;
     for (const auto &d : occs (pivot)) {
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
       const int other =
           second_literal_in_binary_clause (eliminator, d, pivot);
@@ -426,8 +426,8 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       if (tmp != 2)
         continue;
       LOG (d, "AND gate binary side clause");
-      assert (!d->gate);
-      d->gate = true;
+      assert (!d->main.gate);
+      d->main.gate = true;
       eliminator.gates.push_back (d);
       count++;
     }
@@ -446,9 +446,9 @@ DONE:
 // Find and extract ternary clauses.
 
 bool Internal::get_ternary_clause (Clause *d, int &a, int &b, int &c) {
-  if (d->garbage)
+  if (d->main.garbage)
     return false;
-  if (d->size < 3)
+  if (d->size () < 3)
     return false;
   int found = 0;
   a = b = c = 0;
@@ -470,7 +470,7 @@ bool Internal::get_ternary_clause (Clause *d, int &a, int &b, int &c) {
 // This function checks whether 'd' exists as ternary clause.
 
 bool Internal::match_ternary_clause (Clause *d, int a, int b, int c) {
-  if (d->garbage)
+  if (d->main.garbage)
     return false;
   int found = 0;
   for (const auto &lit : *d) {
@@ -551,14 +551,14 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       LOG (d1, "3rd if-then-else");
       LOG (d2, "4th if-then-else");
       LOG ("found ITE gate %d == (%d ? %d : %d)", pivot, -bi, -ci, -cj);
-      assert (!di->gate);
-      assert (!dj->gate);
-      assert (!d1->gate);
-      assert (!d2->gate);
-      di->gate = true;
-      dj->gate = true;
-      d1->gate = true;
-      d2->gate = true;
+      assert (!di->main.gate);
+      assert (!dj->main.gate);
+      assert (!d1->main.gate);
+      assert (!d2->main.gate);
+      di->main.gate = true;
+      dj->main.gate = true;
+      d1->main.gate = true;
+      d2->main.gate = true;
       eliminator.gates.push_back (di);
       eliminator.gates.push_back (dj);
       eliminator.gates.push_back (d1);
@@ -576,7 +576,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
 // Find and extract clause.
 
 bool Internal::get_clause (Clause *c, vector<int> &l) {
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
   l.clear ();
   for (const auto &lit : *c) {
@@ -594,10 +594,10 @@ bool Internal::get_clause (Clause *c, vector<int> &l) {
 // Check whether 'c' contains only the literals in 'l'.
 
 bool Internal::is_clause (Clause *c, const vector<int> &lits) {
-  if (c->garbage)
+  if (c->main.garbage)
     return false;
   int size = lits.size ();
-  if (c->size < size)
+  if (c->size () < size)
     return false;
   int found = 0;
   for (const auto &lit : *c) {
@@ -713,9 +713,9 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
     auto j = eliminator.gates.begin ();
     for (auto i = j; i != end; i++) {
       Clause *e = *i;
-      if (e->gate)
+      if (e->main.gate)
         continue;
-      e->gate = true;
+      e->main.gate = true;
       LOG (e, "contributing");
       *j++ = e;
     }
@@ -754,8 +754,8 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
 void Internal::unmark_gate_clauses (Eliminator &eliminator) {
   LOG ("unmarking %zd gate clauses", eliminator.gates.size ());
   for (const auto &c : eliminator.gates) {
-    assert (c->gate);
-    c->gate = false;
+    assert (c->main.gate);
+    c->main.gate = false;
   }
   eliminator.gates.clear ();
   eliminator.definition_unit = 0;

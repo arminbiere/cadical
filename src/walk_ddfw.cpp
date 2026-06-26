@@ -92,7 +92,7 @@ struct DDFW_Counter {
 #endif
   inline void initialize_binary (Clause *d) {
     assert (d);
-    if (d->size == 2) {
+    if (d->size () == 2) {
       binary = true;
       binary_clause.lit = d->literals[0];
       binary_clause.other = d->literals[1];
@@ -1065,9 +1065,9 @@ bool Walker_DDFW::import_clauses (bool &failed) {
   position_vars_in_broken.resize (internal->max_var + 1, i);
 
   for (const auto c : internal->clauses) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant) {
+    if (c->main.redundant) {
       if (!internal->opts.walkredundant)
         continue;
       if (!internal->likely_to_be_kept_clause (c))
@@ -1078,7 +1078,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
     unsigned satisfied = 0;   // clause satisfied?
 
     int *lits = c->literals;
-    const int size = c->size;
+    const int size = c->size ();
     unsigned critical = 0;
 
     // Move to front satisfied literals and determine whether there
@@ -1105,7 +1105,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
       break;
     }
 
-    assert (satisfied <= (size_t) c->size);
+    assert (satisfied <= (size_t) c->size ());
     position_type pos = weight_clause_info.size ();
     if ((size_t) pos != weight_clause_info.size ()) {
       MSG ("walk cannot go over that many clauses");
@@ -1119,7 +1119,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
 #ifdef LOGGING
     assert (weight_clause_info.size () == pos + 1);
     assert (pos == watched + broken.size ());
-    assert (weight_clause_info[pos].count <= (size_t) c->size);
+    assert (weight_clause_info[pos].count <= (size_t) c->size ());
 #endif
     connect_clause (c, pos);
 

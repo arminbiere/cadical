@@ -1113,16 +1113,16 @@ struct Internal {
   // variables are also marked as being 'added'.
   //
   bool likely_to_be_kept_clause (Clause *c) {
-    if (c->size == 2)
+    if (c->size () == 2)
       return true;
-    if (!c->redundant)
+    if (!c->main.redundant)
       return true;
-    assert (c->size != 2);
+    assert (c->size () != 2);
     if (c->glue () <= tier2[false])
       return true;
     if (c->glue () > lim.keptglue)
       return false;
-    if (c->size > lim.keptsize)
+    if (c->size () > lim.keptsize)
       return false;
     return true;
   }

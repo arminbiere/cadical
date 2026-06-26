@@ -61,7 +61,7 @@ bool Internal::flip (int lit) {
       if (w.binary ())
         continue;
 
-      if (w.clause->garbage) {
+      if (w.clause->main.garbage) {
         j--;
         continue;
       }
@@ -73,7 +73,7 @@ bool Internal::flip (int lit) {
       if (u > 0)
         continue;
 
-      const int size = w.clause->size;
+      const int size = w.clause->size ();
       const literal_iterator middle = lits + w.clause->pos ();
       const const_literal_iterator end = lits + size;
       literal_iterator k = middle;
@@ -194,7 +194,7 @@ bool Internal::flippable (int lit) {
       break;
     }
 
-    if (w.clause->garbage)
+    if (w.clause->main.garbage)
       continue;
 
     literal_iterator lits = w.clause->begin ();
@@ -206,7 +206,7 @@ bool Internal::flippable (int lit) {
       continue;
     }
 
-    const int size = w.clause->size;
+    const int size = w.clause->size ();
     const literal_iterator middle = lits + w.clause->pos ();
     const const_literal_iterator end = lits + size;
     literal_iterator k = middle;

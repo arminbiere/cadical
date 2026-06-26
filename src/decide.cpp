@@ -219,7 +219,7 @@ bool Internal::better_decision (int lit, int other) {
 #define CHECK_MISSED() \
   do { \
     for (auto *c : clauses) { \
-      if (c->garbage) \
+      if (c->main.garbage) \
         continue; \
       bool SAT = false; \
       int PROP = 0; \

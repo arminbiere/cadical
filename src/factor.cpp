@@ -60,18 +60,18 @@ void Internal::factor_mode (bool redundant_only) {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (redundant_only && !c->redundant)
+    if (redundant_only && !c->main.redundant)
       continue;
-    if (!redundant_only && !opts.factorredundant && c->redundant)
+    if (!redundant_only && !opts.factorredundant && c->main.redundant)
       continue;
-    if (!redundant_only && opts.factorredundant == 1 && c->redundant &&
-        c->size > 2)
+    if (!redundant_only && opts.factorredundant == 1 && c->main.redundant &&
+        c->size () > 2)
       continue;
-    if (c->size > size_limit)
+    if (c->size () > size_limit)
       continue;
-    if (c->size == 2) {
+    if (c->size () == 2) {
       const int lit = c->literals[0];
       const int other = c->literals[1];
       bincount[vlit (lit)]++;
@@ -248,8 +248,8 @@ void Internal::clear_nounted (vector<int> &nounted) {
 
 void Internal::clear_flauses (vector<Clause *> &flauses) {
   for (auto c : flauses) {
-    assert (c->swept);
-    c->swept = false;
+    assert (c->main.swept);
+    c->main.swept = false;
   }
   flauses.clear ();
 }
@@ -292,9 +292,9 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
   for (auto *c : occs (first_factor)) {
     ticks++;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size < 3)
+    if (c->size () < 3)
       continue;
     if (ticks > limit)
       break;
@@ -304,9 +304,9 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     ticks += cache_lines (occs (-first_factor).size (), sizeof (Clause *));
     for (auto *d : occs (-first_factor)) {
       ticks++;
-      if (d->garbage)
+      if (d->main.garbage)
         continue;
-      if (d->size != c->size)
+      if (d->size () != c->size ())
         continue;
       if (ticks > limit)
         break;
@@ -453,7 +453,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       q -= 2;
       continue;
     }
-    if (c->swept || d->swept) {
+    if (c->main.swept || d->main.swept) {
       q -= 2;
       LOG ("factor decrement matches due to duplicate clause");
       assert (matches);
@@ -462,16 +462,16 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     }
     // remember wether we matched on second or third for later.
     res->matches.push_back (parity);
-    c->swept = true;
-    d->swept = true;
+    c->main.swept = true;
+    d->main.swept = true;
     // keep and continue.
   }
   res->qlauses.resize (q - begin);
   res->second = best_second;
   res->third = best_third;
   for (auto c : res->qlauses) {
-    assert (c->swept);
-    c->swept = false;
+    assert (c->main.swept);
+    c->main.swept = false;
   }
 #if 0 // sanity check that noccs are used correctly
   for (auto &lit : lits) {
@@ -535,7 +535,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
   const int initial = factoring.initial;
   int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
   for (auto c : last_clauses) {
-    assert (!c->swept);
+    assert (!c->main.swept);
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -557,7 +557,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
     assert (factors);
     if (factors == 1) {
       assert (min_lit);
-      const int c_size = c->size;
+      const int c_size = c->size ();
       vector<int> &nounted = factoring.nounted;
       assert (nounted.empty ());
       ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
@@ -565,9 +565,9 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
         if (c == d)
           continue;
         ticks++;
-        if (d->swept)
+        if (d->main.swept)
           continue;
-        if (d->size != c_size)
+        if (d->size () != c_size)
           continue;
         int next = 0;
         for (const auto &other : *d) {
@@ -590,7 +590,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
         assert (!getfact (next, NOUNTED));
         markfact (next, NOUNTED);
         nounted.push_back (next);
-        d->swept = true;
+        d->main.swept = true;
         flauses.push_back (d);
         if (!count[vlit (next)])
           counted.push_back (next);
@@ -678,7 +678,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
   size_t i = 0;
 
   for (auto c : last_clauses) {
-    assert (!c->swept);
+    assert (!c->main.swept);
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -700,15 +700,15 @@ void Internal::factorize_next (Factoring &factoring, int next,
     assert (factors);
     if (factors == 1) {
       assert (min_lit);
-      const int c_size = c->size;
+      const int c_size = c->size ();
       ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
       for (auto d : occs (min_lit)) {
         if (c == d)
           continue;
         ticks++;
-        if (d->swept)
+        if (d->main.swept)
           continue;
-        if (d->size != c_size)
+        if (d->size () != c_size)
           continue;
         for (const auto &other : *d) {
           if (getfact (other, QUOTIENT))
@@ -722,7 +722,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         next_clauses.push_back (d);
         matches.push_back (i);
         flauses.push_back (d);
-        d->swept = true;
+        d->main.swept = true;
         break;
 
       CONTINUE_WITH_NEXT_MIN_WATCH:;
@@ -1119,8 +1119,8 @@ void Internal::delete_unfactored (Quotient *q) {
   for (auto c : q->qlauses) {
     eagerly_remove_from_occurences (c);
     mark_garbage (c);
-    stats.factor_removed_lits += c->size;
-    if (c->redundant)
+    stats.factor_removed_lits += c->size ();
+    if (c->main.redundant)
       stats.factor_removed_red++;
     else
       stats.factor_removed_irr++;

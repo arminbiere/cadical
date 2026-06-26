@@ -27,7 +27,7 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
 
 ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   // Check if literals fit in 31 bits each
-  if (c->size == 2) {
+  if (c->size () == 2) {
     unsigned lit1 = internal->vlit(c->literals[0]);
     if (lit1 < (1u << 31)) {
       // If literals fit, store as TaggedBinary
@@ -66,7 +66,7 @@ ClauseOrBinary::ClauseOrBinary (Clause *c) {
 #if ((ULONG_MAX) != (UINT_MAX))
   assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
 #endif
-  assert (c->size != 2);
+  assert (c->size () != 2);
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 }
@@ -78,7 +78,7 @@ int ClauseOrBinary::clause_or_binary::TaggedBinary::lit (Internal *internal) con
 ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int other) noexcept {
   unsigned lit1 = internal->vlit(lit);
   assert (lit != other);
-  assert (c->size == 2);
+  assert (c->size () == 2);
   if (lit1 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
@@ -481,7 +481,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
-  assert (walker.scores.size () <= (size_t) c->size);
+  assert (walker.scores.size () <= (size_t) c->size ());
   const double lim = sum * walker.random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
   const auto end = c->end ();
@@ -665,7 +665,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       int prev = 0;
       // Find 'lit' in 'd'.
       //
-      const int size = d->size;
+      const int size = d->size ();
       for (int i = 0; i < size; i++) {
         const int other = literals[i];
         assert (active (other));
@@ -760,11 +760,11 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       if (ticks > limit)
         return stop_and_return_false ();
       // now the expansive part
-      assert (d->size != 2);
+      assert (d->size () != 2);
       ++ticks;
       int *literals = d->literals, replacement = 0, prev = neg_lit;
-      assert (d->size == w.size);
-      const int size = d->size;
+      assert (d->size () == w.size);
+      const int size = d->size ();
       assert (literals[0] == neg_lit);
 
       for (int i = 1; i < size; i++) {
@@ -837,9 +837,9 @@ inline void Internal::walk_save_minimum (Walker &walker) {
   }
   if (walker.minimum == 0) {
     for (auto c : clauses) {
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      if (c->redundant)
+      if (c->main.redundant)
         continue;
       int satisfied = 0;
       for (const auto &lit : *c) {
@@ -975,10 +975,10 @@ int Internal::walk_round (int64_t limit, bool prev) {
     int64_t n = 0;
     for (const auto c : clauses) {
 
-      if (c->garbage)
+      if (c->main.garbage)
         continue;
-      if (c->redundant) {
-        if (opts.walkredundant == 1 && c->size == 2 && !c->hyper)
+      if (c->main.redundant) {
+        if (opts.walkredundant == 1 && c->size () == 2 && !c->main.hyper)
           LOG (c, "importing binary clause");
         else if (opts.walkredundant == 0)
           continue;
@@ -990,9 +990,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
       int satisfied = 0;        // clause satisfied?
 
       int *lits = c->literals;
-      size += c->size;
+      size += c->size ();
       n++;
-      const int size = c->size;
+      const int size = c->size ();
 
       // Move to front satisfied literals and determine whether there
       // is at least one (non-assumed) literal that can be flipped.
@@ -1019,7 +1019,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
       if (satisfied) {
         LOG (c, "pushing to satisfied");
-        if (c->size == 2)
+        if (c->size () == 2)
           watch_binary_literal (lits[0], lits[1], c);
         else
           watch_literal (lits[0], lits[1], c);
@@ -1029,7 +1029,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       } else {
         assert (satisfiable); // at least one non-assumed variable ...
         LOG (c, "broken");
-        assert (c->size == size);
+        assert (c->size () == size);
         if (size == 2)
           walker.broken.emplace_back (walker.internal, c);
         else

@@ -33,9 +33,9 @@ void Internal::connect_watches (bool irredundant_only) {
   // First connect binary clauses.
   //
   for (const auto &c : clauses) {
-    if (irredundant_only && c->redundant)
+    if (irredundant_only && c->main.redundant)
       continue;
-    if (c->garbage || c->size > 2)
+    if (c->main.garbage || c->size () > 2)
       continue;
     watch_clause (c);
   }
@@ -43,9 +43,9 @@ void Internal::connect_watches (bool irredundant_only) {
   // Then connect non-binary clauses.
   //
   for (const auto &c : clauses) {
-    if (irredundant_only && c->redundant)
+    if (irredundant_only && c->main.redundant)
       continue;
-    if (c->garbage || c->size == 2)
+    if (c->main.garbage || c->size () == 2)
       continue;
     watch_clause (c);
     if (!level) {
@@ -89,7 +89,7 @@ void Internal::connect_binary_watches () {
   // First connect binary clauses.
   //
   for (const auto &c : clauses) {
-    if (c->garbage || c->size > 2)
+    if (c->main.garbage || c->size () > 2)
       continue;
     watch_clause (c);
   }

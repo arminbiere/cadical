@@ -118,9 +118,9 @@ int Internal::trivially_false_satisfiable () {
   for (const auto &c : clauses) {
     if (terminated_asynchronously (100))
       return unlucky (-1);
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
     bool satisfied = false, found_negative_literal = false;
     for (const auto &lit : *c) {
@@ -172,9 +172,9 @@ int Internal::trivially_true_satisfiable () {
   for (const auto &c : clauses) {
     if (terminated_asynchronously (100))
       return unlucky (-1);
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
     bool satisfied = false, found_positive_literal = false;
     for (const auto &lit : *c) {

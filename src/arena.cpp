@@ -32,7 +32,7 @@ bool Arena::contains (Clause *p) const {
   const bool with_lrat = internal->requires_id;
   char *c = (char *) p;
   if (!with_lrat)
-    c += Clause::offset (p->allocated_as_binary);
+    c += Clause::offset (p->allocated_as_binary ());
   return (from.start <= c && c < from.top) ||
          (to.start <= c && c < to.top);
 }

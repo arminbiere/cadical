@@ -268,12 +268,12 @@ void Internal::compact () {
   // Map the literals in all clauses.
   //
   for (const auto &c : clauses) {
-    assert (!c->garbage);
+    assert (!c->main.garbage);
     for (auto &src : *c) {
       assert (!val (src));
       int dst;
       dst = mapper.map_lit (src);
-      assert (dst || c->garbage);
+      assert (dst || c->main.garbage);
       src = dst;
     }
   }

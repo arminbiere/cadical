@@ -72,7 +72,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
         if (tmp > 0) { // Found duplicated binary clause.
 
-          if (c->garbage) {
+          if (c->main.garbage) {
             j--;
             continue;
           }
@@ -82,7 +82,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           // second clause 'c' is not (so irredundant), then we have to keep
           // 'c' instead of 'd', thus we search for it and replace it.
 
-          if (!c->redundant) {
+          if (!c->main.redundant) {
             watch_iterator k;
             for (k = ws.begin ();; k++) {
               assert (k != i);
@@ -91,7 +91,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
               if (k->blit != other)
                 continue;
               Clause *d = k->clause;
-              if (d->garbage)
+              if (d->main.garbage)
                 continue;
               c = d;
               break;
@@ -131,7 +131,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           units++;
 
         } else {
-          if (c->garbage) {
+          if (c->main.garbage) {
             j--;
             continue;
           }
@@ -191,8 +191,8 @@ struct deduplicate_flush_smaller {
         return *i < *j;
     const bool smaller =
         (j == eob && i != eoa) ||
-        (j == eob && i == eoa && !a->redundant && b->redundant) ||
-        (j == eob && i == eoa && (a->redundant == b->redundant) &&
+        (j == eob && i == eoa && !a->main.redundant && b->main.redundant) ||
+        (j == eob && i == eoa && (a->main.redundant == b->main.redundant) &&
           clause_flags_ordered_less_than () (a, b));
     return smaller;
   }
@@ -224,12 +224,12 @@ void Internal::deduplicate_all_clauses () {
   // clauses by sorting them and sorting the clause w.r.t each other.
   auto start = clauses.begin ();
   auto mid = std::partition (clauses.begin (), clauses.end (),
-                             [] (Clause *c) { return !c->garbage; });
+                             [] (Clause *c) { return !c->main.garbage; });
   std::for_each (start, mid,
                  [] (Clause *c) { return sort (c->begin (), c->end ()); });
-  assert (std::all_of (start, mid, [] (Clause *c) { return !c->garbage; }));
+  assert (std::all_of (start, mid, [] (Clause *c) { return !c->main.garbage; }));
   assert (std::all_of (mid, end (clauses),
-                       [] (Clause *c) { return c->garbage; }));
+                       [] (Clause *c) { return c->main.garbage; }));
 
   stable_sort (start, mid, deduplicate_flush_smaller ());
   auto j = start, i = j;
@@ -238,7 +238,7 @@ void Internal::deduplicate_all_clauses () {
   int64_t subsumed = 0;
   for (; i != mid; i++) {
     Clause *c = *j++ = *i;
-    if (!prev || c->size < prev->size) {
+    if (!prev || c->size () < prev->size ()) {
       prev = c;
       continue;
     }
@@ -250,14 +250,14 @@ void Internal::deduplicate_all_clauses () {
     if (k == eop) {
       LOG (c, "found subsumed");
       LOG (prev, "subsuming");
-      assert (!c->garbage);
-      assert (!prev->garbage);
+      assert (!c->main.garbage);
+      assert (!prev->main.garbage);
       // Defensive code that I did not manage to trigger with an assertion
       // (I only manage to have identical redundant/irredundant clauses).
       // But the scheduling of deduplication is not final (it currently only
       // triggers in the first solving before anything else), so I prefer
       // supporting this case here.
-      if (!c->redundant && prev->redundant) {
+      if (!c->main.redundant && prev->main.redundant) {
         make_irredundant (prev);
       }
       mark_garbage (c);
@@ -273,7 +273,7 @@ void Internal::deduplicate_all_clauses () {
 
   for (; i != clauses.end (); ++i) {
     Clause *c = *i;
-    assert (c->garbage);
+    assert (c->main.garbage);
     delete_clause (c);
   }
 

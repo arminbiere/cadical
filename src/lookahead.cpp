@@ -20,7 +20,7 @@ std::vector<int> Internal::lookahead_populate_locc () {
     loccs[lit].lit = lit;
   }
   for (const auto &c : clauses)
-    if (!c->redundant)
+    if (!c->main.redundant)
       for (const auto &lit : *c)
         if (active (lit))
           ++loccs[std::abs (lit)];
@@ -47,7 +47,7 @@ int Internal::lookahead_locc (const std::vector<int> &loccs) {
 int Internal::most_occurring_literal () {
   init_noccs ();
   for (const auto &c : clauses)
-    if (!c->redundant)
+    if (!c->main.redundant)
       for (const auto &lit : *c)
         if (active (lit))
           noccs (lit)++;

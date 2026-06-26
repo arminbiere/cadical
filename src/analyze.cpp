@@ -234,12 +234,12 @@ int Internal::recompute_glue (Clause *c) {
 
 inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
-  c->used = max_used;
-  if (c->size == 2)
+  c->main.used = max_used;
+  if (c->size () == 2)
     return;
-  if (c->hyper)
+  if (c->main.hyper)
     return;
-  if (!c->redundant)
+  if (!c->main.redundant)
     return;
   int new_glue = recompute_glue (c);
   if (new_glue < c->glue ())
@@ -547,7 +547,7 @@ Clause *Internal::new_driving_clause (const int glue, int &jump,
     jump = var (clause[1]).level;
     driving_level = var (clause[0]).level;
     res = new_learned_redundant_clause (glue);
-    res->used = max_used;
+    res->main.used = max_used;
   }
 
   LOG ("jump level %d", jump);
@@ -607,7 +607,7 @@ inline int Internal::find_conflict_level (int &forced) {
 
   LOG ("%d literals on actual conflict level %d", count, res);
 
-  const int size = conflict->size;
+  const int size = conflict->size ();
   int *lits = conflict->literals;
 
   // Move the two highest level literals to the front.
@@ -753,11 +753,11 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause *c) {
     Clause *d = *--it;
     if (c == d)
       continue;
-    if (d->garbage)
+    if (d->main.garbage)
       continue;
-    if (!d->redundant)
+    if (!d->main.redundant)
       continue;
-    int needed = c->size;
+    int needed = c->size ();
     for (auto &lit : *d) {
       if (marked (lit) <= 0)
         continue;
@@ -783,10 +783,10 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause *c) {
 
 Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
   assert (new_conflict);
-  assert (new_conflict->size > 2);
+  assert (new_conflict->size () > 2);
   LOG (new_conflict, "applying OTFS on lit %d", uip);
   auto sorted = std::vector<int> ();
-  sorted.reserve (new_conflict->size);
+  sorted.reserve (new_conflict->size ());
   assert (sorted.empty ());
   ++stats.otfs_strengthened;
 
@@ -797,7 +797,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
 
   assert (mini_chain.empty ());
 
-  const int old_size = new_conflict->size;
+  const int old_size = new_conflict->size ();
   int new_size = 0;
   int best = 0;
   int second_best = 0;
@@ -885,7 +885,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     LOG ("highest lit is %d", lits[highest_pos]);
     if (highest_pos != 1)
       swap (lits[1], lits[highest_pos]);
-    LOG ("removing %d literals", new_conflict->size - new_size);
+    LOG ("removing %d literals", new_conflict->size () - new_size);
 
     if (new_size == 1) {
       LOG (new_conflict, "new size = 1, so interrupting");
@@ -893,7 +893,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       return 0;
     } else {
       otfs_strengthen_clause (new_conflict, uip, new_size, sorted);
-      assert (new_size == new_conflict->size);
+      assert (new_size == new_conflict->size ());
     }
   }
 
@@ -914,13 +914,13 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
 inline void Internal::otfs_subsume_clause (Clause *subsuming,
                                            Clause *subsumed) {
   stats.subsumed++;
-  assert (subsuming->size <= subsumed->size);
+  assert (subsuming->size () <= subsumed->size ());
   LOG (subsumed, "subsumed");
-  if (subsumed->redundant)
+  if (subsumed->main.redundant)
     stats.subsumed_redundant++;
   else
     stats.subsumed_irredundant++;
-  if (subsumed->redundant || !subsuming->redundant) {
+  if (subsumed->main.redundant || !subsuming->main.redundant) {
     mark_garbage (subsumed);
     return;
   }
@@ -934,20 +934,20 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
 void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
                                        const std::vector<int> &old) {
   stats.strengthened++;
-  assert (c->size > 2);
+  assert (c->size () > 2);
   (void) shrink_clause (c, new_size);
   if (proof) {
     proof->otfs_strengthen_clause (c, old, mini_chain);
   }
-  if (!c->redundant) {
+  if (!c->main.redundant) {
     mark_removed (lit);
   }
   mini_chain.clear ();
-  c->used = max_used;
+  c->main.used = max_used;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 
-  if (c->size == 2)
+  if (c->size () == 2)
     new_binary_since_dedup = true;
 }
 
@@ -1182,7 +1182,7 @@ void Internal::analyze () {
         otfs_subsume_clause (reason, conflict);
         LOG (reason, "changing conflict to");
         --conflict_size;
-        assert (conflict_size == reason->size);
+        assert (conflict_size == reason->size ());
         ++stats.otfs_subsumed;
         ++stats.subsumed;
       }

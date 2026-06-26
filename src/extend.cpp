@@ -46,7 +46,7 @@ void External::push_witness_literal_on_extension_stack (int ilit) {
 
 void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
-  internal->stats.weakened_lengths += c->size;
+  internal->stats.weakened_lengths += c->size ();
   push_zero_on_extension_stack ();
   push_id_on_extension_stack (internal->allocate_lrat_id() ? c->id () : 1);
   push_zero_on_extension_stack ();

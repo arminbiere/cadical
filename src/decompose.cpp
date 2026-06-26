@@ -10,7 +10,7 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   Clause *reason = from_dfs.parent;
   if (!reason)
     return;
-  assert (reason->size == 2);
+  assert (reason->size () == 2);
   mini_chain.push_back (reason->id ());
   int other = reason->literals[0];
   other = other == from ? -reason->literals[1] : -other;
@@ -30,7 +30,7 @@ vector<Clause *> Internal::decompose_analyze_binary_clauses (DFS *dfs,
   Clause *reason = from_dfs.parent;
   while (reason) {
     result.push_back (reason);
-    assert (reason->size == 2);
+    assert (reason->size () == 2);
     int other = reason->literals[0];
     other = other == from ? -reason->literals[1] : -other;
     Flags &f = flags (other);
@@ -447,7 +447,7 @@ bool Internal::decompose_round () {
       Clause *c = new_clause (false, 1);
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
-      c->gate = true;
+      c->main.gate = true;
       id1 = requires_id ? c->id () : 0;
       frozen_binary_reasons.push_back(c);
     } else {
@@ -483,7 +483,7 @@ bool Internal::decompose_round () {
       watch_clause(c);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
       id2 = requires_id ? c->id () : 0;
-      c->gate = true;
+      c->main.gate = true;
       frozen_binary_reasons.push_back(c);
     } else {
       id2 = ++clause_id;
@@ -516,9 +516,9 @@ bool Internal::decompose_round () {
 #endif
   for (size_t i = 0; substituted && !unsat && i < clause_size; i++) {
     Clause *c = clauses[i];
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    int j, size = c->size;
+    int j, size = c->size ();
     for (j = 0; j < size; j++) {
       const int lit = c->literals[j];
       if (reprs[vlit (lit)] != lit)
@@ -542,7 +542,7 @@ bool Internal::decompose_round () {
     assert (lrat_chain.empty ());
     assert (analyzed.empty ());
     bool satisfied = false;
-    if (c->gate)
+    if (c->main.gate)
       continue;
 
     for (int k = 0; !satisfied && k < size; k++) {
@@ -636,11 +636,11 @@ bool Internal::decompose_round () {
 #endif
     } else {
       LOG ("simply shrinking clause since watches did not change");
-      assert (c->size > 2);
-      if (!c->redundant)
+      assert (c->size () > 2);
+      if (!c->main.redundant)
         mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, c->redundant, clause,
+        proof->add_derived_clause (++clause_id, c->main.redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
         if (requires_id)
@@ -650,7 +650,7 @@ bool Internal::decompose_round () {
       int *literals = c->literals;
       for (l = 2; l < clause.size (); l++)
         literals[l] = clause[l];
-      int flushed = c->size - (int) l;
+      int flushed = c->size () - (int) l;
       if (flushed) {
         if (l == 2)
           new_binary_clause = true;
@@ -658,10 +658,10 @@ bool Internal::decompose_round () {
         (void) shrink_clause (c, l);
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
-      // we have shrunken c->size to l so even though there is an assertion
-      // for c->size > 2 at the beginning of this else block, the new size
+      // we have shrunken c->size () to l so even though there is an assertion
+      // for c->size () > 2 at the beginning of this else block, the new size
       // can be 2 now.
-      if (c->size == 2) { // cheaper to update only new binary clauses
+      if (c->size () == 2) { // cheaper to update only new binary clauses
         assert (new_binary_clause);
         update_watch_size (watches (c->literals[0]), c->literals[1], c);
         update_watch_size (watches (c->literals[1]), c->literals[0], c);
@@ -707,7 +707,7 @@ bool Internal::decompose_round () {
   }
 
   for (auto c : frozen_binary_reasons)
-    c->gate = false;
+    c->main.gate = false;
   if (!unsat && !postponed_garbage.empty ()) {
     LOG ("now marking %zd postponed garbage clauses",
          postponed_garbage.size ());

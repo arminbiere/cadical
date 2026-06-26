@@ -46,13 +46,13 @@ void Internal::transred () {
   //
   for (; i != end; i++) {
     Clause *c = *i;
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size != 2)
+    if (c->size () != 2)
       continue;
-    if (c->redundant && c->hyper)
+    if (c->main.redundant && c->main.hyper)
       continue;
-    if (!c->transred)
+    if (!c->main.transred)
       break;
   }
 
@@ -64,8 +64,8 @@ void Internal::transred () {
            "rescheduling all clauses since no clauses to check left");
     for (i = clauses.begin (); i != end; i++) {
       Clause *c = *i;
-      if (c->transred)
-        c->transred = false;
+      if (c->main.transred)
+        c->main.transred = false;
     }
     i = clauses.begin ();
   }
@@ -93,15 +93,15 @@ void Internal::transred () {
     // added (see the code in 'hyper_binary_resolve' in 'prope.cpp' and
     // also check out our CPAIOR paper on tree-based look ahead).
     //
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->size != 2)
+    if (c->size () != 2)
       continue;
-    if (c->redundant && c->hyper)
+    if (c->main.redundant && c->main.hyper)
       continue;
-    if (c->transred)
+    if (c->main.transred)
       continue;         // checked before?
-    c->transred = true; // marked as checked
+    c->main.transred = true; // marked as checked
 
     LOG (c, "checking transitive reduction of");
 
@@ -126,7 +126,7 @@ void Internal::transred () {
     // binary clauses in the implication graph.  See our inprocessing rules
     // paper, why this restriction is required.
     //
-    const bool irredundant = !c->redundant;
+    const bool irredundant = !c->main.redundant;
 
     assert (work.empty ());
     mark (src);
@@ -157,9 +157,9 @@ void Internal::transred () {
         Clause *d = w.clause;
         if (d == c)
           continue;
-        if (irredundant && d->redundant)
+        if (irredundant && d->main.redundant)
           continue;
-        if (d->garbage)
+        if (d->main.garbage)
           continue;
         const int other = w.blit;
         if (other == dst)

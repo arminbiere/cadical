@@ -92,7 +92,7 @@ void Internal::warmup_propagate_beyond_conflict () {
         // In principle we can ignore garbage binary clauses too, but that
         // would require to dereference the clause pointer all the time with
         //
-        // if (w.clause->garbage) { j--; continue; } // (*)
+        // if (w.clause->main.garbage) { j--; continue; } // (*)
         //
         // This is too costly.  It is however necessary to produce correct
         // proof traces if binary clauses are traced to be deleted ('d ...'
@@ -122,14 +122,14 @@ void Internal::warmup_propagate_beyond_conflict () {
         }
 
       } else {
-        assert (w.clause->size > 2);
+        assert (w.clause->size () > 2);
 
         // The cache line with the clause data is forced to be loaded here
         // and thus this first memory access below is the real hot-spot of
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
 
-        if (w.clause->garbage) {
+        if (w.clause->main.garbage) {
           j--;
           continue;
         }
@@ -139,7 +139,7 @@ void Internal::warmup_propagate_beyond_conflict () {
         if (u > 0)
           j[-1].blit = other;
         else {
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos ();
           literal_iterator k = middle;

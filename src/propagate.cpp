@@ -260,12 +260,12 @@ bool Internal::propagate () {
 
       if (w.binary ()) {
 
-        // assert (w.clause->redundant || !w.clause->garbage);
+        // assert (w.clause->main.redundant || !w.clause->main.garbage);
 
         // In principle we can ignore garbage binary clauses too, but that
         // would require to dereference the clause pointer all the time with
         //
-        // if (w.clause->garbage) { j--; continue; } // (*)
+        // if (w.clause->main.garbage) { j--; continue; } // (*)
         //
         // This is too costly.  It is however necessary to produce correct
         // proof traces if binary clauses are traced to be deleted ('d ...'
@@ -297,7 +297,7 @@ bool Internal::propagate () {
         }
 
       } else {
-        assert (w.clause->size > 2);
+        assert (w.clause->size () > 2);
 
         if (conflict)
           break; // Stop if there was a binary conflict already.
@@ -309,7 +309,7 @@ bool Internal::propagate () {
 
         ticks++;
 
-        if (w.clause->garbage) {
+        if (w.clause->main.garbage) {
           j--;
           continue;
         }
@@ -341,7 +341,7 @@ bool Internal::propagate () {
           // one failed to find a replacement another one starting at the
           // first non-watched literal until the saved position.
 
-          const int size = w.clause->size;
+          const int size = w.clause->size ();
           const literal_iterator middle = lits + w.clause->pos ();
           const const_literal_iterator end = lits + size;
           literal_iterator k = middle;
@@ -526,7 +526,7 @@ void Internal::propergate () {
         assert (val (w.blit) > 0);
         continue;
       }
-      if (w.clause->garbage) {
+      if (w.clause->main.garbage) {
         j--;
         continue;
       }
@@ -541,7 +541,7 @@ void Internal::propergate () {
         continue;
       assert (u < 0);
 
-      const int size = w.clause->size;
+      const int size = w.clause->size ();
       const literal_iterator middle = lits + w.clause->pos ();
       const const_literal_iterator end = lits + size;
       literal_iterator k = middle;

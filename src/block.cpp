@@ -44,12 +44,12 @@ bool Internal::is_blocked_clause (Clause *c, int lit) {
 
   LOG (c, "trying to block on %d", lit);
 
-  assert (c->size >= opts.blockminclslim);
-  assert (c->size <= opts.blockmaxclslim);
+  assert (c->size () >= opts.blockminclslim);
+  assert (c->size () <= opts.blockmaxclslim);
   assert (active (lit));
   assert (!val (lit));
-  assert (!c->garbage);
-  assert (!c->redundant);
+  assert (!c->main.garbage);
+  assert (!c->main.redundant);
   assert (!level);
 
   mark (c); // First mark all literals in 'c'.
@@ -72,9 +72,9 @@ bool Internal::is_blocked_clause (Clause *c, int lit) {
     //
     Clause *d = *i;
 
-    assert (!d->garbage);
-    assert (!d->redundant);
-    assert (d->size <= opts.blockmaxclslim);
+    assert (!d->main.garbage);
+    assert (!d->main.redundant);
+    assert (d->size () <= opts.blockmaxclslim);
 
     *i = prev_d; // Move previous non-tautological clause
     prev_d = d;  // backwards but remember clause at this position.
@@ -151,11 +151,11 @@ void Internal::block_schedule (Blocker &blocker) {
   //
   for (const auto &c : clauses) {
 
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
-    if (c->size <= opts.blockmaxclslim)
+    if (c->size () <= opts.blockmaxclslim)
       continue;
 
     for (const auto &lit : *c)
@@ -166,9 +166,9 @@ void Internal::block_schedule (Blocker &blocker) {
   //
   for (const auto &c : clauses) {
 
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    if (c->redundant)
+    if (c->main.redundant)
       continue;
 
     for (const auto &lit : *c) {
@@ -257,7 +257,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
   assert (!noccs (-lit));
 #ifndef NDEBUG
   for (const auto &c : nos)
-    assert (c->garbage);
+    assert (c->main.garbage);
 #endif
   stats.blocked_pure_literals++;
   LOG ("found pure literal %d", lit);
@@ -265,9 +265,9 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
   int64_t pured = 0;
 #endif
   for (const auto &c : pos) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
-    assert (!c->redundant);
+    assert (!c->main.redundant);
     LOG (c, "pure literal %d in", lit);
     blocker.reschedule.push_back (c);
     if (proof) {
@@ -307,7 +307,7 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
 
   Clause *d = 0;
   for (const auto &c : nos) {
-    if (c->garbage)
+    if (c->main.garbage)
       continue;
     assert (!d);
     d = c;
@@ -319,14 +319,14 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
   nos.resize (1);
   nos[0] = d;
 
-  if (d && d->size > opts.blockmaxclslim) {
+  if (d && d->size () > opts.blockmaxclslim) {
     LOG (d, "skipped common antecedent");
     return;
   }
 
-  assert (!d->garbage);
-  assert (!d->redundant);
-  assert (d->size <= opts.blockmaxclslim);
+  assert (!d->main.garbage);
+  assert (!d->main.redundant);
+  assert (d->size () <= opts.blockmaxclslim);
 
   LOG (d, "common %d antecedent", lit);
   mark (d);
@@ -344,17 +344,17 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
   for (; i != eop; i++) {
     Clause *c = *j++ = *i;
 
-    if (c->garbage) {
+    if (c->main.garbage) {
       j--;
       continue;
     }
-    if (c->size > opts.blockmaxclslim) {
+    if (c->size () > opts.blockmaxclslim) {
 #ifdef LOGGING
       skipped++;
 #endif
       continue;
     }
-    if (c->size < opts.blockminclslim) {
+    if (c->size () < opts.blockminclslim) {
 #ifdef LOGGING
       skipped++;
 #endif
@@ -453,14 +453,14 @@ size_t Internal::block_candidates (Blocker &blocker, int lit) {
 
   for (; i != eop; i++) {
     Clause *c = *j++ = *i;
-    if (c->garbage) {
+    if (c->main.garbage) {
       j--;
       continue;
     }
-    assert (!c->redundant);
-    if (c->size > opts.blockmaxclslim)
+    assert (!c->main.redundant);
+    if (c->size () > opts.blockmaxclslim)
       continue;
-    if (c->size < opts.blockminclslim)
+    if (c->size () < opts.blockminclslim)
       continue;
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator l;
@@ -508,9 +508,9 @@ Clause *Internal::block_impossible (Blocker &blocker, int lit) {
   Clause *res = 0;
 
   for (const auto &c : nos) {
-    assert (!c->garbage);
-    assert (!c->redundant);
-    assert (c->size <= opts.blockmaxclslim);
+    assert (!c->main.garbage);
+    assert (!c->main.redundant);
+    assert (c->size () <= opts.blockmaxclslim);
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator l;
     for (l = c->begin (); l != eoc; l++) {
@@ -561,10 +561,10 @@ void Internal::block_literal_with_at_least_two_negative_occs (
   auto j = nos.begin (), i = j;
   for (; i != eon; i++) {
     Clause *c = *j++ = *i;
-    if (c->garbage)
+    if (c->main.garbage)
       j--;
-    else if (c->size > max_size)
-      max_size = c->size;
+    else if (c->size () > max_size)
+      max_size = c->size ();
   }
   if (j == nos.begin ())
     erase_vector (nos);
@@ -616,8 +616,8 @@ void Internal::block_literal_with_at_least_two_negative_occs (
   // Go over all remaining candidates and try to block them on 'lit'.
   //
   for (const auto &c : blocker.candidates) {
-    assert (!c->garbage);
-    assert (!c->redundant);
+    assert (!c->main.garbage);
+    assert (!c->main.redundant);
     if (!is_blocked_clause (c, lit))
       continue;
     blocked++;
@@ -649,7 +649,7 @@ void Internal::block_reschedule_clause (Blocker &blocker, int lit,
 #ifdef NDEBUG
   (void) lit;
 #endif
-  assert (c->garbage);
+  assert (c->main.garbage);
 
   for (const auto &other : *c) {
 

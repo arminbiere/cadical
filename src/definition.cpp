@@ -45,7 +45,7 @@ static void traverse_definition_core (void *state, unsigned id) {
     sign = 2;
   }
   (void) size_clauses1;
-  clause->gate = true;
+  clause->main.gate = true;
   eliminator->gates.push_back (clause);
 #ifdef LOGGING
   Internal *internal = extractor->internal;
@@ -203,9 +203,9 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     for (auto c : extractor.clauses[sign]) {
       // to avoid copying the literals of c in their unsigned
       // representation we instead implement the translation in kitten
-      if (!c->garbage) {
+      if (!c->main.garbage) {
         LOG (c, "adding to kitten");
-        KITTEN_NAMESPACE(citten_clause_with_id_and_exception) (citten, exported, c->size,
+        KITTEN_NAMESPACE(citten_clause_with_id_and_exception) (citten, exported, c->size (),
                                              c->literals, except);
       }
       exported++;
