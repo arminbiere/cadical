@@ -429,11 +429,9 @@ void Internal::compact () {
     assert (!external->constraint.back ());
     for (auto elit : external->constraint) {
       assert (elit != INT_MIN);
-      if (!elit)
-        continue; // TODO: why can elit be 0?
       int eidx = abs (elit);
       assert (eidx <= external->max_var);
-      int ilit = external->e2i[eidx];
+      int ilit = eidx ? external->e2i[eidx] : 0;
       assert (!ilit == !elit);
       if (elit < 0)
         ilit = -ilit;

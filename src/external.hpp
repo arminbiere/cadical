@@ -84,7 +84,7 @@ struct External {
   };
   struct IntTumb {
     public:
-    std::pair<int,int> operator () () {return std::pair(0,0);}
+    std::pair<int,int> operator () () {return std::pair<int,int>(0,0);}
   };
   struct IntEqualTo {
     public:

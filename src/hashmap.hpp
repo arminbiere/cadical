@@ -8,9 +8,9 @@
 
 // for debugging (we cannot use LOG)
 // guard to avoid warnings.
-// #define MYPRINTFLOGGING
+//#define MYPRINTFLOGGING
 #ifdef MYPRINTFLOGGING
-#define MYPRINTF(str,...) //printf("c HASHMAP " str "\n",  ##__VA_ARGS__)
+#define MYPRINTF(str,...) printf("c HASHMAP " str "\n",  ##__VA_ARGS__)
 #else
 #define MYPRINTF(str,...) do {} while (0)
 #endif
@@ -30,7 +30,9 @@ private:
   size_t capacity = 0;
   FirstHash hash1;
   SecondHash hash2;
+#ifndef NDEBUG
   std::unordered_map<Key, Element> map;
+#endif
 
   size_t reduce_hash1 (Key k) const {
     return FirstHash () (k) & (capacity - 1);
@@ -99,7 +101,9 @@ private:
     }
 
     ++size;
+  #ifndef NDEBUG
     map[k] = el;
+  #endif
   }
 
 public:
@@ -117,6 +121,7 @@ public:
       size_t searched = 1;
       assert (delta & 1);
       do {
+        pos += delta;
         if (searched++ == capacity)
           return Tumb () ();
         if (pos >= capacity)
@@ -129,7 +134,10 @@ public:
 
     const pair &f = table[pos];
     assert (KeyEqual () (f.first, k));
+  #ifndef NDEBUG
     assert (map.find (k) != map.end () && map.find (k)->second == f.second);
+  #endif
+    MYPRINTF("find %d -> %d", k, f.second);
     return f;
   }
 
@@ -162,7 +170,10 @@ public:
 
     pair &f = table[pos];
     assert (KeyEqual () (f.first, k));
+  #ifndef NDEBUG
     assert (map[k] == f.second);
+  #endif
+    MYPRINTF("find %d -> %d", k, f.second);
     return f;
   }
 
@@ -181,12 +192,16 @@ public:
   }
 
   Element operator[] (Key k) const {
+#ifndef NDEBUG
     assert ((map.find (k) == map.end ()) || map.find (k)->second == find (k).second);
+#endif
     assert (find (k).second);
     return find (k).second;
   }
   Element operator[] (Key k) {
+#ifndef NDEBUG
     assert ((map.find (k) == map.end ()) || map.find (k)->second == find (k).second);
+#endif
     assert (find (k).second);
     return find (k).second;
   }
