@@ -48,7 +48,9 @@ int External::declare_var (int new_var, bool extension) {
       internal->i2e.resize (ilit + 1);
     }
     LOG ("new mapping external %d to internal %d", new_var, ilit);
-    e2i[new_var] = ilit;
+    e2i.insert (new_var, ilit);
+    assert (e2i[new_var] == ilit);
+    LOG ("%d -> %d =?= %d", new_var, ilit, e2i[new_var]);
     internal->i2e[ilit] = new_var;
     internal->declare_variable (ilit);
     assert (internal->max_var >= ilit);
@@ -156,7 +158,7 @@ int External::internalize (int elit, bool extension) {
       assert (ervars.size () > (size_t) eidx);
       ervars[eidx] = true;
     }
-    ilit = e2i[eidx];
+    ilit = e2i.find (eidx).second;
     if (!ilit)
       ilit = declare_var (eidx, false);
     if (elit < 0)
@@ -166,7 +168,7 @@ int External::internalize (int elit, bool extension) {
       ilit = internal->max_var + 1u;
       internal->reserve_vars (ilit);
       LOG ("mapping external %d to internal %d", eidx, ilit);
-      e2i[eidx] = ilit;
+      e2i.insert (eidx, ilit);
       internal->i2e.push_back (eidx);
       assert (internal->i2e[ilit] == eidx);
       assert (e2i[eidx] == ilit);
@@ -280,7 +282,7 @@ bool External::flip (int elit) {
     return false;
   if (marked (witness, elit))
     return false;
-  int ilit = e2i[eidx];
+  int ilit = e2i.find (eidx).second;
   if (!ilit)
     return false;
   bool res = internal->flip (ilit);
@@ -299,7 +301,7 @@ bool External::flippable (int elit) {
     return false;
   if (marked (witness, elit))
     return false;
-  int ilit = e2i[eidx];
+  int ilit = e2i.find (eidx).second;
   if (!ilit)
     return false;
   return internal->flippable (ilit);
@@ -311,7 +313,7 @@ bool External::failed (int elit) {
   int eidx = abs (elit);
   if (eidx > max_var)
     return 0;
-  int ilit = e2i[eidx];
+  int ilit = e2i.find(eidx).second;
   if (!ilit)
     return 0;
   if (elit < 0)
@@ -367,7 +369,7 @@ void External::unphase (int elit) {
     LOG ("resetting forced phase of unused external %d ignored", elit);
     return;
   }
-  int ilit = e2i[eidx];
+  int ilit = e2i.find (eidx).second;
   if (!ilit)
     goto UNUSED;
   if (elit < 0)

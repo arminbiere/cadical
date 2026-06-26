@@ -133,7 +133,7 @@ void External::extend () {
   int64_t updated = 0;
 #endif
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
-    const int ilit = e2i[i];
+    const int ilit = e2i.find (i).second;
     if (!ilit)
       continue;
     if (i >= vals.size ())

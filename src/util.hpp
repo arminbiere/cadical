@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "hashmap.hpp"
+
 namespace CaDiCaL {
 
 using namespace std;
@@ -140,6 +142,16 @@ static K find_or_default (const std::unordered_map<K, E> &map, K key,
   if (it == map.end ())
     return default_el;
   return it->second;
+}
+
+template <class Key, class Element, class FirstHash, class SecondHash, class Tumb,
+class KeyEqual>
+static Key find_or_default (const hashmap<Key, Element, FirstHash, SecondHash, Tumb, KeyEqual> &map, Key key,
+                          Element default_el) {
+  auto it = map.find (key);
+  if (it.first == Tumb ()().first)
+    return default_el;
+  return it.second;
 }
 // Clean-up class for bad_alloc error safety.
 

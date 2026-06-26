@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -57,6 +58,8 @@ class Learner;
 class Terminator;
 class WitnessIterator;
 
+#include "hashmap.hpp"
+
 /*------------------------------------------------------------------------*/
 
 /*------------------------------------------------------------------------*/
@@ -71,7 +74,24 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
+  struct IntFirstHash {
+    public:
+    size_t operator () (int el) {return el;}
+  };
+  struct IntSecondHash {
+    public:
+    size_t operator () (int el) {return (321321353 * (size_t)el) | 1;}
+  };
+  struct IntTumb {
+    public:
+    std::pair<int,int> operator () () {return std::pair(0,0);}
+  };
+  struct IntEqualTo {
+    public:
+    bool operator () (int a, int b) {return a == b;}
+  };
+public:
+  CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.

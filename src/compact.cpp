@@ -208,7 +208,7 @@ void Internal::compact () {
   // Also fixes external units.
   //
   for (auto eidx : external->vars) {
-    int src = external->e2i[eidx];
+    int src = external->e2i.find(eidx).second;
     if (!src) {
       continue;
     }
@@ -229,7 +229,8 @@ void Internal::compact () {
     LOG ("compact %" PRId64
          " maps external %d to internal %d from internal %d",
          stats.compacts, eidx, dst, src);
-    external->e2i[eidx] = dst;
+    external->e2i.update (eidx, dst);
+
   }
 
   // Delete garbage units. Needs to occur before resizing unit_clauses
@@ -428,6 +429,8 @@ void Internal::compact () {
     assert (!external->constraint.back ());
     for (auto elit : external->constraint) {
       assert (elit != INT_MIN);
+      if (!elit)
+        continue; // TODO: why can elit be 0?
       int eidx = abs (elit);
       assert (eidx <= external->max_var);
       int ilit = external->e2i[eidx];
