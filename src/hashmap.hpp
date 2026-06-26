@@ -68,7 +68,6 @@ private:
     delete[] old_table;
   }
 
-
   void non_resizing_insert (Key k, Element el) {
     size_t pos = reduce_hash1(k);
     assert (pos < capacity);
@@ -223,6 +222,33 @@ public:
 
   ~hashmap () {
     delete [] table;
+  }
+
+  void enlarge_intern (size_t new_capacity) {
+    assert (full ());
+    if (new_capacity < capacity)
+      return;
+    const size_t old_capacity = capacity;
+    while (capacity <= new_capacity)
+      capacity *= 2;
+    MYPRINTF ("enlarging intern from %zd to %zd\n", old_capacity, capacity);
+    pair *old_table = table;
+    table = new pair[capacity];
+
+    for (size_t i = 0; i < capacity; ++i)
+      table[i] = Tumb () ();
+
+    for (size_t i = 0; i < old_capacity; ++i) {
+      const pair& e = old_table[i];
+      if (KeyEqual () (e.first, Tumb () ().first))
+        continue;
+      // don't reallocate deleted elements
+      if (KeyEqual () (e.second, Tumb () ().second))
+        continue;
+      non_resizing_insert (e.first, e.second);
+    }
+
+    delete[] old_table;
   }
 };
 

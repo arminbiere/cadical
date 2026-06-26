@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 
@@ -84,9 +85,10 @@ void External::push_external_clause_and_witness_on_extension_stack (
     assert (elit != INT_MIN && elit);
     assert (abs (elit) <= max_var);
     int eidx = abs (elit);
-    if (!e2i[eidx])
+    int ilit = find_or_default(e2i, eidx, 0);
+    if (!ilit)
       init (eidx);
-    assert (e2i[eidx] && e2i[eidx] != INT_MIN);
+    assert (ilit && ilit != INT_MIN);
     extension.push_back (elit);
     mark (witness, elit);
   }
@@ -100,9 +102,10 @@ void External::push_external_clause_and_witness_on_extension_stack (
     assert (elit != INT_MIN);
     assert (abs (elit) <= max_var);
     int eidx = abs (elit);
-    if (!e2i[eidx])
-      init (abs (eidx));
-    assert (e2i[eidx] && e2i[eidx] != INT_MIN);
+    int ilit = find_or_default(e2i, eidx, 0);
+    if (!ilit)
+      init (eidx);
+    assert (ilit && ilit != INT_MIN);
     extension.push_back (elit);
   }
 }

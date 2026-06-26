@@ -252,7 +252,7 @@ void Internal::failing () {
     vector<int> sum_constraints;
     vector<int> econstraints;
     for (auto &elit : external->constraint) {
-      int lit = external->e2i.find (abs (elit)).second;
+      int lit = find_or_default (external->e2i, abs (elit), 0);
       if (elit < 0)
         lit = -lit;
       if (!lit)

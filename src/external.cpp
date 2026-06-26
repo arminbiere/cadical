@@ -282,7 +282,7 @@ bool External::flip (int elit) {
     return false;
   if (marked (witness, elit))
     return false;
-  int ilit = e2i.find (eidx).second;
+  int ilit = find_or_default (e2i, eidx, 0);
   if (!ilit)
     return false;
   bool res = internal->flip (ilit);
@@ -301,7 +301,7 @@ bool External::flippable (int elit) {
     return false;
   if (marked (witness, elit))
     return false;
-  int ilit = e2i.find (eidx).second;
+  int ilit = find_or_default (e2i, eidx, 0);
   if (!ilit)
     return false;
   return internal->flippable (ilit);
@@ -313,7 +313,7 @@ bool External::failed (int elit) {
   int eidx = abs (elit);
   if (eidx > max_var)
     return 0;
-  int ilit = e2i.find(eidx).second;
+  int ilit = find_or_default (e2i, eidx, 0);
   if (!ilit)
     return 0;
   if (elit < 0)
