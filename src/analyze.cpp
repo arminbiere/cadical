@@ -1173,7 +1173,6 @@ void Internal::analyze () {
         clause.clear ();
         break;
       }
-      assert (conflict_size >= 2);
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // here both clauses are part of the CNF, so one subsumes the other

@@ -434,7 +434,7 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (level == 0);
+  const bool no_backtrack_notification = (notified_level == 0); // if no assumptions or only already satisfied ones, don't notify
 
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
