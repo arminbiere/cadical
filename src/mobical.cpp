@@ -1045,7 +1045,7 @@ struct Call {
     return (((uint64_t) type & (uint64_t) Call::DURING)) != 0;
   }
   virtual bool always_type () {
-    return (((uint64_t) type & (uint64_t) Call::DURING)) != 0;
+    return (((uint64_t) type & (uint64_t) Call::ALWAYS)) != 0;
   }
   virtual bool process_type () {
     return (((uint64_t) type & (uint64_t) Call::PROCESS)) != 0;
@@ -1195,7 +1195,7 @@ public:
         fatal ("expected single assignment, not %zd", lits.size ());
       if (lits[0] != c->arg)
         fatal ("expected %d does not match assignment %d", c->val, lits[0]);
-    } else if (!relaxed)
+    } else if (!relaxed && (size_t) c->val != lits.size ())
       fatal ("expected %d assignments, not %zd", c->val, lits.size ());
   }
 
@@ -3500,9 +3500,9 @@ public:
             else if (mobical.donot.mock_propagator &&
                      next_c->always_type ()) {
               bool during = false;
-              for (size_t k = j + 1; k < calls.size (); k++) {
+              for (size_t k = j; k < calls.size (); k++) {
                 Call *next_next_c = calls[k];
-                while (next_next_c->always_type ())
+                if (next_next_c->always_type ())
                   continue;
                 if (next_next_c->during_type ())
                   during = true;
