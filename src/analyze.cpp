@@ -994,17 +994,18 @@ void Internal::fix_trail_levels () {
            var (lit).level, res);
 
     var (lit).level = res;
-    if (lrat && !res) {
-      auto tmp = std::move (lrat_chain);
-      lrat_chain.clear ();
-      build_chain_for_units (lit, reason, false);
-      learn_unit_clause (lit);
-      lrat_chain = std::move (tmp);
-    }
     if (!res) {
-      mark_garbage(reason);
+      if (lrat) {
+        auto tmp = std::move (lrat_chain);
+        lrat_chain.clear ();
+        build_chain_for_units (lit, reason, false);
+        learn_unit_clause (lit);
+        lrat_chain = std::move (tmp);
+      } else {
+        learn_unit_clause (lit);
+      }
+      mark_garbage (reason);
       var (lit).reason = nullptr;
-      mark_fixed (lit);
     }
   }
   out_of_order_level = -1;
