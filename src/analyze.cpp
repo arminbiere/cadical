@@ -972,7 +972,7 @@ void Internal::fix_trail_levels () {
   }
   LOG ("fixing all trail levels before backtracking");
   const size_t trix = control[out_of_order_level].trail;
-  assert (trix < trail.size ());
+  assert (trix <= trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
     const int lit = trail[i];
     Clause *reason = var (lit).reason;
