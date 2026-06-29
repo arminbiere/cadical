@@ -6776,7 +6776,8 @@ void Reader::parse () {
         error ("'%s' after 'reset'", c->keyword ());
 
       if (adding && c->type != adding && c->type != Call::RESET &&
-          ((adding == Call::ADD && c->type != Call::RESIZE) ||
+          ((adding == Call::ADD && c->type != Call::RESIZE &&
+            c->type != Call::DECLARE_VARS && c->type != Call::DECLARE) ||
            (adding == Call::CONSTRAIN && c->type != Call::FIXED)))
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
