@@ -1134,6 +1134,7 @@ static const char *ct_to_str (Call::Type type) {
   // clang-format on
 }
 
+#ifdef LOGGING
 static const char *mft_to_str (MockForceType type) {
   // clang-format off
   return (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
@@ -1148,6 +1149,7 @@ static const char *mft_to_str (MockForceType type) {
        : "LAST_MOCK_FORCE_TYPE")))))))));
   // clang-format on
 }
+#endif //
 
 class ReplayPropagator : public ExternalPropagator {
 private:
@@ -1314,8 +1316,12 @@ public:
     if (!relaxed && c->type != Call::CB_ADD_REASON)
       fatal ("expected callback '%s' does not match 'notify_assignment'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_ADD_REASON)
-      return c->arg;
+    if (!relaxed && c->arg == propagated_lit)
+      fatal ("expected argument '%d' does not match "
+             "'cb_add_reason_clause_lit %d'",
+             c->arg, propagated_lit);
+    if (c->type == Call::CB_ADD_REASON)
+      return c->val;
     return 0;
   }
 
@@ -2535,7 +2541,7 @@ struct ObserveCall : public Call {
 };
 
 struct CurrentValueCall : public Call {
-  CurrentValueCall (int l, int r) : Call (CURRENT_VALUE, l, r) {}
+  CurrentValueCall (int l) : Call (CURRENT_VALUE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (delay) {
@@ -2547,13 +2553,13 @@ struct CurrentValueCall : public Call {
       s->current_value (map_arg (s, extendmap));
     }
   }
-  void print (ostream &o) { o << keyword () << " " << arg << "" << res; }
-  Call *copy () { return new CurrentValueCall (arg, res); }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new CurrentValueCall (arg); }
   const char *keyword () { return "current_value"; }
 };
 
 struct IsDecisionCall : public Call {
-  IsDecisionCall (int l, int r) : Call (IS_DECISION, l, r) {}
+  IsDecisionCall (int l) : Call (IS_DECISION, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (delay) {
@@ -2565,8 +2571,8 @@ struct IsDecisionCall : public Call {
       s->is_decision (map_arg (s, extendmap));
     }
   }
-  void print (ostream &o) { o << keyword () << " " << arg << "" << res; }
-  Call *copy () { return new IsDecisionCall (arg, res); }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new IsDecisionCall (arg); }
   const char *keyword () { return "is_decision"; }
 };
 
@@ -2601,7 +2607,7 @@ struct CBAddClauseCall : public Call {
 };
 
 struct CBAddReasonCall : public Call {
-  CBAddReasonCall (int l) : Call (CB_ADD_CLAUSE, l) {}
+  CBAddReasonCall (int l, int v) : Call (CB_ADD_CLAUSE, l, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (delay);
     Call::execute (s, extendmap, delay);
@@ -2610,8 +2616,8 @@ struct CBAddReasonCall : public Call {
     assert (rp);
     rp->push_action (copy ());
   }
-  void print (ostream &o) { o << keyword () << " " << arg; }
-  Call *copy () { return new CBAddReasonCall (arg); }
+  void print (ostream &o) { o << keyword () << " " << arg << " " << val; }
+  Call *copy () { return new CBAddReasonCall (arg, val); }
   const char *keyword () { return "cb_add_reason_clause_lit"; }
 };
 
@@ -2708,7 +2714,7 @@ struct NotifyBacktrackCall : public Call {
 };
 
 struct NotifyLevelCall : public Call {
-  NotifyLevelCall () : Call (NOTIFY_LEVEL) {}
+  NotifyLevelCall (int v) : Call (NOTIFY_LEVEL, 0, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (delay);
     Call::execute (s, extendmap, delay);
@@ -2717,8 +2723,8 @@ struct NotifyLevelCall : public Call {
     assert (rp);
     rp->push_action (copy ());
   }
-  void print (ostream &o) { o << keyword (); }
-  Call *copy () { return new NotifyLevelCall (); }
+  void print (ostream &o) { o << keyword () << " " << val; }
+  Call *copy () { return new NotifyLevelCall (val); }
   const char *keyword () { return "notify_new_decision_level"; }
 };
 
@@ -6334,13 +6340,35 @@ void Reader::parse () {
         error ("cannot execute 'notify_backtrack' (try with '--no-mock')");
       c = new NotifyBacktrackCall (val);
     } else if (!strcmp (keyword, "notify_new_decision_level")) {
-      if (first)
-        error ("additional argument '%s' to 'notify_new_decision_level'",
+      if (!first)
+        error ("argument to 'notify_new_decision_level' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid argument '%s' to 'notify_new_decision_level'",
                first);
+      if (enforce && val < 0)
+        error (
+            "invalid level '%d' as argument to 'notify_new_decision_level'",
+            val);
+      if (second)
+        error ("additional argument '%s' to 'notify_new_decision_level %d'",
+               second, val);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'notify_new_decision_level' (try with "
                "'--no-mock')");
-      c = new NotifyLevelCall ();
+      c = new NotifyLevelCall (val);
+    } else if (!strcmp (keyword, "cb_propagate")) {
+      if (!first)
+        error ("argument to 'cb_propagate' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_propagate'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+      if (second)
+        error ("additional argument '%s' to 'cb_propagate %d'", second,
+               lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_propagate' (try with '--no-mock')");
+      c = new CBPropagateCall (lit);
     } else if (!strcmp (keyword, "cb_decide")) {
       if (!first)
         error ("argument to 'cb_decide' missing");
@@ -6360,12 +6388,9 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'is_decision'", first);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'is_decision'", lit);
-      if (!second)
-        error ("second argument to 'is_decision' missing");
-      if (!parse_int_str (second, val))
-        error ("invalid second argument '%s' to 'is_decision %d'", second,
-               lit);
-      c = new IsDecisionCall (lit, val);
+      if (second)
+        error ("additional argument '%s' to 'is_decision %d'", second, lit);
+      c = new IsDecisionCall (lit);
     } else if (!strcmp (keyword, "current_value")) {
       if (!first)
         error ("argument to 'current_value' missing");
@@ -6373,12 +6398,10 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'current_value'", first);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'current_value'", lit);
-      if (!second)
-        error ("second argument to 'current_value' missing");
-      if (!parse_int_str (second, val))
-        error ("invalid second argument '%s' to 'current_value %d'", second,
+      if (second)
+        error ("additional argument '%s' to 'current_value %d'", second,
                lit);
-      c = new CurrentValueCall (lit, val);
+      c = new CurrentValueCall (lit);
     } else if (!strcmp (keyword, "cb_add_reason_clause_lit")) {
       if (!first)
         error ("argument to 'cb_add_reason_clause_lit' missing");
@@ -6389,13 +6412,20 @@ void Reader::parse () {
         error ("invalid literal '%d' as argument to "
                "'cb_add_reason_clause_lit'",
                lit);
-      if (second)
-        error ("additional argument '%s' to 'cb_add_reason_clause_lit %d'",
-               second, lit);
+      if (!second)
+        error ("second argument to 'cb_add_reason_clause_lit %d' missing",
+               lit);
+      if (!parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'cb_add_reason_clause_lit'",
+               second);
+      if (enforce && val == INT_MIN)
+        error ("invalid literal '%d' as argument to "
+               "'cb_add_reason_clause_lit %d'",
+               val, lit);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_add_reason_clause_lit' (try with "
                "'--no-mock')");
-      c = new CBAddReasonCall (lit);
+      c = new CBAddReasonCall (lit, val);
     } else if (!strcmp (keyword, "cb_add_external_clause_lit")) {
       if (!first)
         error ("argument to 'cb_add_external_clause_lit' missing");
@@ -6414,22 +6444,20 @@ void Reader::parse () {
         error ("cannot execute 'cb_add_external_clause_lit' (try with "
                "'--no-mock')");
       c = new CBAddClauseCall (lit);
-    } else if (!strcmp (keyword, "cb_has_external_clause_lit")) {
+    } else if (!strcmp (keyword, "cb_has_external_clause")) {
       if (!first)
-        error ("argument to 'cb_has_external_clause_lit' missing");
+        error ("argument to 'cb_has_external_clause' missing");
       if (!parse_int_str (first, val))
-        error ("invalid argument '%s' to 'cb_has_external_clause_lit'",
-               first);
+        error ("invalid argument '%s' to 'cb_has_external_clause'", first);
       if (enforce && val != 0 && val != 1)
         error ("invalid literal '%d' as argument to "
-               "'cb_has_external_clause_lit'",
+               "'cb_has_external_clause'",
                val);
       if (second)
-        error (
-            "additional argument '%s' to 'cb_has_external_clause_lit %d'",
-            second, val);
+        error ("additional argument '%s' to 'cb_has_external_clause %d'",
+               second, val);
       if (!mobical.donot.mock_propagator)
-        error ("cannot execute 'cb_has_external_clause_lit' (try with "
+        error ("cannot execute 'cb_has_external_clause' (try with "
                "'--no-mock')");
       c = new CBHasClauseCall (val);
     } else if (!strcmp (keyword, "cb_check_found_model")) {
