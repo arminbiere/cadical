@@ -415,9 +415,13 @@ void External::add_observed_var (int elit) {
     mark (tainted, elit);
   }
   if (!tainted.empty ()) {
+    const bool was_from_propagator = internal->from_propagator;
+    assert (!internal->force_no_backtrack);
+    internal->from_propagator = 0;
     if (internal->force_no_backtrack)
       FATAL ("can not add ");
     restore_clauses ();
+    internal->from_propagator = was_from_propagator;
   }
 
   LOG ("marking %d as externally watched", eidx);
