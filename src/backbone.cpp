@@ -527,6 +527,8 @@ void Internal::keep_backbone_candidates (
 
 unsigned Internal::compute_backbone () {
   size_t failed = 0;
+  if (terminated_asynchronously ()) // REVIEW
+    return failed; 
 
   int64_t ticks = 0;
   backbone_propagate2 (ticks);

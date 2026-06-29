@@ -412,7 +412,8 @@ bool Internal::subsume_round () {
   int64_t left_over_from_last_subsumption_round = 0;
 
   for (auto c : clauses) {
-
+    if (terminated_asynchronously ())
+      break;
     if (c->garbage)
       continue;
     if (c->size > opts.subsumeclslim)

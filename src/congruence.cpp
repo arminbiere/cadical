@@ -296,6 +296,8 @@ bool Closure::find_binary (int lit, int other) const {
 void Closure::extract_binaries () {
   if (!internal->opts.congruencebinaries)
     return;
+  if (internal->terminated_asynchronously ()) // REVIEW
+    return;
   START (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
 
@@ -308,6 +310,10 @@ void Closure::extract_binaries () {
       continue;
     if (c->size > 2)
       continue;
+    if (internal->terminated_asynchronously ()) { // REVIEW
+      STOP (extractbinaries);
+      return;
+    }
     assert (c->size == 2);
     const int lit = c->literals[0];
     const int other = c->literals[1];
@@ -316,6 +322,10 @@ void Closure::extract_binaries () {
     binaries.push_back (CompactBinary (c, c->id,
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));
+  }
+  if (internal->terminated_asynchronously ()) {
+    STOP (extractbinaries);
+    return;
   }
 
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
@@ -343,6 +353,11 @@ void Closure::extract_binaries () {
 
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size; ++i) {
+    if (internal->terminated_asynchronously ()) { // REVIEW
+      STOP (extractbinaries);
+      return;
+    }
+
     Clause *d = internal->clauses[i]; // binary clauses are appended, so
                                       // reallocation possible
     if (d->garbage)
@@ -389,12 +404,20 @@ void Closure::extract_binaries () {
 
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
+  if (internal->terminated_asynchronously ()) {
+    STOP (extractbinaries);
+    return;
+  }
+
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (internal), compact_binary_order (internal));
+
   const size_t new_size = binaries.size ();
   {
     size_t i = 0;
     for (size_t j = 1; j < new_size; ++j) {
+      //if (internal->terminated_asynchronously ()) // REVIEW
+      //  break;
       assert (i < j);
       if (binaries[i].lit1 == binaries[j].lit1 &&
           binaries[i].lit2 == binaries[j].lit2) {
@@ -411,6 +434,7 @@ void Closure::extract_binaries () {
   }
   binaries.clear ();
   STOP (extractbinaries);
+  internal->report ('c'); // TODO: REMOVE
   VERBOSE (2,
            "[congruence-%" PRId64
            "] extracted %zu binaries (plus %zu already "
@@ -3381,6 +3405,8 @@ void Closure::extract_and_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceand)
     return;
+  if (internal->terminated_asynchronously ()) // REVIEW
+    return;
   START (extractands);
 
   marks.resize (internal->max_var * 2 + 3);
@@ -4338,8 +4364,11 @@ void Closure::extract_xor_gates () {
   for (auto c : candidates) {
     if (internal->unsat)
       break;
-    if (internal->terminated_asynchronously ()) // REVIEW: TA added
-      break;
+    if (internal->terminated_asynchronously ()) { // REVIEW: TA added
+      STOP (extractxors);
+      return;
+    } 
+      
     if (c->garbage)
       continue;
     extract_xor_gates_with_base_clause (c);
@@ -4353,6 +4382,10 @@ void Closure::extract_xor_gates () {
 
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
+  if (internal->terminated_asynchronously ()) // REVIEW
+    return;
+  VERBOSE (2, "find_units"); // TODO: remove <v
+  internal->report ('c');
   size_t units = 0;
   for (auto v : internal->vars) {
   RESTART:
@@ -4389,13 +4422,15 @@ void Closure::find_units () {
     }
     assert (internal->analyzed.empty ());
   }
-  LOG ("found %zd units", units);
+  LOG ("found %zd units", units); 
+  internal->report ('c'); // TODO: REMOVE
   (void) units;
 }
 
 void Closure::find_equivalences () {
   assert (!internal->unsat);
-
+  if (internal->terminated_asynchronously ()) // REVIEW
+    return;
   for (auto v : internal->vars) {
   RESTART:
     if (!internal->flags (v).active ())
@@ -4908,6 +4943,8 @@ bool Closure::propagate_binary_clauses_in_and_gates () {
 }
 
 size_t Closure::propagate_units_and_equivalences () {
+  if (internal->terminated_asynchronously ()) // REVIEW: Is this fine to do?
+    return 0;
   START (congruencemerge);
   size_t propagated = 0;
   LOG ("propagating at least %zd units", schedule.size ());
@@ -7834,6 +7871,9 @@ void Closure::extract_gates () {
 /*------------------------------------------------------------------------*/
 // top level function to extract gate
 bool Internal::extract_gates (bool remove_units_before_run) {
+  VERBOSE (2, "extracting gates"); // TODO: remove
+  if (terminated_asynchronously ())
+    return false;
   if (unsat)
     return false;
   if (!opts.congruence)
@@ -7901,26 +7941,27 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   closure->extract_gates ();
   assert (unsat || closure->chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  closure->reset_extraction ();
+  if (!internal->terminated_asynchronously ())
+    closure->reset_extraction (); // TODO: needed ? 
 
-  if (!unsat) {
+  if (!unsat && !internal->terminated_asynchronously ()) { // REVIEW: Can i wrap this in TA? Because then we can surely skip one watches construction i case of TA
     closure->find_units ();
     assert (unsat || closure->chain.empty ());
     assert (unsat || lrat_chain.empty ());
-    if (!internal->unsat) {
+    if (!internal->unsat && !internal->terminated_asynchronously ()) {
       closure->find_equivalences ();
       assert (unsat || closure->chain.empty ());
       assert (unsat || lrat_chain.empty ());
 
-      if (!unsat) {
+      if (!unsat && !internal->terminated_asynchronously ()) {
         const int propagated = closure->propagate_units_and_equivalences ();
         assert (unsat || closure->chain.empty ());
-        if (!unsat && propagated)
+        if (!unsat && propagated && !internal->terminated_asynchronously ())
           closure->forward_subsume_matching_clauses ();
       }
     }
   }
-  assert (closure->new_unwatched_binary_clauses.empty ());
+  assert (closure->new_unwatched_binary_clauses.empty () || internal->terminated_asynchronously ());
   delete_closure.free ();
 
   internal->clear_watches ();

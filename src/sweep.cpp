@@ -94,7 +94,6 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses) {
-    // TODO: ta here 
     if (terminated_asynchronously ()) // REVIEW
       break;
     if (!c->garbage) {
@@ -1754,6 +1753,8 @@ bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
 }
 
 unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
+  if (terminated_asynchronously ()) // REVIEW
+    return 0;
   vector<sweep_candidate> fresh;
   for (const auto &idx : vars) {
     Flags &f = flags (idx);
@@ -1783,6 +1784,8 @@ unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
 
 unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
   unsigned rescheduled = 0;
+  if (terminated_asynchronously ()) // REVIEW
+    return rescheduled; 
   for (const auto &idx : sweep_schedule) {
     Flags &f = flags (idx);
     if (!f.active ())
@@ -1802,6 +1805,8 @@ unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
 }
 
 unsigned Internal::incomplete_variables () {
+  //if (terminated_asynchronously ())
+  //    return 0;
   unsigned res = 0;
   for (const auto &idx : vars) {
     Flags &f = flags (idx);

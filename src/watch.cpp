@@ -1,5 +1,4 @@
 #include "internal.hpp"
-
 namespace CaDiCaL {
 
 void Internal::init_watches () {
@@ -29,7 +28,7 @@ void Internal::connect_watches (bool irredundant_only) {
   assert (watching ());
 
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
-
+  report (':'); // TODO: remove
   // First connect binary clauses.
   //
   for (const auto &c : clauses) {
@@ -73,7 +72,7 @@ void Internal::connect_watches (bool irredundant_only) {
       }
     }
   }
-
+  report (':'); // TODO remove
   STOP (connect);
 }
 

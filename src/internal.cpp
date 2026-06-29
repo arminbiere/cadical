@@ -743,14 +743,12 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   int old_eliminated = stats.vars_all_elim;
-
   if (opts.inprobing)
     inprobe (false);
   if (opts.elim)
     elim (false);
   if (opts.condition)
     condition (false);
-
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
   assert (preprocessing);
@@ -798,18 +796,13 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
-
   if (extract_gates (true))
     decompose ();
   binary_clauses_backbone ();
-
   if (sweep ())
     decompose ();
-
   mark_duplicated_binary_clauses_as_garbage ();
-
   factor ();
-
   elimfast ();
 
   if (opts.fastelim)
@@ -995,7 +988,7 @@ int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   stats.searches++;
   START (solve);
-  activating_all_new_imported_literals ();
+  activating_all_new_imported_literals (); // TODO: can and should this return early?
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {

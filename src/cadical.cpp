@@ -277,6 +277,7 @@ void App::print_witness (FILE *file) {
         continue;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      solver->internal->terminated_asynchronously (); // REVIEW: This only terminates if a signal is raised 
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -298,6 +299,7 @@ void App::print_witness (FILE *file) {
         continue;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      solver->internal->terminated_asynchronously (); // REVIEW: This only terminates if a signal is raised 
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -1010,6 +1012,8 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
+  solver->internal->report ('!'); // TODO: Remove. Just for finding uncovered parts.
+  //solver->internal->opts.log = 1; // TODO: Remove. Just for debugging
   Signal::set_received (sig);
 /* // REVIEW: removed non-async-safe code from the signal handler
 #ifndef QUIET
@@ -1051,15 +1055,8 @@ void App::catch_alarm () {
 int main (int argc, char **argv) {
 
   // REVIEW: added reraising logic and made sure app is destructed correctly
-  // Here we may use the old variant with just reraising.
-  // We could also make sure the desctructor runs first. Is there any benefit to this?
-  // int res;
-  // int sig;
-  // {
-  //  CaDiCaL::App app;  
-  //  res = app.main (argc, argv);
-  //  sig = Signal::received ();
-  // }
+  // TODO: This may not be necessary anymore with reraising in 
+  //       terminated_asynchronously ()
 
   CaDiCaL::App app;
   
