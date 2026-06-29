@@ -223,6 +223,7 @@ int Internal::warmup_decide_assumptions () {
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
       new_trail_level (0);
+      notify_decision ();
       LOG ("added pseudo decision level");
     } else {
       LOG ("deciding assumption %d", lit);
@@ -434,8 +435,8 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (notified_level == 0); // if no assumptions or only already satisfied ones, don't notify
-
+  const bool no_backtrack_notification = (level == 0); // if no assumptions or only already satisfied ones, don't notify
+  LOG ("no_backtrack_notification = %d, notified_level= %d", no_backtrack_notification, notified_level);
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
   assert (!private_steps);

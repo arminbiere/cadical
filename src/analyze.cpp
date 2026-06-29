@@ -603,7 +603,7 @@ inline int Internal::find_conflict_level (int &forced) {
     }
   }
 
-  LOG ("%d literals on actual conflict level %d", count, res);
+  LOG (conflict, "%d literals on actual conflict level %d", count, res);
 
   const int size = conflict->size;
   int *lits = conflict->literals;
@@ -613,7 +613,7 @@ inline int Internal::find_conflict_level (int &forced) {
   for (int i = 0; i < 2; i++) {
 
     const int lit = lits[i];
-
+    assert (val (lit) < 0);
     int highest_position = i;
     int highest_literal = lit;
     int highest_level = var (highest_literal).level;
