@@ -1239,7 +1239,18 @@ private:
   friend struct ResetObservedCall;
   friend struct PropagateLemmaCall;
   friend struct DisconnectCall;
+  friend struct CBDecideCall;
+  friend struct CBPropagateCall;
+  friend struct CBHasClauseCall;
+  friend struct CBAddClauseCall;
+  friend struct CBAddReasonCall;
+  friend struct CBCheckModelCall;
+  friend struct NotifyBatchAssignmentCall;
+  friend struct NotifyAssignmentCall;
+  friend struct NotifyBacktrackCall;
+  friend struct NotifyLevelCall;
   friend class MockPropagator;
+  friend class ReplayPropagator;
 };
 
 /*========================================================================*/
