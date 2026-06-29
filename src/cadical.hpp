@@ -1231,6 +1231,25 @@ private:
   ExternalPropagator *get_propagator ();
   bool observed (int lit);
 
+  friend struct VarsCall;
+  friend struct ActiveCall;
+  friend struct RedundantCall;
+  friend struct IrredundantCall;
+  friend struct FreezeCall;
+  friend struct FrozenCall;
+  friend struct MeltCall;
+  friend struct LimitCall;
+  friend struct OptimizeCall;
+  friend struct StatsCall;
+  friend struct ResizeCall;
+  friend struct DeclareMoreVariablesCall;
+  friend struct DeclareOneMoreVariableCall;
+  friend struct FixedCall;
+  friend struct PhaseCall;
+  friend struct UnPhaseCall;
+  friend struct ReserveCall;
+  friend struct IsDecisionCall;
+  friend struct CurrentValueCall;
   friend struct LemmaCall;
   friend struct DecideCall;
   friend struct MockForceCall;
