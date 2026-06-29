@@ -1001,6 +1001,11 @@ void Internal::fix_trail_levels () {
       learn_unit_clause (lit);
       lrat_chain = std::move (tmp);
     }
+    if (!res) {
+      mark_garbage(reason);
+      var (lit).reason = nullptr;
+      mark_fixed (lit);
+    }
   }
   out_of_order_level = -1;
   out_of_order_trail = -1;
