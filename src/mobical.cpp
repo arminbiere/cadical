@@ -5981,9 +5981,11 @@ void Reader::parse () {
     lineno++;
   }
   if (adding) {
-    assert (prev);
-    error ("EOF after '%s %d' without '%s 0'", prev->keyword (), prev->arg,
-           prev->keyword ());
+    if (enforce) {
+      assert (prev);
+      error ("EOF after '%s %d' without '%s 0'", prev->keyword (),
+             prev->arg, prev->keyword ());
+    }
   }
 }
 
