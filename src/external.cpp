@@ -90,7 +90,7 @@ void External::reserve (int new_max_var) {
 }
 
 void External::init (int new_max_var, bool extension) {
-  assert (!extended);
+  assert (extension || !extended);
   LOG ("%d external variables from %d", new_max_var, max_var);
   assert (!max_var ||
           internal->i2e.size () == (size_t) internal->max_var + 1);
