@@ -4226,9 +4226,8 @@ void Trace::hooks_uninstall (void) {
   *static_cast<volatile free_t *> (&::hook_free) = nullptr;
 }
 
-
-void Trace::account_terminate_delay_allocation () {
 #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
+void Trace::account_terminate_delay_allocation () {
   if (!process_type(current_call_type)) {
     return;
   }
@@ -4265,14 +4264,15 @@ void Trace::account_terminate_delay_allocation () {
       hooks_install ();
     }
   }
-#endif
 }
+#endif
 // -------------------------------------------
 
 void *Trace::hook_malloc (size_t size) {
+  #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
   // mobical malloc count terminator
   account_terminate_delay_allocation ();
-
+  #endif
   // Failing allocator
   if (memory_bad_alloc > 0) {
     memory_bad_size += size + 1; // + 1 to catch allocations of size 0
