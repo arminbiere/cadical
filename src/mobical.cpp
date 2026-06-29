@@ -1171,6 +1171,8 @@ public:
     auto lemma = external_lemmas[reason_id];
     assert (lemma->type == PROPAGATING);
     int lit = lemma->next_lit ();
+    while (lit && !s->observed (lit))
+      lit = lemma->next_lit ();
 
     if (!lit) {
       lemma->add_count++;
