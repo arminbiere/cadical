@@ -1932,13 +1932,17 @@ inline bool Internal::terminated_asynchronously (int factor) {
 #ifndef QUIET
     if (!opts.quiet) {
       message ();
-      //signal_message ("caught", sig); // TODO: define in internal
+      message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), "caught",
+                tout.bright_red_code (), sig, tout.red_code (),
+                Signal::name (sig), tout.normal_code ());
       section ("result");
       message ("UNKNOWN");
       print_statistics ();
       print_resource_usage ();
       message ();
-      //signal_message ("raising", sig); // TODO: from internal
+      message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), "raising",
+                tout.bright_red_code (), sig, tout.red_code (),
+                Signal::name (sig), tout.normal_code ());
     }
 #endif
 

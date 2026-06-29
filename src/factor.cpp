@@ -1427,7 +1427,7 @@ bool Internal::run_factorization (int64_t limit) {
       VERBOSE (2, "factorization ticks limit hit");
       break;
     }
-    if (terminated_asynchronously ())
+    if (terminated_asynchronously ()) // TODO: somehow a ticks update is missed with this
       break;
     Flags &f = flags (first_idx);
     const unsigned bit = 1u << (first < 0);

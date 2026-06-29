@@ -1863,7 +1863,7 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
 #ifdef QUIET
   (void) scheduled, (void) swept;
 #endif
-  assert (sweep_schedule.empty ());
+  assert (sweep_schedule.empty () || terminated_asynchronously ()); // REVIEW
   assert (sweep_incomplete);
   for (all_scheduled (idx))
     if (active (idx)) {

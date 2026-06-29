@@ -1012,8 +1012,7 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-  solver->internal->report ('!'); // TODO: Remove. Just for finding uncovered parts.
-  //solver->internal->opts.log = 1; // TODO: Remove. Just for debugging
+  solver->internal->report ('!'); // TODO: Remove. Useful for finding uncovered parts.
   Signal::set_received (sig);
 /* // REVIEW: removed non-async-safe code from the signal handler
 #ifndef QUIET
