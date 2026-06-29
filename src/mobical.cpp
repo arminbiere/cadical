@@ -1191,7 +1191,7 @@ public:
       fatal ("expected callback '%s' does not match 'notify_assignment'",
              ct_to_str (c->type));
     if (!relaxed && c->arg) {
-      assert (c->val == 1);
+      assert (c->val == 0);
       if (lits.size () != 1)
         fatal ("expected single assignment, not %zd", lits.size ());
       if (lits[0] != c->arg)
@@ -1327,7 +1327,6 @@ public:
   }
 
   bool cb_has_external_clause (bool &is_forgettable) override {
-    (void) is_forgettable;
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_has_external_clause'",
              current_action);
@@ -1343,8 +1342,10 @@ public:
     if (!relaxed && c->type != Call::CB_HAS_CLAUSE)
       fatal ("expected callback '%s' does not match 'notify_assignment'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_HAS_CLAUSE)
+    else if (c->type == Call::CB_HAS_CLAUSE) {
+      is_forgettable = c->val;
       return c->res;
+    }
     return 0;
   }
 
@@ -2596,7 +2597,7 @@ struct IsDecisionCall : public Call {
 };
 
 struct CBHasClauseCall : public Call {
-  CBHasClauseCall (int r) : Call (CB_HAS_CLAUSE, 0, r) {}
+  CBHasClauseCall (int r, int v) : Call (CB_HAS_CLAUSE, 0, r, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (delay);
     Call::execute (s, extendmap, delay);
@@ -2605,8 +2606,8 @@ struct CBHasClauseCall : public Call {
     assert (rp);
     rp->push_action (copy ());
   }
-  void print (ostream &o) { o << keyword () << " " << res; }
-  Call *copy () { return new CBHasClauseCall (res); }
+  void print (ostream &o) { o << keyword () << " " << res << " " << val; }
+  Call *copy () { return new CBHasClauseCall (res, val); }
   const char *keyword () { return "cb_has_external_clause"; }
 };
 
@@ -6477,19 +6478,24 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "cb_has_external_clause")) {
       if (!first)
         error ("argument to 'cb_has_external_clause' missing");
-      if (!parse_int_str (first, val))
+      if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_has_external_clause'", first);
+      if (enforce && lit != 0 && lit != 1)
+        error ("invalid literal '%d' as argument to "
+               "'cb_has_external_clause'",
+               lit);
+      if (!second)
+        error ("second argument to 'cb_has_external_clause' missing");
+      if (!parse_int_str (second, val))
+        error ("invalid argument '%s' to 'cb_has_external_clause'", second);
       if (enforce && val != 0 && val != 1)
         error ("invalid literal '%d' as argument to "
                "'cb_has_external_clause'",
                val);
-      if (second)
-        error ("additional argument '%s' to 'cb_has_external_clause %d'",
-               second, val);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_has_external_clause' (try with "
                "'--no-mock')");
-      c = new CBHasClauseCall (val);
+      c = new CBHasClauseCall (lit, val);
     } else if (!strcmp (keyword, "cb_check_found_model")) {
       if (!first)
         error ("argument to 'cb_check_found_model' missing");

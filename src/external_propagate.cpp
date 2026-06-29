@@ -35,6 +35,15 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
   } while (0)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  do { \
+    LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, RET1, RET2); \
+  } while (0)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   do { \
     LOG (#NAME "(%d) on level %d END", VAL, level); \
@@ -369,7 +378,8 @@ bool Internal::ask_external_clause () {
   LOG_INTERACTION_START (cb_has_external_clause);
   bool res =
       external->propagator->cb_has_external_clause (ext_clause_forgettable);
-  LOG_INTERACTION_RETURN (cb_has_external_clause, res);
+  LOG_INTERACTION_RETURN_TWO (cb_has_external_clause, res,
+                              ext_clause_forgettable);
 
   return res;
 }
