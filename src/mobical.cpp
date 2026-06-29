@@ -2807,7 +2807,7 @@ struct DisconnectCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (!delay);
     Call::execute (s, extendmap, delay);
-    if (mobical.donot.mock_propagator) {
+    if (!mobical.donot.mock_propagator) {
       MockPropagator *mp =
           static_cast<MockPropagator *> (s->get_propagator ());
       assert (mp);
@@ -5545,7 +5545,8 @@ bool Trace::shrink_propagator (int expected) {
       simplified.clear ();
       reduced = true;
       progress ();
-    }
+    } else
+      simplified.clear ();
   }
   while (connected--) {
     bool remove_next_disconnect = false;
