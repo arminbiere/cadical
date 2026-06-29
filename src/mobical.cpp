@@ -917,34 +917,35 @@ struct Call {
     RESET_OBSERVED      = shift ( 40 ),
     IS_DECISION         = shift ( 41 ),
     CURRENT_VALUE       = shift ( 42 ),
+    OBSERVED            = shift ( 43 ),
     
-    LEMMA               = shift ( 43 ),
-    DECIDE              = shift ( 44 ),
-    FORCE               = shift ( 45 ),
+    LEMMA               = shift ( 44 ),
+    DECIDE              = shift ( 45 ),
+    FORCE               = shift ( 46 ),
     
-    CB_DECIDE           = shift ( 46 ),
-    CB_PROPAGATE        = shift ( 47 ),
-    CB_HAS_CLAUSE       = shift ( 48 ),
-    CB_ADD_CLAUSE       = shift ( 49 ),
-    CB_ADD_REASON       = shift ( 50 ),
-    CB_CHECK_MODEL      = shift ( 51 ),
-    NOTIFY_ASSIGNMENT   = shift ( 52 ),
-    NOTIFY_BACKTRACK    = shift ( 53 ),
-    NOTIFY_LEVEL        = shift ( 54 ),
+    CB_DECIDE           = shift ( 47 ),
+    CB_PROPAGATE        = shift ( 48 ),
+    CB_HAS_CLAUSE       = shift ( 49 ),
+    CB_ADD_CLAUSE       = shift ( 50 ),
+    CB_ADD_REASON       = shift ( 51 ),
+    CB_CHECK_MODEL      = shift ( 52 ),
+    NOTIFY_ASSIGNMENT   = shift ( 53 ),
+    NOTIFY_BACKTRACK    = shift ( 54 ),
+    NOTIFY_LEVEL        = shift ( 55 ),
 
-    CONCLUDE            = shift ( 55 ),
-    DISCONNECT          = shift ( 56 ),
+    CONCLUDE            = shift ( 56 ),
+    DISCONNECT          = shift ( 57 ),
                         
-    TRACEPROOF          = shift ( 57 ),
-    FLUSHPROOFTRACE     = shift ( 58 ),
-    CLOSEPROOFTRACE     = shift ( 59 ),
+    TRACEPROOF          = shift ( 58 ),
+    FLUSHPROOFTRACE     = shift ( 59 ),
+    CLOSEPROOFTRACE     = shift ( 60 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC            = shift ( 60 ),
-    LEAKALLOC           = shift ( 61 ),
+    MAXALLOC            = shift ( 61 ),
+    LEAKALLOC           = shift ( 62 ),
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE           = shift ( 62 ),
+    TERMINATE           = shift ( 63 ),
 #endif
 
     // clang-format on
@@ -952,7 +953,7 @@ struct Call {
     // These are used for contracts during parsing
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE |
+             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE | OBSERVED |
              RESET_OBSERVED | IS_DECISION | CURRENT_VALUE | DECLARE |
              DECLARE_VARS,
     MOCK = LEMMA | DECIDE | FORCE,
@@ -2488,6 +2489,24 @@ struct ConnectCall : public Call {
   }
   Call *copy () { return new ConnectCall (); }
   const char *keyword () { return "connect"; }
+};
+
+struct ObservedCall : public Call {
+  ObservedCall (int l) : Call (OBSERVED, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->get_propagator ());
+      assert (rp);
+      rp->push_action (copy ());
+    } else {
+      s->observed (map_arg (s, extendmap));
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new ObservedCall (arg); }
+  const char *keyword () { return "observed"; }
 };
 
 struct UnObserveCall : public Call {
@@ -6206,6 +6225,16 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
+    } else if (!strcmp (keyword, "observed")) {
+      if (!first)
+        error ("argument to 'observed' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'observed'", first);
+      if (enforce && (!lit || lit == INT_MIN))
+        error ("invalid argument '%s' to 'observed'", first);
+      if (second)
+        error ("additional argument '%s' to 'observed'", second);
+      c = new ObservedCall (lit);
     } else if (!strcmp (keyword, "observe")) {
       if (!first)
         error ("argument to 'observe' missing");
@@ -6866,9 +6895,11 @@ void Reader::parse () {
     lineno++;
   }
   if (adding) {
-    assert (prev);
-    error ("EOF after '%s %d' without '%s 0'", prev->keyword (), prev->arg,
-           prev->keyword ());
+    if (enforce) {
+      assert (prev);
+      error ("EOF after '%s %d' without '%s 0'", prev->keyword (),
+             prev->arg, prev->keyword ());
+    }
   }
 }
 

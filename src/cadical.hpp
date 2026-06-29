@@ -1254,6 +1254,7 @@ private:
   friend struct DecideCall;
   friend struct MockForceCall;
   friend struct ObserveCall;
+  friend struct ObservedCall;
   friend struct UnObserveCall;
   friend struct ResetObservedCall;
   friend struct PropagateLemmaCall;
