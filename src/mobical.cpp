@@ -84,6 +84,7 @@ static const char *USAGE =
 "When replaying a trace with user propagator, use the following\n"
 "  --no-mock         disable mock propagator (allows replay of propagators)\n"
 "  --no-mock-relaxed does not fail if the replay diverges from the trace\n"
+"  --trace           trace calls to <output> instead of copying\n"
 "\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
