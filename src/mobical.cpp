@@ -11,6 +11,7 @@
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <cstdio>
 #include <memory>
 namespace CaDiCaL {
 
@@ -577,6 +578,18 @@ struct ExtendMap {
     Internal *internal = s->internal; \
     LOG (__VA_ARGS__); \
   } while (0)
+#define MLOGS(str) MLOG (<< "'" << str << "' started" << std::endl)
+#define RLOGS(str) RLOG (<< "'" << str << "' started" << std::endl)
+#define MLOGE(str, other) \
+  do { \
+    MLOG (<< "'" << str << "' returns"); \
+    CLOG (other << std::endl); \
+  } while (0)
+#define RLOGE(str, other) \
+  do { \
+    RLOG (<< "'" << str << "' returns"); \
+    CLOG (other << std::endl); \
+  } while (0)
 #else
 #define RLOG(str) \
   do { \
@@ -588,6 +601,18 @@ struct ExtendMap {
   do { \
   } while (false)
 #define ILOG(...) \
+  do { \
+  } while (false)
+#define MLOGS(str) \
+  do { \
+  } while (false)
+#define RLOGS(str) \
+  do { \
+  } while (false)
+#define RLOGE(str, other) \
+  do { \
+  } while (false)
+#define MLOGE(str, other) \
   do { \
   } while (false)
 #endif
@@ -1177,10 +1202,14 @@ public:
   void push_action (Call *c) { cb_actions.push_back (c); }
 
   void notify_assignment (const std::vector<int> &lits) override {
+    RLOGS ("notify_assignments(" << lits.size () << ")");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'notify_assignment'", current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_assignments(" << lits.size () << ")",
+             " (out of actions)");
       return;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1199,14 +1228,25 @@ public:
         fatal ("expected %d does not match assignment %d", c->val, lits[0]);
     } else if (!relaxed && (size_t) c->val != lits.size ())
       fatal ("expected %d assignments, not %zd", c->val, lits.size ());
+    if (c->type == Call::NOTIFY_ASSIGNMENT)
+      RLOGE ("notify_assignments(" << lits.size () << ")",
+             " " << lits.size () " new assignments");
+    else {
+      RLOGE ("notify_assignments(" << lits.size () << ")",
+             " (replay does not match)");
+      current_action--;
+    }
   }
 
   void notify_new_decision_level () override {
+    RLOGS ("notify_new_decision_level");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'notify_new_decision_level'",
              current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_new_decision_level", " (out of actions)");
       return;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1215,15 +1255,25 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::NOTIFY_LEVEL)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match "
+             "'notify_new_decision_level'",
              ct_to_str (c->type));
+    if (c->type == Call::NOTIFY_LEVEL)
+      RLOGE ("notify_new_decision_level", " " c->val - 1 << " -> " c->val);
+    else {
+      RLOGE ("notify_new_decision_level", " (replay does not match)");
+      current_action--;
+    }
   }
 
   void notify_backtrack (size_t new_level) override {
+    RLOGS ("notify_backtrack(" << new_level << ")");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'notify_backtrack'", current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_backtrack(" << new_level << ")", " (out of actions)");
       return;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1232,20 +1282,31 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::NOTIFY_BACKTRACK)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match 'notify_backtrack'",
              ct_to_str (c->type));
     if (!relaxed && new_level != (size_t) c->val)
       fatal ("expected backtrack level %d does not match %zd", c->val,
              new_level);
+    if (c->type == Call::NOTIFY_BACKTRACK)
+      RLOGE ("notify_backtrack(" << new_level << ")", "");
+    else {
+      RLOGE ("notify_backtrack(" << new_level << ")",
+             " (replay does not match)");
+      current_action--;
+    }
   }
 
   bool cb_check_found_model (const std::vector<int> &model) override {
+    RLOGS ("cb_check_found_model(" << model.size () << ")");
     (void) model;
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_check_found_model'",
              current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_check_found_model(" << model.size () << ")",
+             << " false (out of actions)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1254,18 +1315,27 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_CHECK_MODEL)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match 'cb_check_found_model'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_CHECK_MODEL)
+    else if (c->type == Call::CB_CHECK_MODEL) {
+      RLOGE ("cb_check_found_model(" << model.size () << ")",
+             << " " << (c->res ? "true" : false));
       return c->res;
+    }
+    current_action--;
+    RLOGE ("cb_check_found_model(" << model.size () << ")",
+           << " false (replay does not match)");
     return 0; // always return 0
   }
 
   int cb_decide () override {
+    RLOGS ("cb_decide");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_decide'", current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_decide", " 0 (out of actions)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1274,18 +1344,25 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_DECIDE)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match 'cb_decide'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_DECIDE)
+    else if (c->type == Call::CB_DECIDE) {
+      RLOGE ("cb_decide", " " << c->arg);
       return c->arg;
+    }
+    RLOGE ("cb_decide", " 0 (replay does not match)");
+    current_action--;
     return 0; // always return 0
   }
 
   int cb_propagate () override {
+    RLOGS ("cb_propagate");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_propagate'", current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_propagate", " 0 (out of actions)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1294,20 +1371,27 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_PROPAGATE)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match 'cb_propagate'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_PROPAGATE)
+    else if (c->type == Call::CB_PROPAGATE) {
+      RLOGE ("cb_propagate", " " << c->arg);
       return c->arg;
+    }
+    current_action--;
+    RLOGE ("cb_propagate", " 0 (out of actions)");
     return 0;
   }
 
   int cb_add_reason_clause_lit (int propagated_lit) override {
-    (void) propagated_lit;
+    RLOGS ("cb_add_reason_clause_lit(" << propagated_lit << ")");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_add_reason_clause_lit'",
              current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
+             " 0 (out of actions)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1316,23 +1400,33 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_ADD_REASON)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match "
+             "'cb_add_reason_clause_lit'",
              ct_to_str (c->type));
     if (!relaxed && c->arg != propagated_lit)
       fatal ("expected argument '%d' does not match "
              "'cb_add_reason_clause_lit %d'",
              c->arg, propagated_lit);
-    if (c->type == Call::CB_ADD_REASON)
+    if (c->type == Call::CB_ADD_REASON) {
+      RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
+             " " c->val);
       return c->val;
+    }
+    current_action--;
+    RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
+           " 0 (replay does not match)");
     return 0;
   }
 
   bool cb_has_external_clause (bool &is_forgettable) override {
+    RLOGS ("cb_has_external_clause");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_has_external_clause'",
              current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_has_external_clause", " false (out of action)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1341,21 +1435,30 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_HAS_CLAUSE)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
-             ct_to_str (c->type));
+      fatal (
+          "expected callback '%s' does not match 'cb_has_external_clause'",
+          ct_to_str (c->type));
     else if (c->type == Call::CB_HAS_CLAUSE) {
+      RLOGE ("cb_has_external_clause",
+             " " << (c->res ? (c->val ? "redundant" : "irredundant")
+                            : "false"));
       is_forgettable = c->val;
       return c->res;
     }
+    current_action--;
+    RLOGE ("cb_has_external_clause", " false (replay does not match)");
     return 0;
   }
 
   int cb_add_external_clause_lit () override {
+    RLOGS ("cb_add_external_clause");
     if (!relaxed && cb_actions.size () <= current_action)
       fatal ("out of actions %zd in 'cb_add_external_clause_lit'",
              current_action);
-    else if (cb_actions.size () <= current_action)
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_add_external_clause", " 0 (out of actions)");
       return 0;
+    }
     assert (cb_actions.size () > current_action);
     Call *c = cb_actions[current_action++];
     while (c->always_type ()) {
@@ -1364,10 +1467,15 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_ADD_CLAUSE)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
+      fatal ("expected callback '%s' does not match "
+             "'cb_add_external_clause_lit'",
              ct_to_str (c->type));
-    else if (c->type == Call::CB_ADD_CLAUSE)
+    else if (c->type == Call::CB_ADD_CLAUSE) {
+      RLOGE ("cb_add_external_clause", " " << c->arg);
       return c->arg;
+    }
+    current_action--;
+    RLOGE ("cb_add_external_clause", " 0 (replay does not match)");
     return 0;
   }
 };
@@ -1522,8 +1630,8 @@ public:
     assert (lit != INT_MIN);
     nof_decide++;
 
-    MLOG ("push decide to position " << external_decide.size ());
-    CLOG (std::endl);
+    MLOG ("push decide to position " << external_decide.size ()
+                                     << std::endl);
 
     external_decide.push_back (Decisions (lit, delay));
   }
@@ -1574,17 +1682,22 @@ public:
   }
 
   void add_observed (int lit) {
-    if (observed_map[abs (lit)])
+    if (observed_map[abs (lit)]) {
+      MLOG ("ignore already observed " << lit << std::endl);
       return;
+    }
     assert (!value_map[lit]);
     assert (!s->observed (lit));
     observed_map[abs (lit)] = true;
+    MLOG ("adding observed " << lit << std::endl);
     s->add_observed_var (lit);
   }
 
   void remove_observed (int lit) {
-    if (!observed_map[abs (lit)])
+    if (!observed_map[abs (lit)]) {
+      MLOG ("ignore unobserved " << lit << std::endl);
       return;
+    }
     observed_map.erase (abs (lit));
     assert (s->observed (lit));
     auto it =
@@ -1604,6 +1717,7 @@ public:
       value_map[lit] = value_map[-lit] = 0;
       remove_reason (lit);
     }
+    MLOG ("removing observed " << lit << std::endl);
     s->remove_observed_var (lit);
   }
 
@@ -1621,11 +1735,13 @@ public:
       t.clear ();
     }
     observed_fixed.clear ();
+    MLOG ("reset observed");
     s->reset_observed_vars ();
   }
 
   void check_trail () {
-    ILOG ("check consistency of mobical and solver assignments");
+    MLOG ("check consistency of mobical and solver assignments"
+          << std::endl);
 #ifndef NDEBUG
     for (auto &kvp : observed_map) {
       if (!kvp.second)
@@ -1636,16 +1752,22 @@ public:
     }
 #endif
   }
+
   void add_reason (int lit, ExternalLemma *lemma) {
+    MLOG ("add reason(" << lit << ") lemma[" << lemma->id << "]"
+                        << std::endl);
     assert (!reason_map[lit]);
     lemma->propagation_reason = true;
     reason_map[lit] = lemma->id;
     unnotified_propagations.push_back (lit);
   }
+
   void remove_reason (int lit) {
     if (!reason_map[lit])
       return;
     size_t reason_id = reason_map[lit];
+    MLOG ("remove reason(" << lit << ") lemma[" << reason_id << "]"
+                           << std::endl);
     assert (reason_id < external_lemmas.size ());
     external_lemmas[reason_id]->propagation_reason = false;
     external_lemmas[reason_id]->forgettable = true;
@@ -1656,10 +1778,7 @@ public:
 
   /*------------ FixedAssignmentListener functions ---------------------*/
   void notify_fixed_assignment (int lit) override {
-    MLOG ("notify_fixed_assignment: "
-          << lit << " (current level: " << observed_trail.size () - 1
-          << ", current fixed count: " << observed_fixed.size () << ")"
-          << std::endl);
+    MLOGS ("notify_fixed_assignment(" << lit << ")");
 
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
                        lit) == observed_fixed.end ());
@@ -1691,7 +1810,7 @@ public:
   /* -------------------- ExternalPropagator functions -----------------*/
 
   bool cb_check_found_model (const std::vector<int> &model) override {
-    MLOG ("cb_check_found_model (" << model.size () << ") started" << endl);
+    MLOGS ("cb_check_found_model");
     check_trail ();
 #ifndef NDEBUG
     size_t assigned = model.size ();
@@ -1937,7 +2056,7 @@ public:
   }
 
   int cb_propagate () override {
-    MLOG ("cb_propagate starts" << std::endl);
+    MLOGS ("cb_propagate");
     check_trail ();
     // Calls to solver that might force it to backtrack.
     if (get_force (CB_PROPAGATE))
@@ -2025,8 +2144,7 @@ public:
   }
 
   void notify_assignment (const std::vector<int> &lits) override {
-    MLOG ("notified " << lits.size () << " new assignments on level "
-                      << observed_trail.size () - 1 << std::endl);
+    MLOGS ("notify_assignments");
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
@@ -2045,18 +2163,22 @@ public:
     // check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_ASSIGNMENT);
+    MLOGE ("notify_assignments", " " << lits.size ()
+                                     << " new assignments on level "
+                                     << observed_trail.size ());
   }
 
   void notify_new_decision_level () override {
-    MLOG ("notify new decision level " << observed_trail.size () - 1
-                                       << " -> " << observed_trail.size ()
-                                       << std::endl);
+    MLOG ("notify new decision level start" << std::endl);
     level++;
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
     check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_NEW_DECISION_LEVEL);
+    MLOG ("notify new decision level end"
+          << observed_trail.size () - 1 << " -> " << observed_trail.size ()
+          << std::endl);
   }
 
   void notify_backtrack (size_t new_level) override {
