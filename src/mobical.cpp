@@ -578,16 +578,16 @@ struct ExtendMap {
     Internal *internal = s->internal; \
     LOG (__VA_ARGS__); \
   } while (0)
-#define MLOGS(str) MLOG (<< "'" << str << "' started" << std::endl)
-#define RLOGS(str) RLOG (<< "'" << str << "' started" << std::endl)
+#define MLOGS(str) MLOG ("'" << str << "' started" << std::endl)
+#define RLOGS(str) RLOG ("'" << str << "' started" << std::endl)
 #define MLOGE(str, other) \
   do { \
-    MLOG (<< "'" << str << "' returns"); \
+    MLOG ("'" << str << "' returns"); \
     CLOG (other << std::endl); \
   } while (0)
 #define RLOGE(str, other) \
   do { \
-    RLOG (<< "'" << str << "' returns"); \
+    RLOG ("'" << str << "' returns"); \
     CLOG (other << std::endl); \
   } while (0)
 #else
@@ -1230,7 +1230,7 @@ public:
       fatal ("expected %d assignments, not %zd", c->val, lits.size ());
     if (c->type == Call::NOTIFY_ASSIGNMENT)
       RLOGE ("notify_assignments(" << lits.size () << ")",
-             " " << lits.size () " new assignments");
+             " " << lits.size () << " new assignments");
     else {
       RLOGE ("notify_assignments(" << lits.size () << ")",
              " (replay does not match)");
@@ -1259,7 +1259,8 @@ public:
              "'notify_new_decision_level'",
              ct_to_str (c->type));
     if (c->type == Call::NOTIFY_LEVEL)
-      RLOGE ("notify_new_decision_level", " " c->val - 1 << " -> " c->val);
+      RLOGE ("notify_new_decision_level",
+             " " << c->val - 1 << " -> " << c->val);
     else {
       RLOGE ("notify_new_decision_level", " (replay does not match)");
       current_action--;
@@ -1304,7 +1305,7 @@ public:
              current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_check_found_model(" << model.size () << ")",
-             << " false (out of actions)");
+             " false (out of actions)");
       return 0;
     }
     assert (cb_actions.size () > current_action);
@@ -1319,12 +1320,12 @@ public:
              ct_to_str (c->type));
     else if (c->type == Call::CB_CHECK_MODEL) {
       RLOGE ("cb_check_found_model(" << model.size () << ")",
-             << " " << (c->res ? "true" : false));
+             " " << (c->res ? "true" : "false"));
       return c->res;
     }
     current_action--;
     RLOGE ("cb_check_found_model(" << model.size () << ")",
-           << " false (replay does not match)");
+           " false (replay does not match)");
     return 0; // always return 0
   }
 
@@ -1409,7 +1410,7 @@ public:
              c->arg, propagated_lit);
     if (c->type == Call::CB_ADD_REASON) {
       RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
-             " " c->val);
+             " " << c->val);
       return c->val;
     }
     current_action--;
@@ -1942,7 +1943,7 @@ public:
 
       added_lemma_count++;
       MLOGE ("cb_has_external_clause",
-             " " << (forgettable ?: "redundant" : "irredundant"));
+             " " << (forgettable ? "redundant" : "irredundant"));
       return true;
     }
 
@@ -1970,7 +1971,7 @@ public:
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
         MLOGE ("cb_has_external_clause",
-               " " << (forgettable ?: "redundant" : "irredundant"));
+               " " << (forgettable ? "redundant" : "irredundant"));
 
         added_lemma_count++;
         return true;
@@ -2127,7 +2128,7 @@ public:
       }
       add_reason (propagate, lemma);
       MLOGE ("cb_propagate",
-             " " << propagate " (lemma[" << lemma->idx "])");
+             " " << propagate << " (lemma[" << lemma->id << "])");
       return propagate;
     }
 
@@ -2162,7 +2163,7 @@ public:
       remove_reason (plit);
     }
 
-    MLOGE ("cb_add_reason_clause_lit(" << plit ")", " lit");
+    MLOGE ("cb_add_reason_clause_lit(" << plit << ")", " lit");
     return lit;
   }
 
@@ -2215,7 +2216,7 @@ public:
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
         // assert (!reason_map[lit] || s->current_value (lit) <= 0);
-        MLOG ("unassign " << lit << " (reason " reason_map[lit] << "/"
+        MLOG ("unassign " << lit << " (reason " << reason_map[lit] << "/"
                           << reason_map[-lit] << ")");
         remove_reason (lit);
         value_map[lit] = value_map[-lit] = 0;
