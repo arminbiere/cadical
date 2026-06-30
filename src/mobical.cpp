@@ -2626,8 +2626,14 @@ struct ConnectCall : public Call {
       mobical.mock_pointer->collect_prev_fixed ();
     } else {
       assert (!mobical.replay_pointer);
+#ifdef LOGGING
+      mobical.replay_pointer =
+          new ReplayPropagator (s, extendmap, mobical.add_set_log_to_true,
+                                mobical.donot.replay_strict);
+#else
       mobical.replay_pointer = new ReplayPropagator (
           s, extendmap, 0, mobical.donot.replay_strict);
+#endif
       s->connect_external_propagator (mobical.replay_pointer);
     }
   }
@@ -7149,6 +7155,7 @@ int Mobical::main (int argc, char **argv) {
   int64_t bug_limit = -1;
 
   int summary = -1;
+  bool tracing = 0;
 
   // Error message in 'die' also uses colors.
   //
@@ -7198,8 +7205,10 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--no-mock-relaxed")) {
       donot.mock_propagator = true;
       donot.replay_strict = true;
-    } else if (!strcmp (argv[i], "--do-not-shrink") ||
-               !strcmp (argv[i], "--do-not-shrink-at-all"))
+    } else if (!strcmp (argv[i], "--trace"))
+      tracing = 1;
+    else if (!strcmp (argv[i], "--do-not-shrink") ||
+             !strcmp (argv[i], "--do-not-shrink-at-all"))
       donot.shrink.atall = true;
     else if (!strcmp (argv[i], "--do-not-add-options") ||
              !strcmp (argv[i], "--do-not-add-options-before-shrinking"))
@@ -7383,8 +7392,12 @@ int Mobical::main (int argc, char **argv) {
   if (!input_path && donot.mock_propagator)
     die ("can not use '--no-mock' without '<input>'");
 
-  if (output_path && donot.mock_propagator)
-    die ("can not use '--no-mock' with '<output>'");
+  if (output_path && donot.mock_propagator && !tracing)
+    die ("can not use '--no-mock' with '<output>' (except when "
+         "'--tracing')");
+
+  if (tracing && !output_path)
+    die ("can only use '--tracing' with '<output>'");
 
   if (!input_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' without '<input>'");
