@@ -958,7 +958,8 @@ struct Call {
              DECLARE_VARS,
     MOCK = LEMMA | DECIDE | FORCE,
     REPLAY = CB_DECIDE | CB_PROPAGATE | CB_HAS_CLAUSE | CB_ADD_CLAUSE |
-             NOTIFY_ASSIGNMENT | NOTIFY_BACKTRACK | NOTIFY_LEVEL,
+             CB_ADD_REASON | CB_CHECK_MODEL | NOTIFY_ASSIGNMENT |
+             NOTIFY_BACKTRACK | NOTIFY_LEVEL,
 
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF
 #ifdef MOBICAL_MEMORY
@@ -1317,7 +1318,7 @@ public:
     if (!relaxed && c->type != Call::CB_ADD_REASON)
       fatal ("expected callback '%s' does not match 'notify_assignment'",
              ct_to_str (c->type));
-    if (!relaxed && c->arg == propagated_lit)
+    if (!relaxed && c->arg != propagated_lit)
       fatal ("expected argument '%d' does not match "
              "'cb_add_reason_clause_lit %d'",
              c->arg, propagated_lit);
@@ -2627,7 +2628,7 @@ struct CBAddClauseCall : public Call {
 };
 
 struct CBAddReasonCall : public Call {
-  CBAddReasonCall (int l, int v) : Call (CB_ADD_CLAUSE, l, 0, 0, v) {}
+  CBAddReasonCall (int l, int v) : Call (CB_ADD_REASON, l, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (delay);
     Call::execute (s, extendmap, delay);
