@@ -1810,7 +1810,7 @@ public:
   /* -------------------- ExternalPropagator functions -----------------*/
 
   bool cb_check_found_model (const std::vector<int> &model) override {
-    MLOGS ("cb_check_found_model");
+    MLOGS ("cb_check_found_model(" << model.size () << ")");
     check_trail ();
 #ifndef NDEBUG
     size_t assigned = model.size ();
@@ -1832,8 +1832,11 @@ public:
     (void) model;
 
     // Calls to solver that might force it to backtrack.
-    if (get_force (CB_CHECK_FOUND_MODEL))
+    if (get_force (CB_CHECK_FOUND_MODEL)) {
+      MLOGE ("cb_check_found_model(" << model.size () << ")",
+             " false (forced backtrack)");
       return false;
+    }
 
     for (const auto lemma : external_lemmas) {
       if (lemma == nullptr)
@@ -1861,6 +1864,8 @@ public:
       if (unobserved && lemma->type == OBSERVING) {
         // this might trigger a bt
         add_observed (unobserved);
+        MLOGE ("cb_check_found_model(" << model.size () << ")",
+               " false (observe literal)");
         return false;
       }
 
@@ -1869,6 +1874,8 @@ public:
 
       if (!satisfied && lemma->type == PROPAGATING && level) {
         s->force_backtrack (level - 1);
+        MLOGE ("cb_check_found_model(" << model.size () << ")",
+               " false (forced backtrack)");
         return false;
       }
 
@@ -1888,26 +1895,29 @@ public:
         }
         CLOG (std::endl);
 
-        MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
-        CLOG ("false" << std::endl);
+        MLOGE ("cb_check_found_model(" << model.size () << ")",
+               " false (adding falsified lemma)");
         return false;
       }
     }
 
-    MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
-    CLOG ("true" << std::endl);
-
+    MLOGE ("cb_check_found_model(" << model.size () << ")", " true");
     return true;
   }
 
   // Before finalizing the new ipasir-up
   bool cb_has_external_clause () {
+    MLOGS ("cb_has_external_clause");
     bool forgettable = true;
-    return cb_has_external_clause (forgettable);
+    bool res = cb_has_external_clause (forgettable);
+    MLOGE ("cb_has_external_clause",
+           " " << (res ? (forgettable ? "redundant" : "irredundant")
+                       : "false"));
+    return res;
   }
 
   bool cb_has_external_clause (bool &forgettable) override {
-    MLOG ("cb_has_external_clause returns: ");
+    MLOGS ("cb_has_external_clause");
 
     // Calls to solver that might force it to backtrack.
     get_force (CB_HAS_EXTERNAL_CLAUSE);
@@ -1915,7 +1925,7 @@ public:
     forgettable = false;
 
     if (external_lemmas.size () == 1) {
-      CLOG ("false (there are no external lemmas)." << std::endl);
+      MLOGE ("cb_has_external_clause", " false");
       return false;
     }
     assert (external_lemmas.size () > 1);
@@ -1931,12 +1941,15 @@ public:
             << ")." << std::endl);
 
       added_lemma_count++;
+      MLOGE ("cb_has_external_clause",
+             " " << (forgettable ?: "redundant" : "irredundant"));
       return true;
     }
 
     if (added_lemma_count > lemma_per_cb) {
       added_lemma_count = 0;
-      CLOG ("false (lemma per CB treshold reached)." << std::endl);
+      MLOGE ("cb_has_external_clause",
+             " false (lemma per CB treshold reached)");
       return false;
     }
 
@@ -1956,9 +1969,8 @@ public:
         external_lemmas[add_lemma_idx]->delay = 0;
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
-        CLOG ("true (new lemma was found, "
-              << "forgettable: " << forgettable << " id: " << add_lemma_idx
-              << ")." << std::endl);
+        MLOGE ("cb_has_external_clause",
+               " " << (forgettable ?: "redundant" : "irredundant"));
 
         added_lemma_count++;
         return true;
@@ -1971,12 +1983,13 @@ public:
     }
     if (add_lemma_idx >= external_lemmas.size ())
       add_lemma_idx = 1;
-    CLOG ("false." << std::endl);
+    MLOGE ("cb_has_external_clause", " false (no more lemmas)");
 
     return false;
   }
 
   int cb_add_external_clause_lit () override {
+    MLOGS ("cb_add_external_clause_lit");
     // Calls to solver that might force it to backtrack.
     get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
 
@@ -1993,45 +2006,48 @@ public:
             << std::endl);
       lit = lemma->next_lit ();
     }
-    MLOG ("cb_add_external_clause_lit "
-          << lit << " (lemma " << add_lemma_idx << "/"
-          << external_lemmas.size () << ")" << std::endl);
-
     if (!lit)
       lemma->add_count++;
+
+    MLOGE ("cb_add_external_clause_lit",
+           " " << lit << " (lemma " << add_lemma_idx << "/"
+               << external_lemmas.size () << ")");
 
     return lit;
   }
 
   int cb_decide () override {
-    MLOG ("cb_decide starts." << std::endl);
+    MLOGS ("cb_decide");
     check_trail ();
     // Calls to solver that might force it to backtrack.
-    if (get_force (CB_DECIDE))
+    if (get_force (CB_DECIDE)) {
+      MLOGE ("cb_decide", " 0 (forced backtrack)");
       return 0;
+    }
 
     if (external_decide.empty ()) {
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOGE ("cb_decide", " 0 (no more decisions)");
       return 0;
     }
 
     auto &next_decision = external_decide.back ();
     if (next_decision.delay--) {
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOGE ("cb_decide",
+             " 0 (next decision " << next_decision.lit << " delayed)");
       return 0;
     }
     const int lit = next_decision.lit;
     external_decide.pop_back ();
 
     if (!lit) {
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOGE ("cb_decide", " 0");
       return 0;
     }
 
     if (!s->observed (lit)) {
       // do we want to observe?
       add_observed (lit);
-      MLOG ("cb_decide returns " << lit << std::endl);
+      MLOGE ("cb_decide", " " << lit << " (fresh observed)");
       return lit;
     }
 
@@ -2039,19 +2055,19 @@ public:
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       if (s->force_unassign (lit)) {
         // this decision is ignored, but we are asked again.
-        MLOG ("cb_decide returns " << lit << std::endl);
+        MLOGE ("cb_decide", " " << lit << " (after forced backtrack)");
         return lit;
       }
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOGE ("cb_decide", " 0 (forced backtrack unsuccessful)");
       return 0;
     }
     assert (s->current_value (lit) >= 0);
     if (s->current_value (lit) > 0) {
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOGE ("cb_decide", " 0 (decision " << lit << " satisfied)");
       return 0;
     }
     assert (!s->internal->val (s->external->internalize (lit)));
-    MLOG ("cb_decide returns " << lit << std::endl);
+    MLOGE ("cb_decide", " " << lit);
     return lit;
   }
 
@@ -2059,11 +2075,15 @@ public:
     MLOGS ("cb_propagate");
     check_trail ();
     // Calls to solver that might force it to backtrack.
-    if (get_force (CB_PROPAGATE))
+    if (get_force (CB_PROPAGATE)) {
+      MLOGE ("cb_propagate", " 0 (forced backtrack)");
       return 0;
+    }
 
-    if (external_lemmas.size () <= 1)
+    if (external_lemmas.size () <= 1) {
+      MLOGE ("cb_propagate", " 0 (no lemmas)");
       return 0;
+    }
 
     for (auto &lemma : external_lemmas) {
       // first lemma is 0 to have positive ids/indizes
@@ -2106,15 +2126,17 @@ public:
         continue;
       }
       add_reason (propagate, lemma);
-      MLOG ("cb_propagate returns " << propagate << std::endl);
+      MLOGE ("cb_propagate",
+             " " << propagate " (lemma[" << lemma->idx "])");
       return propagate;
     }
 
-    MLOG ("cb_propagate returns 0" << std::endl);
+    MLOGE ("cb_propagate", " 0 (no propagation)");
     return 0;
   }
 
   int cb_add_reason_clause_lit (int plit) override {
+    MLOGS ("cb_add_reason_clause_lit(" << plit << ")");
 
     // Calls to solver that might force it to backtrack.
     // Not allowed here!
@@ -2140,11 +2162,12 @@ public:
       remove_reason (plit);
     }
 
+    MLOGE ("cb_add_reason_clause_lit(" << plit ")", " lit");
     return lit;
   }
 
   void notify_assignment (const std::vector<int> &lits) override {
-    MLOGS ("notify_assignments");
+    MLOGS ("notify_assignments(" << lits.size () << ")");
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
@@ -2163,27 +2186,25 @@ public:
     // check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_ASSIGNMENT);
-    MLOGE ("notify_assignments", " " << lits.size ()
-                                     << " new assignments on level "
-                                     << observed_trail.size ());
+    MLOGE ("notify_assignments(" << lits.size () << ")",
+           " (level " << observed_trail.size () << ")");
   }
 
   void notify_new_decision_level () override {
-    MLOG ("notify new decision level start" << std::endl);
+    MLOGS ("notify_new_decision_level");
     level++;
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
     check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_NEW_DECISION_LEVEL);
-    MLOG ("notify new decision level end"
-          << observed_trail.size () - 1 << " -> " << observed_trail.size ()
-          << std::endl);
+    MLOGE ("notify_new_decision_level",
+           " (" << observed_trail.size () - 1 << " -> "
+                << observed_trail.size () << ")");
   }
 
   void notify_backtrack (size_t new_level) override {
-    MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
-                               << new_level << std::endl);
+    MLOGS ("notify_backtrack(" << new_level << ")");
     assert (observed_trail.size () > 1 || !new_level);
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
@@ -2194,8 +2215,8 @@ public:
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
         // assert (!reason_map[lit] || s->current_value (lit) <= 0);
-        ILOG ("unassign %d (reason %zd/%zd)", lit, reason_map[lit],
-              reason_map[-lit]);
+        MLOG ("unassign " << lit << " (reason " reason_map[lit] << "/"
+                          << reason_map[-lit] << ")");
         remove_reason (lit);
         value_map[lit] = value_map[-lit] = 0;
       }
@@ -2209,6 +2230,8 @@ public:
     // Calls to solver that might force it to backtrack.
     // TODO: not allowed
     get_force (NOTIFY_BACKTRACK);
+    MLOGE ("notify_backtrack(" << new_level << ")",
+           " (from level" << observed_trail.size () << ")");
   }
 
   /* ----------- FixedAssignmentListener functions end -----------------*/
