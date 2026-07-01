@@ -257,7 +257,6 @@ struct DoNot {
   bool enforce = false;      // do not enforce contracts on read trace
   bool seeds = false;
   bool summary = false;
-  bool api_calls = false;       // do not add api calls on execute
   bool extend_map = false;      // do not map variables
   bool mock_propagator = false; // do not map variables
   bool ignore_resource_limits = false;
@@ -7222,7 +7221,7 @@ int Mobical::main (int argc, char **argv) {
       summary = 1;
     else if (!strcmp (argv[i], "--replay")) {
       donot.extend_map = true;
-      donot.api_calls = true;
+      donot.mock_propagator = true;
       donot.shrink.atall = true;
     } else if (!strcmp (argv[i], "--trace"))
       tracing = 1;
