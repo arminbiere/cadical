@@ -83,12 +83,8 @@ static const char *USAGE =
 "\n"
 "Replay and record traces more faithfully with the following options\n"
 "\n"
-"  --replay                  do  '--do-not-add-api-calls'\n"
-"                            and '--do-not-extend-map'\n"
-"                            and '--do-not-mock-propagator'\n"
-"  --do-not-mock-propagator  switches to replay propagator\n"
-"                            and '--do-not-shrink-at-all'\n"
-"  --do-not-add-api-calls    avoids use of additional API calls\n"
+"  --replay                 '--do-not-mock-propagator' and '--do-not-extend-map'\n"
+"  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
 "  --do-not-extend-map       trust variable names in trace\n"
 "  --trace                   trace calls to <output> instead of copying\n"
 "\n"
@@ -1765,8 +1761,8 @@ public:
       if (!kvp.second)
         continue;
       const int lit = kvp.first;
-      assert (value_map[lit] == s->current_value (lit));
-      assert (value_map[-lit] == s->current_value (-lit));
+      assert (value_map[lit] == s->external->current_val (lit));
+      assert (value_map[-lit] == s->external->current_val (-lit));
     }
 #endif
   }
@@ -1870,7 +1866,7 @@ public:
           unobserved = lit;
           continue;
         }
-        const signed char tmp = s->current_val (lit);
+        const signed char tmp = s->current_value (lit);
         if (tmp > 0) {
           satisfied = true;
           break;
@@ -2468,7 +2464,7 @@ struct DeclareOneMoreVariableCall : public Call {
       int i =
 #endif
           s->declare_one_more_variable ();
-      assert (i == s->external->max_vars);
+      assert (i == s->external->max_var);
       assert (extendmap->map.back () == i);
     }
   }
@@ -7232,8 +7228,6 @@ int Mobical::main (int argc, char **argv) {
       tracing = 1;
     else if (!strcmp (argv[i], "--do-not-extend-map"))
       donot.extend_map = true;
-    else if (!strcmp (argv[i], "--do-not-add-api-calls"))
-      donot.api_calls = true;
     else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
       donot.shrink.atall = true;
       donot.mock_propagator = true;
