@@ -1228,7 +1228,6 @@ private:
   // Used in mobical to test external propagation internally.
   // These functions should not be called for any other purposes.
   //
-  ExternalPropagator *get_propagator ();
   bool observed (int lit);
 
   friend struct VarsCall;
@@ -1271,6 +1270,7 @@ private:
   friend struct NotifyLevelCall;
   friend class MockPropagator;
   friend class ReplayPropagator;
+  friend struct ExtendMap;
 };
 
 /*========================================================================*/

@@ -1579,10 +1579,6 @@ void Solver::dump_cnf () {
 
 /*------------------------------------------------------------------------*/
 
-ExternalPropagator *Solver::get_propagator () {
-  return external->propagator;
-}
-
 bool Solver::observed (int lit) {
   TRACE (observed, "observed", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
