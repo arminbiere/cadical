@@ -10,14 +10,6 @@ namespace CaDiCaL {
   LOG (#NAME "(%d) on level %d START", VAL, level)
 
 static void trace_api_call (FILE *trace_api_file, Internal *internal,
-                            const char *s0) {
-  assert (trace_api_file);
-  LOG ("TRACE %s", s0);
-  (void) internal;
-  fprintf (trace_api_file, "%s\n", s0);
-  fflush (trace_api_file);
-}
-static void trace_api_call (FILE *trace_api_file, Internal *internal,
                             const char *s0, int i1) {
   assert (trace_api_file);
   LOG ("TRACE %s %d", s0, i1);
@@ -43,6 +35,15 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
   } while (0)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  do { \
+    LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, RET1, RET2); \
+  } while (0)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   do { \
     LOG (#NAME "(%d) on level %d END", VAL, level); \
@@ -52,18 +53,9 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \
   } while (0)
-#define LOG_INTERACTION_END(NAME) \
-  do { \
-    LOG (#NAME " on level %d END", level); \
-    if (!opts.exttracecalls) \
-      break; \
-    if (!external->trace_api_file) \
-      break; \
-    trace_api_call (external->trace_api_file, this, #NAME); \
-  } while (0)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   do { \
-    LOG (#NAME "returns %d on level %d END", VAL, level); \
+    LOG (#NAME " returns %d on level %d END", VAL, level); \
     if (!opts.exttracecalls) \
       break; \
     if (!external->trace_api_file) \
@@ -75,9 +67,10 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d START", VAL, level)
 
-#define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
-  LOG (#NAME "returns %d on level %d END", VAL, level)
+  LOG (#NAME " returns %d on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d END", VAL, level)
 #define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
@@ -225,15 +218,16 @@ void Internal::renotify_full_trail_between_trail_pos (
 #endif
   if (start_new_level) {
     if (assigned.size ()) {
-      LOG_INTERACTION_START (notify_assignment);
+      LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
       external->propagator->notify_assignment (assigned);
-      LOG_INTERACTION_END (notify_assignment);
+      LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                               (int) assigned.size ());
     }
     assigned.clear ();
     notified_level++;
-    LOG_INTERACTION_START (notify_new_decision_level);
+    LOG_INTERACTION_FOR (notify_new_decision_level, notified_level);
     external->propagator->notify_new_decision_level ();
-    LOG_INTERACTION_END (notify_new_decision_level);
+    LOG_INTERACTION_END_FOR (notify_new_decision_level, notified_level);
   }
   for (; j < end_level; ++j) {
     int ilit = trail[j];
@@ -258,9 +252,10 @@ void Internal::renotify_full_trail_between_trail_pos (
   }
 
   if (assigned.size ()) {
-    LOG_INTERACTION_START (notify_assignment);
+    LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
     external->propagator->notify_assignment (assigned);
-    LOG_INTERACTION_END (notify_assignment);
+    LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                             (int) assigned.size ());
   }
   assigned.clear ();
 }
@@ -528,7 +523,8 @@ bool Internal::ask_external_clause () {
   LOG_INTERACTION_START (cb_has_external_clause);
   bool res =
       external->propagator->cb_has_external_clause (ext_clause_forgettable);
-  LOG_INTERACTION_RETURN (cb_has_external_clause, res);
+  LOG_INTERACTION_RETURN_TWO (cb_has_external_clause, res,
+                              ext_clause_forgettable);
 
   return res;
 }
