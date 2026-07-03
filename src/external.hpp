@@ -256,6 +256,7 @@ struct External {
 
   void restore_clauses ();
 
+  bool is_witness (int);
   /*----------------------------------------------------------------------*/
 
   // Explicitly freeze and melt literals (instead of just freezing

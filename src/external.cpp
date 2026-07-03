@@ -395,6 +395,22 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
+  REQUIRE (eidx > max_var ||
+               (!marked (witness, elit) && !marked (witness, -elit)),
+           "Only clean variables are allowed to be observed.");
+  // if (eidx <= max_var &&
+  //     (marked (witness, elit) || marked (witness, -elit))) {
+  //   LOG ("Error, only clean variables are allowed to become observed.");
+  //   assert (false);
+
+  //   // TODO: here needs to come the taint and restore of the newly
+  //   // observed variable. Restore_clauses must be called before continue.
+  //   // LOG ("marking tainted %d", elit);
+  //   // mark (tainted, elit);
+  //   // mark (tainted, -elit);
+  //   // restore_clauses ...
+  // }
+
   if (eidx >= (int64_t) is_observed.size ())
     is_observed.resize (1 + (size_t) eidx, false);
   else if (is_observed[eidx])
@@ -407,7 +423,8 @@ void External::add_observed_var (int elit) {
 
   // taint and restore of the newly observed variable.
   // Restore_clauses must be called before continue.
-
+  // alternative to above
+  /*
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }
@@ -423,6 +440,7 @@ void External::add_observed_var (int elit) {
     restore_clauses ();
     internal->from_propagator = was_from_propagator;
   }
+  */
 
   LOG ("marking %d as externally watched", eidx);
 
@@ -718,6 +736,15 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
   return cubes;
 }
 
+/*------------------------------------------------------------------------*/
+bool External::is_witness (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return false;
+  return (marked (witness, elit) || marked (witness, -elit));
+}
 /*------------------------------------------------------------------------*/
 
 void External::freeze (int elit) {

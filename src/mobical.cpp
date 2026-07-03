@@ -780,9 +780,13 @@ public:
           << " on " << lit << std::endl);
     // clang-format on
     if (!s->observed (lit))
-      s->add_observed_var (lit);
-    if (s->current_value (lit))
-      s->force_unassign (lit);
+      if (s->external->is_witness (lit))
+        return false;
+    s->add_observed_var (lit);
+    if (s->external->current_val (lit))
+      if (level_map[lit])
+        s->force_backtrack (level_map[lit] - 1);
+    // s->force_unassign (lit);
     return true;
   }
 
@@ -858,7 +862,7 @@ public:
           assert (s->external->ival (abs (lit)) == lit);
           continue;
         }
-        assert (s->current_value (lit) > 0);
+        assert (s->external->current_val (lit) > 0);
       }
     }
 #endif
@@ -879,7 +883,7 @@ public:
           unobserved = lit;
           continue;
         }
-        const signed char tmp = s->current_value (lit);
+        const signed char tmp = s->external->current_val (lit);
         if (tmp > 0) {
           satisfied = true;
           break;
@@ -890,7 +894,8 @@ public:
       }
       if (unobserved && lemma->type == OBSERVING) {
         // this might trigger a bt
-        s->add_observed_var (unobserved);
+        if (!s->external->is_witness (unobserved))
+          s->add_observed_var (unobserved);
         return false;
       }
 
@@ -940,7 +945,7 @@ public:
     MLOG ("cb_has_external_clause returns: ");
 
     // Calls to solver that might force it to backtrack.
-    get_force (CB_HAS_EXTERNAL_CLAUSE);
+    // get_force (CB_HAS_EXTERNAL_CLAUSE);
 
     forgettable = false;
 
@@ -1006,13 +1011,14 @@ public:
 
   int cb_add_external_clause_lit () override {
     // Calls to solver that might force it to backtrack.
-    get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
+    // get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
 
     auto lemma = external_lemmas[add_lemma_idx];
     int lit = lemma->next_lit ();
 
     if (lemma->type == OBSERVING && lit && !s->observed (lit))
-      s->add_observed_var (lit);
+      if (!s->external->is_witness (lit))
+        s->add_observed_var (lit);
     while (lit && !s->observed (lit)) {
       MLOG ("cb_add_external_clause_lit "
             << lit << " (lemma " << add_lemma_idx << "/"
@@ -1075,8 +1081,9 @@ public:
 
     if (!s->observed (lit)) {
       // do we want to observe?
-      s->add_observed_var (lit);
-      if (s->current_value (lit)) {
+      if (!s->external->is_witness (lit))
+        s->add_observed_var (lit);
+      if (s->external->current_val (lit)) {
         MLOG ("cb_decide returns 0" << std::endl);
         return 0;
       }
@@ -1084,18 +1091,22 @@ public:
       return lit;
     }
 
-    if (s->current_value (lit) < 0) {
+    if (s->external->current_val (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      if (s->force_unassign (lit)) {
-        // this decision is ignored, but we are asked again.
-        MLOG ("cb_decide returns " << lit << std::endl);
-        return lit;
-      }
+      if (level_map[lit])
+        s->force_backtrack (level_map[lit] - 1);
+      /*
+    if (s->force_backtrack (level_map[lit])) {
+      // this decision is ignored, but we are asked again.
+      MLOG ("cb_decide returns " << lit << std::endl);
+      return lit;
+    }
+    */
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
-    assert (s->current_value (lit) >= 0);
-    if (s->current_value (lit) > 0) {
+    assert (s->external->current_val (lit) >= 0);
+    if (s->external->current_val (lit) > 0) {
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
@@ -1107,7 +1118,7 @@ public:
   int cb_propagate () override {
     MLOG ("cb_propagate starts" << std::endl);
     // Calls to solver that might force it to backtrack.
-    get_force (CB_PROPAGATE);
+    // get_force (CB_PROPAGATE);
 
     if (external_lemmas.empty ())
       return 0;
@@ -1125,7 +1136,7 @@ public:
           propagate = INT_MIN;
           break;
         }
-        const signed char tmp = s->current_value (lit);
+        const signed char tmp = s->external->current_val (lit);
         if (tmp > 0) {
           propagate = INT_MIN;
           break;
@@ -1160,7 +1171,7 @@ public:
   int cb_add_reason_clause_lit (int plit) override {
 
     // Calls to solver that might force it to backtrack.
-    get_force (CB_ADD_REASON_CLAUSE_LIT);
+    // get_force (CB_ADD_REASON_CLAUSE_LIT);
 
     // At that point there is no need to assume that the trails are in
     // synchron.
@@ -1189,11 +1200,11 @@ public:
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
-      assert (s->current_value (lit) > 0);
+      assert (s->external->current_val (lit) > 0);
       unassigned_reasons.erase (lit);
     }
     // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_ASSIGNMENT);
+    // get_force (NOTIFY_ASSIGNMENT);
   }
 
   void notify_new_decision_level () override {
@@ -1204,7 +1215,7 @@ public:
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
     // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_NEW_DECISION_LEVEL);
+    // get_force (NOTIFY_NEW_DECISION_LEVEL);
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -1236,7 +1247,7 @@ public:
     }
     level = new_level;
     // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_BACKTRACK);
+    // get_force (NOTIFY_BACKTRACK);
   }
 
   /* ---------------- ExternalPropagator functions end -------------------*/
@@ -1259,6 +1270,7 @@ class Mobical : public Handler {
   friend struct ImpliedCall;
   friend struct FlippableCall;
   friend struct MeltCall;
+  friend struct ObserveCall;
   friend class MockPropagator;
   friend struct ResetCall;
   friend struct ConnectCall;
@@ -2024,7 +2036,9 @@ struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     Call::execute (s, extendmap);
-    s->add_observed_var (map_arg (s, extendmap));
+    if (mobical.donot.enforce ||
+        !s->is_witness (map_arg (s, extendmap, false)))
+      s->add_observed_var (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "observe " << arg; }
   Call *copy () { return new ObserveCall (arg); }

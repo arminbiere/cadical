@@ -123,6 +123,9 @@ void Internal::add_observed_var (int ilit) {
 //
 void Internal::remove_observed_var (int ilit) {
   if (!fixed (ilit) && level && val (ilit)) {
+    if (force_no_backtrack)
+      FATAL ("can not remove observed assigned variable during conflict "
+             "analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   }
@@ -1238,7 +1241,6 @@ void Internal::notify_assignments () {
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
 
-  const int level_now = level;
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
     if (!observed (ilit))
@@ -1257,15 +1259,6 @@ void Internal::notify_assignments () {
     if (!external->observed (elit))
       continue;
     notification_trail.push_back (elit);
-    if (opts.extnassign) {
-      LOG_INTERACTION_FOR (notify_assignment, notification_trail[0]);
-      external->propagator->notify_assignment (notification_trail);
-      LOG_INTERACTION_END_FOR (notify_assignment, notification_trail[0]);
-      notification_trail.clear ();
-      // stop notifying
-      if (level_now != level)
-        return;
-    }
   }
   if (notification_trail.size ()) {
     LOG_INTERACTION_FOR (notify_assignment_batch,
@@ -1306,18 +1299,11 @@ void Internal::notify_decision () {
 void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
-  size_t level_now = notified_level;
   assert ((size_t) notified_level > new_level);
-  if (!opts.extnbacktrack)
-    level_now = new_level + 1;
-  while (level_now > new_level) {
-    level_now--;
-    LOG_INTERACTION_FOR (notify_backtrack, (int) level_now);
-    external->propagator->notify_backtrack (level_now);
-    LOG_INTERACTION_END_FOR (notify_backtrack, (int) level_now);
-  }
+  LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
+  external->propagator->notify_backtrack (new_level);
+  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
   notified_level = new_level;
-  assert (level_now == new_level);
 }
 
 /*----------------------------------------------------------------------------*/

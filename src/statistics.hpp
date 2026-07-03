@@ -55,6 +55,7 @@
   STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
   STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
+  STATISTIC (api_is_witness,            3, NOTHING, 0, 0) \
   STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
 
 #else

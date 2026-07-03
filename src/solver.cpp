@@ -1592,6 +1592,7 @@ bool Solver::observed (int lit) {
   return res;
 }
 
+/*
 signed char Solver::current_value (int lit) {
   TRACE (current_value, "current_value", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
@@ -1602,6 +1603,7 @@ signed char Solver::current_value (int lit) {
   LOG_API_CALL_RETURNS ("current_value", lit, res);
   return res;
 }
+*/
 
 bool Solver::is_decision (int lit) {
   TRACE (is_decision, "is_decision", lit);
@@ -1627,6 +1629,16 @@ void Solver::force_backtrack (int new_level) {
   external->force_backtrack (new_level);
 }
 
+bool Solver::is_witness (int lit) {
+  TRACE (is_witness, "is_witness", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  bool res = external->is_witness (lit);
+  LOG_API_CALL_RETURNS ("is_witness", lit, res);
+  return res;
+}
+
+/*
 bool Solver::force_unassign (int lit) {
   TRACE (force_unassign, "force_unassign", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
@@ -1641,6 +1653,7 @@ bool Solver::force_unassign (int lit) {
   LOG_API_CALL_RETURNS ("force_unassign", lit, res);
   return res;
 }
+*/
 
 /*------------------------------------------------------------------------*/
 
