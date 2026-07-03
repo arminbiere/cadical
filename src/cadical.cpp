@@ -1013,6 +1013,14 @@ void App::signal_message (const char *msg, int sig) {
 void App::catch_signal (int sig) {
 #ifndef QUIET
   if (!get ("quiet")) {
+    Internal *internal = solver->internal;
+#ifndef QUIET
+#define PROFILE(NAME, LEVEL) \
+  if (PROFILE_ACTIVE (NAME)) \
+    STOP (NAME);
+    PROFILES
+#undef PROFILE
+#endif
     solver->message ();
     signal_message ("caught", sig);
     solver->section ("result");

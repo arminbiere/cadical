@@ -92,19 +92,23 @@ void Internal::print_profile () {
   // not the heap, which should be the case.
 
   double solve = profiles.solve.value;
-  double solve_ticks = profiles.solve.search_ticks;
+  uint64_t solve_ticks = profiles.solve.search_ticks;
 
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
-    MSG ("%12.2f %7.2f%% %12" PRId64 " %7.2f%% %s", profs[i]->value,
-         percent (profs[i]->value, solve), profs[i]->search_ticks,
-         percent (profs[i]->search_ticks, solve_ticks), profs[i]->name);
+    MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", profs[i]->value,
+         percent (profs[i]->value, solve), profs[i]->name,
+         profs[i]->search_ticks,
+         percent (profs[i]->search_ticks, solve_ticks));
   }
 
-  MSG ("  =================================");
-  MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
+  MSG ("  "
+       "==================================================================="
+       "=");
+  MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", solve,
+       percent (solve, now), "solve", solve_ticks, 100.0);
 
   LINE ();
   PRT ("last line shows %s time for solving", time_type);
