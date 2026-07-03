@@ -643,6 +643,10 @@ class Mobical : public Handler {
   friend struct FailedCall;
   friend struct ConcludeCall;
   friend struct ValCall;
+  friend struct VarCall;
+  friend struct DeclareMoreVariablesCall;
+  friend struct DeclareOneMoreVariableCall;
+  friend struct ResizeCall;
   friend struct FlipCall;
   friend struct ImpliedCall;
   friend struct FlippableCall;
@@ -1091,16 +1095,19 @@ struct Call {
 
   // extend the size of `extendmap` by `arg` new variables.
   virtual void extend_map_by (Solver *&s, ExtendMap *&extendmap, int arg) {
-    extendmap->extend_map_by (s, arg);
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_by (s, arg);
   }
 
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap) {
-    extend_map_to (s, extendmap, arg);
+    if (!mobical.donot.extend_map)
+      extend_map_to (s, extendmap, arg);
   }
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap, int arg) {
-    extendmap->extend_map_to (arg);
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_to (arg);
     (void) s;
   }
 
@@ -1608,7 +1615,10 @@ private:
     return lemma->id;
   }
 
-  void extend_map (int arg) { extendmap->extend_map_to (arg); }
+  void extend_map (int arg) {
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_to (arg);
+  }
 
   int map_arg (int arg, bool declare_new_var = true) {
     if (mobical.donot.extend_map)
@@ -2410,7 +2420,7 @@ struct ResizeCall : public Call {
       extend_map_to (s, extendmap);
       s->resize (arg);
 #ifndef NDEBUG
-      assert (!has_effect ||
+      assert (mobical.donot.extend_map || !has_effect ||
               extendmap->map.back () == s->external->max_var);
 #endif
     }
@@ -2440,7 +2450,8 @@ struct DeclareMoreVariablesCall : public Call {
       // check that our mapping from trace literals to external literals
       // matchs the `declare_more_variables` result.
       assert (!arg || i == s->external->max_var);
-      assert (!arg || extendmap->map.back () == i);
+      assert (!arg || mobical.donot.extend_map ||
+              extendmap->map.back () == i);
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -2464,7 +2475,7 @@ struct DeclareOneMoreVariableCall : public Call {
 #endif
           s->declare_one_more_variable ();
       assert (i == s->external->max_var);
-      assert (extendmap->map.back () == i);
+      assert (mobical.donot.extend_map || extendmap->map.back () == i);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -6957,7 +6968,8 @@ void Reader::parse () {
 
       if (adding && c->type != adding && c->type != Call::RESET &&
           ((adding == Call::ADD && c->type != Call::RESIZE &&
-            c->type != Call::DECLARE_VARS && c->type != Call::DECLARE) ||
+            c->type != Call::VARS && c->type != Call::DECLARE_VARS &&
+            c->type != Call::DECLARE) ||
            (adding == Call::CONSTRAIN && c->type != Call::FIXED)))
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
