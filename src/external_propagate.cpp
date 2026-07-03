@@ -28,35 +28,28 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   do { \
     LOG (#NAME " returns %d on level %d END", VAL, level); \
-    if (!external->trace_api_file) \
+    if (!opts.exttracecalls || !external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \
   } while (0)
 #define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
   do { \
     LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level); \
-    if (!external->trace_api_file) \
+    if (!opts.exttracecalls || !external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, RET1, RET2); \
-  } while (0)
-#define LOG_INTERACTION_RETURN(NAME, VAL) \
-  do { \
-    LOG (#NAME " returns %d on level %d END", VAL, level); \
-    if (!external->trace_api_file) \
-      break; \
-    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
   } while (0)
 #define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
   do { \
     LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level); \
-    if (!external->trace_api_file) \
+    if (!opts.exttracecalls || !external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
   } while (0)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   do { \
     LOG (#NAME "(%d) on level %d END", VAL, level); \
-    if (!external->trace_api_file) \
+    if (!opts.exttracecalls || !external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \
   } while (0)
@@ -1166,7 +1159,6 @@ void Internal::notify_assignments () {
 
   LOG ("notify external propagator about new assignments");
   std::vector<int> assigned;
-  const int level_now = level;
 
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
@@ -1181,15 +1173,6 @@ void Internal::notify_assignments () {
     // is already done.
     assert (external->observed (elit) || fixed (ilit));
     assigned.push_back (elit);
-    if (opts.extnassign) {
-      LOG_INTERACTION_FOR (notify_assignment, assigned[0]);
-      external->propagator->notify_assignment (assigned);
-      LOG_INTERACTION_END_FOR (notify_assignment, assigned[0]);
-      assigned.clear ();
-      // stop notifying
-      if (level_now != level)
-        return;
-    }
   }
 
   LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
@@ -1225,17 +1208,10 @@ void Internal::notify_decision () {
 void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
-  size_t level_now = notified_level;
-  if (!opts.extnbacktrack)
-    level_now = new_level + 1;
-  while (level_now > new_level) {
-    level_now--;
-    LOG_INTERACTION_FOR (notify_backtrack, (int) level_now);
-    external->propagator->notify_backtrack (level_now);
-    LOG_INTERACTION_END_FOR (notify_backtrack, (int) level_now);
-  }
+  LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
+  external->propagator->notify_backtrack (new_level);
+  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
   notified_level = new_level;
-  assert (level_now == new_level);
 }
 
 /*----------------------------------------------------------------------------*/
