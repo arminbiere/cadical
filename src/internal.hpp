@@ -1632,8 +1632,8 @@ struct Internal {
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').
   //
-  void start_profiling (Profile &p, double);
-  void stop_profiling (Profile &p, double);
+  void start_profiling (Profile &p, double, int64_t);
+  void stop_profiling (Profile &p, double, int64_t);
 
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();
