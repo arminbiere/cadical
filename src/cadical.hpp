@@ -479,7 +479,7 @@ public:
   //   require (SOLVING)
   //   ensure (SOLVING)
   //
-  // bool force_unassign (int lit);
+  bool force_unassign (int lit);
 
   // ====== END IPASIR-UP ==================================================
 

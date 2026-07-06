@@ -1638,7 +1638,6 @@ bool Solver::is_witness (int lit) {
   return res;
 }
 
-/*
 bool Solver::force_unassign (int lit) {
   TRACE (force_unassign, "force_unassign", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
@@ -1653,7 +1652,6 @@ bool Solver::force_unassign (int lit) {
   LOG_API_CALL_RETURNS ("force_unassign", lit, res);
   return res;
 }
-*/
 
 /*------------------------------------------------------------------------*/
 

@@ -549,7 +549,9 @@ bool External::is_decision (int elit) {
   return internal->is_decision (ilit);
 }
 signed char External::current_val (int elit) {
+  assert (elit < e2i.size ());
   int ilit = e2i[abs (elit)];
+  assert (ilit);
   if (elit < 0)
     ilit = -ilit;
   signed char res = internal->val (ilit);

@@ -784,9 +784,7 @@ public:
         return false;
     s->add_observed_var (lit);
     if (s->external->current_val (lit))
-      if (level_map[lit])
-        s->force_backtrack (level_map[lit] - 1);
-    // s->force_unassign (lit);
+      s->force_unassign (lit);
     return true;
   }
 
@@ -1093,15 +1091,11 @@ public:
 
     if (s->external->current_val (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      if (level_map[lit])
-        s->force_backtrack (level_map[lit] - 1);
-      /*
-    if (s->force_backtrack (level_map[lit])) {
-      // this decision is ignored, but we are asked again.
-      MLOG ("cb_decide returns " << lit << std::endl);
-      return lit;
-    }
-    */
+      if (s->force_unassign (lit)) {
+        // this decision is ignored, but we are asked again.
+        MLOG ("cb_decide returns " << lit << std::endl);
+        return lit;
+      }
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
