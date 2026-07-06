@@ -6,8 +6,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-
-ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother)
+ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (
+    Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother)
     : first_literal (clit), other (cother)
 #if defined(LOGGING) || !defined(NDEBUG)
       ,
@@ -15,7 +15,8 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
 #endif
 {
 #ifdef LOGGING
-  assert (c->literals[0] == internal->u2i(clit) || c->literals[1] == internal->u2i(clit));
+  assert (c->literals[0] == internal->u2i (clit) ||
+          c->literals[1] == internal->u2i (clit));
   assert (c->literals[0] == cother || c->literals[1] == cother);
 #endif
 
@@ -28,7 +29,7 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
 ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   // Check if literals fit in 31 bits each
   if (c->size == 2) {
-    unsigned lit1 = internal->vlit(c->literals[0]);
+    unsigned lit1 = internal->vlit (c->literals[0]);
     if (lit1 < (1u << 31)) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
@@ -40,7 +41,7 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
       return;
     }
 
-    unsigned lit2 = internal->vlit(c->literals[1]);
+    unsigned lit2 = internal->vlit (c->literals[1]);
     if (lit2 < (1u << 31)) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
@@ -53,30 +54,33 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     }
   }
 #if ((ULONG_MAX) != (UINT_MAX))
-  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+  assert ((reinterpret_cast<uintptr_t> (c) & ((uintptr_t) 1 << 63)) == 0);
 #endif
-  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t> (c);
   tagged.b.binary = false;
 #if !defined(LOGGING) && defined(NDEBUG)
-  static_assert (sizeof (ClauseOrBinary) == 8, "ClauseOrBinary compression does not work");
+  static_assert (sizeof (ClauseOrBinary) == 8,
+                 "ClauseOrBinary compression does not work");
 #endif
 }
 
 ClauseOrBinary::ClauseOrBinary (Clause *c) {
 #if ((ULONG_MAX) != (UINT_MAX))
-  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+  assert ((reinterpret_cast<uintptr_t> (c) & ((uintptr_t) 1 << 63)) == 0);
 #endif
   assert (c->size != 2);
-  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t> (c);
   tagged.b.binary = false;
 }
 
-int ClauseOrBinary::clause_or_binary::TaggedBinary::lit (Internal *internal) const {
-  return internal->u2i(first_literal);
+int ClauseOrBinary::clause_or_binary::TaggedBinary::lit (
+    Internal *internal) const {
+  return internal->u2i (first_literal);
 }
 
-ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int other) noexcept {
-  unsigned lit1 = internal->vlit(lit);
+ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit,
+                                int other) noexcept {
+  unsigned lit1 = internal->vlit (lit);
   assert (lit != other);
   assert (c->size == 2);
   if (lit1 < (1u << 31)) {
@@ -90,7 +94,7 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
     return;
   }
 
-  unsigned lit2 = internal->vlit(other);
+  unsigned lit2 = internal->vlit (other);
   if (lit2 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
@@ -102,12 +106,10 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
     return;
   }
 #if ((ULONG_MAX) != (UINT_MAX))
-  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+  assert ((reinterpret_cast<uintptr_t> (c) & ((uintptr_t) 1 << 63)) == 0);
 #endif
-  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
-
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t> (c);
 }
-
 
 // Random walk local search based on 'ProbSAT' ideas.
 
@@ -516,7 +518,9 @@ int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
   return walk_pick_lit (walker, c.clause ());
 }
 
-int Internal::walk_pick_lit (Walker &walker, const ClauseOrBinary::clause_or_binary::TaggedBinary c) {
+int Internal::walk_pick_lit (
+    Walker &walker,
+    const ClauseOrBinary::clause_or_binary::TaggedBinary c) {
   LOG ("picking literal by break-count on binary clause [%" PRIu64 "]%s %s",
        c.d->id, LOGLIT (c.lit (internal)), LOGLIT (c.other));
   assert (walker.scores.empty ());
@@ -597,7 +601,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     __builtin_prefetch (&w, 0, 1);
   }
 
-  auto stop_and_return_false = [&]() -> bool {
+  auto stop_and_return_false = [&] () -> bool {
     walker.ticks = ticks;
     STOP (walkflip);
     return false;
@@ -611,8 +615,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 
     const size_t broken_size = walker.broken.size ();
     ClauseOrBinary *const broken_begin = walker.broken.data ();
-    ClauseOrBinary *const broken_end = broken_size ? broken_begin + broken_size
-                                                    : broken_begin;
+    ClauseOrBinary *const broken_end =
+        broken_size ? broken_begin + broken_size : broken_begin;
     ClauseOrBinary *j = broken_begin, *i = broken_begin;
     // broken is in cache given how central it is... but not always (see the
     // ncc problems). Value was heuristically determined to give reasonnable
@@ -627,7 +631,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       ClauseOrBinary tagged = *j++ = *i++;
 
       if (tagged.is_binary ()) {
-        const ClauseOrBinary::clause_or_binary::TaggedBinary &b = tagged.tagged_binary ();
+        const ClauseOrBinary::clause_or_binary::TaggedBinary &b =
+            tagged.tagged_binary ();
         const int clit = b.lit (internal);
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
@@ -696,15 +701,15 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       }
       LOG (d, "clause after undoing shift");
     }
-    assert ((int64_t) (j - broken_begin) + made ==
-            (int64_t) broken_size);
+    assert ((int64_t) (j - broken_begin) + made == (int64_t) broken_size);
     walker.broken.resize (j - broken_begin);
     LOG ("made %" PRId64 " clauses by flipping %d, still %zu broken", made,
          lit, walker.broken.size ());
 #ifndef NDEBUG
     for (auto d : walker.broken) {
       if (d.is_binary ()) {
-        const ClauseOrBinary::clause_or_binary::TaggedBinary &b = d.tagged_binary ();
+        const ClauseOrBinary::clause_or_binary::TaggedBinary &b =
+            d.tagged_binary ();
         assert (val (b.lit (internal)) < 0 && val (b.other) < 0);
       } else {
         for (auto lit : *d.clause ())

@@ -29,6 +29,7 @@ void Internal::stop_profiling (Profile &profile, double s,
   LOG ("STOP PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (profile.active);
+  assert (profile.started_ticks <= s_ticks);
   profile.value += s - profile.started;
   profile.search_ticks += s_ticks - profile.started_ticks;
   profile.active = false;

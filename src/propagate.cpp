@@ -496,6 +496,7 @@ bool Internal::propagate () {
     if (!--randomized_deciding)
       VERBOSE (3, "last random decision conflict");
   }
+  assert (ticks >= 0);
   STOP (propagate);
 
   return !conflict;
