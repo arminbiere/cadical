@@ -73,10 +73,12 @@ void Stats::print_internal_stats (Internal *internal) {
   double t = internal->solve_time ();
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
-  PRINT_STATER (#NAME, (int64_t)stats.NAME, VERBOSE, \
-                COMMAND ((int64_t)stats.NAME, (int64_t)stats.OTHER), SYMBOL, #OTHER);
+  PRINT_STATER (#NAME, (int64_t) stats.NAME, VERBOSE, \
+                COMMAND ((int64_t) stats.NAME, (int64_t) stats.OTHER), \
+                SYMBOL, #OTHER);
 #ifndef NMETRICS
-#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
+  STATISTIC (NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
 #else
 #define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
 #endif
@@ -88,10 +90,9 @@ void Stats::print_internal_stats (Internal *internal) {
 #ifndef QUIET
   int all = internal->opts.verbose > 0 || internal->opts.stats;
   if (internal->profiles.walk.value > 0)
-    PRT ("walk_flips_per_s:       %15" PRId64 " %10.2f M  per second",
-      stats.walk_flips,
-      relative (1e-6 * stats.walk_flips,
-        internal->profiles.walk.value));
+    PRT ("walk_flips_per_s:      %15" PRId64 " %10.2f M  per second",
+         stats.walk_flips,
+         relative (1e-6 * stats.walk_flips, internal->profiles.walk.value));
 #endif
 }
 #endif
@@ -108,7 +109,6 @@ void Stats::print (Internal *internal) {
   SECTION ("statistics");
 
   print_internal_stats (internal);
-
 
   LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",

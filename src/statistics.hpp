@@ -309,6 +309,8 @@
   STATISTIC (ternary_resolutions,    2, relative, "per", ternary) \
   STATISTIC (ticks,                  0, SECONDS, "per", second) \
   STATISTIC (ticks_backbone,         2, percent, "%", ticks) \
+  STATISTIC (ticks_elim,             2, percent, "%", ticks) \
+  STATISTIC (ticks_fastelim,         2, percent, "%", ticks) \
   STATISTIC (ticks_factor,           2, percent, "%", ticks) \
   STATISTIC (ticks_probe,            2, percent, "%", ticks) \
   STATISTIC (ticks_search_stable,    2, percent, "%", ticks) \

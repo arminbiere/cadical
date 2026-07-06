@@ -1273,7 +1273,8 @@ struct Internal {
   //
   bool ineliminating ();
   double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+  void
+  mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);

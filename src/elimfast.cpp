@@ -64,6 +64,9 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
+  // loose assumption: stays in cache
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
 
   int64_t pos = ps.size ();
   int64_t neg = ns.size ();
@@ -95,10 +98,12 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
+    ++eliminator.ticks;
     assert (!c->redundant);
     if (c->garbage)
       continue;
     for (const auto &d : ns) {
+      ++eliminator.ticks;
       assert (!d->redundant);
       if (d->garbage)
         continue;
@@ -149,15 +154,20 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+
 #ifdef LOGGING
   int64_t resolvents = 0;
 #endif
   for (auto &c : ps) {
+    ++eliminator.ticks;
     if (unsat)
       break;
     if (c->garbage)
       continue;
     for (auto &d : ns) {
+      ++eliminator.ticks;
       if (unsat)
         break;
       if (d->garbage)
@@ -234,6 +244,9 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
   stable_sort (ps.begin (), ps.end (), clause_smaller_size ());
   Occs &ns = occs (-pivot);
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
+  // loose approximation of ticks for sorting
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
 
   if (!unsat && !val (pivot)) {
     if (product <= bound ||
@@ -289,7 +302,8 @@ int Internal::elimfast_round (bool &completed,
 
     resolution_limit = stats.eliminate_resolved + delta;
   } else {
-    PHASE ("fastelim-round", stats.eliminate_fast_rounds, "resolutions unlimited");
+    PHASE ("fastelim-round", stats.eliminate_fast_rounds,
+           "resolutions unlimited");
     resolution_limit = LONG_MAX;
   }
 
@@ -375,7 +389,8 @@ int Internal::elimfast_round (bool &completed,
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
   //
-  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) + (1 << 20);
+  const int64_t garbage_limit =
+      (2 * stats.irredundant_literals / 3) + (1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
@@ -384,8 +399,10 @@ int Internal::elimfast_round (bool &completed,
 #ifndef QUIET
   int64_t tried = 0;
 #endif
+
   while (!unsat && !terminated_asynchronously () &&
-         stats.eliminate_resolved <= resolution_limit && !schedule.empty ()) {
+         stats.eliminate_resolved <= resolution_limit &&
+         !schedule.empty ()) {
     int idx = schedule.front ();
     schedule.pop_front ();
     flags (idx).elim = false;
@@ -395,7 +412,8 @@ int Internal::elimfast_round (bool &completed,
 #endif
     if (stats.garbage_literals <= garbage_limit)
       continue;
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (
+        eliminator.ticks);
     garbage_collection ();
   }
 
@@ -417,10 +435,14 @@ int Internal::elimfast_round (bool &completed,
   // Mark all redundant clauses with eliminated variables as garbage.
   //
   if (!unsat)
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (
+        eliminator.ticks);
 
   int eliminated = stats.vars_all_elim - old_eliminated;
   stats.vars_all_elim_fast += eliminated;
+  stats.ticks_fastelim += eliminator.ticks;
+  stats.ticks += eliminator.ticks;
+
 #ifndef QUIET
   int64_t resolutions = stats.eliminate_resolved - old_resolutions;
   PHASE ("fastelim-round", stats.eliminate_fast_rounds,
@@ -500,8 +522,8 @@ void Internal::elimfast () {
     }
 
     if (round++ >= opts.fastelimrounds) {
-      PHASE ("fastelim-phase", stats.eliminate_phases, "round limit %d hit (%s)",
-             round - 1,
+      PHASE ("fastelim-phase", stats.eliminate_phases,
+             "round limit %d hit (%s)", round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
       assert (!phase_complete);

@@ -803,9 +803,10 @@ bool Internal::block () {
 
   pured = stats.blocked_pure_clauses - pured;
   purelits = stats.blocked_pure_literals - purelits;
+  int64_t ticks = 0; // currently not counted here
 
   if (pured)
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (ticks);
 
   if (purelits)
     PHASE ("block", stats.blockings,
