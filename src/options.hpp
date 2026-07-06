@@ -81,6 +81,7 @@ OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
 OPTION( deduplicateallinit,0,  0,  1,0,1,1, "remove duplicated clauses once before solving") \
 OPTION( eagersubsume,      1,  0,  1,0,1,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
+OPTION( elevate,           2, -1,  3,0,0,1, "elevate during clause addition") \
 OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1,0,0,1, "find AND gates") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
@@ -112,9 +113,9 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( exteagerreasons,   1,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
+OPTION( exteagerreasons,   0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
-OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
+OPTION( exttracecalls,     0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factorcheck,       1,  0,  2,0,0,1, "API checks that variables have been declared (1 = only with factor on, 2 = always)") \

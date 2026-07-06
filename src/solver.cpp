@@ -1,4 +1,5 @@
 #include "cadical.hpp"
+#include "contract.hpp"
 #include "internal.hpp"
 #include <atomic>
 

@@ -12,16 +12,16 @@ Internal::Internal ()
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), forced_backt_allowed (false),
-
-      private_steps (false), rephased (0), vsize (0), max_var (0),
+      private_steps (false), out_of_order_level (-1),
+      out_of_order_trail (-1), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
       saved_decisions (0), concluded (false), lrat (false), frat (false),
       level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
       ignore (0), external_reason (&external_reason_clause),
       newest_clause (0), force_no_backtrack (false),
       from_propagator (false), ext_clause_forgettable (false),
-      changed_val (0), notified (0), probe_reason (0), propagated (0),
-      propagated2 (0), propergated (0), best_assigned (0),
+      changed_val (0), notified (0), notified_level (0), probe_reason (0),
+      propagated (0), propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
       randomized_deciding (false), citten (0), num_assigned (0), proof (0),
@@ -42,8 +42,8 @@ Internal::Internal ()
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
-  // In a previous version we used local automatic allocated 'Clause' on the
-  // stack, which became incompatible with several compilers (see the
+  // In a previous version we used local automatic allocated 'Clause' on
+  // the stack, which became incompatible with several compilers (see the
   // discussion on flexible array member in 'Clause.cpp').
 
   size_t bytes = Clause::bytes (2);
@@ -83,20 +83,21 @@ Internal::~Internal () {
 /*------------------------------------------------------------------------*/
 
 // Values in 'vals' can be accessed in the range '[-max_var,max_var]' that
-// is directly by a literal.  This is crucial for performance.  By shifting
-// the start of 'vals' appropriately, we achieve that negative offsets from
-// the start of 'vals' can be used.  We also need to set both values at
-// 'lit' and '-lit' during assignments.  In MiniSAT integer literals are
-// encoded, using the least significant bit as negation.  This avoids taking
-// the 'abs ()' (as in our solution) and thus also avoids a branch in the
-// hot-spot of the solver (clause traversal in propagation).  That solution
-// requires another (branch less) negation of the values though and
-// debugging is harder since literals occur only encoded in clauses.
-// The main draw-back of our solution is that we have to shift the memory
-// and access it through negative indices, which looks less clean (but still
-// as far I can tell is properly defined C / C++).   You might get a warning
-// by static analyzers though.  Clang with '--analyze' thought that this
-// idiom would generate a memory leak thus we use the following dummy.
+// is directly by a literal.  This is crucial for performance.  By
+// shifting the start of 'vals' appropriately, we achieve that negative
+// offsets from the start of 'vals' can be used.  We also need to set both
+// values at 'lit' and '-lit' during assignments.  In MiniSAT integer
+// literals are encoded, using the least significant bit as negation. This
+// avoids taking the 'abs ()' (as in our solution) and thus also avoids a
+// branch in the hot-spot of the solver (clause traversal in propagation).
+// That solution requires another (branch less) negation of the values
+// though and debugging is harder since literals occur only encoded in
+// clauses. The main draw-back of our solution is that we have to shift
+// the memory and access it through negative indices, which looks less
+// clean (but still as far I can tell is properly defined C / C++).   You
+// might get a warning by static analyzers though.  Clang with '--analyze'
+// thought that this idiom would generate a memory leak thus we use the
+// following dummy.
 
 static signed char *ignore_clang_analyze_memory_leak_warning;
 
@@ -120,8 +121,9 @@ void Internal::enlarge_vals (size_t new_vsize) {
 /*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
-  // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct
+  // New variables can be created that can invoke enlarge anytime (via
+  // calls during ipasir-up call-backs), thus assuming (!level) is not
+  // correct
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -154,8 +156,9 @@ void Internal::enlarge (int new_max_var) {
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
-  // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct
+  // New variables can be created that can invoke enlarge anytime (via
+  // calls during ipasir-up call-backs), thus assuming (!level) is not
+  // correct
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize)
@@ -200,7 +203,8 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
-        // First integer is the presence-flag (even if the clause is empty)
+        // First integer is the presence-flag (even if the clause is
+        // empty)
         external->forgettable_original[id] = {1};
 
         for (auto const &elit : external->eclause)
@@ -776,8 +780,8 @@ void Internal::preprocess_quickly (bool always) {
 
   if (opts.fastelim)
     elimfast ();
-    // if (opts.condition)
-    // condition (false);
+  // if (opts.condition)
+  // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.current.irredundant;
@@ -1144,8 +1148,8 @@ void Internal::finalize (int res) {
         continue;
       proof->finalize_unit (id, lit);
     }
-    // See the discussion in 'propagate' on why garbage binary clauses stick
-    // around.
+    // See the discussion in 'propagate' on why garbage binary clauses
+    // stick around.
     for (const auto &c : clauses)
       if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);

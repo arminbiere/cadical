@@ -342,7 +342,7 @@ void Internal::mark_garbage (Clause *c) {
 // to learn a new unit clause (which was confusing in log files).
 
 void Internal::assign_original_unit (int64_t id, int lit) {
-  assert (!level || opts.chrono);
+  // assert (!level || opts.chrono || external->propagator);
   assert (!unsat);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -486,29 +486,7 @@ void Internal::add_new_original_clause (int64_t id) {
       marked_failed = true;
       conclusion.push_back (new_id);
     } else if (size == 1) {
-      if (force_no_backtrack) {
-        assert (level);
-        const int idx = vidx (clause[0]);
-        assert (val (clause[0]) >= 0);
-        assert (!flags (idx).eliminated ());
-        Var &v = var (idx);
-        assert (val (clause[0]));
-        v.level = 0;
-        v.reason = 0;
-        did_external_prop = true;
-        const unsigned uidx = vlit (clause[0]);
-        if (lrat || frat)
-          unit_clauses (uidx) = new_id;
-        mark_fixed (clause[0]);
-      } else {
-        const int lit = clause[0];
-        assert (!val (lit) || var (lit).level);
-        if (val (lit) < 0)
-          backtrack (var (lit).level - 1);
-        assert (val (lit) >= 0);
-        handle_external_clause (0);
-        assign_original_unit (new_id, lit);
-      }
+      handle_external_clause (0, new_id);
     } else {
       move_literals_to_watch ();
 #ifndef NDEBUG
@@ -520,10 +498,10 @@ void Internal::add_new_original_clause (int64_t id) {
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
-      watch_clause (c);
-      clause.clear ();
       original.clear ();
-      handle_external_clause (c);
+      handle_external_clause (c); // handle_external_clause uses clause
+      watch_clause (c);           // and may change the watched literal
+      clause.clear ();            // therefore it is cleared afterwards
       newest_clause = c;
     }
   }

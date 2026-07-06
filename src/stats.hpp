@@ -59,6 +59,11 @@ struct Stats {
         0; // learned external clauses (incl. eprop explanations)
     int64_t elearn_prop =
         0; // number of learned and propagating external clauses
+    int64_t elearn_ooo =
+        0; // number of learned out-of-order external clauses
+    int64_t elearn_elevate =
+        0;                   // number of learned elevated external clauses
+    int64_t elearn_unit = 0; // number of learned unit external clauses
     int64_t elearn_conf =
         0; // number of learned and conflicting external clauses
     int64_t echeck_call = 0; // number of checking found complete solutions

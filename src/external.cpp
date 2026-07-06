@@ -8,7 +8,7 @@ namespace CaDiCaL {
 External::External (Internal *i)
     : internal (i), max_var (0), vsize (0), extended (false),
       concluded (false), terminator (0), learner (0), fixed_listener (0),
-      propagator (0), solution (0), vars (max_var) {
+      propagator (0), trace_api_file (0), solution (0), vars (max_var) {
   assert (internal);
   assert (!internal->external);
   internal->external = this;
@@ -176,8 +176,8 @@ void External::add (int elit) {
     REQUIRE (is_valid_input ((int) elit),
              "extension variable '%d' defined by the solver internally "
              "(all user variables have to be declared explicitly "
-	     "if 'factor' is enabled)", // TODO only reason?
-             (int) abs(elit));
+             "if 'factor' is enabled)", // TODO only reason?
+             (int) abs (elit));
   reset_extended ();
 
   bool forgettable = false;

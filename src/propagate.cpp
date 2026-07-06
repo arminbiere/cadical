@@ -37,7 +37,6 @@ Clause *Internal::decision_reason = &decision_reason_clause;
 
 inline int Internal::assignment_level (int lit, Clause *reason) {
 
-  assert (opts.chrono || external_prop);
   if (!reason || reason == external_reason)
     return level;
 
@@ -61,10 +60,8 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
                                       bool forced) {
   if (!lrat)
     return;
-  if (opts.chrono && assignment_level (lit, reason) && !forced)
+  if (assignment_level (lit, reason) && !forced)
     return;
-  else if (!opts.chrono && level && !forced)
-    return; // not decision level 0
   assert (lrat_chain.empty ());
   for (auto &reason_lit : *reason) {
     if (lit == reason_lit)
@@ -127,10 +124,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono)
-    lit_level = assignment_level (lit, reason);
   else
-    lit_level = level;
+    lit_level = assignment_level (lit, reason);
   if (!lit_level)
     reason = 0;
 

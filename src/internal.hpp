@@ -191,15 +191,17 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;   // no notification of ext. prop during these steps
-  char rephased;        // last type of resetting phases
-  Reluctant reluctant;  // restart counter in stable mode
-  size_t vsize;         // actually allocated variable data size
-  int max_var;          // internal maximum variable index
-  int64_t clause_id;    // last used id for clauses
-  int64_t original_id;  // ids for original clauses to produce LRAT
-  int64_t reserved_ids; // number of reserved ids for original clauses
-  int64_t conflict_id;  // store conflict id for finalize (frat)
+  bool private_steps;     // no notification of ext. prop during these steps
+  int out_of_order_level; // lowest out-of-order level to fix
+  int out_of_order_trail; // highest out-of-order literal on the trail
+  char rephased;          // last type of resetting phases
+  Reluctant reluctant;    // restart counter in stable mode
+  size_t vsize;           // actually allocated variable data size
+  int max_var;            // internal maximum variable index
+  int64_t clause_id;      // last used id for clauses
+  int64_t original_id;    // ids for original clauses to produce LRAT
+  int64_t reserved_ids;   // number of reserved ids for original clauses
+  int64_t conflict_id;    // store conflict id for finalize (frat)
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion; // store ids of conclusion clauses
@@ -247,6 +249,7 @@ struct Internal {
   bool ext_clause_forgettable;  // Is new clause from propagator forgettable
   int changed_val;              // used for ILB
   size_t notified;           // next trail position to notify external prop
+  int notified_level;        // current level of external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
   size_t propagated2;        // next binary trail position to propagate
@@ -763,6 +766,7 @@ struct Internal {
   void update_target_and_best ();
   void backtrack (int target_level = 0);
   void backtrack_without_updating_phases (int target_level = 0);
+  void fix_trail_levels ();
 
   // Minimized learned clauses in 'minimize.cpp'.
   //
@@ -792,7 +796,7 @@ struct Internal {
                         int &antecedent_size);
   void analyze_reason (int lit, Clause *, int &open, int &resolvent_size,
                        int &antecedent_size);
-  Clause *new_driving_clause (const int glue, int &jump);
+  Clause *new_driving_clause (const int glue, int &jump, int &);
   int find_conflict_level (int &forced);
   int determine_actual_backtrack_level (int jump);
   void otfs_strengthen_clause (Clause *, int, int,
@@ -801,7 +805,7 @@ struct Internal {
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void update_decision_rate_average ();
-  void lazy_external_propagator_out_of_order_clause (int &);
+  bool lazy_external_propagator_out_of_order_clause (int &);
   void analyze ();
   void iterate (); // report learned unit clause
 
@@ -817,7 +821,8 @@ struct Internal {
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();
-  void handle_external_clause (Clause *);
+  size_t best_literal_to_watch (int, bool);
+  void handle_external_clause (Clause *, int64_t new_id = 0);
   void notify_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);
