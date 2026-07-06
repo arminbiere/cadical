@@ -157,10 +157,6 @@ static const char *USAGE =
 #include <map>
 #include <set>
 
-// overwriting new for hooking on apple
-#include <new>
-#include <cstdlib>
-
 /*------------------------------------------------------------------------*/
 
 extern "C" {
@@ -203,8 +199,6 @@ void initialize_allocators () {
   libc_realloc = reinterpret_cast<realloc_t> (dlsym (RTLD_NEXT, "realloc"));
   libc_free = reinterpret_cast<free_t> (dlsym (RTLD_NEXT, "free"));
 }
-//__attribute__ ((section (".preinit_array"))) void (*init_allocators_ptr) (
-//    void) = initialize_allocators;
 #ifdef __APPLE__
 __attribute__ ((section ("__DATA,__mod_init_func")))
 #else
@@ -213,8 +207,6 @@ __attribute__ ((section (".preinit_array")))
 void (*init_allocators_ptr)(void) = initialize_allocators;
 #endif
 
-// for enabling and disabling the new hook
-static bool enable_new_hook = false;
 /*------------------------------------------------------------------------*/
 namespace CaDiCaL { // All except 'main' below.
 /*------------------------------------------------------------------------*/
@@ -1311,9 +1303,6 @@ class Mobical : public Handler {
 #ifdef MOBICAL_TERMINATE
   bool terminator = true;
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-  bool terminate_delay = true;
-#endif
   Terminal &terminal = terr;
 
   void header (); // Print right part of header.
@@ -1576,9 +1565,6 @@ struct Call {
 #ifdef MOBICAL_TERMINATE
     TERMINATE       = shift ( 44 ),
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-    TERMINATE_DELAY = shift ( 50 ),
-#endif
 
     PROPAGATE_ASSUMPTIONS = shift ( 45 ),
     IMPLIED_LITERALS = shift ( 46 ),
@@ -1598,10 +1584,7 @@ struct Call {
 #endif
 #ifdef MOBICAL_TERMINATE
              | TERMINATE
-#endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-             | TERMINATE_DELAY
-#endif        
+#endif     
     ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
@@ -1763,26 +1746,6 @@ struct TerminateCall : public Call {
   void print (ostream &o) { o << "terminate " << val; }
   Call *copy () { return new TerminateCall (val); }
   const char *keyword () { return "terminate"; }
-};
-#endif
-
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-struct TerminateDelayCall : public Call {
-  int k; // number of malloc calls permitted after terminate flag set
-
-  TerminateDelayCall(int budget, int k_)
-    : Call(TERMINATE_DELAY, 0, 0, 0, budget), k(k_) {}
-
-  void execute(Solver *&s, ExtendMap *&extendmap) {
-    (void) s;
-    (void) extendmap;
-  }
-
-  void print(ostream &o) { o << "terminate_delay " << val << " " << k; }
-
-  Call *copy () { return new TerminateDelayCall(val, k); }
-
-  const char *keyword () {return "terminate_delay"; }
 };
 #endif
 
@@ -2429,37 +2392,10 @@ public:
   static int64_t memory_leak_next_free;
 #endif
 
-// Malloc-based termination delay fuzzing
-#if defined(MOBICAL_TERMINATE_DELAY) && \
-   (!defined(MOBICAL_MEMORY) || !defined(MOBICAL_TERMINATE))
-#error "MOBICAL_TERMINATE_DELAY requires MOBICAL_MEMORY and MOBICAL_TERMINATE"
-#endif
-#ifdef MOBICAL_TERMINATE_DELAY
-  static int64_t terminate_budget;
-  static int64_t terminate_k;
-  static int64_t terminate_triggered;
-  static int64_t mallocs_after_trigger;
-  static int64_t terminate_delay_failed;
-  static Call::Type current_call_type;
-#endif
-
 #ifdef MOBICAL_TERMINATE
   static int64_t limit_terminate;
   static int64_t limit_terminate_remaining;
   bool terminate () override {
-    // Malloc-based termination delay fuzzing
-    #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE_DELAY)
-    if (mobical.add_set_log_to_true)
-      printf("CADICAL CHECKING FOR ASYNC TERMINATE.\n");
-    if (terminate_triggered) {
-      if (mobical.add_set_log_to_true)
-        printf("CADICAL DETECTED ASYNC TERMINATE.\n");
-      terminate_triggered = 0;
-      mallocs_after_trigger = 0;
-      return true;
-    }
-    #endif
-
     // Send termination signal once when counter reaches 0.
     if (!limit_terminate || !limit_terminate_remaining)
       return false;
@@ -2498,10 +2434,6 @@ public:
   static void *hook_malloc (size_t);
   static void *hook_realloc (void *, size_t);
   static void hook_free (void *);
-
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-  static void account_terminate_delay_allocation ();
-#endif
 #endif
 
 #ifdef MOBICAL_TERMINATE
@@ -2694,19 +2626,11 @@ public:
     limit_terminate = 0;
     limit_terminate_remaining = 0;
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE)
-    // mobical malloc count terminate hack
-    terminate_budget = 0;
-    terminate_k = 0;
-    terminate_triggered = 0;
-    mallocs_after_trigger = 0;
-    terminate_delay_failed = 0;
-#endif
     executed++;
     bool first = true;
     bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
-      if (Signal::interrupted ()) // REVIEW: Otherwise the trace will just continue
+      if (Signal::interrupted ())
         break;
       Call *c = calls[i];
       trace_call_index = i + 1;
@@ -2746,20 +2670,6 @@ public:
           limit_terminate_remaining = c->val;
         }
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-        if (c->type == Call::TERMINATE_DELAY) {
-          auto *td = static_cast<TerminateDelayCall*> (c);
-
-          terminate_budget = c->val;
-          terminate_k = td->k;
-
-          terminate_triggered = 0;
-          mallocs_after_trigger = 0;
-          terminate_delay_failed = 0;
-
-          continue;
-        } 
-#endif
 
         if (c->type == Call::SET) {
           // ignore fixed options
@@ -2783,9 +2693,6 @@ public:
             mobical.add_statistics (solver);
           mobical.shared->executed++;
         }
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-        current_call_type = c->type;
-#endif
         if (mobical.shared && process_type (c->type)) {
           mobical.shared->solved++;
           if (first)
@@ -3148,11 +3055,6 @@ void Trace::generate_options (Random &random, Size size) {
   if (mobical.add_set_log_to_true)
     mobical.warning ("ignoring log option");
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-    // No checkfailed with terminate delay fuzzing. The external terminator is
-    // disconnected when checking and therefore false positives will be found.
-    push_back (new SetCall ("checkfailed", 0));
-#endif
   // In 10% of the cases do not change any options.
   //
   if (random.generate_double () < 0.1)
@@ -3195,12 +3097,6 @@ void Trace::generate_options (Random &random, Size size) {
     if (o.lo == o.hi)
       continue;
 
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-    // No checkfailed with terminate delay fuzzing. The external terminator is
-    // when checking and therefore false positives will be found.
-    if (!strcmp (o.name, "checkfailed"))
-      continue;
-#endif
     // We ignore logging here and set it below to make mobical
     // deterministic
     if (!strcmp (o.name, "log"))
@@ -3804,11 +3700,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int leakallocall = random.pick_int (0, 2);
   int terminatecall = random.pick_int (0, 2);  
   int terminatecallsize = random.pick_log (1e1, 1e4);
-  // terminate delay hack
-  int terminatedelaycall = random.pick_int (0, 1); // activate malloc/new count based termination
-  int terminatedelay_budget = random.pick_log (1, 5e4); // when to terminate
-  int terminatedelay_k = random.pick_int (600, 1000); // maximum delay in number of mallocs/news before signal is raised
-
+  
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && (mallocall == 0))
     push_back (new MaxAllocCall (mallocallsize));
@@ -3825,14 +3717,6 @@ void Trace::generate (uint64_t i, uint64_t s) {
 #else
   (void) terminatecall;
   (void) terminatecallsize;
-#endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-  if (mobical.terminate_delay && (terminatedelaycall == 0))
-    push_back (new TerminateDelayCall (terminatedelay_budget, terminatedelay_k));
-#else
-  (void) terminatedelaycall;
-  (void) terminatedelay_budget;
-  (void) terminatedelay_k;
 #endif
   push_back (new InitCall ());
 
@@ -4132,15 +4016,6 @@ int64_t Trace::memory_leak_next_free = 0;
 int64_t Trace::limit_terminate = 0;
 int64_t Trace::limit_terminate_remaining = 0;
 #endif
-// mobical malloc count terminate hack
-#if defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE_DELAY)
-int64_t Trace::terminate_budget = 0;
-int64_t Trace::terminate_k = 0;
-int64_t Trace::terminate_triggered = 0;
-int64_t Trace::mallocs_after_trigger = 0;
-int64_t Trace::terminate_delay_failed = 0;
-Call::Type Trace::current_call_type = Call::INIT; // just some non-PROCESS value
-#endif
 
 #define SIGNAL(SIG) void (*Trace::old_##SIG##_handler) (int);
 SIGNALS
@@ -4213,66 +4088,18 @@ void Trace::init_child_signal_handlers () {
 
 #ifdef MOBICAL_MEMORY
 void Trace::hooks_install (void) {
-  enable_new_hook = true;
   *static_cast<volatile malloc_t *> (&::hook_malloc) = &hook_malloc;
   *static_cast<volatile realloc_t *> (&::hook_realloc) = &hook_realloc;
   *static_cast<volatile free_t *> (&::hook_free) = &hook_free;
 }
 
 void Trace::hooks_uninstall (void) {
-  enable_new_hook = false;
   *static_cast<volatile malloc_t *> (&::hook_malloc) = nullptr;
   *static_cast<volatile realloc_t *> (&::hook_realloc) = nullptr;
   *static_cast<volatile free_t *> (&::hook_free) = nullptr;
 }
 
-#if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
-void Trace::account_terminate_delay_allocation () {
-  if (!process_type(current_call_type)) {
-    return;
-  }
-  if (terminate_triggered) {
-    mallocs_after_trigger++;
-    //printf ("NEW/MALLOC %lld AFTER TRIGGER\n", mallocs_after_trigger); // TODO: remove
-    if (mallocs_after_trigger > terminate_k && !terminate_delay_failed) {
-      terminate_delay_failed = 1;
-      hooks_uninstall ();
-      mobical.shared->limit_terminate.terminate_call_index = trace_call_index;
-      mobical.shared->limit_terminate.terminate_stack_size = 
-        backtrace (
-          mobical.shared->limit_terminate.terminate_stack_array,
-          MOBICAL_TERMINATE_STACK_COUNT);
-      hooks_install ();
-      reset_child_signal_handlers ();
-      if (mobical.add_set_log_to_true)
-        printf ("TERMINATE DELAY VIOLATION: %lld NEW/MALLOC-CALLS AFTER TRIGGER. RAISING SIGUSR2\n", terminate_k);
-      raise (SIGUSR2);
-    }
-  }
-  if (terminate_budget > 0) {
-    //printf ("NEW/MALLOC CAUGHT, BUDGET: %lld\n", terminate_budget); // TODO: remove
-    if (--terminate_budget <= 0 && !terminate_triggered) {
-      if (mobical.add_set_log_to_true)
-        printf ("ASYNC TERMINATE TRIGGERED <------------------------------------------------------------------------------\n"); // TODO: remove
-      terminate_triggered = 1;
-      hooks_uninstall ();
-      mobical.shared->limit_terminate.terminate_call_index = trace_call_index;
-      mobical.shared->limit_terminate.terminate_stack_size = 
-        backtrace (
-          mobical.shared->limit_terminate.terminate_stack_array,
-          MOBICAL_TERMINATE_STACK_COUNT);
-      hooks_install ();
-    }
-  }
-}
-#endif
-// -------------------------------------------
-
 void *Trace::hook_malloc (size_t size) {
-  #if defined(MOBICAL_MEMORY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_TERMINATE_DELAY)
-  // mobical malloc count terminator
-  account_terminate_delay_allocation ();
-  #endif
   // Failing allocator
   if (memory_bad_alloc > 0) {
     memory_bad_size += size + 1; // + 1 to catch allocations of size 0
@@ -4451,16 +4278,16 @@ int Trace::fork_and_execute () {
     limit.rlim_max = 0;
     setrlimit(RLIMIT_CORE, &limit);
 #endif
-    //int status, other = wait (&status);
     int status;
-    pid_t other = waitpid (child, &status, WUNTRACED); // WUNTRACED -> notify also TSTP
+    pid_t other = waitpid (child, &status, WUNTRACED);
     if (other != child)
       res = 0;
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
-    else if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTSTP) { // before if !WIFSIGNALED
+    else if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTSTP) {
       kill (child, SIGKILL); // fork is just suspended. Now kill it,
       waitpid (child, nullptr, 0); // and reap it
+      // Termination caused signal.
       res = 5;
     }
     else if (!WIFSIGNALED (status))
@@ -4474,11 +4301,6 @@ int Trace::fork_and_execute () {
       res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
       res = 4; // Leaked allocation caused signal.
-    /* 
-    REVIEW: I think this has always been a dead branch
-    else if (WTERMSIG (status) == SIGTSTP) 
-      res = 5; // Termination caused signal.
-    */
     else
       res = 6;
 
@@ -4505,8 +4327,8 @@ int Trace::fork_and_execute () {
     dup2 (2, 4);
     int null = open ("/dev/null", O_WRONLY);
     assert (null);
-    dup2 (null, 1); 
-    dup2 (null, 2); 
+    dup2 (null, 1);
+    dup2 (null, 2);
     execute ();
     close (1);
     close (2);
@@ -4588,7 +4410,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         }
       }
       // The attempt should be finished and in a valid state.
-      if (Signal::interrupted ()) // REVIEW
+      if (Signal::interrupted ())
         break;
     }
     if (Signal::interrupted ())
@@ -4931,7 +4753,7 @@ bool Trace::shrink_propagator (int expected) {
       reduced = true;
       progress ();
     }
-    if (Signal::interrupted ()) // REVIEW
+    if (Signal::interrupted ())
       break;
   }
   while (connected--) {
@@ -4960,7 +4782,7 @@ bool Trace::shrink_propagator (int expected) {
       simplified.clear ();
       progress ();
     }
-    if (Signal::interrupted ()) // REVIEW
+    if (Signal::interrupted ())
       break;
   }
   notify ();
@@ -5177,14 +4999,14 @@ bool Trace::reduce_values (int expected) {
       c->val = lo;
       progress ();
 
-      bool success = fork_and_execute () == expected; // REVIEW <-v
+      bool success = fork_and_execute () == expected; 
       if (success) {
         assert (c->val != old_val);
         changed = true;
       } else 
         c->val = old_val;
 
-      if (Signal::interrupted ()) // REVIEW
+      if (Signal::interrupted ())
         break;
 
       if (success)
@@ -5247,7 +5069,7 @@ static bool has_lit_arg_type (Call *c) { return c->type & Call::LITTYPE; }
 void Trace::map_variables (int expected) {
   if (mobical.donot.map)
     return;
-  if (Signal::interrupted ()) // REVIEW
+  if (Signal::interrupted ())
     return;
   for (int with_gaps = 0; with_gaps <= 1; with_gaps++) {
     notify ('m');
@@ -5307,7 +5129,7 @@ void Trace::map_variables (int expected) {
       with_gaps = 2;
     }
     notify ();
-    if (Signal::interrupted ()) // REVIEW
+    if (Signal::interrupted ()) 
       break;
   }
 }
@@ -5378,7 +5200,7 @@ void Trace::shrink (int expected) {
   shrink_options (expected);
   // Execute one last time to get accurate results when memory fuzzing
   // is enabled.
-  if (!Signal::interrupted ()) // REVIEW
+  if (!Signal::interrupted ()) 
     fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
@@ -5967,27 +5789,6 @@ void Reader::parse () {
         error ("invalid first argument '%s' to 'terminate'", first);
       c = new TerminateCall (val);
 #endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-    } else if (!strcmp (keyword, "terminate_delay")) {
-      //if (!mobical.terminate_delay)
-      //  error ("Trace contains a 'terminate_delay' call (run without "
-      //         "'--no-terminate-delay') (TODO:implement)");
-
-      if (!first)
-        error ("first argument to 'terminate_delay' missing");
-      if (!second)
-        error ("second argument to 'terminate_delay' missing");
-
-      int budget, k;
-
-      if (!parse_int_str (first, budget))
-        error ("invalid first argument '%s' to 'terminate_delay'", first);
-
-      if (!parse_int_str (second, k))
-        error ("invalid second argument '%s' to 'terminate_delay'", second);
-
-      c = new TerminateDelayCall (budget, k);
-#endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
       if (first)
         error ("additional argument to 'propagate_assumptions'");
@@ -6023,9 +5824,6 @@ void Reader::parse () {
 #endif
 #ifdef MOBICAL_TERMINATE
                                  | Call::TERMINATE
-#endif
-#if defined(MOBICAL_TERMINATE_DELAY) && defined(MOBICAL_TERMINATE) && defined(MOBICAL_MEMORY)
-                                 | Call::TERMINATE_DELAY
 #endif
                                  )))
         error ("first call has to be an 'init', 'max_alloc', 'leak_alloc'"
@@ -6229,14 +6027,10 @@ Mobical::~Mobical () {
 }
 
 void Mobical::catch_signal (int sig) {
-  Signal::set_received (sig); // REVIEW
+  Signal::set_received (sig); 
 
-  //if ((terminal && (mode & RANDOM)) || shrinking || running) // REVIEW: Output still looks fine
-  //  cerr << endl;
-  //terminal.reset ();
   if (Trace::executed && !Trace::failed && !Trace::ok)
     assert (mode & (INPUT | SEED)), Trace::failed = 1;
-  //print_statistics (); // REVIEW
 }
 
 /*------------------------------------------------------------------------*/
@@ -6814,8 +6608,7 @@ END_OF_BANNER_AND_OPTIONS:
       if (Trace::failed >= bug_limit)
         break;
 
-      const int sig = Signal::received (); // REVIEW
-      if (sig == SIGINT || sig == SIGTERM) 
+      if (Signal::interrupted ())
         break;
 
       if (!quiet && !donot.seeds) {
@@ -6926,57 +6719,6 @@ END_OF_BANNER_AND_OPTIONS:
 /*------------------------------------------------------------------------*/
 } // namespace CaDiCaL
 /*------------------------------------------------------------------------*/
-
-// -----------------------------------------------------------------------------
-// --- Terminate Delay Fuzzing: macOS new hook
-#if defined(__APPLE__) && \
-    defined(MOBICAL_TERMINATE_DELAY) && \
-    defined(MOBICAL_TERMINATE) && \
-    defined(MOBICAL_MEMORY)
-
-static thread_local bool inside_operator_new = false;
-
-void *operator new (size_t size) {
-  if (enable_new_hook && !inside_operator_new) {
-    inside_operator_new = true;
-    CaDiCaL::Trace::account_terminate_delay_allocation ();
-    inside_operator_new = false;
-  }
-
-  void *ptr = (*libc_malloc) (size);
-
-  if (!ptr)
-    throw std::bad_alloc ();
-
-  return ptr;
-}
-
-void *operator new[] (size_t size) {
-  if (!inside_operator_new) {
-    inside_operator_new = true;
-    CaDiCaL::Trace::account_terminate_delay_allocation ();
-    inside_operator_new = false;
-  }
-
-  void *ptr = (*libc_malloc) (size);
-
-  if (!ptr)
-    throw std::bad_alloc ();
-
-  return ptr;
-}
-
-void operator delete (void *ptr) noexcept {
-  std::free (ptr);
-}
-
-void operator delete[] (void *ptr) noexcept {
-  std::free (ptr);
-}
-#endif
-// -----------------------------------------------------------------------------
-
-
 
 int main (int argc, char **argv) {
 #ifdef MOBICAL_MEMORY

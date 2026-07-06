@@ -69,7 +69,7 @@ void Internal::init_probehbr_lrat () {
     return;
   const size_t size = 2 * (1 + (size_t) max_var);
   probehbr_chains.resize (size);
-  for (size_t i = 0; i < size; i++) { // REVIEW: ignored for now
+  for (size_t i = 0; i < size; i++) {
     probehbr_chains[i].resize (size);
     // commented because not needed... should be empty already
     /*

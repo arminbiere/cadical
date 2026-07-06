@@ -1920,15 +1920,11 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // REVIEW: Here we check whether a signal was caught. 
-  // Previous: We set termination_forced and just before returning in main we will reraise.
-  // Now: We will immediately reraise after printing stats. For this we need to move
+  // Here we check whether a signal was caught. 
+  // We will immediately reraise after printing stats. For this we need to move
   // this above if (termination_forced) though.
   if (const int sig = Signal::received ()) {
-    report ('!');
     VERBOSE (2, "signal %d detected", sig);
-    LOG ("signal %d detected", sig);
-
 #ifndef QUIET
     if (!opts.quiet) {
       message ();
@@ -1948,9 +1944,6 @@ inline bool Internal::terminated_asynchronously (int factor) {
 
     Signal::reset (); // Disconnects signal handler
     raise (sig);
-
-    termination_forced = true;
-    return true;
   }
 
 

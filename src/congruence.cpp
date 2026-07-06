@@ -296,7 +296,7 @@ bool Closure::find_binary (int lit, int other) const {
 void Closure::extract_binaries () {
   if (!internal->opts.congruencebinaries)
     return;
-  if (internal->terminated_asynchronously ()) // REVIEW
+  if (internal->terminated_asynchronously ())
     return;
   START (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
@@ -310,7 +310,7 @@ void Closure::extract_binaries () {
       continue;
     if (c->size > 2)
       continue;
-    if (internal->terminated_asynchronously ()) { // REVIEW
+    if (internal->terminated_asynchronously ()) {
       STOP (extractbinaries);
       return;
     }
@@ -353,7 +353,7 @@ void Closure::extract_binaries () {
 
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size; ++i) {
-    if (internal->terminated_asynchronously ()) { // REVIEW
+    if (internal->terminated_asynchronously ()) {
       STOP (extractbinaries);
       return;
     }
@@ -416,8 +416,6 @@ void Closure::extract_binaries () {
   {
     size_t i = 0;
     for (size_t j = 1; j < new_size; ++j) {
-      //if (internal->terminated_asynchronously ()) // REVIEW
-      //  break;
       assert (i < j);
       if (binaries[i].lit1 == binaries[j].lit1 &&
           binaries[i].lit2 == binaries[j].lit2) {
@@ -434,7 +432,6 @@ void Closure::extract_binaries () {
   }
   binaries.clear ();
   STOP (extractbinaries);
-  internal->report ('c'); // TODO: REMOVE
   VERBOSE (2,
            "[congruence-%" PRId64
            "] extracted %zu binaries (plus %zu already "
@@ -3405,7 +3402,7 @@ void Closure::extract_and_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceand)
     return;
-  if (internal->terminated_asynchronously ()) // REVIEW
+  if (internal->terminated_asynchronously ())
     return;
   START (extractands);
 
@@ -4147,7 +4144,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   }
 
   for (auto c : candidates) {
-    if (internal->terminated_asynchronously ()) // REVIEW
+    if (internal->terminated_asynchronously ())
       return;
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
@@ -4364,7 +4361,7 @@ void Closure::extract_xor_gates () {
   for (auto c : candidates) {
     if (internal->unsat)
       break;
-    if (internal->terminated_asynchronously ()) { // REVIEW: TA added
+    if (internal->terminated_asynchronously ()) {
       STOP (extractxors);
       return;
     } 
@@ -4382,10 +4379,8 @@ void Closure::extract_xor_gates () {
 
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
-  if (internal->terminated_asynchronously ()) // REVIEW
+  if (internal->terminated_asynchronously ())
     return;
-  VERBOSE (2, "find_units"); // TODO: remove <v
-  internal->report ('c');
   size_t units = 0;
   for (auto v : internal->vars) {
   RESTART:
@@ -4423,13 +4418,12 @@ void Closure::find_units () {
     assert (internal->analyzed.empty ());
   }
   LOG ("found %zd units", units); 
-  internal->report ('c'); // TODO: REMOVE
   (void) units;
 }
 
 void Closure::find_equivalences () {
   assert (!internal->unsat);
-  if (internal->terminated_asynchronously ()) // REVIEW
+  if (internal->terminated_asynchronously ()) 
     return;
   for (auto v : internal->vars) {
   RESTART:
@@ -4943,7 +4937,7 @@ bool Closure::propagate_binary_clauses_in_and_gates () {
 }
 
 size_t Closure::propagate_units_and_equivalences () {
-  if (internal->terminated_asynchronously ()) // REVIEW: Is this fine to do?
+  if (internal->terminated_asynchronously ())
     return 0;
   START (congruencemerge);
   size_t propagated = 0;
@@ -7824,7 +7818,7 @@ void Closure::extract_ite_gates () {
   for (auto idx : internal->vars) {
     if (internal->flags (idx).active ()) {
       extract_ite_gates_of_variable (idx);
-      if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: inserted TA
+      if (internal->unsat || internal->terminated_asynchronously ()) 
         break;
     }
   }
@@ -7871,7 +7865,6 @@ void Closure::extract_gates () {
 /*------------------------------------------------------------------------*/
 // top level function to extract gate
 bool Internal::extract_gates (bool remove_units_before_run) {
-  VERBOSE (2, "extracting gates"); // TODO: remove
   if (terminated_asynchronously ())
     return false;
   if (unsat)
@@ -7944,7 +7937,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   if (!internal->terminated_asynchronously ())
     closure->reset_extraction (); // TODO: needed ? 
 
-  if (!unsat && !internal->terminated_asynchronously ()) { // REVIEW: Can i wrap this in TA? Because then we can surely skip one watches construction i case of TA
+  if (!unsat && !internal->terminated_asynchronously ()) {
     closure->find_units ();
     assert (unsat || closure->chain.empty ());
     assert (unsat || lrat_chain.empty ());

@@ -564,7 +564,7 @@ int Internal::lucky_phases () {
   searching_lucky_phases = false;
   PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
 
-  // REVIEW: Here we should reset lim.terminate.check since in a lucky run this 
+  // Here we should reset lim.terminate.check since in a lucky run this 
   // may be set to up to 1000. This then may lead to a high latency for external
   // termination.
   lim.terminate.check = opts.terminateint;

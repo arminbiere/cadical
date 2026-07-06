@@ -988,7 +988,7 @@ int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   stats.searches++;
   START (solve);
-  activating_all_new_imported_literals (); // TODO: can and should this return early?
+  activating_all_new_imported_literals ();
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {

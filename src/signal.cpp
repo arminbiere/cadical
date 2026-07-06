@@ -103,13 +103,11 @@ static void catch_signal (int sig) {
     Signal::reset_alarm ();
   } else
 #endif
-  { // REVIEW:
-    // Reraising should happen after the graceful exit (or directly before returning 0)
-    // at least for SIGINT and SIGTERM for the others we can probably 
-    // reraise directly because it is not safe return control
+  { 
+    // Reraising should happen in solver control for SIGINT and SIGTERM.
     switch (sig) {
-    case SIGABRT:
-    case SIGSEGV:
+    case SIGABRT: // Better not return control for these two
+    case SIGSEGV: 
       Signal::reset ();
       ::raise (sig);
     default:
@@ -121,7 +119,6 @@ static void catch_signal (int sig) {
       if (signal_handler)
         signal_handler->catch_signal (sig);
     }
-
   }
 }
 
@@ -146,7 +143,6 @@ void Signal::alarm (int seconds) {
 
 #endif
 
-// REVIEW: added functionality to set and get the signal value
 void Signal::set_received (int sig) {
   signal_value = sig;
 }
@@ -154,7 +150,8 @@ void Signal::set_received (int sig) {
 int Signal::received () {
   return signal_value;
 }
-// Signals for which doing a graceful exit is sensible
+
+// Signals for which returning control is sensible
 bool Signal::interrupted () {
   const int sig = received ();
   return sig == SIGINT || sig == SIGTERM;

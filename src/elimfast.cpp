@@ -95,7 +95,7 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       return false;
     assert (!c->redundant);
     if (c->garbage)
@@ -125,7 +125,7 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
         return false;
       else if (val (pivot))
         return false;
-      else if (terminated_asynchronously ()) // REVIEW
+      else if (terminated_asynchronously ())
         return false;
     }
   }
@@ -271,7 +271,7 @@ int Internal::elimfast_round (bool &completed,
 
   assert (opts.fastelim);
   assert (!unsat);
-  if (terminated_asynchronously ()) // REVIEW
+  if (terminated_asynchronously ())
     return 0;
 
   START_SIMPLIFIER (fastelim, ELIM);
@@ -306,7 +306,7 @@ int Internal::elimfast_round (bool &completed,
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       break;
     if (c->garbage || c->redundant)
       continue;
@@ -369,7 +369,7 @@ int Internal::elimfast_round (bool &completed,
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
@@ -453,7 +453,7 @@ void Internal::elimfast () {
     return;
   if (unsat)
     return;
-  if (terminated_asynchronously ()) // REVIEW: inserted TA
+  if (terminated_asynchronously ())
     return;
   if (level)
     backtrack ();

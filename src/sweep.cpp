@@ -94,7 +94,7 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       break;
     if (!c->garbage) {
       for (const auto &lit : *c)
@@ -390,7 +390,7 @@ static void save_core_clause (void *state, unsigned id, bool learned,
                               size_t size, const unsigned *lits) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
-  if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: TA added
+  if (internal->unsat || internal->terminated_asynchronously ())
     return;
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   sweep_proof_clause pc;
@@ -422,7 +422,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
                                         const unsigned *chain) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
-  if (internal->unsat || internal->terminated_asynchronously ()) // REVIEW: TA added
+  if (internal->unsat || internal->terminated_asynchronously ())
     return;
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   vector<Clause *> &clauses = sweeper->clauses;
@@ -617,8 +617,8 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
 
 void Internal::save_add_clear_core (Sweeper &sweeper) {
   save_core (sweeper, 0); 
-  // REVIEW: now skip adding the core completely if TA is true. Else need to do 
-  // the full adding and clearing (including proof deletion steps)
+  // now skip adding the core completely if terminated_asynchronously is true. 
+  // Else need full adding and clearing (including proof deletion steps)
   if (!terminated_asynchronously ()) {
     add_core (sweeper, 0);
     clear_core (sweeper, 0);
@@ -651,7 +651,7 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
 void Internal::sweep_empty_clause (Sweeper &sweeper) {
   assert (!unsat);
   save_add_clear_core (sweeper); 
-  assert (unsat || terminated_asynchronously ()); // REVIEW: May be violated if terminated_asynchronously
+  assert (unsat || terminated_asynchronously ());
 }
 
 void Internal::sweep_refine_partition (Sweeper &sweeper) {
@@ -877,7 +877,7 @@ bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
   if (res == 20) {
     LOG ("sweep unit %d", lit); 
     save_add_clear_core (sweeper);
-    assert (val (lit) || terminated_asynchronously() ); // REVIEW: May be violated if terminated_asynchronously
+    assert (val (lit) || terminated_asynchronously() );
     stats.sweep_bb_solved_unsat++;
     return true;
   }
@@ -1460,7 +1460,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   LOG ("second sweeping implication %d <- %d succeeded too", other, lit);
 
   save_core (sweeper, 1);
-  // REVIEW: TA added. Same argument as for the other call site of save_core...
+  // Same argument as for the other call site of save_core...
   if (terminated_asynchronously ()) { 
     sweeper.core[0].clear ();
     sweeper.core[1].clear ();
@@ -1753,7 +1753,7 @@ bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
 }
 
 unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
-  if (terminated_asynchronously ()) // REVIEW
+  if (terminated_asynchronously ())
     return 0;
   vector<sweep_candidate> fresh;
   for (const auto &idx : vars) {
@@ -1784,7 +1784,7 @@ unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
 
 unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
   unsigned rescheduled = 0;
-  if (terminated_asynchronously ()) // REVIEW
+  if (terminated_asynchronously ())
     return rescheduled; 
   for (const auto &idx : sweep_schedule) {
     Flags &f = flags (idx);
@@ -1863,7 +1863,7 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
 #ifdef QUIET
   (void) scheduled, (void) swept;
 #endif
-  assert (sweep_schedule.empty () || terminated_asynchronously ()); // REVIEW
+  assert (sweep_schedule.empty () || terminated_asynchronously ());
   assert (sweep_incomplete);
   for (all_scheduled (idx))
     if (active (idx)) {
@@ -1911,7 +1911,7 @@ bool Internal::sweep () {
   uint64_t units = stats.sweep_units;
   Sweeper *sweeper = new Sweeper (this);
   DeferDeletePtr<Sweeper> delete_sweeper (sweeper);
-  init_sweeper (*sweeper); // <---- TODO: 
+  init_sweeper (*sweeper); 
   if (opts.sweepcomplete)
     sweeper->limit.ticks = INT64_MAX;
   else

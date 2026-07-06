@@ -27,7 +27,6 @@ flexible=yes
 profile=no
 memory_fuzzing=no
 terminator_fuzzing=no
-terminator_delay_fuzzing=no
 contracts=yes
 tracing=yes
 unlocked=yes
@@ -186,8 +185,6 @@ do
     --memory|--memory-fuzzing) memory_fuzzing=yes;;
     --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing) terminator_fuzzing=yes;;
 
-    --terminate-delay-fuzzing) terminator_delay_fuzzing=yes;;
-
     --competition) competition=yes;;
     --no-options) deactivate_options=yes;;
 
@@ -250,13 +247,6 @@ then
   [ $check = no ] && die "'--check-missed' requires assertion checking ('-c')"
 fi
 
-if [ $terminator_delay_fuzzing = yes ]
-then 
-  if [ "$memory_fuzzing" = no ] || [ "$terminator_fuzzing" = no ]
-  then
-    die "'--terminate-delay-fuzzing' requires '--memory-fuzzing --terminator-fuzzing'"
-  fi
-fi
 #--------------------------------------------------------------------------#
 
 # Generate and enter 'build' directory if not already in sub-directory.
@@ -376,7 +366,6 @@ fi
 
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
 [ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_TERMINATE"
-[ $terminator_delay_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_TERMINATE_DELAY"
 
 if [ $pedantic = yes ]
 then

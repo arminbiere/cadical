@@ -60,7 +60,7 @@ void Internal::factor_mode (bool redundant_only) {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       return;
     if (c->garbage)
       continue;
@@ -95,7 +95,7 @@ void Internal::factor_mode (bool redundant_only) {
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
   for (unsigned round = 1; !opts.factorxor && round <= rounds; round++) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ())
       return;
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
@@ -131,7 +131,7 @@ void Internal::factor_mode (bool redundant_only) {
 
   // finally push remaining clause on the occurrence stack
   for (const auto &c : candidates) {
-    if (terminated_asynchronously ()) // REVIEW
+    if (terminated_asynchronously ()) 
       return;
     for (const auto &lit : *c)
       occs (lit).push_back (c);
@@ -305,7 +305,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     if (ticks > limit)
       break;
-    if (terminated_asynchronously ()) // REVIEW: inserted TA
+    if (terminated_asynchronously ()) 
       break;
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
@@ -1009,7 +1009,7 @@ void Internal::add_factor_xorite (Quotient *q, int fresh) {
   }
   // mini_chain contains the relevant ids.
   // add simplified clauses.
-  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) { // REVIEW: This can be long but i think it is unskippable.
+  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) {
     Clause *c = q->qlauses[2 * idx];
     Clause *d = q->qlauses[2 * idx + 1];
     // resolve tells us wether we matched on second or third.

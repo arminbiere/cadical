@@ -282,7 +282,7 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
       continue;
     if (c->size > 3)
       continue;
-    if (terminated_asynchronously ()) // REVIEW: TA here 
+    if (terminated_asynchronously ())
       break;
     bool assigned = false, marked = false;
     for (const auto &lit : *c) {

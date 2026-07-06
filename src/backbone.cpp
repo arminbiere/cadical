@@ -527,7 +527,7 @@ void Internal::keep_backbone_candidates (
 
 unsigned Internal::compute_backbone () {
   size_t failed = 0;
-  if (terminated_asynchronously ()) // REVIEW
+  if (terminated_asynchronously ())
     return failed; 
 
   int64_t ticks = 0;
@@ -610,7 +610,7 @@ void Internal::binary_clauses_backbone () {
     return;
   if (!opts.backbone)
     return;
-  if (terminated_asynchronously ()) // REVIEW: inserted TA 
+  if (terminated_asynchronously ())
     return;
   if (level)
     backtrack_without_updating_phases ();

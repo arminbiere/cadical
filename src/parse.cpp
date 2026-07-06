@@ -105,7 +105,6 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 #ifndef QUIET
   double start = internal->time ();
 #endif
-
   bool found_inccnf_header = false;
   int ch = 0, declared = 0;
   uint64_t clauses = 0;
@@ -273,10 +272,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         break;
       continue;
     }
-    // REVIEW: here after every "token" or rather after every clause (i.e. !lit)
-    // Currently an error will be raised afterwards anyways.
-    if (internal->terminated_asynchronously ()) 
-      return "parsing interrupted";
+    internal->terminated_asynchronously ();
     if (ch == 'a' && found_inccnf_header)
       break;
     const char *err = parse_lit (ch, lit, vars, strict);
@@ -336,8 +332,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
           break;
         continue;
       }
-      if (internal->terminated_asynchronously ()) // REVIEW: as above
-        return "parsing interrupted";
+      internal->terminated_asynchronously ();
       const char *err = parse_lit (ch, lit, vars, strict);
       if (err == cube_token)
         PER ("two 'a' in a row");

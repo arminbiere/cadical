@@ -46,7 +46,7 @@ void Stats::print_old (Internal *internal) {
                          stats.ticks_sweep + stats.ticks_backbone;
   int64_t local_search_ticks = stats.ticks_walk;
   int64_t totalticks = searchticks + inprobeticks + local_search_ticks;
-  assert (totalticks == stats.ticks);
+  assert (totalticks == stats.ticks || Signal::received ());
 
   size_t extendbytes = internal->external->extension.size ();
   extendbytes *= sizeof (int);
