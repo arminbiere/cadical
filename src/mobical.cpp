@@ -86,7 +86,9 @@ static const char *USAGE =
 "  --replay                 '--do-not-mock-propagator' and '--do-not-extend-map'\n"
 "  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
 "  --do-not-extend-map       trust variable names in trace\n"
+#ifndef NTRACING
 "  --trace                   trace calls to <output> instead of copying\n"
+#endif
 "\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
@@ -3709,7 +3711,7 @@ public:
 #endif
   }
 
-  void execute () {
+  void execute (FILE *trace_file = nullptr) {
 #ifdef MOBICAL_MEMORY
     memory_bad_alloc = 0;
     memory_bad_size = 0;
@@ -3825,6 +3827,10 @@ public:
             mobical.shared->unsat++;
         } else
           c->execute (solver, extendmap);
+#ifndef NTRACING
+        if (c->type == Call::INIT && trace_file != nullptr)
+          solver->trace_api_calls (trace_file);
+#endif
         // initialize options after INIT or CONFIGURE
         if (c->type == Call::INIT || c->type == Call::CONFIGURE) {
 #ifdef MOBICAL_TERMINATE
@@ -7327,9 +7333,13 @@ int Mobical::main (int argc, char **argv) {
       donot.extend_map = true;
       donot.mock_propagator = true;
       donot.shrink.atall = true;
-    } else if (!strcmp (argv[i], "--trace"))
+    } else if (!strcmp (argv[i], "--trace")) {
+#ifdef NTRACING
+      die ("compile without 'NTRACING'");
+#endif
       tracing = 1;
-    else if (!strcmp (argv[i], "--do-not-extend-map"))
+      donot.shrink.atall = true;
+    } else if (!strcmp (argv[i], "--do-not-extend-map"))
       donot.extend_map = true;
     else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
       donot.shrink.atall = true;
@@ -7519,6 +7529,9 @@ int Mobical::main (int argc, char **argv) {
   if (tracing && !output_path)
     die ("can only use '--tracing' with '<output>'");
 
+  if (tracing && donot.execute)
+    die ("can not combine '--tracing' with '--do-not-execute'");
+
   if (!input_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' without '<input>'");
 
@@ -7673,7 +7686,8 @@ int Mobical::main (int argc, char **argv) {
   if (mode & OUTPUT) {
     assert (output_path);
     prefix ();
-    cerr << "writing " << (donot.shrink.atall ? "original" : "shrunken")
+    cerr << (tracing ? "tracing " : "writing ")
+         << (donot.shrink.atall ? "original" : "shrunken")
          << " trace to output '" << output_path << '\'' << endl;
   }
   cerr << flush;
@@ -7739,7 +7753,16 @@ END_OF_BANNER_AND_OPTIONS:
       cerr << endl << flush;
     }
 
-    if (output_path) {
+    if (tracing) {
+      FILE *output_file = nullptr;
+      output_file = fopen (output_path, "w");
+      if (output_file == NULL)
+        die ("could not open '%s'", output_path);
+      trace.execute (output_file);
+      fclose (output_file);
+      Trace::ok++;
+
+    } else if (output_path) {
 
       if (!donot.execute) {
 
@@ -7791,7 +7814,6 @@ END_OF_BANNER_AND_OPTIONS:
         summarize (trace);
         cerr << endl << flush;
       }
-
     } else {
       trace.execute (); // execute
       Trace::ok++;
