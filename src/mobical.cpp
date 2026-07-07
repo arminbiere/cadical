@@ -247,7 +247,6 @@ struct DoNot {
   bool fork = false;         // do not fork sub-process
   bool enforce = false;      // do not enforce contracts on read trace
   bool seeds = false;
-  bool summary = false;
   bool ignore_resource_limits = false;
 };
 
@@ -1303,6 +1302,7 @@ class Mobical : public Handler {
 
   bool shrinking = false; // In the middle of shrinking.
   bool running = false;   // In the middle of running.
+  int summary = -1;
 
   int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
   int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
@@ -2524,7 +2524,7 @@ public:
       calls.pop_back ();
     }
     if (solver) {
-      if (!mobical.donot.summary && mobical.shared) {
+      if (mobical.summary && mobical.shared) {
         mobical.add_statistics (solver);
       }
       delete solver;
@@ -2755,8 +2755,7 @@ public:
               break;
           }
         }
-        if (!mobical.donot.summary && mobical.shared &&
-            c->type == Call::RESET) {
+        if (mobical.summary && mobical.shared && c->type == Call::RESET) {
           if (solver)
             mobical.add_statistics (solver);
           mobical.shared->executed++;
@@ -4002,7 +4001,10 @@ void Mobical::print_statistics () {
   if (!quiet)
     hline ();
 
-  if (!mobical.donot.summary && mobical.shared) {
+  const bool summary =
+      mobical.shared &&
+      (mobical.summary == 1 || (mobical.summary == -1 && !Trace::failed));
+  if (summary) {
     section ("summary");
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
@@ -6087,8 +6089,6 @@ int Mobical::main (int argc, char **argv) {
   int64_t limit = -1;
   int64_t bug_limit = -1;
 
-  int summary = -1;
-
   // Error message in 'die' also uses colors.
   //
   for (int i = 1; i < argc; i++)
@@ -6335,14 +6335,8 @@ int Mobical::main (int argc, char **argv) {
   }
   check_mode_valid ();
 
-  if (summary == 1)
-    donot.summary = false;
-  else if (summary == 0)
-    donot.summary = true;
-  else if (mode & RANDOM)
-    donot.summary = false;
-  else
-    donot.summary = true;
+  if (summary == -1 && !(mode & RANDOM))
+    summary = 0;
 
   /*----------------------------------------------------------------------*/
 
