@@ -1260,7 +1260,7 @@ void Internal::notify_assignments () {
       continue;
     notification_trail.push_back (elit);
   }
-  if (notification_trail.size ()) {
+  if (!notification_trail.empty ()) {
     LOG_INTERACTION_FOR (notify_assignment_batch,
                          (int) notification_trail.size ());
     external->propagator->notify_assignment (notification_trail);
