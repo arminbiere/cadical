@@ -7539,6 +7539,12 @@ int Mobical::main (int argc, char **argv) {
     die ("can not use '--do-not-enforce-contracts' "
          "with both '<input>' and '<output>'");
 
+  if (!input_path && mobical.donot.mock_propagator)
+    die ("can not use '--do-not-mock-propagator' without <input>");
+
+  if (!input_path && mobical.donot.extend_map)
+    die ("can not use '--do-not-extend-map' without <input>");
+
   /*----------------------------------------------------------------------*/
 
   // Set mode.
