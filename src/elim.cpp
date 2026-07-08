@@ -675,7 +675,6 @@ void Internal::mark_eliminated_clauses_as_garbage (
 // Try to eliminate 'pivot' by bounded variable elimination.
 void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
                                           bool &deleted_binary_clause) {
-
   if (!active (pivot))
     return;
   assert (!frozen (pivot));
@@ -860,11 +859,14 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
   // Connect irredundant clauses.
   //
-  for (const auto &c : clauses)
+  for (const auto &c : clauses) {
+    if (terminated_asynchronously ())
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
-        if (active (lit))
-          occs (lit).push_back (c);
+        if (active (lit)) 
+          occs (lit).push_back (c); 
+  }
 
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;

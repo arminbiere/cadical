@@ -176,6 +176,10 @@ bool Internal::decompose_round () {
     if (!active (root_idx))
       continue;
     for (int root_sign = -1; !unsat && root_sign <= 1; root_sign += 2) {
+      if (terminated_asynchronously ()) {
+        STOP_SIMPLIFIER (decompose, DECOMP);
+        return false;
+      }
       int root = root_sign * root_idx;
       if (dfs[vlit (root)].min == TRAVERSED)
         continue; // skip traversed

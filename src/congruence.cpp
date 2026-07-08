@@ -202,6 +202,8 @@ bool Closure::find_binary (int lit, int other) const {
 void Closure::extract_binaries () {
   if (!internal->opts.congruencebinaries)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
 
@@ -214,6 +216,10 @@ void Closure::extract_binaries () {
       continue;
     if (c->size > 2)
       continue;
+    if (internal->terminated_asynchronously ()) {
+      STOP(extractbinaries);
+      return;
+    }
     assert (c->size == 2);
     const int lit = c->literals[0];
     const int other = c->literals[1];
@@ -223,7 +229,10 @@ void Closure::extract_binaries () {
                                        already_sorted ? lit : other,
                                        already_sorted ? other : lit));
   }
-
+  if (internal->terminated_asynchronously ()) {
+    STOP (extractbinaries);
+    return;
+  }
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (internal), compact_binary_order (internal));
 
@@ -249,6 +258,10 @@ void Closure::extract_binaries () {
 
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size; ++i) {
+    if (internal->terminated_asynchronously ()) {
+      STOP (extractbinaries);
+      return;
+    }
     Clause *d = internal->clauses[i]; // binary clauses are appended, so
                                       // reallocation possible
     if (d->garbage)
@@ -295,6 +308,10 @@ void Closure::extract_binaries () {
 
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
+  if (internal->terminated_asynchronously ()) {
+    STOP (extractbinaries);
+    return;
+  }
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (internal), compact_binary_order (internal));
   const size_t new_size = binaries.size ();
@@ -3399,6 +3416,8 @@ void Closure::extract_and_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceand)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractands);
 
   marks.resize (internal->max_var * 2 + 3);
@@ -4129,6 +4148,8 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   }
 
   for (auto c : candidates) {
+    if (internal->terminated_asynchronously ())
+      return;
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
   }
@@ -4345,6 +4366,10 @@ void Closure::extract_xor_gates () {
   for (auto c : candidates) {
     if (internal->unsat)
       break;
+    if (internal->terminated_asynchronously ()) {
+      STOP (extractxors);
+      return;
+    }
     if (c->garbage)
       continue;
     extract_xor_gates_with_base_clause (c);
@@ -4358,6 +4383,8 @@ void Closure::extract_xor_gates () {
 
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
+  if (internal->terminated_asynchronously ())
+    return;
   size_t units = 0;
   for (auto v : internal->vars) {
   RESTART:
@@ -4400,7 +4427,8 @@ void Closure::find_units () {
 
 void Closure::find_equivalences () {
   assert (!internal->unsat);
-
+  if (internal->terminated_asynchronously ())
+    return;
   for (auto v : internal->vars) {
   RESTART:
     if (!internal->flags (v).active ())
@@ -4846,6 +4874,8 @@ bool Closure::propagate_equivalence (int lit) {
 }
 
 size_t Closure::propagate_units_and_equivalences () {
+  if (internal->terminated_asynchronously ())
+    return 0;
   START (congruencemerge);
   size_t propagated = 0;
   LOG ("propagating at least %zd units", schedule.size ());
@@ -7235,6 +7265,8 @@ void Closure::init_ite_gate_extraction (
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
+    if (internal->terminated_asynchronously ())
+      break;
     unsigned positive = 0, negative = 0, twice = 0;
     for (auto lit : *c) {
       if (internal->val (lit))
@@ -7692,7 +7724,7 @@ void Closure::extract_ite_gates () {
   for (auto idx : internal->vars) {
     if (internal->flags (idx).active ()) {
       extract_ite_gates_of_variable (idx);
-      if (internal->unsat)
+      if (internal->unsat || internal->terminated_asynchronously ())
         break;
     }
   }
@@ -7740,6 +7772,8 @@ void Closure::extract_gates () {
 /*------------------------------------------------------------------------*/
 // top level function to extract gate
 bool Internal::extract_gates (bool remove_units_before_run) {
+  if (terminated_asynchronously ())
+    return false;
   if (unsat)
     return false;
   if (!opts.congruence)
@@ -7799,21 +7833,22 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  closure.reset_extraction ();
+  if (!internal->terminated_asynchronously ())
+    closure.reset_extraction ();
 
-  if (!unsat) {
+  if (!unsat && !internal->terminated_asynchronously ()) {
     closure.find_units ();
     assert (unsat || closure.chain.empty ());
     assert (unsat || lrat_chain.empty ());
-    if (!internal->unsat) {
+    if (!internal->unsat && !internal->terminated_asynchronously ()) {
       closure.find_equivalences ();
       assert (unsat || closure.chain.empty ());
       assert (unsat || lrat_chain.empty ());
 
-      if (!unsat) {
+      if (!unsat && !internal->terminated_asynchronously ()) {
         const int propagated = closure.propagate_units_and_equivalences ();
         assert (unsat || closure.chain.empty ());
-        if (!unsat && propagated)
+        if (!unsat && propagated && !internal->terminated_asynchronously ())
           closure.forward_subsume_matching_clauses ();
       }
     }
@@ -7825,7 +7860,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   if (!internal->unsat) {
     propagated2 = propagated = 0;
   }
-  assert (closure.new_unwatched_binary_clauses.empty ());
+  assert (closure.new_unwatched_binary_clauses.empty () || internal->terminated_asynchronously ());
   internal->reset_occs ();
   internal->reset_noccs ();
   assert (!internal->occurring ());

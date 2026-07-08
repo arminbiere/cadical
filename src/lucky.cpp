@@ -497,6 +497,11 @@ int Internal::lucky_phases () {
     LOG ("lucky %" PRId64 " units", units);
   searching_lucky_phases = false;
 
+  // Here we should reset lim.terminate.check since in a lucky run this 
+  // may be set to up to 1000. This then may lead to a high latency for external
+  // termination.
+  lim.terminate.check = opts.terminateint;
+
   STOP (lucky);
   STOP (search);
 

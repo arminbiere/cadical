@@ -278,6 +278,8 @@ void App::print_witness (FILE *file) {
       continue;
     else
       tmp = solver->val (i) < 0 ? -i : i;
+    // This only terminates if a signal is raised 
+    solver->internal->terminated_asynchronously (); 
     char str[32];
     snprintf (str, sizeof str, " %d", tmp);
     int l = strlen (str);
@@ -714,10 +716,13 @@ int App::main (int argc, char **argv) {
   if (dimacs_path)
     err = solver->read_dimacs (dimacs_path, max_var, force_strict_parsing,
                                incremental, cube_literals);
-  else
+  else {
+    Signal::reset ();
     err = solver->read_dimacs (stdin, dimacs_name, max_var,
                                force_strict_parsing, incremental,
                                cube_literals);
+    Signal::set (this);
+  }
   if (err)
     APPERR ("%s", err);
   if (read_solution_path) {
@@ -984,20 +989,7 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-#ifndef QUIET
-  if (!get ("quiet")) {
-    solver->message ();
-    signal_message ("caught", sig);
-    solver->section ("result");
-    solver->message ("UNKNOWN");
-    solver->statistics ();
-    solver->resources ();
-    solver->message ();
-    signal_message ("raising", sig);
-  }
-#else
-  (void) sig;
-#endif
+  Signal::set_received (sig);
 }
 
 void App::catch_alarm () {
