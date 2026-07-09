@@ -116,7 +116,7 @@ OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( exteagerreasons,   0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( exttracecalls,     0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
-OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
+OPTION( factor,            0,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factorcheck,       1,  0,  2,0,0,1, "API checks that variables have been declared (1 = only with factor on, 2 = always)") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delay bounded variable addition between eliminations") \
@@ -160,7 +160,7 @@ OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocessinit,  2e6,  0,2e9,2,0,1, "initial preprocessing base limit" ) \
-OPTION( preprocesslight,   1,  0,  1,0,1,1, "lightweight preprocessing" ) \
+OPTION( preprocesslight,   0,  0,  1,0,1,1, "lightweight preprocessing" ) \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probeeffort,       8,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
