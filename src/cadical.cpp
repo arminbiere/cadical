@@ -1020,7 +1020,7 @@ void App::catch_alarm () {
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  solver->internal->report ('!'); // SIGTODO: remove after latency debugging
+  //solver->internal->report ('!'); // SIGTODO: remove after latency debugging
   timesup = true; // Wait for solver to call 'App::terminate ()'.
 #endif
 }
