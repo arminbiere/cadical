@@ -1812,6 +1812,13 @@ public:
   }
 
   void reset_observed () {
+    // there is a data race where reset_observed can
+    // trigger a bt in cadical which re-notifies
+    // literals that should no longer be observed
+    // (or are unobserved immediatly afterwords)
+    MLOG ("reset observed (solver)" << std::endl);
+    s->reset_observed_vars ();
+    MLOG ("reset observed (propagator)" << std::endl);
     for (auto &kvp : observed_map) {
       if (!kvp.second)
         continue;
@@ -1825,8 +1832,6 @@ public:
       t.clear ();
     }
     observed_fixed.clear ();
-    MLOG ("reset observed");
-    s->reset_observed_vars ();
   }
 
   void check_trail () {
