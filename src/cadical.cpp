@@ -49,7 +49,7 @@ class App : public Handler, public Terminator {
   //
   int max_var;           // Set after parsing.
   volatile bool timesup; // Asynchronous termination.
-
+  volatile sig_atomic_t signal_value = 0; // Caught signal.
   // Printing.
   //
   void print_usage (bool all = false);
@@ -278,8 +278,8 @@ void App::print_witness (FILE *file) {
       continue;
     else
       tmp = solver->val (i) < 0 ? -i : i;
-    // This only terminates if a signal is raised 
-    solver->internal->terminated_asynchronously (); 
+    if (signal_value) // SIGTODO: review
+      break;
     char str[32];
     snprintf (str, sizeof str, " %d", tmp);
     int l = strlen (str);
@@ -934,6 +934,13 @@ int App::main (int argc, char **argv) {
   if (time_limit > 0)
     alarm (0);
 #endif
+  // SIGTODO: Review. Just before we return from App::main
+  if (signal_value) {
+    CaDiCaL::Signal::reset ();
+    signal_message ("raising", signal_value);
+    solver->internal->report ('!'); // SIGTODO: remove after latency debugging
+    raise (signal_value);
+  }
 
   return res;
 }
@@ -989,7 +996,10 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-  Signal::set_received (sig);
+  signal_value = sig;
+  solver->internal->report ('!'); // SIGTODO: remove after latency debugging
+  solver->internal->termination_forced = true;
+  Signal::reset (); // Send signal again -> instant termination but no stats
 }
 
 void App::catch_alarm () {

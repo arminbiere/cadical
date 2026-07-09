@@ -93,7 +93,6 @@ extern "C" {
 #include "reluctant.hpp"
 #include "resources.hpp"
 #include "score.hpp"
-#include "signal.hpp"
 #include "stats.hpp"
 #include "sweep.hpp"
 #include "terminal.hpp"
@@ -1867,6 +1866,7 @@ inline bool Internal::terminated_asynchronously (int factor) {
   // Here we check whether a signal was caught. 
   // We will immediately reraise after printing stats. For this we need to move
   // this above the 'if (termination_forced)' branch.
+  /* SIGTODO: Evil dependency. Needs to be removed
   if (const int sig = Signal::received ()) {
     VERBOSE (2, "signal %d detected", sig);
 #ifndef QUIET
@@ -1889,9 +1889,11 @@ inline bool Internal::terminated_asynchronously (int factor) {
     Signal::reset (); // Disconnects signal handler
     raise (sig);
   }
-  // First way of asynchronous termination is through 'terminate' which sets
-  // the 'termination_forced' flag directly.  The second way is through a
-  // call back to a 'terminator' if it is non-zero, which however is costly.
+  */
+  // First way of asynchronous termination is through 'terminate' or 
+  // 'catch_signal' which sets the 'termination_forced' flag directly.  
+  // The second way is through a call back to a 'terminator' if it is non-zero,
+  // which however is costly.
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");

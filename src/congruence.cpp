@@ -4881,6 +4881,8 @@ size_t Closure::propagate_units_and_equivalences () {
   LOG ("propagating at least %zd units", schedule.size ());
   assert (lrat_chain.empty ());
   while (propagate_units () && !schedule.empty ()) {
+    if (internal->terminated_asynchronously ())
+      return 0;
     assert (!internal->unsat);
     assert (lrat_chain.empty ());
     ++propagated;
