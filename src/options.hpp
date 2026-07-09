@@ -31,7 +31,7 @@ OPTION( arenasort,            1,  0,  1,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,            3,  1,  3,0,0,1, "1=clause, 2=var, 3=queue") \
 OPTION( backbone,             1,  0,  2,0,0,1, "binary clause backbone") \
 OPTION( backboneeffort,      20,  0,1e5,0,0,1, "binary effort in per mile") \
-OPTION( backbonemaxrounds,  1e3, 0,1e5,0,0,1, "backbone rounds limit") \
+OPTION( backbonemaxrounds,  1e3,  0,1e5,0,0,1, "backbone rounds limit") \
 OPTION( backbonerounds,     100,  0,1e5,0,0,1, "backbone rounds limit") \
 OPTION( backbonethresh,       5,  0,1e9,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( binary,               1,  0,  1,0,0,1, "use binary proof format") \
@@ -67,13 +67,13 @@ OPTION( conditionmaxrat,    100,  1,2e9,1,0,1, "maximum clause variable ratio") 
 OPTION( conditionmineff,      0,  0,2e9,1,0,1, "minimum condition efficiency") \
 OPTION( congruence,           1,  0,  1,0,1,1, "congruence closure") \
 OPTION( congruenceand,        1,  0,  1,0,0,1, "extract AND gates") \
-OPTION( congruenceandarity,   1e6,2,5e7,0,0,1, "AND gate arity limit") \
-OPTION( congruenceanddummy,   1,  0,  1,0,1,1, "check for dummy AND out of binary clauses") \
+OPTION( congruenceandarity, 1e6,  2,5e7,0,0,1, "AND gate arity limit") \
+OPTION( congruenceanddummy,   1,  0,  1,0,1,1, "extract dummy AND from binaries") \
 OPTION( congruencebinaries,   1,  0,  1,0,0,1, "extract binary and strengthen ternary clauses") \
 OPTION( congruenceite,        1,  0,  1,0,0,1, "extract ITE gates") \
 OPTION( congruencexor,        1,  0,  1,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,   4,  2, 31,0,0,1, "XOR gate arity limit") \
-OPTION( congruencexorcounts,  1, 1,5e6,0,0,1, "XOR gate round") \
+OPTION( congruencexorcounts,  1,  1,5e6,0,0,1, "XOR gate round") \
 OPTION( cover,                0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covereffort,          4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( covermaxclslim,     1e5,  1,2e9,2,0,1, "maximum clause size") \
@@ -98,7 +98,7 @@ OPTION( elimdefcores,         1,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefticks,       2e5,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimeffort,         1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( elimequivs,           1,  0,  1,0,0,1, "find equivalence gates") \
-OPTION( elimfactor,           1,  0,  1,0,0,1, "eliminate extension variables introduced by factor") \
+OPTION( elimfactor,           1,  0,  1,0,0,1, "eliminate extension variables") \
 OPTION( elimint,            2e3,  1,2e9,0,0,1, "elimination interval") \
 OPTION( elimites,             1,  0,  1,0,0,1, "find if-then-else gates") \
 OPTION( elimlimited,          1,  0,  1,0,0,1, "limit resolutions") \
@@ -155,8 +155,8 @@ OPTION( frat,                 0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
 OPTION( idrup,                0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,                  0,  0,  2,0,0,1, "ILB (incremental lazy backtrack) (0: no, 1: assumptions only, 2: everything)") \
 OPTION( incdecay,             1,  0,  4,0,0,1, "decay clauses when doing incremental clauses" ) \
-OPTION( incdecayint,          1e6,  1,2e9,0,0,1, "decay interval when doing incremental clauses" ) \
-OPTION( inprobeint,           100,  1,2e9,0,0,1, "inprobing interval" ) \
+OPTION( incdecayint,        1e6,  1,2e9,0,0,1, "decay interval when doing incremental clauses" ) \
+OPTION( inprobeint,         100,  1,2e9,0,0,1, "inprobing interval" ) \
 OPTION( inprobing,            1,  0,  1,0,1,1, "enable probe inprocessing") \
 OPTION( inprocessing,         1,  0,  1,0,1,1, "enable general inprocessing") \
 OPTION( instantiate,          0,  0,  1,0,1,1, "variable instantiation") \
@@ -173,7 +173,7 @@ OPTION( luckyearly,           1,  0,  1,0,0,1, "lucky phases before preprocessin
 OPTION( luckylate,            1,  0,  1,0,0,1, "lucky phases after preprocessing") \
 OPTION( luckymininterval,   1e5,  0,2e9,0,0,1, "min number of conflicts between two lucky phases in incremental calls") \
 OPTION( luckyrandom,          0,  0,  1,0,0,1, "use lucky random") \
-OPTION( luckyrounds,          10, 1,100,0,0,1, "maximum number of lucky round") \
+OPTION( luckyrounds,         10,  1,100,0,0,1, "maximum number of lucky round") \
 OPTION( minimize,             1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,      1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( minimizeticks,        1,  0,  1,0,0,1, "increment ticks in minimization") \
@@ -191,7 +191,7 @@ QUTOPT( quiet,                0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,        32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( randec,               1,  0,  1,0,0,1, "random decisions") \
 OPTION( randecfocused,        1,  0,  1,0,0,1, "random decisions in focused mode") \
-OPTION( randecinit,          1e3, 2,2e9,0,0,1, "inital random decision interval") \
+OPTION( randecinit,         1e3,  2,2e9,0,0,1, "inital random decision interval") \
 OPTION( randecint,          500,  0,2e9,0,0,1, "random conflict length") \
 OPTION( randeclength,        10,  1,1e9,0,0,1, "length random decisions phases") \
 OPTION( randecstable,         0,  0,  1,0,0,1, "random decisions in stable mode") \
@@ -214,8 +214,8 @@ OPTION( reportall,            0,  0,  1,0,0,1, "report even if not successful") 
 OPTION( reportsolve,          0,  0,  1,0,0,1, "use solving not process time") \
 OPTION( restart,              1,  0,  1,0,0,1, "enable restarts") \
 OPTION( restartint,           2,  1,2e9,0,0,1, "restart interval") \
-OPTION( restartmarginfocused,10,  0,25,0,0,1, "focused slow fast margin in percent") \
-OPTION( restartmarginstable, 25,  0,25,0,0,1, "stable slow fast margin in percent") \
+OPTION( restartmarginfocused,10,  0, 25,0,0,1, "focused slow fast margin in percent") \
+OPTION( restartmarginstable, 25,  0, 25,0,0,1, "stable slow fast margin in percent") \
 OPTION( restartreusetrail,    1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,           0,  0,  2,0,0,1, "restore all clauses (2=really)") \
 OPTION( restoreflush,         0,  0,  1,0,0,1, "remove satisfied clauses") \
@@ -296,9 +296,9 @@ OPTION( vivifytier2eff,       2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,          1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,       1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,                 1,  0,  1,0,0,1, "enable random walks") \
-OPTION( walkddfwstrat,        4, 0,  4,1,0,1, "ddfw weight strategy [0=yalin-itl,1=yalin=ite,2=yalin-ith,3=ddfw,4=tassat") \
+OPTION( walkddfwstrat,        4,  0,  4,1,0,1, "ddfw weight strategy [0=yalin-itl,1=yalin=ite,2=yalin-ith,3=ddfw,4=tassat") \
 OPTION( walkeffort,          80,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkfullocc,          2,   0,  2,1,0,1, "0 = single watched, 1 = Kissat watched, 2 = ddfw") \
+OPTION( walkfullocc,          2,  0,  2,1,0,1, "0 = single watched, 1 = Kissat watched, 2 = ddfw") \
 OPTION( walkmaxeff,         1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,           0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walkmineffinit,     1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \
