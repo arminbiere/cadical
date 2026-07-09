@@ -592,7 +592,7 @@ void Internal::sort_and_reuse_assumptions () {
       break;
     }
     ++i, ++j;
-    assert (var (lit).level == lev);
+    assert (var (lit).level == lev || !var (lit).level || var (lit).reason);
     if (l.decision == alit) {
       continue;
     }
