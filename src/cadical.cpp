@@ -1010,7 +1010,7 @@ void App::signal_message (const char *msg, int sig) {
 
 void App::catch_signal (int sig) {
   signal_value = sig;
-  solver->internal->report ('!'); // SIGTODO: remove after latency debugging
+  //solver->internal->report ('!'); // SIGTODO: remove after latency debugging
   solver->internal->termination_forced = true;
   Signal::reset (); // Send signal again -> instant termination but no stats
 }
