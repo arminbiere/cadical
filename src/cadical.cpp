@@ -653,6 +653,7 @@ int App::main (int argc, char **argv) {
           localsearch, localsearch_specified);
       solver->limit ("localsearch", localsearch);
     }
+    /* SIGTODO: uncomment this block
 #ifndef _WIN32
     if (time_limit >= 0) {
       solver->message (
@@ -662,6 +663,7 @@ int App::main (int argc, char **argv) {
       solver->connect_terminator (this);
     }
 #endif
+*/
     if (conflict_limit >= 0) {
       solver->message (
           "setting conflict limit to %d conflicts (due to '%s')",
@@ -725,6 +727,17 @@ int App::main (int argc, char **argv) {
   }
   if (err)
     APPERR ("%s", err);
+  // SIGTODO: remove this block. Just here for better latency testing
+  #ifndef _WIN32
+    if (time_limit >= 0) {
+      solver->message (
+          "setting time limit to %d seconds real time (due to '-t %s')",
+          time_limit, time_limit_specified);
+      Signal::alarm (time_limit);
+      solver->connect_terminator (this);
+    }
+  #endif
+  // ----------
   if (read_solution_path) {
     solver->section ("parsing solution");
     solver->message ("reading solution file from '%s'", read_solution_path);

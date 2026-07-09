@@ -7872,7 +7872,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   PHASE ("congruence-phase", stats.congruence.rounds,
          "merged %" PRId64 " literals", new_merged - old_merged);
-  if (!unsat && !internal->propagate ()) {
+  if (!internal->terminated_asynchronously () && !unsat && !internal->propagate ()) {
     learn_empty_clause ();
   }
 
