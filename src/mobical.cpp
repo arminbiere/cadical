@@ -113,8 +113,7 @@ static const char *USAGE =
 "through delta-debugging to produce a smaller trace.  The shrunken failing\n"
 "trace is written as 'red-<seed>.trace' to the current working directory.\n"
 "\n"
-"The following options disable certain parts of the shrinking "
-"algorithm:\n"
+"The following options disable certain parts of the shrinking algorithm:\n"
 "\n"
 "  --do-not-shrink[-at-all]\n"
 "  --do-not-add-options[-before-shrinking]\n"
@@ -127,6 +126,30 @@ static const char *USAGE =
 "  --do-not-shrink-variables\n"
 "  --do-not-shrink-options\n"
 "  --do-not-shrink-propagator\n"
+"\n"
+"The following options change certain parts of trace generation,\n"
+"with '<r>' between 0-1000 the probability to generate these.\n"
+"Prefixes 'always' and 'never' are shortcuts for '<r>' = 1000\n"
+"and '<r>' = 0 respectively. The last bracket is the default.\n"
+"\n"
+"  --[always,never]-generate_options[]<r> [900]\n"
+"  --[always,never]-generate_resize[]<r> [10]\n"
+"  --[always,never]-generate_declare_one_more_variable[]<r> [10]\n"
+"  --[always,never]-generate_declare_more_variables[]<r> [10]\n"
+"  --[always,never]-generate_constraint[]<r> [50]\n"
+"  --[always,never]-generate_assume[]<r> [850]\n"
+"  --[always,never]-generate_values[]<r> [900]\n"
+"  --[always,never]-generate_flipped[]<r> [500]\n"
+"  --[always,never]-generate_frozen[]<r> [500]\n"
+"  --[always,never]-generate_failed[]<r> [950]\n"
+"  --[always,never]-generate_phase[]<r> [950]\n"
+"  --[always,never]-generate_conclude[]<r> [50]\n"
+"  --[always,never]-generate_freeze[]<r> [500]\n"
+"  --[always,never]-generate_melt[]<r> [950]\n"
+"  --[always,never]-generate_propagator[]<r> [100]\n"
+"  --[always,never]-generate_forces[]<r> [900]\n"
+"  --[always,never]-generate_propagate[]<r> [10]\n"
+"  --[always,never]-generate_implied[]<r> [10]\n"
 "\n"
 "The standard mode of using the model based tester is to start it in\n"
 "random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
@@ -260,6 +283,29 @@ struct DoNot {
   bool extend_map = false;      // do not map variables
   bool mock_propagator = false; // do not use mock propagator
   bool ignore_resource_limits = false;
+};
+
+/*------------------------------------------------------------------------*/
+
+struct TraceGen {
+  int generate_options = 900;
+  int generate_resize = 10;
+  int generate_declare_one_more_variable = 10;
+  int generate_declare_more_variables = 10;
+  int generate_constraint = 50;
+  int generate_assume = 850;
+  int generate_values = 900;
+  int generate_flipped = 500;
+  int generate_frozen = 500;
+  int generate_failed = 950;
+  int generate_phase = 950;
+  int generate_conclude = 50;
+  int generate_freeze = 500;
+  int generate_melt = 950;
+  int generate_propagator = 100;
+  int generate_forces = 900;
+  int generate_propagate = 10;
+  int generate_implied = 10;
 };
 
 /*------------------------------------------------------------------------*/
@@ -675,6 +721,7 @@ class Mobical : public Handler {
   DoNot donot;
   Force force;
   Mopts mopts;
+  TraceGen tracegen;
 
   bool verbose = false;
   bool quiet = false;
@@ -4184,7 +4231,7 @@ void Trace::generate_options (Random &random, Size size) {
 #endif
   // In 10% of the cases do not change any options.
   //
-  if (random.generate_double () < 0.1)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_options)
     return;
 
   // In order to increase throughput we enable 'walk' in 5% tests, which
@@ -4317,7 +4364,7 @@ void Trace::generate_queries (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_resize (Random &random, int max_var) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_resize)
     return;
   int new_max_var = random.pick_int (0, 1.1 * max_var);
   push_back (new ResizeCall (new_max_var));
@@ -4326,14 +4373,16 @@ void Trace::generate_resize (Random &random, int max_var) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_declare_more_variables (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >=
+      mobical.tracegen.generate_declare_more_variables)
     return;
   int new_max_var = random.pick_int (0, 100);
   push_back (new DeclareMoreVariablesCall (new_max_var));
 }
 
 void Trace::generate_declare_one_more_variable (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >=
+      mobical.tracegen.generate_declare_one_more_variable)
     return;
   push_back (new DeclareOneMoreVariableCall ());
 }
@@ -4341,7 +4390,7 @@ void Trace::generate_declare_one_more_variable (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_implied (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_implied)
     return;
   push_back (new ImpliedCall ());
 }
@@ -4349,7 +4398,7 @@ void Trace::generate_implied (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_propagate (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_propagate)
     return;
   push_back (new PropagateImplyCall ());
 }
@@ -4431,7 +4480,7 @@ void Trace::generate_clause (Random &random, int minvars, int maxvars,
 
 void Trace::generate_constraint (Random &random, int minvars, int maxvars,
                                  int uniform) {
-  if (random.generate_double () < 0.95)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_constraint)
     return;
   assert (minvars <= maxvars);
   int maxsize = maxvars - minvars + 1;
@@ -4458,9 +4507,9 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 /*------------------------------------------------------------------------*/
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   // No Propagator in 90% of cases.
-  if (!in_connection && random.generate_double () < 0.9) {
+  if (!in_connection &&
+      random.pick_int (0, 999) >= mobical.tracegen.generate_propagator)
     return;
-  }
   if (!in_connection) {
     push_back (new ConnectCall ());
     in_connection = true;
@@ -4515,16 +4564,13 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
 }
 
 void Trace::generate_forces (Random &random, int minvars, int maxvars) {
-  if (!in_connection)
+  if (!in_connection ||
+      random.pick_int (0, 999) >= mobical.tracegen.generate_forces)
     return;
 
   assert (minvars <= maxvars);
 
   const int diff = maxvars - minvars;
-
-  // Give a chance to add no forces.
-  if (random.generate_double () < 0.1)
-    return;
 
   // TODO: MockForceType length.
   for (int i = 0; i < LAST_MOCK_FORCE_TYPE; i++) {
@@ -4608,7 +4654,7 @@ void Trace::generate_lemmas (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_assume (Random &random, int vars) {
-  if (random.generate_double () < 0.15)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_assume)
     return;
   int count;
   if (random.generate_bool ())
@@ -4639,7 +4685,7 @@ void Trace::generate_assume (Random &random, int vars) {
 }
 
 void Trace::generate_values (Random &random, int vars) {
-  if (random.generate_double () < 0.1)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_values)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -4657,7 +4703,7 @@ void Trace::generate_values (Random &random, int vars) {
 }
 
 void Trace::generate_flipped (Random &random, int vars) {
-  if (random.generate_double () < 0.5)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_flipped)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -4680,7 +4726,7 @@ void Trace::generate_flipped (Random &random, int vars) {
 }
 
 void Trace::generate_failed (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_failed)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -4697,13 +4743,13 @@ void Trace::generate_failed (Random &random, int vars) {
 }
 
 void Trace::generate_conclude (Random &random) {
-  if (random.generate_double () < 0.95)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_conclude)
     return;
   push_back (new ConcludeCall ());
 }
 
 void Trace::generate_frozen (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_frozen)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -4720,7 +4766,7 @@ void Trace::generate_frozen (Random &random, int vars) {
 }
 
 void Trace::generate_phase (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_phase)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -4745,7 +4791,7 @@ void Trace::generate_phase (Random &random, int vars) {
 }
 
 void Trace::generate_melt (Random &random) {
-  if (random.generate_bool ())
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_melt)
     return;
   int m = vars ();
   int64_t *frozen = new int64_t[m + 1];
@@ -4779,7 +4825,7 @@ void Trace::generate_melt (Random &random) {
 }
 
 void Trace::generate_freeze (Random &random, int vars) {
-  if (random.generate_bool ())
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_freeze)
     return;
   double fraction = random.generate_double () * 0.5;
   for (int idx = 1; idx <= vars; idx++) {
@@ -7300,6 +7346,9 @@ int Mobical::main (int argc, char **argv) {
     if (!strcmp (argv[i], "-h")) {
       printf (USAGE, DEFAULT_TIME_LIMIT, DEFAULT_SPACE_LIMIT);
       exit (0);
+    } else if (!strcmp (argv[i], "--help")) {
+      printf (USAGE, DEFAULT_TIME_LIMIT, DEFAULT_SPACE_LIMIT);
+      exit (0);
     } else if (!strcmp (argv[i], "--version"))
       puts (version ()), exit (0);
     else if (!strcmp (argv[i], "--build")) {
@@ -7390,6 +7439,432 @@ int Mobical::main (int argc, char **argv) {
       add_stats_after_solve = true;
     } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
       add_plain_after_options = true;
+    } else if (!strncmp (argv[i], "--always", 8)) {
+      if (!strcmp (argv[i] + 8, "-generate-options"))
+        tracegen.generate_options = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-resize"))
+        tracegen.generate_resize = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-declare-one-more-variable"))
+        tracegen.generate_declare_one_more_variable = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-declare-more-variables"))
+        tracegen.generate_declare_more_variables = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-constraint"))
+        tracegen.generate_constraint = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-assume"))
+        tracegen.generate_assume = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-values"))
+        tracegen.generate_values = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-flipped"))
+        tracegen.generate_flipped = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-frozen"))
+        tracegen.generate_frozen = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-failed"))
+        tracegen.generate_failed = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-phase"))
+        tracegen.generate_phase = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-conclude"))
+        tracegen.generate_conclude = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-freeze"))
+        tracegen.generate_freeze = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-melt"))
+        tracegen.generate_melt = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-propagator"))
+        tracegen.generate_propagator = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-forces"))
+        tracegen.generate_forces = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-propagate"))
+        tracegen.generate_propagate = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-implied"))
+        tracegen.generate_implied = 1000;
+      else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
+    } else if (!strncmp (argv[i], "--never", 7)) {
+      if (!strcmp (argv[i] + 7, "-generate-options"))
+        tracegen.generate_options = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-resize"))
+        tracegen.generate_resize = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-declare-one-more-variable"))
+        tracegen.generate_declare_one_more_variable = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-declare-more-variables"))
+        tracegen.generate_declare_more_variables = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-constraint"))
+        tracegen.generate_constraint = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-assume"))
+        tracegen.generate_assume = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-values"))
+        tracegen.generate_values = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-flipped"))
+        tracegen.generate_flipped = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-frozen"))
+        tracegen.generate_frozen = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-failed"))
+        tracegen.generate_failed = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-phase"))
+        tracegen.generate_phase = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-conclude"))
+        tracegen.generate_conclude = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-freeze"))
+        tracegen.generate_freeze = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-melt"))
+        tracegen.generate_melt = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-propagator"))
+        tracegen.generate_propagator = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-forces"))
+        tracegen.generate_forces = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-propagate"))
+        tracegen.generate_propagate = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-implied"))
+        tracegen.generate_implied = 0;
+      else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
+    } else if (!strncmp (argv[i], "--generate", 10)) {
+      int gen_val = 0;
+      if (!strncmp (argv[i], "--generate-options", 18)) {
+        if (!strcmp (argv[i], "--generate-options")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-options");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-options");
+        tracegen.generate_options = gen_val;
+      } else if (!strncmp (argv[i], "--generate-resize", 17)) {
+        if (!strcmp (argv[i], "--generate-resize")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-resize");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-resize");
+        tracegen.generate_resize = gen_val;
+      } else if (!strncmp (argv[i], "--generate-declare-one-more-variable",
+                           36)) {
+        if (!strcmp (argv[i], "--generate-declare-one-more-variable")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 36))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 36,
+                 "--generate-declare-one-more-variable");
+          gen_val = atol (argv[i] + 36);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-declare-one-more-variable");
+        tracegen.generate_declare_one_more_variable = gen_val;
+      } else if (!strncmp (argv[i], "--generate-declare-more-variables",
+                           33)) {
+        if (!strcmp (argv[i], "--generate-declare-more-variables")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 33))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 33,
+                 "--generate-declare-more-variables");
+          gen_val = atol (argv[i] + 33);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-declare-more-variables");
+        tracegen.generate_declare_more_variables = gen_val;
+      } else if (!strncmp (argv[i], "--generate-constraint", 21)) {
+        if (!strcmp (argv[i], "--generate-constraint")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 21))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 21,
+                 "--generate-constraint");
+          gen_val = atol (argv[i] + 21);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-constraint");
+        tracegen.generate_constraint = gen_val;
+      } else if (!strncmp (argv[i], "--generate-assume", 17)) {
+        if (!strcmp (argv[i], "--generate-assume")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-assume");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-assume");
+        tracegen.generate_assume = gen_val;
+      } else if (!strncmp (argv[i], "--generate-values", 17)) {
+        if (!strcmp (argv[i], "--generate-values")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-values");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-values");
+        tracegen.generate_values = gen_val;
+      } else if (!strncmp (argv[i], "--generate-flipped", 18)) {
+        if (!strcmp (argv[i], "--generate-flipped")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-flipped");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-flipped");
+        tracegen.generate_flipped = gen_val;
+      } else if (!strncmp (argv[i], "--generate-frozen", 17)) {
+        if (!strcmp (argv[i], "--generate-frozen")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-frozen");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-frozen");
+        tracegen.generate_frozen = gen_val;
+      } else if (!strncmp (argv[i], "--generate-failed", 17)) {
+        if (!strcmp (argv[i], "--generate-failed")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-failed");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-failed");
+        tracegen.generate_failed = gen_val;
+      } else if (!strncmp (argv[i], "--generate-phase", 16)) {
+        if (!strcmp (argv[i], "--generate-phase")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 16))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 16,
+                 "--generate-phase");
+          gen_val = atol (argv[i] + 16);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-phase");
+        tracegen.generate_phase = gen_val;
+      } else if (!strncmp (argv[i], "--generate-conclude", 19)) {
+        if (!strcmp (argv[i], "--generate-conclude")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 19))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 19,
+                 "--generate-conclude");
+          gen_val = atol (argv[i] + 19);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-conclude");
+        tracegen.generate_conclude = gen_val;
+      } else if (!strncmp (argv[i], "--generate-freeze", 17)) {
+        if (!strcmp (argv[i], "--generate-freeze")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-freeze");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-freeze");
+        tracegen.generate_freeze = gen_val;
+      } else if (!strncmp (argv[i], "--generate-melt", 15)) {
+        if (!strcmp (argv[i], "--generate-melt")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 15))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 15,
+                 "--generate-melt");
+          gen_val = atol (argv[i] + 15);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-melt");
+        tracegen.generate_melt = gen_val;
+      } else if (!strncmp (argv[i], "--generate-propagator", 21)) {
+        if (!strcmp (argv[i], "--generate-propagator")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 21))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 21,
+                 "--generate-propagator");
+          gen_val = atol (argv[i] + 21);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-propagator");
+        tracegen.generate_propagator = gen_val;
+      } else if (!strncmp (argv[i], "--generate-forces", 17)) {
+        if (!strcmp (argv[i], "--generate-forces")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-forces");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-forces");
+        tracegen.generate_forces = gen_val;
+      } else if (!strncmp (argv[i], "--generate-propagate", 20)) {
+        if (!strcmp (argv[i], "--generate-propagate")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 20))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 20,
+                 "--generate-propagate");
+          gen_val = atol (argv[i] + 20);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-propagate");
+        tracegen.generate_propagate = gen_val;
+      } else if (!strncmp (argv[i], "--generate-implied", 18)) {
+        if (!strcmp (argv[i], "--generate-implied")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-implied");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-implied");
+        tracegen.generate_implied = gen_val;
+      } else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
     } else if (!strcmp (argv[i], "-L")) {
       if (limit >= 0)
         die ("multiple '-L' options (try '-h')");
