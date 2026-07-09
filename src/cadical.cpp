@@ -415,6 +415,25 @@ int App::main (int argc, char **argv) {
     if (!strcmp (argv[i], "-h") || !strcmp (argv[i], "--help") ||
         !strcmp (argv[i], "--build") || !strcmp (argv[i], "--version") ||
         !strcmp (argv[i], "--copyright")) {
+      if (!strcmp (argv[i], "-h")) {
+        print_usage ();
+        return 0;
+      } else if (!strcmp (argv[i], "--help")) {
+        print_usage (true);
+        return 0;
+      } else if (!strcmp (argv[i], "--version")) {
+        printf ("%s\n", CaDiCaL::version ());
+        return 0;
+      } else if (!strcmp (argv[i], "--build")) {
+        tout.disable ();
+        Solver::build (stdout, "");
+        return 0;
+      } else if (!strcmp (argv[i], "--copyright")) {
+        printf ("%s\n", copyright ());
+        printf ("%s\n", authors ());
+        printf ("%s\n", affiliations ());
+        return 0;
+      }
       APPERR ("can only use '%s' as single first option", argv[i]);
     } else if (!strcmp (argv[i], "-")) {
       if (proof_specified)
