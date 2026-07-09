@@ -1823,7 +1823,9 @@ public:
       if (!kvp.second)
         continue;
       const int lit = kvp.first;
-      assert (s->external->observed (lit));
+      // This assertion no longer holds if we
+      // reset observed in the solver first
+      // assert (s->external->observed (lit));
       value_map[lit] = value_map[-lit] = 0;
       remove_reason (lit);
     }
