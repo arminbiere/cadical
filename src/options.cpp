@@ -105,7 +105,7 @@ void Options::initialize_from_environment (int &val, const char *name,
 
 Options::Options (Internal *s) : internal (s) {
   assert (number_of_options == sizeof Options::table / sizeof (Option));
-#if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
   // First initialize them according to defaults in 'options.hpp'.
   //
   const char *prev = "";
@@ -177,7 +177,8 @@ void Options::set (Option *o, int new_val) {
   LOG ("set option 'set (\"%s\", %d)' from '%d'", o->name, new_val,
        old_val);
 #else
-    (void) o; (void) new_val;
+  (void) o;
+  (void) new_val;
 #endif
 }
 
@@ -191,7 +192,8 @@ bool Options::set (const char *name, int val) {
   set (o, val);
   return true;
 #else
-  (void) name; (void) val;
+  (void) name;
+  (void) val;
   return false;
 #endif
 }
@@ -245,10 +247,10 @@ void Options::usage () {
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
 #define OPTION(N, V, L, H, O, P, R, D) \
   if ((L) == 0 && (H) == 1) \
-    printf ("  %-26s " D " [%s]\n", "--" #N "=bool", \
+    printf ("  %-28s " D " [%s]\n", "--" #N "=bool", \
             (bool) (V) ? "true" : "false"); \
   else \
-    printf ("  %-26s " D " [" #V "]\n", "--" #N "=" #L ".." #H);
+    printf ("  %-28s " D " [" #V "]\n", "--" #N "=" #L ".." #H);
   OPTIONS
 #undef OPTION
 }
@@ -256,7 +258,7 @@ void Options::usage () {
 /*------------------------------------------------------------------------*/
 
 void Options::optimize (int val) {
-#if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
   int64_t factor2 = 1;
   for (int i = 0; i < abs (val) && factor2 <= INT_MAX; i++)
     factor2 *= 2;
@@ -267,25 +269,25 @@ void Options::optimize (int val) {
 
   if (val < 0) {
     unsigned increased = 0;
-  #define OPTION(N, V, L, H, O, P, R, D) \
-    do { \
-      if (!(O)) \
-        break; \
-      const int64_t factor1 = ((O) == 1 ? factor2 : factor10); \
-      int64_t new_val = (int64_t) (V) / factor1; \
-      if (new_val < (L)) \
-        new_val = (L); \
-      if (new_val == (int) (V)) \
-        break; \
-      LOG ("optimization mode '%d' for '%s' " \
-           "gives '%" PRId64 "' instead of '%d", \
-           val, #N, new_val, (int) (V)); \
-      assert (new_val <= INT_MAX); \
-      N = (int) new_val; \
-      increased++; \
-    } while (0);
+#define OPTION(N, V, L, H, O, P, R, D) \
+  do { \
+    if (!(O)) \
+      break; \
+    const int64_t factor1 = ((O) == 1 ? factor2 : factor10); \
+    int64_t new_val = (int64_t) (V) / factor1; \
+    if (new_val < (L)) \
+      new_val = (L); \
+    if (new_val == (int) (V)) \
+      break; \
+    LOG ("optimization mode '%d' for '%s' " \
+         "gives '%" PRId64 "' instead of '%d", \
+         val, #N, new_val, (int) (V)); \
+    assert (new_val <= INT_MAX); \
+    N = (int) new_val; \
+    increased++; \
+  } while (0);
     OPTIONS
-  #undef OPTION
+#undef OPTION
     if (increased)
       MSG ("optimization mode '-O%d' increased %u limits", val, increased);
     return;
@@ -328,7 +330,7 @@ void Options::optimize (int val) {
 /*------------------------------------------------------------------------*/
 
 void Options::disable_preprocessing () {
-#if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
   size_t count = 0;
 #define OPTION(N, V, L, H, O, P, R, D) \
   do { \
@@ -385,7 +387,7 @@ void Options::reset_default_values () {
 /*------------------------------------------------------------------------*/
 
 void Options::copy (Options &other) const {
-#if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
 #ifdef LOGGING
   Internal *internal = other.internal;
 #endif
