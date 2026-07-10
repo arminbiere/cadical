@@ -36,8 +36,11 @@ Stats::Stats () {
 #define SYMBOL_OFFSET "3"
 #define PRINT_OFFSET "21"
 
+#define RELPROFW(FIRST, IGNORE) \
+  relative (1e-6 * FIRST, internal->profiles.walk.value)
 #define SECONDS(FIRST, IGNORE) relative (FIRST, t)
-#define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
+#define MSECONDS(FIRST, IGNORE) relative (1e-6 * FIRST, t)
+#define INTERVAL(FIRST, IGNORE) relative (conflicts, FIRST)
 #define NOTHING(FIRST, IGNORE) 0
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
@@ -74,8 +77,7 @@ void Stats::print_internal_stats (Internal *internal) {
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
   PRINT_STATER (#NAME, (int64_t) stats.NAME, VERBOSE, \
-                COMMAND ((int64_t) stats.NAME, (int64_t) stats.OTHER), \
-                SYMBOL, #OTHER);
+                COMMAND (NAME, OTHER), SYMBOL, #OTHER);
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
   STATISTIC (NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
@@ -86,14 +88,6 @@ void Stats::print_internal_stats (Internal *internal) {
 
 #undef STATISTIC
 #undef METRIC
-
-#ifndef QUIET
-  int all = internal->opts.verbose > 0 || internal->opts.stats;
-  if (internal->profiles.walk.value > 0)
-    PRT ("walk_flips_per_s:      %15" PRId64 " %10.2f M  per second",
-         stats.walk_flips,
-         relative (1e-6 * stats.walk_flips, internal->profiles.walk.value));
-#endif
 }
 #endif
 

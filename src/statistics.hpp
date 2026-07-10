@@ -232,7 +232,7 @@
   STATISTIC (probed,                 1, percent, "%", vars) \
   STATISTIC (probe_failed_literals,  1, relative, "per", probed) \
   STATISTIC (probingrounds,          2, INTERVAL, "", interval) \
-  STATISTIC (propagations,           0, SECONDS, "per", second) \
+  STATISTIC (propagations,           0, MSECONDS, "M", per second) \
   STATISTIC (propagations_backbone,  2, percent, "%", propagations) \
   STATISTIC (propagations_cover,     2, percent, "%", propagations) \
   STATISTIC (propagations_inst,      2, percent, "%", propagations) \
@@ -307,7 +307,7 @@
   STATISTIC (ternary_htrs_binary,    2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_htrs_ternary,   2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_resolutions,    2, relative, "per", ternary) \
-  STATISTIC (ticks,                  0, SECONDS, "per", second) \
+  STATISTIC (ticks,                  0, MSECONDS, "M", per second) \
   STATISTIC (ticks_backbone,         2, percent, "%", ticks) \
   STATISTIC (ticks_elim,             2, percent, "%", ticks) \
   STATISTIC (ticks_fastelim,         2, percent, "%", ticks) \
@@ -373,7 +373,7 @@
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
   METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
   METRIC (vivify_demote,             2, percent, "%", vivify_strength) \
-  METRIC (vivify_flushed,           2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_flushed,            2, percent, "%", vivify_subsumed) \
   METRIC (vivify_implied,            2, percent, "%", vivify_checks) \
   METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
   METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
@@ -389,7 +389,7 @@
   METRIC (vivify_units,              2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   METRIC (walk_broken,               2, relative, "per", walk_flips) \
-  STATISTIC (walk_flips,             2, relative, "per", walk) \
+  STATISTIC (walk_flips,             2, RELPROFW,"M", per second walk) \
   METRIC (walk_flips_reducing,       2, percent, "%", walk_flips) \
   METRIC (walk_flips_sideways,       2, percent, "%", walk_flips) \
   METRIC (walk_flips_transfer,       2, percent, "%", walk_flips) \
