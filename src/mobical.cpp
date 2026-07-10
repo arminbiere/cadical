@@ -148,8 +148,7 @@ static const char *USAGE =
 "  --[always,never]-generate_melt[]<r> [950]\n"
 "  --[always,never]-generate_propagator[]<r> [100]\n"
 "  --[always,never]-generate_forces[]<r> [900]\n"
-"  --[always,never]-generate_propagate[]<r> [10]\n"
-"  --[always,never]-generate_implied[]<r> [10]\n"
+"  --[always,never]-generate_implied[]<r> [500]\n"
 "\n"
 "The standard mode of using the model based tester is to start it in\n"
 "random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
@@ -304,8 +303,7 @@ struct TraceGen {
   int generate_melt = 950;
   int generate_propagator = 100;
   int generate_forces = 900;
-  int generate_propagate = 10;
-  int generate_implied = 10;
+  int generate_implied = 500;
 };
 
 /*------------------------------------------------------------------------*/
@@ -974,7 +972,6 @@ struct Call {
     LOOKAHEAD           = shift ( 20 ),
     CUBING              = shift ( 21 ),
     PROPAGATE           = shift ( 22 ),
-    PROPAGATE_IMPLY     = shift ( 23 ),
                         
     VAL                 = shift ( 24 ),
     FLIP                = shift ( 25 ),
@@ -1054,8 +1051,7 @@ struct Call {
              RESET_ASSUMPTIONS,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS | IMPLIED |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE,
-    PROCESS =
-        SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | PROPAGATE_IMPLY,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = MOCK | REPLAY,
 
     // This is used for executing traces
@@ -1075,12 +1071,12 @@ struct Call {
 #ifdef MOBICAL_MEMORY
         LEAKALLOC | MAXALLOC |
 #endif
-        ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE |
-        PROPAGATE_IMPLY | VARS | ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE |
-        RESERVE | DECLARE | DECLARE_VARS | VAL | FLIP | FLIPPABLE | FIXED |
-        FAILED | FROZEN | CONCLUDE | FREEZE | MELT | PHASE | UNPHASE |
-        LIMIT | OPTIMIZE | RESET_OBSERVED | IS_WITNESS | DECIDE | FORCE |
-        RESET_ASSUMPTIONS | OBSERVE | OBSERVED | UNOBSERVE | IS_DECISION,
+        ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | VARS |
+        ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE | RESERVE | DECLARE |
+        DECLARE_VARS | VAL | FLIP | FLIPPABLE | FIXED | FAILED | FROZEN |
+        CONCLUDE | FREEZE | MELT | PHASE | UNPHASE | LIMIT | OPTIMIZE |
+        RESET_OBSERVED | IS_WITNESS | DECIDE | FORCE | RESET_ASSUMPTIONS |
+        OBSERVE | OBSERVED | UNOBSERVE | IS_DECISION,
 
   };
 
@@ -1855,6 +1851,8 @@ public:
   void add_reason (int lit, ExternalLemma *lemma) {
     MLOG ("add reason(" << lit << ") lemma[" << lemma->id << "]"
                         << std::endl);
+    if (reason_map[lit])
+      remove_reason (lit);
     assert (!reason_map[lit]);
     lemma->propagation_reason = true;
     reason_map[lit] = lemma->id;
@@ -1870,7 +1868,7 @@ public:
     assert (reason_id < external_lemmas.size ());
     external_lemmas[reason_id]->propagation_reason = false;
     external_lemmas[reason_id]->forgettable = true;
-    reason_map.erase (lit);
+    reason_map[lit] = 0;
   }
 
   /*-----------------functions for mobical ends ------------------------*/
@@ -3264,23 +3262,6 @@ struct CubingCall : public Call {
   const char *keyword () { return "cubing"; }
 };
 
-struct PropagateImplyCall : public Call {
-  PropagateImplyCall (int r = 0) : Call (PROPAGATE_IMPLY, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
-    assert (!delay);
-    Call::execute (s, extendmap, delay);
-    (void) extendmap;
-    int res = s->propagate ();
-    if (!res) {
-      std::vector<int> implicants;
-      s->implied (implicants);
-    }
-  }
-  void print (ostream &o) { o << keyword () << ' ' << res; }
-  Call *copy () { return new PropagateImplyCall (res); }
-  const char *keyword () { return "propagate"; }
-};
-
 struct ValCall : public Call {
   ValCall (int l, int r = 0) : Call (VAL, l, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
@@ -4065,7 +4046,6 @@ private:
   void generate_lemmas (Random &);
   void generate_forces (Random &, int minvars, int maxvars);
 
-  void generate_propagate (Random &);
   void generate_implied (Random &);
 
   void generate_limits (Random &);
@@ -4397,14 +4377,6 @@ void Trace::generate_implied (Random &random) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_implied)
     return;
   push_back (new ImpliedCall ());
-}
-
-/*------------------------------------------------------------------------*/
-
-void Trace::generate_propagate (Random &random) {
-  if (random.pick_int (0, 999) >= mobical.tracegen.generate_propagate)
-    return;
-  push_back (new PropagateImplyCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -4853,7 +4825,7 @@ void Trace::generate_process (Random &random) {
     push_back (new CubingCall (depth));
   } else if (fraction > 0.9) {
     push_back (new LookaheadCall ());
-  } else if (fraction > 0.85) {
+  } else if (fraction > 0.8) {
     push_back (new PropagateAssumptionsCall ());
   } else {
     const int rounds = random.pick_int (0, 10);
@@ -4894,6 +4866,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   (void) terminatecallsize;
 #endif
 
+  /* -------  generate INIT ------------ */
   push_back (new InitCall ());
 
   Size size;
@@ -4914,6 +4887,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     }
   }
 
+  /* -------  generate CONFIG ------------ */
   generate_options (random, size);
 
   if (mobical.add_plain_after_options)
@@ -4980,15 +4954,18 @@ void Trace::generate (uint64_t i, uint64_t s) {
     minvars = random.pick_int (1, maxvars + 1);
     maxvars = minvars + range;
 
+    /* -------  generate ADD ------------ */
+
     for (int j = 0; j < clauses; j++)
       generate_queries (random), generate_resize (random, maxvars),
           generate_declare_more_variables (random),
           generate_declare_one_more_variable (random),
-          generate_implied (random), generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
+    /* -------  generate PROPAGATOR ------------ */
     generate_propagator (random, minvars, maxvars);
 
+    /* -------  generate BEFORE ------------ */
     generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);
     generate_melt (random);
@@ -4996,18 +4973,25 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_limits (random);
     generate_phase (random, maxvars);
 
+    /* -------  generate PROCESS ------------ */
     generate_process (random);
+
+    /* -------  generate DURING ------------ */
     generate_lemmas (random);
     generate_forces (random, minvars, maxvars);
 
+    /* -------  generate AFTER ------------ */
     generate_values (random, maxvars);
+    generate_implied (random);
     if (!in_connection)
       generate_flipped (random, maxvars);
+
     generate_failed (random, maxvars);
     generate_conclude (random);
     generate_frozen (random, maxvars);
   }
 
+  /* -------  generate RESET ------------ */
   push_back (new ResetCall ());
 }
 
@@ -6893,16 +6877,6 @@ void Reader::parse () {
       assert (!second);
       c = new CubingCall (lit);
       solved++;
-    } else if (!strcmp (keyword, "propagate")) {
-      if (first && !parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'solve'", first);
-      if (first && lit != 0 && lit != 10 && lit != 20)
-        error ("invalid result argument '%d' to 'solve'", lit);
-      assert (!second);
-      if (first)
-        c = new PropagateImplyCall (lit);
-      else
-        c = new PropagateImplyCall ();
     } else if (!strcmp (keyword, "val")) {
       if (!first)
         error ("first argument to 'val' missing");
@@ -7478,8 +7452,6 @@ int Mobical::main (int argc, char **argv) {
         tracegen.generate_propagator = 1000;
       else if (!strcmp (argv[i] + 8, "-generate-forces"))
         tracegen.generate_forces = 1000;
-      else if (!strcmp (argv[i] + 8, "-generate-propagate"))
-        tracegen.generate_propagate = 1000;
       else if (!strcmp (argv[i] + 8, "-generate-implied"))
         tracegen.generate_implied = 1000;
       else
@@ -7517,8 +7489,6 @@ int Mobical::main (int argc, char **argv) {
         tracegen.generate_propagator = 0;
       else if (!strcmp (argv[i] + 7, "-generate-forces"))
         tracegen.generate_forces = 0;
-      else if (!strcmp (argv[i] + 7, "-generate-propagate"))
-        tracegen.generate_propagate = 0;
       else if (!strcmp (argv[i] + 7, "-generate-implied"))
         tracegen.generate_implied = 0;
       else
@@ -7831,25 +7801,6 @@ int Mobical::main (int argc, char **argv) {
                "[0-1000])",
                gen_val, "--generate-forces");
         tracegen.generate_forces = gen_val;
-      } else if (!strncmp (argv[i], "--generate-propagate", 20)) {
-        if (!strcmp (argv[i], "--generate-propagate")) {
-          if (++i == argc)
-            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
-          if (!is_unsigned_str (argv[i]))
-            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
-                 argv[i - 1]);
-          gen_val = atol (argv[i]);
-        } else {
-          if (!is_unsigned_str (argv[i] + 20))
-            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 20,
-                 "--generate-propagate");
-          gen_val = atol (argv[i] + 20);
-        }
-        if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
-               "[0-1000])",
-               gen_val, "--generate-propagate");
-        tracegen.generate_propagate = gen_val;
       } else if (!strncmp (argv[i], "--generate-implied", 18)) {
         if (!strcmp (argv[i], "--generate-implied")) {
           if (++i == argc)
