@@ -224,6 +224,7 @@ int Internal::warmup_decide () {
       LOG ("assumption %d already satisfied", lit);
       new_trail_level (0);
       LOG ("added pseudo decision level");
+      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
@@ -322,6 +323,7 @@ int Internal::warmup_decide () {
     int decision = decide_phase (idx, target);
     new_trail_level (decision);
     warmup_assign (decision, decision_reason);
+    notify_decision ();
   }
   if (res)
     marked_failed = false;
