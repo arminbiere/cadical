@@ -997,8 +997,7 @@ void Internal::fix_trail_levels () {
       build_chain_for_units (lit, reason, false);
       learn_unit_clause (lit);
       lrat_chain = std::move (tmp);
-    }
-    if (!res) {
+    } else if (!res) {
       mark_garbage (reason);
       var (lit).reason = nullptr;
       mark_fixed (lit);
