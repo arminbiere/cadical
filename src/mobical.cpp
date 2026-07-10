@@ -1211,7 +1211,9 @@ static const char *ct_to_str (Call::Type type) {
        : (type == Call::NOTIFY_BACKTRACK ? "notify_backtrack"
        : (type == Call::NOTIFY_LEVEL ? "notify_level"
        : ((type & Call::ALWAYS) != 0 ? "ALWAYS"
-       : "UNDEFINED"))))))))));
+       : (type == Call::CONNECT ? "connect"
+       : (type == Call::DISCONNECT ? "disconnect"
+       : "UNDEFINED"))))))))))));
   // clang-format on
 }
 
@@ -2138,11 +2140,7 @@ public:
       size_t del_count = 0;
 #endif
       for (const auto &lit : unassigned_reasons) {
-        size_t reason_id = reason_map[lit];
-        assert (reason_id < external_lemmas.size ());
-        external_lemmas[reason_id]->propagation_reason = false;
-        external_lemmas[reason_id]->forgettable = true;
-        reason_map.erase (lit);
+        remove_reason (lit);
 #ifdef LOGGING
         CLOG (lit << " ");
         del_count++;
@@ -2363,7 +2361,6 @@ public:
         // assert (!reason_map[lit] || s->external->current_val (lit) <= 0);
         MLOG ("unassign " << lit << " (reason " << reason_map[lit] << "/"
                           << reason_map[-lit] << ")" << std::endl);
-        remove_reason (lit);
         value_map[lit] = value_map[-lit] = 0;
         if (reason_map[lit]) {
           unassigned_reasons.insert (lit);
@@ -5819,7 +5816,7 @@ bool Trace::shrink_propagator (int expected) {
       continue;
     }
     if (c->type == Call::DISCONNECT) {
-      connected++;
+      disconnected++;
       continue;
     }
     if (c->propagator_type ())
@@ -5888,6 +5885,7 @@ bool Trace::shrink_propagator (int expected) {
       }
       simplified.push_back (c->copy ());
     }
+    assert (num_connect > connected);
     assert (simplified.calls.size () < calls.size ());
     if (simplified.fork_and_execute () == expected) {
       clear ();
@@ -5896,7 +5894,8 @@ bool Trace::shrink_propagator (int expected) {
       reduced = true;
       simplified.clear ();
       progress ();
-    }
+    } else
+      simplified.clear ();
   }
   notify ();
   return reduced;
