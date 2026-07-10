@@ -242,14 +242,16 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
 #endif
   if (!proof_chain.size () || proof_chain.back () < 0)
     return false;
-  LratCheckerClause *c = *find (proof_chain.back ());
+  auto p = proof_chain.rbegin ();
+  LratCheckerClause *c = *find (*p);
   assert (c);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
     int lit = *i;
     checked_lit (lit) = true;
     assert (!checked_lit (-lit));
   }
-  for (auto p = proof_chain.end () - 2; p >= proof_chain.begin (); p--) {
+
+  for (p++; p != proof_chain.rend (); p++) {
     auto &id = *p;
     c = *find (id);
     assert (c); // since this is checked in check already
