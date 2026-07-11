@@ -4356,6 +4356,8 @@ void Closure::extract_xor_gates () {
   assert (!full_watching);
   if (!internal->opts.congruencexor)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractxors);
 #ifndef QUIET
   const int64_t gates_before = internal->stats.congruence.xor_gates;
@@ -7716,6 +7718,8 @@ void Closure::extract_ite_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceite)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
@@ -7758,7 +7762,6 @@ void Closure::extract_gates () {
     assert (mu2_ids.empty ());
     assert (mu4_ids.empty ());
   }
-
   extract_xor_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());
@@ -7819,7 +7822,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   ++stats.congruence.rounds;
   clear_watches ();
   //  connect_binary_watches ();
-
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
 
@@ -7835,8 +7837,11 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  if (!internal->terminated_asynchronously ())
-    closure.reset_extraction ();
+  bool reconnect = true;
+  if (!internal->terminated_asynchronously ()) {
+    closure.reset_extraction (); // reconnect watches
+    reconnect = false; // fresh watches
+  }
 
   if (!unsat && !internal->terminated_asynchronously ()) {
     closure.find_units ();
@@ -7854,11 +7859,13 @@ bool Internal::extract_gates (bool remove_units_before_run) {
           closure.forward_subsume_matching_clauses ();
       }
     }
+    reconnect = true; // possibly stale watches
   }
-
-  closure.reset_closure ();
-  internal->clear_watches ();
-  internal->connect_watches ();
+  closure.reset_closure (); 
+  if (reconnect) {
+    internal->clear_watches ();
+    internal->connect_watches ();  
+  }
   if (!internal->unsat) {
     propagated2 = propagated = 0;
   }
@@ -7867,7 +7874,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   internal->reset_noccs ();
   assert (!internal->occurring ());
   assert (lrat_chain.empty ());
-
   const int64_t new_merged = stats.congruence.congruent;
 
   PHASE ("congruence-phase", stats.congruence.rounds,

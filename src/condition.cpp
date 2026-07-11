@@ -896,6 +896,8 @@ void Internal::condition (bool update_limits) {
 
   if (unsat)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (!stats.current.irredundant)
     return;
 
