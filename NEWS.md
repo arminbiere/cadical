@@ -1,3 +1,10 @@
+Version 3.0.1
+-------------
+
+- Less disruptive clause import with user propagators due to `elevate`.
+
+- Changed default value for `preprocesslight` and `factor` to zero (off).
+
 Version 3.0.0
 -------------
 
