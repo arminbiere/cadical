@@ -29,7 +29,7 @@ int Internal::unlucky (int res) {
 
 int Internal::trivially_false_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking that all clauses contain a negative literal");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -80,7 +80,7 @@ int Internal::trivially_false_satisfiable () {
 
 int Internal::trivially_true_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking that all clauses contain a positive literal");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -158,7 +158,7 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 
 int Internal::forward_false_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
@@ -187,7 +187,7 @@ int Internal::forward_false_satisfiable () {
 
 int Internal::forward_true_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking increasing variable index true assignment");
   assert (!unsat);
   assert (!level);
@@ -218,7 +218,7 @@ int Internal::forward_true_satisfiable () {
 
 int Internal::backward_false_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
@@ -248,7 +248,7 @@ int Internal::backward_false_satisfiable () {
 
 int Internal::backward_true_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
@@ -286,7 +286,7 @@ int Internal::backward_true_satisfiable () {
 
 int Internal::positive_horn_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   LOG ("checking that all clauses are positive horn satisfiable");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -387,7 +387,7 @@ int Internal::lucky_decide_assumptions () {
 
 int Internal::negative_horn_satisfiable () {
   if (terminated_asynchronously ())
-    return -1; // SIGTODO: review
+    return -1;
   assert (!level);
   LOG ("checking that all clauses are negative horn satisfiable");
   int res = lucky_decide_assumptions ();

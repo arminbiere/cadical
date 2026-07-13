@@ -1863,33 +1863,6 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // Here we check whether a signal was caught. 
-  // We will immediately reraise after printing stats. For this we need to move
-  // this above the 'if (termination_forced)' branch.
-  /* SIGTODO: Evil dependency. Needs to be removed
-  if (const int sig = Signal::received ()) {
-    VERBOSE (2, "signal %d detected", sig);
-#ifndef QUIET
-    if (!opts.quiet) {
-      message ();
-      message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), "caught",
-                tout.bright_red_code (), sig, tout.red_code (),
-                Signal::name (sig), tout.normal_code ());
-      section ("result");
-      message ("UNKNOWN");
-      print_statistics ();
-      print_resource_usage ();
-      message ();
-      message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), "raising",
-                tout.bright_red_code (), sig, tout.red_code (),
-                Signal::name (sig), tout.normal_code ());
-    }
-#endif
-
-    Signal::reset (); // Disconnects signal handler
-    raise (sig);
-  }
-  */
   // First way of asynchronous termination is through 'terminate' or 
   // 'catch_signal' which sets the 'termination_forced' flag directly.  
   // The second way is through a call back to a 'terminator' if it is non-zero,

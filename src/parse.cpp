@@ -392,7 +392,7 @@ const char *Parser::parse_solution_non_profiled () {
   clear_n (external->solution, external->max_var + 1u);
   int ch;
   for (;;) {
-    if (internal->terminated_asynchronously ()) // SIGTODO: review
+    if (internal->terminated_asynchronously ())
       return "parsing solution interrupted by signal";
     ch = parse_char ();
     if (ch == EOF)

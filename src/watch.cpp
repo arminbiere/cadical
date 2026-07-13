@@ -26,7 +26,6 @@ void Internal::reset_watches () {
 void Internal::connect_watches (bool irredundant_only) {
   START (connect);
   assert (watching ());
-  report (':'); // SIGTODO: remove after debugging
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
 
   // First connect binary clauses.
@@ -72,7 +71,6 @@ void Internal::connect_watches (bool irredundant_only) {
       }
     }
   }
-  report (':'); // SIGTODO: remove after debugging
   STOP (connect);
 }
 

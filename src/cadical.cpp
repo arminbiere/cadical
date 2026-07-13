@@ -278,7 +278,7 @@ void App::print_witness (FILE *file) {
       continue;
     else
       tmp = solver->val (i) < 0 ? -i : i;
-    if (signal_value) // SIGTODO: review
+    if (signal_value)
       break;
     char str[32];
     snprintf (str, sizeof str, " %d", tmp);
@@ -653,7 +653,6 @@ int App::main (int argc, char **argv) {
           localsearch, localsearch_specified);
       solver->limit ("localsearch", localsearch);
     }
-    /* SIGTODO: uncomment this block
 #ifndef _WIN32
     if (time_limit >= 0) {
       solver->message (
@@ -663,7 +662,6 @@ int App::main (int argc, char **argv) {
       solver->connect_terminator (this);
     }
 #endif
-*/
     if (conflict_limit >= 0) {
       solver->message (
           "setting conflict limit to %d conflicts (due to '%s')",
@@ -727,17 +725,6 @@ int App::main (int argc, char **argv) {
   }
   if (err)
     APPERR ("%s", err);
-  // SIGTODO: remove this block. Just here for better latency testing
-  #ifndef _WIN32
-    if (time_limit >= 0) {
-      solver->message (
-          "setting time limit to %d seconds real time (due to '-t %s')",
-          time_limit, time_limit_specified);
-      Signal::alarm (time_limit);
-      solver->connect_terminator (this);
-    }
-  #endif
-  // ----------
   if (read_solution_path) {
     solver->section ("parsing solution");
     solver->message ("reading solution file from '%s'", read_solution_path);
@@ -947,11 +934,10 @@ int App::main (int argc, char **argv) {
   if (time_limit > 0)
     alarm (0);
 #endif
-  // SIGTODO: Review. Just before we return from App::main
+
   if (signal_value) {
     CaDiCaL::Signal::reset ();
     signal_message ("raising", signal_value);
-    solver->internal->report ('!'); // SIGTODO: remove after latency debugging
     raise (signal_value);
   }
 
@@ -1010,7 +996,6 @@ void App::signal_message (const char *msg, int sig) {
 
 void App::catch_signal (int sig) {
   signal_value = sig;
-  //solver->internal->report ('!'); // SIGTODO: remove after latency debugging
   solver->internal->termination_forced = true;
   Signal::reset (); // Send signal again -> instant termination but no stats
 }
@@ -1020,8 +1005,8 @@ void App::catch_alarm () {
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  //solver->internal->report ('!'); // SIGTODO: remove after latency debugging
-  timesup = true; // Wait for solver to call 'App::terminate ()'.
+  solver->internal->termination_forced = true;
+  // timesup = true; // Wait for solver to call 'App::terminate ()'.
 #endif
 }
 
