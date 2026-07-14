@@ -108,14 +108,16 @@ void Internal::lucky_assume_decision (int lit) {
   lucky_search_assign (lit, decision_reason);
 }
 
-int Internal::trivially_false_satisfiable () {
+int Internal::trivially_false_satisfiable (int64_t &ticks) {
   VERBOSE (3, "checking that all clauses contain a negative literal");
   assert (!level);
   ++stats.lucky_constant_zero;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
   for (const auto &c : clauses) {
+    ++ticks;
     if (terminated_asynchronously (100))
       return unlucky (-1);
     if (c->garbage)
@@ -162,14 +164,16 @@ int Internal::trivially_false_satisfiable () {
   return 10;
 }
 
-int Internal::trivially_true_satisfiable () {
+int Internal::trivially_true_satisfiable (int64_t &ticks) {
   VERBOSE (3, "checking that all clauses contain a positive literal");
   assert (!level);
   ++stats.lucky_constant_one;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
   for (const auto &c : clauses) {
+    ++ticks;
     if (terminated_asynchronously (100))
       return unlucky (-1);
     if (c->garbage)
@@ -530,11 +534,15 @@ int Internal::lucky_phases (bool update_limit) {
     }
   }
 
-  res = trivially_false_satisfiable ();
+  int64_t ticks = 0;
+  res = trivially_false_satisfiable (ticks);
   if (!res)
-    res = trivially_true_satisfiable();
+    res = trivially_true_satisfiable(ticks);
+  stats.ticks += ticks;
 
   const int64_t old_active = stats.vars_active;
+  // abort the search if visit each clause too often
+  const int64_t limit = stats.ticks + stats.clauses_now_irr * opts.luckylimitpercls;
   if (!res)
     do {
       const int64_t active_before = stats.vars_active;
@@ -542,6 +550,8 @@ int Internal::lucky_phases (bool update_limit) {
       for (auto &luck : schedule) {
         res = luck ();
         if (res)
+          break;
+        if (stats.ticks >= limit)
           break;
       }
       if (res < 0)
@@ -563,7 +573,6 @@ int Internal::lucky_phases (bool update_limit) {
   report ('l', !res && (old_active == stats.vars_active));
   searching_lucky_phases = false;
   PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
-
   if (update_limit && !res && (old_active == stats.vars_active)) {
     lim.lucky = stats.conflicts + opts.luckymininterval;
     VERBOSE (3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64, stats.lucky_tried, lim.lucky);

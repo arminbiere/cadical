@@ -920,8 +920,8 @@ struct Internal {
   void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
   void lucky_assume_decision (int);
-  int trivially_false_satisfiable ();
-  int trivially_true_satisfiable ();
+  int trivially_false_satisfiable (int64_t &);
+  int trivially_true_satisfiable (int64_t &);
   template <class Iterator>
   int lucky_fixed_test (Iterator begin, Iterator end, signed char pol,
                         std::string str);

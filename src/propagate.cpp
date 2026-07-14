@@ -462,6 +462,7 @@ bool Internal::propagate () {
   }
 
   if (searching_lucky_phases) {
+    stats.ticks += ticks;
 
     if (conflict)
       LOG (conflict, "ignoring lucky conflict");
