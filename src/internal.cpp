@@ -726,6 +726,8 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return false;
   if (!max_var)
     return false;
+  if (terminated_asynchronously ())
+    return false;
   START (preprocess);
   if (!triggered)
     report ('('), triggered = true;
@@ -775,6 +777,8 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   if (unsat)
     return;
   if (!max_var)
+    return;
+  if (terminated_asynchronously ())
     return;
   if (!opts.preprocesslight)
     return;
@@ -917,6 +921,8 @@ int Internal::local_search_round (int round) {
   if (unsat)
     return false;
   if (!max_var)
+    return false;
+  if (terminated_asynchronously ())
     return false;
 
   START_OUTER_WALK ();

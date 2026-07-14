@@ -924,6 +924,8 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   if (unsat)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (level)
     backtrack ();
   if (!propagate ()) {

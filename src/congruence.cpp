@@ -4365,6 +4365,8 @@ void Closure::extract_xor_gates () {
   assert (!full_watching);
   if (!internal->opts.congruencexor)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractxors);
 #ifndef QUIET
   const int64_t gates_before = (int64_t)internal->stats.congruence_gates_xor;
@@ -7824,6 +7826,8 @@ void Closure::extract_ite_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceite)
     return;
+  if (internal->terminated_asynchronously ())
+    return;
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
@@ -7950,8 +7954,12 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   closure->extract_gates ();
   assert (unsat || closure->chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  if (!internal->terminated_asynchronously ())
-    closure->reset_extraction (); // TODO: needed ? 
+
+  bool reconnect = true;
+  if (!internal->terminated_asynchronously ()) {
+    closure->reset_extraction (); // reconnect watches
+    reconnect = false; // fresh watches
+  }
 
   if (!unsat && !internal->terminated_asynchronously ()) {
     closure->find_units ();
@@ -7969,12 +7977,14 @@ bool Internal::extract_gates (bool remove_units_before_run) {
           closure->forward_subsume_matching_clauses ();
       }
     }
+    reconnect = true;
   }
   assert (closure->new_unwatched_binary_clauses.empty () || internal->terminated_asynchronously ());
   delete_closure.free ();
-
-  internal->clear_watches ();
-  internal->connect_watches ();
+  if (reconnect) {
+    internal->clear_watches ();
+    internal->connect_watches ();
+  }
   if (!internal->unsat) {
     propagated2 = propagated = 0;
   }
