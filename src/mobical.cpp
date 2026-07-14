@@ -194,7 +194,7 @@ __attribute__ ((section ("__DATA,__mod_init_func")))
 #else
 __attribute__ ((section (".preinit_array")))
 #endif
-void (*init_allocators_ptr)(void) = initialize_allocators;
+void (*init_allocators_ptr) (void) = initialize_allocators;
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -3560,7 +3560,7 @@ int Trace::fork_and_execute () {
 
     // If SIGTSTP is used in the future rather use waitpid & WUNTRACED
     // int status;
-    // pid_t other = waitpid (child, &status, WUNTRACED); 
+    // pid_t other = waitpid (child, &status, WUNTRACED);
 
     int status, other = wait (&status);
     if (other != child)
@@ -5629,12 +5629,15 @@ END_OF_BANNER_AND_OPTIONS:
   const bool reraise = Signal::interrupted ();
   Signal::reset ();
 
+  if (sig)
+    if ((terminal && (mode & RANDOM)) || shrinking || running)
+      cerr << endl;
   terminal.reset ();
   print_statistics ();
 
   if (reraise)
     raise (sig);
-  
+
   return Trace::failed > 0;
 }
 
