@@ -702,6 +702,8 @@ bool Internal::preprocess_round (int round) {
     return false;
   if (!max_var)
     return false;
+  if (terminated_asynchronously ())
+    return false;
   START (preprocess);
   struct {
     int64_t vars, clauses;
@@ -747,6 +749,8 @@ void Internal::preprocess_quickly (bool always) {
   if (unsat)
     return;
   if (!max_var)
+    return;
+  if (terminated_asynchronously ())
     return;
   if (!opts.preprocesslight)
     return;

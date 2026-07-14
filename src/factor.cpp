@@ -38,6 +38,8 @@ void Internal::factor_mode () {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
+    if (terminated_asynchronously ())
+      return;
     if (c->garbage)
       continue;
     if (c->redundant && c->size > 2)
@@ -65,6 +67,8 @@ void Internal::factor_mode () {
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
   for (unsigned round = 1; round <= rounds; round++) {
+    if (terminated_asynchronously ())
+      return;
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
@@ -98,9 +102,12 @@ void Internal::factor_mode () {
   }
 
   // finally push remaining clause on the occurrence stack
-  for (const auto &c : candidates)
+  for (const auto &c : candidates) {
+    if (terminated_asynchronously ())
+      return;
     for (const auto &lit : *c)
       occs (lit).push_back (c);
+  }
 }
 
 // go back to two watch scheme

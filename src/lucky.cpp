@@ -28,6 +28,8 @@ int Internal::unlucky (int res) {
 }
 
 int Internal::trivially_false_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking that all clauses contain a negative literal");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -77,6 +79,8 @@ int Internal::trivially_false_satisfiable () {
 }
 
 int Internal::trivially_true_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking that all clauses contain a positive literal");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -153,6 +157,8 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 }
 
 int Internal::forward_false_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
@@ -180,6 +186,8 @@ int Internal::forward_false_satisfiable () {
 }
 
 int Internal::forward_true_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking increasing variable index true assignment");
   assert (!unsat);
   assert (!level);
@@ -209,6 +217,8 @@ int Internal::forward_true_satisfiable () {
 /*------------------------------------------------------------------------*/
 
 int Internal::backward_false_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
@@ -237,6 +247,8 @@ int Internal::backward_false_satisfiable () {
 }
 
 int Internal::backward_true_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
@@ -273,6 +285,8 @@ int Internal::backward_true_satisfiable () {
 // is not implemented yet.
 
 int Internal::positive_horn_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   LOG ("checking that all clauses are positive horn satisfiable");
   assert (!level);
   int res = lucky_decide_assumptions ();
@@ -372,6 +386,8 @@ int Internal::lucky_decide_assumptions () {
 }
 
 int Internal::negative_horn_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   assert (!level);
   LOG ("checking that all clauses are negative horn satisfiable");
   int res = lucky_decide_assumptions ();
@@ -441,8 +457,9 @@ int Internal::lucky_phases () {
   require_mode (SEARCH);
   if (!opts.lucky)
     return 0;
-
   if (!opts.luckyassumptions && !assumptions.empty ())
+    return 0;
+  if (terminated_asynchronously ())
     return 0;
   // TODO: Some of the lucky assignments can also be found if there are
   // constraint.
@@ -496,6 +513,11 @@ int Internal::lucky_phases () {
   if (!res && units)
     LOG ("lucky %" PRId64 " units", units);
   searching_lucky_phases = false;
+
+  // Here we should reset lim.terminate.check since in a lucky run this 
+  // may be set to up to 1000. This then may lead to a high latency for external
+  // termination.
+  lim.terminate.check = opts.terminateint;
 
   STOP (lucky);
   STOP (search);
