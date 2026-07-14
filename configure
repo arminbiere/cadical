@@ -39,6 +39,7 @@ ipasir=yes
 shared=no
 pic=no
 deactivate_options=no
+metrics=yes
 
 #--------------------------------------------------------------------------#
 
@@ -116,7 +117,7 @@ where '<option>' is one of the following
 --no-ipasir        compile without ipasir interface
 
 --competition      configure for the competition
-                   ('--quiet', '--no-contracts', '--no-tracing')
+                   ('--quiet', '--no-contracts', '--no-tracing', '--no-metrics')
 
 --no-options       hard-code options
 
@@ -177,6 +178,7 @@ do
     --no-tracing | --no-trace) tracing=no;;
     --no-contrib) contrib=no;;
     --no-ipasir) ipasir=no;;
+    --no-metrics) metrics=no;;
 
     --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
@@ -350,19 +352,22 @@ then
   contracts=no
   tracing=no
   contrib=no
+  metrics=no
 fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
-[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+[ $metrics = no ] && CXXFLAGS="$CXXFLAGS -DNMETRICS"
 
 [ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
 [ $logging = yes ] && CFLAGS="$CFLAGS -DLOGGING"
 [ $quiet = yes ] && CFLAGS="$CFLAGS -DQUIET"
 [ $profile = yes ] && CFLAGS="$CFLAGS -pg"
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
+[ $metrics = no ] && CFLAGS="$CFLAGS -DNMETRICS"
 
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
 [ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_TERMINATE"
@@ -373,7 +378,7 @@ then
   CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*)
-      CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+      CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS,-D_GLIBCXX_DEBUG"
     ;;
   esac
   case x"$CC" in
@@ -396,6 +401,7 @@ fi
 
 [ $checkmissed = yes ] && CXXFLAGS="$CXXFLAGS -DCHECKMISSED"
 [ $deactivate_options = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
+[ $deactivate_options = yes ] && CFLAGS="$CXXFLAGS -DNOPTIONS"
 
 CXXFLAGS="$CXXFLAGS$options"
 CFLAGS="$CFLAGS$options"

@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -91,6 +92,7 @@ void Internal::elim_update_added_clause (Eliminator &eliminator,
                                          Clause *c) {
   assert (!c->redundant);
   ElimSchedule &schedule = eliminator.schedule;
+  ++eliminator.ticks;
   for (const auto &lit : *c) {
     if (!active (lit))
       continue;
@@ -127,6 +129,7 @@ void Internal::elim_update_removed_lit (Eliminator &eliminator, int lit) {
 void Internal::elim_update_removed_clause (Eliminator &eliminator,
                                            Clause *c, int except) {
   assert (!c->redundant);
+  ++eliminator.ticks;
   for (const auto &lit : *c) {
     if (lit == except)
       continue;
@@ -151,10 +154,12 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
     LOG ("elimination propagation of %d", lit);
     assert (val (lit) > 0);
     const Occs &ns = occs (-lit);
+    eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
     for (const auto &c : ns) {
       if (c->garbage)
         continue;
       int unit = 0, satisfied = 0;
+      ++eliminator.ticks;
       for (const auto &other : *c) {
         const signed char tmp = val (other);
         if (tmp < 0)
@@ -190,6 +195,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
     if (unsat)
       break;
     const Occs &ps = occs (lit);
+    eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
     for (const auto &c : ps) {
       if (c->garbage)
         continue;
@@ -214,6 +220,7 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator &eliminator,
   stats.eliminate_otf_str++;
   stats.strengthened++;
   assert (clause.empty ());
+  ++eliminator.ticks;
   for (const auto &lit : *c) {
     if (lit == pivot)
       continue;
@@ -269,6 +276,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
 
   assert (!c->redundant);
   assert (!d->redundant);
+  eliminator.ticks += 2; // access of the 2 clauses
 
   stats.eliminate_resolved++;
 
@@ -492,11 +500,17 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
 
   int64_t resolvents = 0; // Non-tautological resolvents.
 
+  // loose assumption: stays in cache
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+
   for (const auto &c : ps) {
+    ++eliminator.ticks;
     assert (!c->redundant);
     if (c->garbage)
       continue;
     for (const auto &d : ns) {
+      ++eliminator.ticks;
       assert (!d->redundant);
       if (d->garbage)
         continue;
@@ -574,10 +588,13 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
 #ifdef LOGGING
   int64_t resolvents = 0;
 #endif
   for (auto &c : ps) {
+    ++eliminator.ticks;
     if (unsat)
       break;
     if (c->garbage)
@@ -624,7 +641,9 @@ void Internal::mark_eliminated_clauses_as_garbage (
   int64_t pushed = 0;
 #endif
   Occs &ps = occs (pivot);
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
   for (const auto &c : ps) {
+    ++eliminator.ticks;
     if (c->garbage)
       continue;
     assert (!c->redundant);
@@ -646,7 +665,9 @@ void Internal::mark_eliminated_clauses_as_garbage (
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
   Occs &ns = occs (-pivot);
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
   for (const auto &d : ns) {
+    ++eliminator.ticks;
     if (d->garbage)
       continue;
     assert (!d->redundant);
@@ -713,6 +734,10 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
   Occs &ns = occs (-pivot);
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
+  // loose approximation of ticks for sorting
+  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+
   if (pos)
     find_gate_clauses (eliminator, pivot);
 
@@ -736,9 +761,11 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
 
 /*------------------------------------------------------------------------*/
 
-void Internal::
-    mark_redundant_clauses_with_eliminated_variables_as_garbage () {
+void Internal::mark_redundant_clauses_with_eliminated_variables_as_garbage (
+    int64_t &ticks) {
+  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
   for (const auto &c : clauses) {
+    ++ticks;
     if (c->garbage || !c->redundant)
       continue;
     bool clean = true;
@@ -903,7 +930,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 #endif
     if (stats.garbage_literals <= garbage_limit)
       continue;
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (
+        eliminator.ticks);
     garbage_collection ();
   }
 
@@ -935,7 +963,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // Mark all redundant clauses with eliminated variables as garbage.
   //
   if (!unsat)
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (
+        eliminator.ticks);
 
   int eliminated = stats.vars_all_elim - old_eliminated;
 #ifndef QUIET
@@ -944,6 +973,9 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
          "eliminated %d variables %.0f%% in %" PRId64 " resolutions",
          eliminated, percent (eliminated, scheduled), resolutions);
 #endif
+
+  stats.ticks_elim += eliminator.ticks;
+  stats.ticks += eliminator.ticks;
 
   last.elim.subsumephases = stats.subsume_phases;
   const int units = stats.vars_all_fixed - old_fixed;
@@ -1008,12 +1040,12 @@ void Internal::init_citten () {
   if (!opts.elimdef)
     return;
   assert (!citten);
-  citten = kitten_init ();
+  citten = KITTEN_NAMESPACE (kitten_init) ();
 }
 
 void Internal::reset_citten () {
   if (citten) {
-    kitten_release (citten);
+    KITTEN_NAMESPACE (kitten_release) (citten);
     citten = 0;
   }
 }

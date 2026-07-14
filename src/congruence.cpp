@@ -1,11 +1,9 @@
 #include "congruence.hpp"
-#include "clause.hpp"
+
 #include "internal.hpp"
-#include "util.hpp"
-#include <algorithm>
+
 #include <cstdint>
 #include <iterator>
-#include <utility>
 #include <vector>
 namespace CaDiCaL {
 
@@ -140,11 +138,17 @@ void check_correct_ite_flags (const Gate *const g) {
 
 /*------------------------------------------------------------------------*/
 Gate *Gate::new_gate (size_t n, bool lrat) {
-  void *raw = malloc (sizeof (Gate) + n * sizeof (int));
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate ();
+  size_t bytes = Gate::bytes (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = 0;
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL;
   if (lrat) {
     g->lrat_reasons = new Gate::LRAT_Reasons ();
   }
@@ -155,11 +159,16 @@ Gate *Gate::new_gate (size_t n, bool lrat) {
 Gate *Gate::new_gate (const std::vector<int> &v, bool lrat) {
   const int n = v.size ();
   size_t bytes = Gate::bytes (n);
-  void *raw = malloc (bytes);
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = (n);
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL;
   for (int i = 0; i < n; ++i)
     g->rhs[i] = v[i];
   if (lrat) {
@@ -173,11 +182,16 @@ Gate *Gate::new_gate (const_literal_iterator begin,
                       const_literal_iterator end, bool lrat) {
   const int n = end - begin;
   size_t bytes = Gate::bytes (n);
-  void *raw = malloc (bytes);
-  if (!raw)
-    throw std::bad_alloc ();
-  Gate *g = new (raw) Gate (n);
+  Gate *g = (Gate *) new char[bytes];
   DeferDeleteFunc<Gate> delete_g (g, &Gate::delete_gate);
+  g->lrat_reasons = nullptr;
+  g->lhs = (0);
+  g->garbage = (false);
+  g->indexed = (false);
+  g->marked = (false);
+  g->size = (n);
+  g->tag = Gate_Type::And_Gate;
+  g->degenerated_gate = Special_Gate::NORMAL;
   auto u = begin;
   for (int i = 0; i < n; ++i, ++u) {
     assert (u < end);
@@ -193,7 +207,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
 void Gate::delete_gate (Gate *&g) {
   if (g) {
     delete g->lrat_reasons;
-    free (g);
+    delete [] (g);
   }
   g = 0;
 }
@@ -3409,7 +3423,7 @@ void Closure::extract_and_gates () {
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_and;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_and;
 #endif
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
@@ -4353,7 +4367,7 @@ void Closure::extract_xor_gates () {
     return;
   START (extractxors);
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_xor;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_xor;
 #endif
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
@@ -7813,7 +7827,7 @@ void Closure::extract_ite_gates () {
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_gates_ite;
+  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_ite;
 #endif
   init_ite_gate_extraction (candidates);
 

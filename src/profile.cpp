@@ -14,19 +14,24 @@ Profiles::Profiles (Internal *s)
 {
 }
 
-void Internal::start_profiling (Profile &profile, double s) {
+void Internal::start_profiling (Profile &profile, double s,
+                                int64_t s_ticks) {
   LOG ("START PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (!profile.active);
   profile.started = s;
+  profile.started_ticks = s_ticks;
   profile.active = true;
 }
 
-void Internal::stop_profiling (Profile &profile, double s) {
+void Internal::stop_profiling (Profile &profile, double s,
+                               int64_t s_ticks) {
   LOG ("STOP PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (profile.active);
+  assert (profile.started_ticks <= s_ticks);
   profile.value += s - profile.started;
+  profile.search_ticks += s_ticks - profile.started_ticks;
   profile.active = false;
 }
 
@@ -58,7 +63,8 @@ void Internal::print_profile () {
   double now = update_profiles ();
   const char *time_type = opts.realtime ? "real" : "process";
   SECTION ("run-time profiling");
-  PRT ("%s time taken by individual solving procedures", time_type);
+  PRT ("%s time and ticks taken by individual solving procedures",
+       time_type);
   PRT ("(percentage relative to %s time for solving)", time_type);
   LINE ();
   const size_t size = sizeof profiles / sizeof (Profile);
@@ -87,17 +93,23 @@ void Internal::print_profile () {
   // not the heap, which should be the case.
 
   double solve = profiles.solve.value;
+  uint64_t solve_ticks = profiles.solve.search_ticks;
 
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
-    MSG ("%12.2f %7.2f%% %s", profs[i]->value,
-         percent (profs[i]->value, solve), profs[i]->name);
+    MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", profs[i]->value,
+         percent (profs[i]->value, solve), profs[i]->name,
+         profs[i]->search_ticks,
+         percent (profs[i]->search_ticks, solve_ticks));
   }
 
-  MSG ("  =================================");
-  MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
+  MSG ("  "
+       "==================================================================="
+       "=");
+  MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", solve,
+       percent (solve, now), "solve", solve_ticks, 100.0);
 
   LINE ();
   PRT ("last line shows %s time for solving", time_type);

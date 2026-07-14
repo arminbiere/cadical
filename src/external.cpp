@@ -90,7 +90,7 @@ void External::reserve (int new_max_var) {
 }
 
 void External::init (int new_max_var, bool extension) {
-  assert (!extended);
+  assert (extension || !extended);
   LOG ("%d external variables from %d", new_max_var, max_var);
   assert (!max_var ||
           internal->i2e.size () == (size_t) internal->max_var + 1);
@@ -98,15 +98,11 @@ void External::init (int new_max_var, bool extension) {
     declare_var (new_max_var, extension);
     return;
   }
-  int new_vars = new_max_var - max_var;
-  LOG ("initialized %d external variables", new_vars);
+
+  LOG ("initialized %d external variables", new_max_var - max_var);
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (extension)
-    internal->stats.variables_extension += new_vars;
-  else
-    internal->stats.variables_original += new_vars;
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
@@ -169,7 +165,6 @@ int External::internalize (int elit, bool extension) {
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->reserve_vars (ilit);
-      e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
       internal->i2e.push_back (eidx);
@@ -400,19 +395,36 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
+  REQUIRE (eidx > max_var ||
+               (!marked (witness, elit) && !marked (witness, -elit)),
+           "Only clean variables are allowed to be observed.");
+  // if (eidx <= max_var &&
+  //     (marked (witness, elit) || marked (witness, -elit))) {
+  //   LOG ("Error, only clean variables are allowed to become observed.");
+  //   assert (false);
+
+  //   // TODO: here needs to come the taint and restore of the newly
+  //   // observed variable. Restore_clauses must be called before continue.
+  //   // LOG ("marking tainted %d", elit);
+  //   // mark (tainted, elit);
+  //   // mark (tainted, -elit);
+  //   // restore_clauses ...
+  // }
+
   if (eidx >= (int64_t) is_observed.size ())
     is_observed.resize (1 + (size_t) eidx, false);
   else if (is_observed[eidx])
     return;
+
+  reset_extended (); // tainting!
 
   // internalize and in particular declares the variables
   int ilit = internalize (elit);
 
   // taint and restore of the newly observed variable.
   // Restore_clauses must be called before continue.
-
-  reset_extended (); // tainting!
-
+  // alternative to above
+  /*
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }
@@ -420,10 +432,15 @@ void External::add_observed_var (int elit) {
     mark (tainted, elit);
   }
   if (!tainted.empty ()) {
+    const bool was_from_propagator = internal->from_propagator;
+    assert (!internal->force_no_backtrack);
+    internal->from_propagator = 0;
     if (internal->force_no_backtrack)
       FATAL ("can not add ");
     restore_clauses ();
+    internal->from_propagator = was_from_propagator;
   }
+  */
 
   LOG ("marking %d as externally watched", eidx);
 
@@ -532,7 +549,10 @@ bool External::is_decision (int elit) {
   return internal->is_decision (ilit);
 }
 signed char External::current_val (int elit) {
+  assert (observed (elit));
+  // assert (elit < e2i.size ());
   int ilit = e2i[abs (elit)];
+  assert (ilit);
   if (elit < 0)
     ilit = -ilit;
   signed char res = internal->val (ilit);
@@ -720,6 +740,15 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
 }
 
 /*------------------------------------------------------------------------*/
+bool External::is_witness (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return false;
+  return (marked (witness, elit) || marked (witness, -elit));
+}
+/*------------------------------------------------------------------------*/
 
 void External::freeze (int elit) {
   reset_extended ();
@@ -838,6 +867,10 @@ void External::check_assignment (int (External::*a) (int) const) {
       }
 
       if ((this->*a) (lit) == lit) {
+        satisfied = true;
+        break;
+      } else if (!observed (lit)) {
+        // unobserved variables do not need to be satisfied
         satisfied = true;
         break;
       }

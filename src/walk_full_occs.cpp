@@ -146,7 +146,7 @@ struct WalkerFO {
 // 'b^-i' for picking a literal with the break value 'i' (first column is
 // the 'size', second the 'CB' value).
 
-static double cbvals[][2] = {
+static constexpr double cbvals[][2] = {
     {0.0, 2.00}, {3.0, 2.50}, {4.0, 2.85}, {5.0, 3.70},
     {6.0, 5.10}, {7.0, 7.40}, // Adrian has '5.4', but '7.4' looks better.
 };
@@ -296,9 +296,10 @@ void WalkerFO::save_walker_trail (bool keep) {
 // finally export the final minimum
 void WalkerFO::save_final_minimum (size_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
-#ifdef NDEBUG
-  (void) old_init_minimum;
-#endif
+  if (minimum == old_init_minimum) {
+    LOG ("no improvement thus keeping saved clauses");
+    return;
+  }
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");

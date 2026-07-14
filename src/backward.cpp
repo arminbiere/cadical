@@ -36,7 +36,6 @@ Eliminator::~Eliminator () {
 }
 
 /*------------------------------------------------------------------------*/
-
 void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   assert (opts.elimbackward);
   assert (!c->redundant);
@@ -120,6 +119,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           assert (minimize_chain.empty ());
           assert (analyzed.empty ());
           assert (lrat_chain.empty ());
+          ++eliminator.ticks;
           // figure out wether we strengthen c or get a new unit
           for (const auto &lit : *d) {
             const signed char tmp = val (lit);

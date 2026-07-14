@@ -1,4 +1,4 @@
-Version 3.0.X
+  Version 3.0.X
 -------------
 
 User Facing Changes:
@@ -12,7 +12,15 @@ User Facing Changes:
 - Improved walk with assumptions (literals propagated by the assumptions cannot
   be flipped anymore). This means that lucky will now run if you have
   assumptions. For many short calls, this can be prohibitive. Use
-  `--no-luckyassumptions`.
+  `--no-luckyassumptions`. To limit the effect, when lucky is not effective, it
+  will not be reused for the next `luckymininterval' conflicts (and then still
+  only at the beginning of the solve call). Set this option to 0, if you want to
+  make sure that lucky is executed in each 
+
+- Lucky is now also limited in its runtime (in number of ticks per clauses). Set
+  `luckylimitpercls` to a higher value if needed. This limit is mostly important
+  for some very large instances (like `baseballcover12with23_and2positions`) where
+  lucky has a prohibitive cost.
 
 - Fixed accidental deactivation of local search initially (off by
   default, activation with `-L`), due to a ticks limit of 0. Only noticeable if
@@ -23,6 +31,14 @@ User Facing Changes:
   LRAT with extended resolution (and therefore no interpolation) and
   `cover`, `instantiate` and `vivifyinst` which all require less strict
   LRAT checking where the antecedents subsume the learned clause.
+
+- Option '-O' accepts negative argument to decrease the amount of inprocessing.
+  Before only positive value were supported. Value '0' has no effect.
+
+- The output of the statistics has changed. `stats` now has 3 values, 0 (few
+  statistics as previously), 1 (more statistics), 2 (all statistics, similar to
+  old default). Related to this, you can now deactivate some metrics with
+  `./configure --no-metrics`. 
 
 New and Improved Techniques:
 

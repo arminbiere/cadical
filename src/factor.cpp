@@ -1414,7 +1414,7 @@ bool Internal::run_factorization (int64_t limit) {
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
     const unsigned ufirst = factoring.schedule.pop_front ();
-    VERBOSE (3, "next factor candidate %d", ufirst);
+    LOG ("next factor candidate %d", ufirst);
     const int first = u2i (ufirst);
     const int first_idx = vidx (first);
     if (!active (first_idx))

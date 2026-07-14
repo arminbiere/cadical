@@ -23,9 +23,9 @@ Internal::Internal ()
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
-      earliest_changed_val (0), notified (0), probe_reason (0),
-      propagated (0), propagated2 (0), propergated (0), best_assigned (0),
-      target_assigned (0), no_conflict_until (0),
+      earliest_changed_val (0), notified (0), notified_level (0),
+      probe_reason (0), propagated (0), propagated2 (0), propergated (0),
+      best_assigned (0), target_assigned (0), no_conflict_until (0),
       randomized_deciding (false), citten (nullptr), num_assigned (0),
       proof (0), opts (this),
 #ifndef QUIET
@@ -803,10 +803,12 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     decompose ();
   mark_duplicated_binary_clauses_as_garbage ();
   factor ();
-  elimfast ();
 
   if (opts.fastelim)
     elimfast ();
+
+  // if (opts.fastelim)
+  //  elimfast ();
   // if (opts.condition)
   // condition (false);
 #ifndef QUIET
@@ -1023,13 +1025,17 @@ int Internal::solve (bool preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
-  if (!preprocess_only && !res && !level && opts.luckyearly)
-    res = lucky_phases ();
+  bool run_lucky = stats.conflicts >=
+                   lim.lucky; // cannot be in lucky, because we run it twice
+  bool update_lucky_limits =
+      !opts.luckylate; // update in the second run if there is any
+  if (!preprocess_only && !res && !level && opts.luckyearly && run_lucky)
+    res = lucky_phases (update_lucky_limits);
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level && opts.luckylate)
-      res = lucky_phases ();
+    if (!res && !level && opts.luckylate && run_lucky)
+      res = lucky_phases (true);
     if (!res && !level)
       res = local_search ();
     if (!res)

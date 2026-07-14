@@ -462,6 +462,7 @@ bool Internal::propagate () {
   }
 
   if (searching_lucky_phases) {
+    stats.ticks += ticks;
 
     if (conflict)
       LOG (conflict, "ignoring lucky conflict");
@@ -496,6 +497,7 @@ bool Internal::propagate () {
     if (!--randomized_deciding)
       VERBOSE (3, "last random decision conflict");
   }
+  assert (ticks >= 0);
   STOP (propagate);
 
   return !conflict;

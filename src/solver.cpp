@@ -481,8 +481,13 @@ int Solver::vars () const {
 void Solver::resize (int min_max_var) {
   TRACE (resize, "resize", min_max_var);
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  /* TODO: fuzz without. this code is problematic
+   * as it allows to add 1 -> resize -> solve
   if (state () != SOLVING)
     transition_to_steady_state ();
+  */
+  // removing this triggers an assertion in
+  // external but it maybe it is not necessary
   external->reset_extended ();
   if (min_max_var <= external->max_var) {
     LOG ("do nothing");
@@ -495,8 +500,13 @@ void Solver::resize (int min_max_var) {
 int Solver::declare_more_variables (int number_of_vars) {
   TRACE (declare_vars, "declare_vars", number_of_vars);
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  /* TODO: fuzz without. this code is problematic
+   * as it allows to add 1 -> declare -> solve
   if (state () != SOLVING)
     transition_to_steady_state ();
+  */
+  // removing this triggers an assertion in
+  // external but it maybe it is not necessary
   external->reset_extended ();
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
@@ -508,8 +518,13 @@ int Solver::declare_more_variables (int number_of_vars) {
 int Solver::declare_one_more_variable () {
   TRACE (declare_var, "declare_var");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  /* TODO: fuzz without. this code is problematic
+   * as it allows to add 1 -> declare -> solve
   if (state () != SOLVING)
     transition_to_steady_state ();
+  */
+  // removing this triggers an assertion in
+  // external but it maybe it is not necessary
   external->reset_extended ();
   int new_max_var = external->max_var + 1;
   external->init (new_max_var);
@@ -1107,6 +1122,9 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
     disconnect_external_propagator ();
 
   external->propagator = propagator;
+#ifndef NTRACING
+  external->trace_api_file = trace_api_file;
+#endif
   internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
@@ -1122,6 +1140,7 @@ void Solver::disconnect_external_propagator () {
   external->reset_observed_vars ();
 
   external->propagator = 0;
+  external->trace_api_file = 0;
   internal->set_changed_val ();
   internal->external_prop = false;
   internal->external_prop_is_lazy = true;
@@ -1146,7 +1165,8 @@ void Solver::remove_observed_var (int idx) {
   REQUIRE (external->propagator,
            "can not unobserve variables without a connected propagator");
   REQUIRE (!internal->level || external->fixed (idx) ||
-               !external->current_val (idx) || !internal->conflict,
+               !external->observed (idx) || !external->current_val (idx) ||
+               !internal->conflict,
            "can not unobserve assigned variable during conflict analysis");
   external->remove_observed_var (idx);
   LOG_API_CALL_END ("unobserve", idx);
@@ -1572,6 +1592,7 @@ bool Solver::observed (int lit) {
   return res;
 }
 
+/*
 signed char Solver::current_value (int lit) {
   TRACE (current_value, "current_value", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
@@ -1582,6 +1603,7 @@ signed char Solver::current_value (int lit) {
   LOG_API_CALL_RETURNS ("current_value", lit, res);
   return res;
 }
+*/
 
 bool Solver::is_decision (int lit) {
   TRACE (is_decision, "is_decision", lit);
@@ -1605,6 +1627,15 @@ void Solver::force_backtrack (int new_level) {
            "the target level of a forced backtrack must be smaller than "
            "the current decision level.");
   external->force_backtrack (new_level);
+}
+
+bool Solver::is_witness (int lit) {
+  TRACE (is_witness, "is_witness", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  bool res = external->is_witness (lit);
+  LOG_API_CALL_RETURNS ("is_witness", lit, res);
+  return res;
 }
 
 bool Solver::force_unassign (int lit) {

@@ -264,6 +264,7 @@ struct Internal {
                              // (otherwise, we backtrack, so no
                              // renotification is needed).
   size_t notified;           // next trail position to notify external prop
+  int notified_level;        // current level of external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
   size_t propagated2;        // next binary trail position to propagate
@@ -427,7 +428,7 @@ struct Internal {
     return (lit < 0) + 2u * (unsigned) vidx (lit);
   }
 
-  int u2i (unsigned u) {
+  int u2i (unsigned u) const {
     assert (u > 1);
     assert (u <= INT32_MAX);
     int res = (int) u / 2;
@@ -437,7 +438,7 @@ struct Internal {
     return res;
   }
 
-  int citten2lit (unsigned ulit) {
+  int citten2lit (unsigned ulit) const {
     assert (ulit <= INT32_MAX);
     int res = (int) (ulit / 2) + 1;
     assert (res <= max_var);
@@ -446,7 +447,7 @@ struct Internal {
     return res;
   }
 
-  unsigned lit2citten (int lit) {
+  unsigned lit2citten (int lit) const {
     int idx = vidx (lit) - 1;
     return (lit < 0) + 2u * (unsigned) idx;
   }
@@ -919,8 +920,8 @@ struct Internal {
   void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
   void lucky_assume_decision (int);
-  int trivially_false_satisfiable ();
-  int trivially_true_satisfiable ();
+  int trivially_false_satisfiable (int64_t &);
+  int trivially_true_satisfiable (int64_t &);
   template <class Iterator>
   int lucky_fixed_test (Iterator begin, Iterator end, signed char pol,
                         std::string str);
@@ -1272,7 +1273,8 @@ struct Internal {
   //
   bool ineliminating ();
   double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+  void
+  mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
@@ -1445,7 +1447,8 @@ struct Internal {
   int walk_pick_lit (Walker &walker, ClauseOrBinary);
   int walk_pick_lit (Walker &, Clause *);
   bool walk_flip_lit (Walker &, int lit);
-  int walk_pick_lit (Walker &walker, TaggedBinary c);
+  int walk_pick_lit (Walker &walker,
+                     ClauseOrBinary::clause_or_binary::TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
 
@@ -1608,7 +1611,7 @@ struct Internal {
   int preprocess (bool always);
   int local_search_round (int round);
   int local_search ();
-  int lucky_phases ();
+  int lucky_phases (bool update_limit);
   int cdcl_loop_with_inprocessing ();
   void reset_solving ();
   int solve (bool preprocess_only = false);
@@ -1630,8 +1633,8 @@ struct Internal {
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').
   //
-  void start_profiling (Profile &p, double);
-  void stop_profiling (Profile &p, double);
+  void start_profiling (Profile &p, double, int64_t);
+  void stop_profiling (Profile &p, double, int64_t);
 
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();

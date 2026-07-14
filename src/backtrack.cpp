@@ -175,7 +175,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   assert (notified <= assigned + reassigned);
 
   control.resize (new_level + 1);
-  level = new_level;
   if (earliest_changed_val) {
     assert (opts.ilb);
     if (!val (earliest_changed_val)) {
@@ -187,6 +186,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   if (reassigned) {
     notify_assignments ();
   }
+  level = new_level;
 }
 
 } // namespace CaDiCaL

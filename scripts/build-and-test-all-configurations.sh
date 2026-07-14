@@ -114,16 +114,16 @@ runExtraMobical () {
     cecho "[$running] $environment$configure$configureoptions # skipped"
     skipped=`expr $skipped + 1`
   else
-    cecho "[$running] $environment$configure$configureoptions && make$makeoptions$makeflags &&/build/mobical --bad-alloc --leak-alloc 42 --medium -L 1000 --do-not-fork && make$makeoptions$makeflags test && make$makeoptions$makeflags clean"
+    cecho "[$running] $environment$configure$configureoptions && make$makeoptions$makeflags && ./build/mobical 42 --medium -L 1000 --do-not-fork && make$makeoptions$makeflags test && make$makeoptions$makeflags clean"
     $configure$configureoptions $* >/dev/null 2>&1
     test $? = 0 || die "configuration $running failed (run '$configure$configureoptions $*' to investigate)"
     make$makeoptions$makeflags >/dev/null 2>&1
     test $? = 0 || die "building configuration $running failed (run 'make' to investigate)"
     make$makeoptions$makeflags test >/dev/null 2>&1
     test $? = 0 || die "testing configuration $running failed (run 'make test' to investigate)"
-    ./build/mobical --bad-alloc --leak-alloc 42 --medium -L 1000 --do-not-fork
+    ./build/mobical 42 --medium -L 1000 --do-not-fork
  >/dev/null 2>&1
-    test $? = 0 || die "./build/mobical --bad-alloc  --leak-alloc -L 10000 $running failed (run 'make test' to investigate)"
+    test $? = 0 || die "./build/mobical 42 -L 10000 $running failed (run 'make test' to investigate)"
 
     make$makeoptions$makeflags clean >/dev/null 2>&1
     test $? = 0 || die "cleaning configuration $running failed (run 'make clean' to investigate)"
@@ -134,7 +134,7 @@ runExtraMobical () {
 ############################################################################
 
 begin=0
-end=36
+end=37
 
 m32=no
 undefined=no
@@ -248,10 +248,15 @@ map_and_run () {
     32) run -a -p -fsanitize=address;;
     33) run -a -fsanitize=undefined;;
     34) run -a -p -fsanitize=undefined;;
+
+    # all warnings
     35) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wswitch-enum -Wpointer-arith -Winline -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing -fno-common -fstrict-aliasing -Wno-format-nonliteral;;
 
+    # extra flags
+    36) run --no-metrics;;
+
     # memory fuzzing
-    36) runExtraMobical -a -p --memory-fuzzing
+    37) runExtraMobical -a -p --memory-fuzzing
 
       executed_last_configuration=yes # Keep this as part of last configuration!
 

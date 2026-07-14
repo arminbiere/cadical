@@ -15,7 +15,7 @@ static const char * usage =
 #ifdef LOGGING
 "  -l | --log      print all messages including logging messages\n"
 #endif
-"  -q | --quiet    be quiet and do not print any messages\n" 
+"  -q | --quiet    be quiet and do not print any messages\n"
 "  -s | --strict   expect strict resolution chain format\n"
 "  -t | --track    track more detailed addition and deletion information\n"
 "  -v | --verbose  enable verbose messages\n"
@@ -776,9 +776,15 @@ static double real_time (void) {
 }
 
 static size_t maximum_resident_set_size (void) {
+  size_t res = 0;
   struct rusage u;
-  (void)getrusage (RUSAGE_SELF, &u);
-  return ((size_t)u.ru_maxrss) << 10;
+  if (!getrusage (RUSAGE_SELF, &u)) {
+    res = (size_t) u.ru_maxrss;
+#ifndef __APPLE__
+    res <<= 10;
+#endif
+  }
+  return res;
 }
 
 static double mega_bytes (void) {

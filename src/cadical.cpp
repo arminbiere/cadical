@@ -274,7 +274,7 @@ void App::print_witness (FILE *file) {
       if (!c)
         fputc ('v', file), c = 1;
       if (solver->external->ervars[elit])
-        continue;
+        tmp = elit;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
       if (signal_value)
@@ -286,16 +286,13 @@ void App::print_witness (FILE *file) {
         fputs ("\nv", file), c = 1;
       fputs (str, file);
       c += l;
-
     }
   } else {
     for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
       const int elit = eilit.first;
-      const int ilit = eilit.second;
       if (!c)
         fputc ('v', file), c = 1;
-      if (!ilit)
-        continue;
+      assert (elit);
       if (solver->external->ervars[elit])
         continue;
       else
@@ -312,7 +309,7 @@ void App::print_witness (FILE *file) {
     }
   }
   if (c)
-    fputc ('\n', file);
+    fputs (" 0\n", file);
 }
 
 /*------------------------------------------------------------------------*/
@@ -422,6 +419,25 @@ int App::main (int argc, char **argv) {
     if (!strcmp (argv[i], "-h") || !strcmp (argv[i], "--help") ||
         !strcmp (argv[i], "--build") || !strcmp (argv[i], "--version") ||
         !strcmp (argv[i], "--copyright")) {
+      if (!strcmp (argv[i], "-h")) {
+        print_usage ();
+        return 0;
+      } else if (!strcmp (argv[i], "--help")) {
+        print_usage (true);
+        return 0;
+      } else if (!strcmp (argv[i], "--version")) {
+        printf ("%s\n", CaDiCaL::version ());
+        return 0;
+      } else if (!strcmp (argv[i], "--build")) {
+        tout.disable ();
+        Solver::build (stdout, "");
+        return 0;
+      } else if (!strcmp (argv[i], "--copyright")) {
+        printf ("%s\n", copyright ());
+        printf ("%s\n", authors ());
+        printf ("%s\n", affiliations ());
+        return 0;
+      }
       APPERR ("can only use '%s' as single first option", argv[i]);
     } else if (!strcmp (argv[i], "-")) {
       if (proof_specified)
@@ -554,7 +570,8 @@ int App::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "-f") || !strcmp (argv[i], "--force") ||
              !strcmp (argv[i], "--force=1") ||
              !strcmp (argv[i], "--force=true"))
-      force_strict_parsing = 0, force_writing = true, solver->set ("factorcheck", 0);
+      force_strict_parsing = 0, force_writing = true,
+      solver->set ("factorcheck", 0);
     else if (!strcmp (argv[i], "--strict") ||
              !strcmp (argv[i], "--strict=1") ||
              !strcmp (argv[i], "--strict=true"))
@@ -566,8 +583,8 @@ int App::main (int argc, char **argv) {
       optimization_specified = argv[i];
       if (!parse_int_str (argv[i] + 2, optimize))
         APPERR ("invalid optimization option '%s'", argv[i]);
-      if (optimize < 0 || optimize > 31)
-        APPERR ("invalid argument in '%s' (expected '0..31')", argv[i]);
+      if (optimize < -31 || optimize > 31)
+        APPERR ("invalid argument in '%s' (expected '-31..31')", argv[i]);
     } else if (has_prefix (argv[i], "-P")) {
       if (preprocessing_specified)
         APPERR ("multiple preprocessing options '%s' and '%s'",
@@ -758,7 +775,7 @@ int App::main (int argc, char **argv) {
   }
 
   solver->section ("options");
-  if (optimize > 0) {
+  if (optimize) {
     solver->optimize (optimize);
     solver->message ();
   }
@@ -1003,7 +1020,10 @@ void App::init () {
 
 /*------------------------------------------------------------------------*/
 
-App::App () : solver (0), time_limit(-1), force_strict_parsing (false), force_writing(false), max_var (0), timesup (false) {} // Only partially initialize the app.
+App::App ()
+    : solver (0), time_limit (-1), force_strict_parsing (false),
+      force_writing (false), max_var (0), timesup (false) {
+} // Only partially initialize the app.
 
 App::~App () {
   if (!solver)
@@ -1027,7 +1047,7 @@ void App::signal_message (const char *msg, int sig) {
 void App::catch_signal (int sig) {
   signal_value = sig;
   solver->internal->termination_forced = true;
-  Signal::reset (); // Sed signal again -> instant termination but no stats
+  Signal::reset (); // Send signal again -> instant termination but no stats
 }
 
 void App::catch_alarm () {

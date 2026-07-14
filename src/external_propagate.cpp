@@ -4,6 +4,79 @@
 
 namespace CaDiCaL {
 
+#ifndef NTRACING
+#define LOG_INTERACTION_START(NAME) LOG (#NAME " on level %d START", level);
+#define LOG_INTERACTION_FOR(NAME, VAL) \
+  LOG (#NAME "(%d) on level %d START", VAL, level)
+
+static void trace_api_call (FILE *trace_api_file, Internal *internal,
+                            const char *s0, int i1) {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d", s0, i1);
+  (void) internal;
+  fprintf (trace_api_file, "%s %d\n", s0, i1);
+  fflush (trace_api_file);
+}
+static void trace_api_call (FILE *trace_api_file, Internal *internal,
+                            const char *s0, int i1, int i2) {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d", s0, i1);
+  (void) internal;
+  fprintf (trace_api_file, "%s %d %d\n", s0, i1, i2);
+  fflush (trace_api_file);
+}
+
+#define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
+  do { \
+    LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
+  } while (0)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  do { \
+    LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, RET1, RET2); \
+  } while (0)
+#define LOG_INTERACTION_END_FOR(NAME, VAL) \
+  do { \
+    LOG (#NAME "(%d) on level %d END", VAL, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
+  } while (0)
+#define LOG_INTERACTION_RETURN(NAME, VAL) \
+  do { \
+    LOG (#NAME " returns %d on level %d END", VAL, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
+  } while (0)
+#else
+#define LOG_INTERACTION_START(NAME) LOG (#NAME " on level %d START", level)
+#define LOG_INTERACTION_FOR(NAME, VAL) \
+  LOG (#NAME "(%d) on level %d START", VAL, level)
+
+#define LOG_INTERACTION_RETURN(NAME, VAL) \
+  LOG (#NAME " returns %d on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level)
+#define LOG_INTERACTION_END_FOR(NAME, VAL) \
+  LOG (#NAME "(%d) on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
+  LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level)
+#endif
+
 /*----------------------------------------------------------------------------*/
 //
 // Mark a variable as an observed one. It can be a new variable. It is
@@ -50,6 +123,9 @@ void Internal::add_observed_var (int ilit) {
 //
 void Internal::remove_observed_var (int ilit) {
   if (!fixed (ilit) && level && val (ilit)) {
+    if (force_no_backtrack)
+      FATAL ("can not remove observed assigned variable during conflict "
+             "analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   }
@@ -144,10 +220,17 @@ void Internal::renotify_full_trail_between_trail_pos (
   (void) up_level;
 #endif
   if (start_new_level) {
-    if (assigned.size ())
+    if (assigned.size ()) {
+      LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
       external->propagator->notify_assignment (assigned);
+      LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                               (int) assigned.size ());
+    }
     assigned.clear ();
+    notified_level++;
+    LOG_INTERACTION_FOR (notify_new_decision_level, notified_level);
     external->propagator->notify_new_decision_level ();
+    LOG_INTERACTION_END_FOR (notify_new_decision_level, notified_level);
   }
   for (; j < end_level; ++j) {
     int ilit = trail[j];
@@ -171,8 +254,12 @@ void Internal::renotify_full_trail_between_trail_pos (
       assigned.push_back (elit);
   }
 
-  if (assigned.size ())
+  if (assigned.size ()) {
+    LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
     external->propagator->notify_assignment (assigned);
+    LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                             (int) assigned.size ());
+  }
   assigned.clear ();
 }
 
@@ -187,7 +274,8 @@ void Internal::renotify_full_trail () {
   if (level) {
     notified = 0; // TODO: save the last notified root-level position
                   // somewhere and use it here
-    notify_backtrack (0);
+    if (notified_level)
+      notify_backtrack (0);
   }
   std::vector<int> assigned;
 
@@ -286,7 +374,9 @@ bool Internal::external_propagate () {
 
     notify_assignments ();
 
+    LOG_INTERACTION_START (cb_propagate);
     int elit = external->propagator->cb_propagate ();
+    LOG_INTERACTION_RETURN (cb_propagate, elit);
 
     if (elit && !external->observed (elit))
       FATAL ("external propagations are only allowed over observed "
@@ -347,7 +437,9 @@ bool Internal::external_propagate () {
           notify_assignments ();
         }
       } // else (tmp > 0) -> the case of a satisfied literal is ignored
+      LOG_INTERACTION_START (cb_propagate);
       elit = external->propagator->cb_propagate ();
+      LOG_INTERACTION_RETURN (cb_propagate, elit);
       stats.up_cb++;
       stats.up_cb_prop++;
     }
@@ -431,8 +523,11 @@ bool Internal::external_propagate () {
 
 bool Internal::ask_external_clause () {
   ext_clause_forgettable = false;
+  LOG_INTERACTION_START (cb_has_external_clause);
   bool res =
       external->propagator->cb_has_external_clause (ext_clause_forgettable);
+  LOG_INTERACTION_RETURN_TWO (cb_has_external_clause, res,
+                              ext_clause_forgettable);
 
   return res;
 }
@@ -540,11 +635,17 @@ void Internal::add_external_clause (int propagated_elit,
   assert (tmp_elits.empty ());
 
   while (true) {
-    if (propagated_elit)
+    if (propagated_elit) {
+      LOG_INTERACTION_FOR (cb_add_reason_clause_lit, propagated_elit);
       elit =
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
-    else
+      LOG_INTERACTION_RETURN_FOR (cb_add_reason_clause_lit, propagated_elit,
+                                  elit);
+    } else {
+      LOG_INTERACTION_START (cb_add_external_clause_lit);
       elit = external->propagator->cb_add_external_clause_lit ();
+      LOG_INTERACTION_RETURN (cb_add_external_clause_lit, elit);
+    }
     LOG ("cb_add %d", elit);
 
     tmp_elits.push_back (elit);
@@ -1044,8 +1145,10 @@ bool Internal::external_check_solution () {
     forced_backt_allowed = true;
     size_t assigned = num_assigned;
     int level_before = level;
+    LOG_INTERACTION_START (cb_check_found_model);
     bool is_consistent =
         external->propagator->cb_check_found_model (notify_model_trail);
+    LOG_INTERACTION_RETURN (cb_check_found_model, is_consistent);
     notify_model_trail.clear ();
     stats.up_cb++;
     forced_backt_allowed = false;
@@ -1157,8 +1260,12 @@ void Internal::notify_assignments () {
       continue;
     notification_trail.push_back (elit);
   }
-  if (notification_trail.size ()) {
+  if (!notification_trail.empty ()) {
+    LOG_INTERACTION_FOR (notify_assignment_batch,
+                         (int) notification_trail.size ());
     external->propagator->notify_assignment (notification_trail);
+    LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                             (int) notification_trail.size ());
     notification_trail.clear ();
   }
   return;
@@ -1179,7 +1286,10 @@ void Internal::notify_decision () {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   notify_assignments ();
+  notified_level = level;
+  LOG_INTERACTION_FOR (notify_new_decision_level, level);
   external->propagator->notify_new_decision_level ();
+  LOG_INTERACTION_END_FOR (notify_new_decision_level, level);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1189,7 +1299,11 @@ void Internal::notify_decision () {
 void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
+  assert ((size_t) notified_level > new_level);
+  LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
   external->propagator->notify_backtrack (new_level);
+  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
+  notified_level = new_level;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1206,7 +1320,9 @@ int Internal::ask_decision () {
   notify_assignments ();
   int level_before = level;
   forced_backt_allowed = true;
+  LOG_INTERACTION_START (cb_decide);
   int elit = external->propagator->cb_decide ();
+  LOG_INTERACTION_RETURN (cb_decide, elit);
   forced_backt_allowed = false;
   stats.up_cb++;
   stats.up_cb_decide++;

@@ -603,7 +603,7 @@ inline int Internal::find_conflict_level (int &forced) {
     }
   }
 
-  LOG ("%d literals on actual conflict level %d", count, res);
+  LOG (conflict, "%d literals on actual conflict level %d", count, res);
 
   const int size = conflict->size;
   int *lits = conflict->literals;
@@ -613,7 +613,7 @@ inline int Internal::find_conflict_level (int &forced) {
   for (int i = 0; i < 2; i++) {
 
     const int lit = lits[i];
-
+    assert (val (lit) < 0);
     int highest_position = i;
     int highest_literal = lit;
     int highest_level = var (highest_literal).level;
@@ -972,7 +972,7 @@ void Internal::fix_trail_levels () {
   }
   LOG ("fixing all trail levels before backtracking");
   const size_t trix = control[out_of_order_level].trail;
-  assert (trix < trail.size ());
+  assert (trix <= trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
     const int lit = trail[i];
     Clause *reason = var (lit).reason;
@@ -994,12 +994,18 @@ void Internal::fix_trail_levels () {
            var (lit).level, res);
 
     var (lit).level = res;
-    if (lrat && !res) {
-      auto tmp = std::move (lrat_chain);
-      lrat_chain.clear ();
-      build_chain_for_units (lit, reason, false);
-      learn_unit_clause (lit);
-      lrat_chain = std::move (tmp);
+    if (!res) {
+      if (lrat) {
+        auto tmp = std::move (lrat_chain);
+        lrat_chain.clear ();
+        build_chain_for_units (lit, reason, false);
+        learn_unit_clause (lit);
+        lrat_chain = std::move (tmp);
+      } else {
+        learn_unit_clause (lit);
+      }
+      mark_garbage (reason);
+      var (lit).reason = nullptr;
     }
   }
   out_of_order_level = -1;
@@ -1143,6 +1149,7 @@ void Internal::analyze () {
     analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
     if (resolved == 0)
       conflict_size = antecedent_size - 1;
+    LOG ("conflict size %d after %d", conflict_size, resolved);
     assert (resolvent_size == open + (int) clause.size ());
 
     if (otfs && resolved > 0 && antecedent_size > 2 &&
@@ -1172,7 +1179,6 @@ void Internal::analyze () {
         clause.clear ();
         break;
       }
-      assert (conflict_size >= 2);
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // here both clauses are part of the CNF, so one subsumes the other

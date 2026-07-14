@@ -4,6 +4,7 @@
 /*------------------------------------------------------------------------*/
 #ifndef QUIET
 /*------------------------------------------------------------------------*/
+#include <cstdint>
 
 namespace CaDiCaL {
 
@@ -121,13 +122,15 @@ struct Internal;
 struct Profile {
 
   bool active;
-  double value;     // accumulated time
-  double started;   // started time if active
-  const char *name; // name of the profiled function (or 'phase')
-  const int level;  // allows to cheaply test if profiling is enabled
+  double value;          // accumulated time
+  int64_t search_ticks;  // accumulated ticks
+  double started;        // started time if active
+  int64_t started_ticks; // accumulated ticks
+  const char *name;      // name of the profiled function (or 'phase')
+  const int level;       // allows to cheaply test if profiling is enabled
 
   Profile (const char *n, int l)
-      : active (false), value (0), name (n), level (l) {}
+      : active (false), value (0), search_ticks (0), name (n), level (l) {}
 };
 
 struct Profiles {
@@ -157,7 +160,8 @@ struct Profiles {
     NON_QUIET_PROFILE_CODE ( \
         if (internal->profiles.P.level <= internal->opts.profile) \
             internal->start_profiling (internal->profiles.P, \
-                                       internal->time ());) \
+                                       internal->time (), \
+                                       internal->stats.ticks);) \
   } while (0)
 
 #define STOP(P) \
@@ -165,7 +169,8 @@ struct Profiles {
     NON_QUIET_PROFILE_CODE ( \
         if (internal->profiles.P.level <= internal->opts.profile) \
             internal->stop_profiling (internal->profiles.P, \
-                                      internal->time ());) \
+                                      internal->time (), \
+                                      internal->stats.ticks);) \
   } while (0)
 
 #define PROFILE_ACTIVE(P) \
@@ -177,22 +182,24 @@ struct Profiles {
 #define START_SIMPLIFIER(S, M) \
   do { \
     NON_QUIET_PROFILE_CODE (const double N = time (); \
+                            const int64_t T = internal->stats.ticks; \
                             const int L = internal->opts.profile;) \
     if (!internal->preprocessing && !internal->lookingahead) { \
       NON_QUIET_PROFILE_CODE ( \
           if (internal->stable && internal->profiles.stable.level <= L) \
-              internal->stop_profiling (internal->profiles.stable, N); \
+              internal->stop_profiling (internal->profiles.stable, N, T); \
           if (!internal->stable && internal->profiles.unstable.level <= L) \
-              internal->stop_profiling (internal->profiles.unstable, N); \
+              internal->stop_profiling (internal->profiles.unstable, N, \
+                                        T); \
           if (internal->profiles.search.level <= L) \
-              internal->stop_profiling (internal->profiles.search, N);) \
+              internal->stop_profiling (internal->profiles.search, N, T);) \
       reset_mode (SEARCH); \
     } \
     NON_QUIET_PROFILE_CODE ( \
         if (internal->profiles.simplify.level <= L) \
-            internal->start_profiling (internal->profiles.simplify, N); \
+            internal->start_profiling (internal->profiles.simplify, N, T); \
         if (internal->profiles.S.level <= L) \
-            internal->start_profiling (internal->profiles.S, N);) \
+            internal->start_profiling (internal->profiles.S, N, T);) \
     set_mode (SIMPLIFY); \
     set_mode (M); \
   } while (0)
@@ -203,21 +210,23 @@ struct Profiles {
   do { \
     NON_QUIET_PROFILE_CODE ( \
         const double N = internal->time (); \
+        const int64_t T = internal->stats.ticks; \
         const int L = internal->opts.profile; \
         if (internal->profiles.S.level <= L) \
-            internal->stop_profiling (internal->profiles.S, N); \
+            internal->stop_profiling (internal->profiles.S, N, T); \
         if (internal->profiles.simplify.level <= L) \
-            internal->stop_profiling (internal->profiles.simplify, N);) \
+            internal->stop_profiling (internal->profiles.simplify, N, T);) \
     reset_mode (M); \
     reset_mode (SIMPLIFY); \
     if (!internal->preprocessing && !internal->lookingahead) { \
       NON_QUIET_PROFILE_CODE ( \
           if (internal->profiles.search.level <= L) \
-              internal->start_profiling (internal->profiles.search, N); \
+              internal->start_profiling (internal->profiles.search, N, T); \
           if (internal->stable && internal->profiles.stable.level <= L) \
-              internal->start_profiling (internal->profiles.stable, N); \
+              internal->start_profiling (internal->profiles.stable, N, T); \
           if (!internal->stable && internal->profiles.unstable.level <= L) \
-              internal->start_profiling (internal->profiles.unstable, N);) \
+              internal->start_profiling (internal->profiles.unstable, N, \
+                                         T);) \
       set_mode (SEARCH); \
     } \
   } while (0)
@@ -232,12 +241,13 @@ struct Profiles {
     NON_QUIET_PROFILE_CODE ( \
         const double N = internal->time (); \
         const int L = internal->opts.profile; \
+        const int64_t T = internal->stats.ticks; \
         if (internal->stable && internal->profiles.stable.level <= L) \
-            internal->stop_profiling (internal->profiles.stable, N); \
+            internal->stop_profiling (internal->profiles.stable, N, T); \
         if (!internal->stable && internal->profiles.unstable.level <= L) \
-            internal->stop_profiling (internal->profiles.unstable, N); \
+            internal->stop_profiling (internal->profiles.unstable, N, T); \
         if (internal->profiles.walk.level <= L) \
-            internal->start_profiling (internal->profiles.walk, N);) \
+            internal->start_profiling (internal->profiles.walk, N, T);) \
     set_mode (Mode::WALK); \
   } while (0)
 
@@ -251,13 +261,15 @@ struct Profiles {
     reset_mode (WALK); \
     NON_QUIET_PROFILE_CODE ( \
         const double N = time (); const int L = internal->opts.profile; \
+        const int64_t T = internal->stats.ticks; \
         if (internal->profiles.walk.level <= L) \
-            internal->stop_profiling (internal->profiles.walk, N); \
+            internal->stop_profiling (internal->profiles.walk, N, T); \
         if (internal->stable && internal->profiles.stable.level <= L) \
-            internal->start_profiling (internal->profiles.stable, N); \
+            internal->start_profiling (internal->profiles.stable, N, T); \
         if (!internal->stable && internal->profiles.unstable.level <= L) \
-            internal->start_profiling (internal->profiles.unstable, N); \
-        internal->profiles.walk.started = (N);) \
+            internal->start_profiling (internal->profiles.unstable, N, T); \
+        internal->profiles.walk.started = (N); \
+        internal->profiles.walk.started_ticks = (T);) \
   } while (0)
 
 /*------------------------------------------------------------------------*/
