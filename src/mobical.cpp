@@ -341,6 +341,7 @@ private:
   size_t must_add_idx;
   // Next decision to make
   size_t decision_loc = 0;
+  size_t forced_bt = 0;
 
   // Observed variables and their current assignments
   std::set<int> observed_variables;
@@ -811,13 +812,14 @@ public:
         current_observed_satisfied_set (lit_sum, lowest_lit, highest_lit);
 
     if ((decision_loc % observed_variables.size ()) == 0) {
-      if (!(observed_variables.size () % 11) &&
+      if (!((observed_variables.size () + forced_bt) % 11) &&
           observed_trail.size () > 1) {
         int target = std::min (observed_variables.size () % 5,
                                observed_trail.size () - 2);
         MLOG ("cb_decide forces backtracking to level " << target
                                                         << std::endl);
         s->force_backtrack (target);
+        forced_bt++;
       }
       size_t n = decision_loc / observed_variables.size ();
       auto is_unassigned = [satisfied_literals] (int lit) {
@@ -3371,6 +3373,7 @@ void Trace::child_signal_handler (int sig) {
     }
   }
   reset_child_signal_handlers ();
+  Signal::reset ();
   raise (sig);
 }
 
@@ -5022,8 +5025,12 @@ Mobical::~Mobical () {
 void Mobical::catch_signal (int sig) {
   Signal::set_received (sig);
 
-  if (Trace::executed && !Trace::failed && !Trace::ok)
-    assert (mode & (INPUT | SEED)), Trace::failed = 1;
+  if (!(mode & RANDOM)) {
+    if (Trace::executed && !Trace::failed && !Trace::ok)
+      assert (mode & (INPUT | SEED)), Trace::failed = 1;
+    Signal::reset ();
+    ::raise (sig);
+  }
 }
 
 /*------------------------------------------------------------------------*/
