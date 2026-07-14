@@ -3356,10 +3356,10 @@ void Trace::child_signal_handler (int sig) {
 
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
-#ifdef __APPLE__
-    if ((int64_t) u.ru_maxrss >> 20 >= mobical.space_limit) {
-#else
+#ifndef __APPLE__
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
+#else
+    if ((int64_t) u.ru_maxrss >> 20 >= mobical.space_limit) {
 #endif
       if (mobical.shared)
         mobical.shared->memout++;
