@@ -892,13 +892,14 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
          scheduled, percent (scheduled, active ()));
 
   // Connect irredundant clauses.
-  //
-  for (const auto &c : clauses)
+  for (const auto &c : clauses) {
+    if (terminated_asynchronously ())
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-
+  }
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
@@ -1055,6 +1056,8 @@ void Internal::reset_citten () {
 void Internal::elim (bool update_limits) {
 
   if (unsat)
+    return;
+  if (terminated_asynchronously ())
     return;
   if (level)
     backtrack ();

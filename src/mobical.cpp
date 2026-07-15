@@ -231,8 +231,12 @@ void initialize_allocators () {
   libc_realloc = reinterpret_cast<realloc_t> (dlsym (RTLD_NEXT, "realloc"));
   libc_free = reinterpret_cast<free_t> (dlsym (RTLD_NEXT, "free"));
 }
-__attribute__ ((section (".preinit_array"))) void (*init_allocators_ptr) (
-    void) = initialize_allocators;
+#ifdef __APPLE__
+__attribute__ ((section ("__DATA,__mod_init_func")))
+#else
+__attribute__ ((section (".preinit_array")))
+#endif
+void (*init_allocators_ptr) (void) = initialize_allocators;
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -744,7 +748,6 @@ class Mobical : public Handler {
 #ifdef MOBICAL_TERMINATE
   bool terminator = true;
 #endif
-
   Terminal &terminal = terr;
 
   void header (); // Print right part of header.
@@ -1045,7 +1048,7 @@ struct Call {
 #endif
 #ifdef MOBICAL_TERMINATE
              | TERMINATE
-#endif
+#endif     
     ,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
@@ -3750,6 +3753,7 @@ public:
     memory_bad_failed = 0;
     memory_leak_alloc = 0;
     memory_leak_next_free = 0;
+
     std::memset (&mobical.shared->bad_alloc, 0,
                  sizeof (mobical.shared->bad_alloc));
     std::memset (&mobical.shared->leak_alloc, 0,
@@ -3760,11 +3764,12 @@ public:
     limit_terminate = 0;
     limit_terminate_remaining = 0;
 #endif
-
     executed++;
     bool first = true;
     bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
+      if (Signal::interrupted ())
+        break;
       Call *c = calls[i];
       trace_call_index = i + 1;
 
@@ -4846,8 +4851,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int mallocall = random.pick_int (0, 2);
   int mallocallsize = random.pick_log (1e2, 1e6);
   int leakallocall = random.pick_int (0, 2);
-  int terminatecall = random.pick_int (0, 2);
+  int terminatecall = random.pick_int (0, 2);  
   int terminatecallsize = random.pick_log (1e1, 1e4);
+  
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && (mallocall == 0))
     push_back (new MaxAllocCall (mallocallsize));
@@ -5241,7 +5247,6 @@ void Trace::child_signal_handler (int sig) {
     raise (SIGTSTP);
   }
 #endif
-
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
@@ -5261,6 +5266,7 @@ void Trace::child_signal_handler (int sig) {
     }
   }
   reset_child_signal_handlers ();
+  Signal::reset ();
   raise (sig);
 }
 
@@ -5462,15 +5468,21 @@ int Trace::fork_and_execute () {
     rlimit64 limit;
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
-    setrlimit64 (RLIMIT_CORE, &limit);
+    setrlimit64(RLIMIT_CORE, &limit);
 #endif
 #endif
-
-    int status, other = wait (&status);
+    int status;
+    pid_t other = waitpid (child, &status, WUNTRACED);
     if (other != child)
       res = 0;
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
+    else if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTSTP) {
+      kill (child, SIGKILL); // fork is just suspended. Now kill it,
+      waitpid (child, nullptr, 0); // and reap it
+      // Termination caused signal.
+      res = 5;
+    }
     else if (!WIFSIGNALED (status))
       res = 0;
     else if (WTERMSIG (status) == SIGABRT)
@@ -5482,8 +5494,6 @@ int Trace::fork_and_execute () {
       res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
       res = 4; // Leaked allocation caused signal.
-    else if (WTERMSIG (status) == SIGTSTP)
-      res = 5; // Termination caused signal.
     else
       res = 6;
 
@@ -5594,7 +5604,12 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           tmp_notify = &tmp2;
         }
       }
+      // The attempt should be finished and in a valid state.
+      if (Signal::interrupted ())
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -5717,6 +5732,8 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('p');
   size_t l;
   for (l = 1; l < size () && calls[l]->config_type (); l++)
@@ -5750,6 +5767,8 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('c');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
@@ -5772,6 +5791,8 @@ bool Trace::shrink_clauses (int expected) {
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('l');
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
@@ -5789,6 +5810,8 @@ bool Trace::shrink_literals (int expected) {
 // (connect, disconnect) with propagator calls in between
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
+    return false;
+  if (Signal::interrupted ())
     return false;
   notify ('e');
   Trace simplified;
@@ -5851,6 +5874,8 @@ bool Trace::shrink_propagator (int expected) {
       progress ();
     } else
       simplified.clear ();
+    if (Signal::interrupted ())
+      break;
   }
   while (connected--) {
     bool remove_next_disconnect = false;
@@ -5880,6 +5905,8 @@ bool Trace::shrink_propagator (int expected) {
       progress ();
     } else
       simplified.clear ();
+    if (Signal::interrupted ())
+      break;
   }
   notify ();
   return reduced;
@@ -5887,6 +5914,8 @@ bool Trace::shrink_propagator (int expected) {
 
 bool Trace::shrink_basic (int expected) {
   if (mobical.donot.shrink.basic)
+    return false;
+  if (Signal::interrupted ())
     return false;
   notify ('b');
   Segments segments;
@@ -5952,6 +5981,8 @@ void Trace::add_options (int expected) {
 bool Trace::shrink_disable (int expected) {
   if (mobical.donot.disable)
     return false;
+  if (Signal::interrupted ())
+    return false;
   const int max_var = vars ();
 
   notify ('d');
@@ -6005,7 +6036,11 @@ bool Trace::shrink_disable (int expected) {
           c->val = saved[j];
         }
       }
+      if (Signal::interrupted ())
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -6020,13 +6055,18 @@ bool Trace::reduce_values (int expected) {
 
   if (mobical.donot.reduce)
     return false;
-
+  if (Signal::interrupted ())
+    return false;
   notify ('r');
 
   assert (size ());
 
   bool changed = false, res = false;
   do {
+    if (Signal::interrupted ()) {
+      res = false; // Otherwise we do another round
+      break;
+    }
     if (changed)
       res = true;
     changed = false;
@@ -6080,12 +6120,19 @@ bool Trace::reduce_values (int expected) {
       int old_val = c->val;
       c->val = lo;
       progress ();
-      if (fork_and_execute () == expected) {
+
+      bool success = fork_and_execute () == expected; 
+      if (success) {
         assert (c->val != old_val);
         changed = true;
+      } else 
+        c->val = old_val;
+
+      if (Signal::interrupted ())
+        break;
+
+      if (success)
         continue;
-      }
-      c->val = old_val;
 
       // Then try to limit to the high value if current value too large.
       //
@@ -6093,13 +6140,17 @@ bool Trace::reduce_values (int expected) {
         int old_val = c->val;
         c->val = hi;
         progress ();
-        if (fork_and_execute () == expected) {
+        success = fork_and_execute () == expected;
+        if (success) {
           assert (c->val != old_val);
           changed = true;
         } else {
           c->val = old_val;
-          continue;
         }
+        if (Signal::interrupted ())
+          break;
+        if (!success)
+          continue;
       }
 
       // Now we do a delta-debugging inspired binary search for the
@@ -6122,6 +6173,8 @@ bool Trace::reduce_values (int expected) {
           changed = true;
         } else
           c->val = old_val;
+        if (Signal::interrupted ())
+          break;
       }
     }
   } while (changed);
@@ -6135,6 +6188,8 @@ bool Trace::reduce_values (int expected) {
 
 void Trace::map_variables (int expected) {
   if (mobical.donot.map)
+    return;
+  if (Signal::interrupted ())
     return;
   for (int with_gaps = 0; with_gaps <= 1; with_gaps++) {
     notify ('m');
@@ -6194,6 +6249,8 @@ void Trace::map_variables (int expected) {
       with_gaps = 2;
     }
     notify ();
+    if (Signal::interrupted ()) 
+      break;
   }
 }
 
@@ -6202,7 +6259,8 @@ void Trace::map_variables (int expected) {
 void Trace::shrink_options (int expected) {
   if (mobical.donot.shrink.options)
     return;
-
+  if (Signal::interrupted ())
+    return;
   notify ('o');
   Segments segments;
   for (size_t i = 0; i < size (); i++) {
@@ -6256,7 +6314,8 @@ void Trace::shrink (int expected) {
   shrink_options (expected);
   // Execute one last time to get accurate results when memory fuzzing
   // is enabled.
-  fork_and_execute ();
+  if (!Signal::interrupted ()) 
+    fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
 }
@@ -7290,13 +7349,15 @@ Mobical::~Mobical () {
   delete replay_pointer;
 }
 
-void Mobical::catch_signal (int) {
-  if ((terminal && (mode & RANDOM)) || shrinking || running)
-    cerr << endl;
-  terminal.reset ();
-  if (Trace::executed && !Trace::failed && !Trace::ok)
-    assert (mode & (INPUT | SEED)), Trace::failed = 1;
-  print_statistics ();
+void Mobical::catch_signal (int sig) {
+  Signal::set_received (sig); 
+
+  if (!(mode & RANDOM) && !shrinking) {
+    if (Trace::executed && !Trace::failed && !Trace::ok)
+      assert (mode & (INPUT | SEED)), Trace::failed = 1;
+    Signal::reset ();
+    ::raise (sig);
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -8314,6 +8375,9 @@ END_OF_BANNER_AND_OPTIONS:
       if (Trace::failed >= bug_limit)
         break;
 
+      if (Signal::interrupted ())
+        break;
+
       if (!quiet && !donot.seeds) {
         prefix ();
         cerr << ' ' << left << setw (15) << traces << ' ';
@@ -8407,10 +8471,19 @@ END_OF_BANNER_AND_OPTIONS:
     }
   }
 
+  const int sig = Signal::received (); 
+  const bool reraise = Signal::interrupted ();
   Signal::reset ();
+  
+  if (reraise)
+    if ((terminal && (mode & RANDOM)) || shrinking || running)
+      cerr << endl;
 
   terminal.reset ();
   print_statistics ();
+
+  if (reraise)
+    raise (sig);
 
   return Trace::failed > 0;
 }

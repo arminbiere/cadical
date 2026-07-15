@@ -109,6 +109,8 @@ void Internal::lucky_assume_decision (int lit) {
 }
 
 int Internal::trivially_false_satisfiable (int64_t &ticks) {
+  if (terminated_asynchronously ())
+    return -1;
   VERBOSE (3, "checking that all clauses contain a negative literal");
   assert (!level);
   ++stats.lucky_constant_zero;
@@ -165,6 +167,8 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
 }
 
 int Internal::trivially_true_satisfiable (int64_t &ticks) {
+  if (terminated_asynchronously ())
+    return -1;
   VERBOSE (3, "checking that all clauses contain a positive literal");
   assert (!level);
   ++stats.lucky_constant_one;
@@ -246,6 +250,8 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 
 template<class Iterator>
 int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, std::string str) {
+  if (terminated_asynchronously ())
+    return -1;
   VERBOSE (3, "checking %s variable index %s assignment", str.c_str (), pol == 1 ? "true" : "false");
 #ifdef QUIET
   (void) str;
@@ -295,6 +301,8 @@ int Internal::forward_true_satisfiable () {
 /*------------------------------------------------------------------------*/
 
 int Internal::backward_false_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   VERBOSE (3, "checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
@@ -325,6 +333,8 @@ int Internal::backward_false_satisfiable () {
 }
 
 int Internal::backward_true_satisfiable () {
+  if (terminated_asynchronously ())
+    return -1;
   VERBOSE (3, "checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
@@ -448,6 +458,8 @@ int Internal::lucky_phases (bool update_limit) {
     return 0;
 
   if (!opts.luckyassumptions && !assumptions.empty ())
+    return 0;
+  if (terminated_asynchronously ())
     return 0;
   // TODO: Some of the lucky assignments can also be found if there are
   // constraint.
@@ -573,10 +585,17 @@ int Internal::lucky_phases (bool update_limit) {
   report ('l', !res && (old_active == stats.vars_active));
   searching_lucky_phases = false;
   PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
+
+  // Here we should reset lim.terminate.check since in a lucky run this 
+  // may be set to up to 1000 (for terminateint=10). 
+  // This then may lead to a high latency for external termination.
+  lim.terminate.check = opts.terminateint;
+  
   if (update_limit && !res && (old_active == stats.vars_active)) {
     lim.lucky = stats.conflicts + opts.luckymininterval;
     VERBOSE (3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64, stats.lucky_tried, lim.lucky);
   }
+
   STOP (lucky);
   STOP (search);
 

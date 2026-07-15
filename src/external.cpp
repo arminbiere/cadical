@@ -918,6 +918,8 @@ void External::check_constraint_satisfied () {
 
 void External::check_failing () {
   Solver *checker = new Solver ();
+  if (terminator)
+    checker->connect_terminator (terminator);
   DeferDeletePtr<Solver> delete_checker (checker);
   checker->prefix ("checker ");
 #ifdef LOGGING

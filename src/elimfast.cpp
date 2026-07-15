@@ -98,6 +98,8 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   for (const auto &c : ps) {
+    if (terminated_asynchronously ())
+      return false;
     ++eliminator.ticks;
     assert (!c->redundant);
     if (c->garbage)
@@ -127,6 +129,8 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
       } else if (unsat)
         return false;
       else if (val (pivot))
+        return false;
+      else if (terminated_asynchronously ())
         return false;
     }
   }
@@ -280,6 +284,8 @@ int Internal::elimfast_round (bool &completed,
 
   assert (opts.fastelim);
   assert (!unsat);
+  if (terminated_asynchronously ())
+    return 0;
 
   START_SIMPLIFIER (fastelim, ELIM);
 
@@ -314,6 +320,8 @@ int Internal::elimfast_round (bool &completed,
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
+    if (terminated_asynchronously ())
+      break;
     if (c->garbage || c->redundant)
       continue;
     bool satisfied = false, falsified = false;
@@ -374,12 +382,14 @@ int Internal::elimfast_round (bool &completed,
 
   // Connect irredundant clauses.
   //
-  for (const auto &c : clauses)
+  for (const auto &c : clauses) {
+    if (terminated_asynchronously ())
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-
+  }
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
@@ -464,6 +474,8 @@ void Internal::elimfast () {
   if (!opts.fastelim)
     return;
   if (unsat)
+    return;
+  if (terminated_asynchronously ())
     return;
   if (level)
     backtrack ();

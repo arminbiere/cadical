@@ -1928,6 +1928,7 @@ inline bool Internal::terminated_asynchronously (int factor) {
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");
+    VERBOSE (2, "termination forced");
     return true;
   }
 

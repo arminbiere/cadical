@@ -610,7 +610,7 @@ struct Closure {
   queue<int> schedule;
   vector<bool> scheduled;
 
-  std::vector<Clause *> new_unwatched_binary_clauses;
+  std::vector<Clause *> new_unwatched_binary_clauses; // TODO: unused
   // LRAT proofs
   vector<int> resolvent_analyzed;
   mutable vector<LRAT_ID> lrat_chain; // storing LRAT chain

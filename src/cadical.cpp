@@ -49,7 +49,7 @@ class App : public Handler, public Terminator {
   //
   int max_var;           // Set after parsing.
   volatile bool timesup; // Asynchronous termination.
-
+  volatile sig_atomic_t signal_value = 0; // Caught signal.
   // Printing.
   //
   void print_usage (bool all = false);
@@ -277,6 +277,8 @@ void App::print_witness (FILE *file) {
         tmp = elit;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      if (signal_value)
+        break;
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -295,6 +297,8 @@ void App::print_witness (FILE *file) {
         continue;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      // This only terminates if a signal is raised 
+      solver->internal->terminated_asynchronously (); 
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -752,10 +756,15 @@ int App::main (int argc, char **argv) {
   if (dimacs_path)
     err = solver->read_dimacs (dimacs_path, max_var, force_strict_parsing,
                                incremental, cube_literals);
-  else
+  else {
+    // Otherwise we may catch a SIGINT and continue to wait for an user input 
+    // in getc. 
+    Signal::reset ();
     err = solver->read_dimacs (stdin, dimacs_name, max_var,
                                force_strict_parsing, incremental,
                                cube_literals);
+    Signal::set (this);
+  }
   if (err)
     APPERR ("%s", err);
   if (read_solution_path) {
@@ -971,6 +980,12 @@ int App::main (int argc, char **argv) {
     alarm (0);
 #endif
 
+  if (signal_value) {
+    CaDiCaL::Signal::reset ();
+    signal_message ("raising", signal_value);
+    raise (signal_value);
+  }
+
   return res;
 }
 
@@ -1030,28 +1045,9 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-#ifndef QUIET
-  if (!get ("quiet")) {
-    Internal *internal = solver->internal;
-#ifndef QUIET
-#define PROFILE(NAME, LEVEL) \
-  if (PROFILE_ACTIVE (NAME)) \
-    STOP (NAME);
-    PROFILES
-#undef PROFILE
-#endif
-    solver->message ();
-    signal_message ("caught", sig);
-    solver->section ("result");
-    solver->message ("UNKNOWN");
-    solver->statistics ();
-    solver->resources ();
-    solver->message ();
-    signal_message ("raising", sig);
-  }
-#else
-  (void) sig;
-#endif
+  signal_value = sig;
+  solver->internal->termination_forced = true;
+  Signal::reset (); // Send signal again -> instant termination but no stats
 }
 
 void App::catch_alarm () {
@@ -1059,7 +1055,8 @@ void App::catch_alarm () {
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  timesup = true; // Wait for solver to call 'App::terminate ()'.
+  //timesup = true; // Wait for solver to call 'App::terminate ()'.
+  solver->internal->termination_forced = true;
 #endif
 }
 
@@ -1075,6 +1072,14 @@ void App::catch_alarm () {
 
 int main (int argc, char **argv) {
   CaDiCaL::App app;
+  
   int res = app.main (argc, argv);
+  const int sig = CaDiCaL::Signal::received ();
+
+  if (sig) {
+    CaDiCaL::Signal::reset (); // Disconnects signal handler
+    raise (sig);
+  }
+  
   return res;
 }

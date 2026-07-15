@@ -317,6 +317,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
+    else if (terminated_asynchronously ()) // externally terminated
+      break;
     else if (!external_propagate () || unsat) { // external propagation
       if (unsat)
         continue;
@@ -726,6 +728,8 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return false;
   if (!max_var)
     return false;
+  if (terminated_asynchronously ())
+    return false;
   START (preprocess);
   if (!triggered)
     report ('('), triggered = true;
@@ -743,14 +747,12 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   int old_eliminated = stats.vars_all_elim;
-
   if (opts.inprobing)
     inprobe (false);
   if (opts.elim)
     elim (false);
   if (opts.condition)
     condition (false);
-
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
   assert (preprocessing);
@@ -778,6 +780,8 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     return;
   if (!max_var)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (!opts.preprocesslight)
     return;
   if (!always && stats.searches > 1)
@@ -798,16 +802,12 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
-
   if (extract_gates (true))
     decompose ();
   binary_clauses_backbone ();
-
   if (sweep ())
     decompose ();
-
   mark_duplicated_binary_clauses_as_garbage ();
-
   factor ();
 
   if (opts.fastelim)
@@ -923,6 +923,8 @@ int Internal::local_search_round (int round) {
   if (unsat)
     return false;
   if (!max_var)
+    return false;
+  if (terminated_asynchronously ())
     return false;
 
   START_OUTER_WALK ();
