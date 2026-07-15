@@ -963,6 +963,7 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
+#ifndef QUIET
   if (!res && timesup && !get ("quiet")) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
@@ -971,6 +972,7 @@ int App::main (int argc, char **argv) {
            write_result_file);
     fflush (write_result_file);
   }
+#endif
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
