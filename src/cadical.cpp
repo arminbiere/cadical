@@ -47,15 +47,15 @@ class App : public Handler, public Terminator {
 
   // Internal variables.
   //
-  int max_var;           // Set after parsing.
-  volatile bool timesup; // Asynchronous termination.
+  int max_var;                            // Set after parsing.
+  volatile bool timesup;                  // Asynchronous termination.
   volatile sig_atomic_t signal_value = 0; // Caught signal.
   // Printing.
   //
   void print_usage (bool all = false);
   void print_witness (FILE *);
 
-#ifndef QUIET
+#ifndef NQUIET
   void signal_message (const char *msg, int sig);
 #endif
 
@@ -937,7 +937,9 @@ int App::main (int argc, char **argv) {
 
   if (signal_value) {
     CaDiCaL::Signal::reset ();
+#ifndef NQUIET
     signal_message ("raising", signal_value);
+#endif
     raise (signal_value);
   }
 
@@ -984,7 +986,7 @@ App::~App () {
 
 /*------------------------------------------------------------------------*/
 
-#ifndef QUIET
+#ifndef NQUIET
 
 void App::signal_message (const char *msg, int sig) {
   solver->message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), msg,
