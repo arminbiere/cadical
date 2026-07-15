@@ -920,12 +920,14 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
-  if (!res && timesup)
+#ifndef QUIET
+  if (!res && timesup && !solver->get ("quiet"))
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"
            "c automated reasoning. 🚧 🚧 🚧\n",
            write_result_file);
+#endif
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
