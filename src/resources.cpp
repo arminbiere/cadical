@@ -130,7 +130,11 @@ uint64_t maximum_resident_set_size () {
   struct rusage u;
   if (getrusage (RUSAGE_SELF, &u))
     return 0;
+#ifndef __APPLE__
   return ((uint64_t) u.ru_maxrss) << 10;
+#else
+  return ((uint64_t) u.ru_maxrss);
+#endif
 }
 
 // Unfortunately 'getrusage' on Linux does not support current resident set
