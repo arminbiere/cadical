@@ -47,8 +47,8 @@ class App : public Handler, public Terminator {
 
   // Internal variables.
   //
-  int max_var;           // Set after parsing.
-  volatile bool timesup; // Asynchronous termination.
+  int max_var;                            // Set after parsing.
+  volatile bool timesup;                  // Asynchronous termination.
   volatile sig_atomic_t signal_value = 0; // Caught signal.
   // Printing.
   //
@@ -297,8 +297,8 @@ void App::print_witness (FILE *file) {
         continue;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
-      // This only terminates if a signal is raised 
-      solver->internal->terminated_asynchronously (); 
+      // This only terminates if a signal is raised
+      solver->internal->terminated_asynchronously ();
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -757,8 +757,8 @@ int App::main (int argc, char **argv) {
     err = solver->read_dimacs (dimacs_path, max_var, force_strict_parsing,
                                incremental, cube_literals);
   else {
-    // Otherwise we may catch a SIGINT and continue to wait for an user input 
-    // in getc. 
+    // Otherwise we may catch a SIGINT and continue to wait for an user
+    // input in getc.
     Signal::reset ();
     err = solver->read_dimacs (stdin, dimacs_name, max_var,
                                force_strict_parsing, incremental,
@@ -982,7 +982,9 @@ int App::main (int argc, char **argv) {
 
   if (signal_value) {
     CaDiCaL::Signal::reset ();
+#ifndef QUIET
     signal_message ("raising", signal_value);
+#endif
     raise (signal_value);
   }
 
@@ -1055,7 +1057,7 @@ void App::catch_alarm () {
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  //timesup = true; // Wait for solver to call 'App::terminate ()'.
+  // timesup = true; // Wait for solver to call 'App::terminate ()'.
   solver->internal->termination_forced = true;
 #endif
 }
@@ -1072,7 +1074,7 @@ void App::catch_alarm () {
 
 int main (int argc, char **argv) {
   CaDiCaL::App app;
-  
+
   int res = app.main (argc, argv);
   const int sig = CaDiCaL::Signal::received ();
 
@@ -1080,6 +1082,6 @@ int main (int argc, char **argv) {
     CaDiCaL::Signal::reset (); // Disconnects signal handler
     raise (sig);
   }
-  
+
   return res;
 }
