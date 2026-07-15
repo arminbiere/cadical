@@ -5592,8 +5592,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         if (!ignore[i])
           tmp.push_back (calls[i]->copy ());
       progress (*tmp_notify);
-      if (tmp.fork_and_execute () != expected || 
-          Signal::received ()) { // failed
+      if (tmp.fork_and_execute () != expected) { // failed
         for (size_t i = l; i < r; i++)
           removed[i] = saved[i];
       } else {
@@ -6027,7 +6026,7 @@ bool Trace::shrink_disable (int expected) {
       if (!reduce)
         continue;
       progress ();
-      if (fork_and_execute () == expected && !Signal::interrupted ())
+      if (fork_and_execute () == expected)
         res = true;
       else {
         for (size_t j = i; j < n && j < i + granularity; j++) {
@@ -6122,8 +6121,7 @@ bool Trace::reduce_values (int expected) {
       c->val = lo;
       progress ();
 
-      bool success = 
-        (fork_and_execute () == expected && !Signal::interrupted ()); 
+      bool success = fork_and_execute () == expected; 
       if (success) {
         assert (c->val != old_val);
         changed = true;
@@ -6142,8 +6140,7 @@ bool Trace::reduce_values (int expected) {
         int old_val = c->val;
         c->val = hi;
         progress ();
-        success = 
-        (fork_and_execute () == expected && !Signal::interrupted ());
+        success = fork_and_execute () == expected;
         if (success) {
           assert (c->val != old_val);
           changed = true;
@@ -6171,7 +6168,7 @@ bool Trace::reduce_values (int expected) {
         assert (new_val <= hi);
         c->val = new_val;
         progress ();
-        if (fork_and_execute () == expected && !Signal::interrupted ()) {
+        if (fork_and_execute () == expected) {
           assert (c->val != old_val);
           changed = true;
         } else
@@ -6244,7 +6241,7 @@ void Trace::map_variables (int expected) {
       }
     }
     progress ();
-    if (mapped.fork_and_execute () == expected && !Signal::interrupted ()) {
+    if (mapped.fork_and_execute () == expected) {
       clear ();
       for (size_t i = 0; i < mapped.size (); i++)
         push_back (mapped[i]->copy ());

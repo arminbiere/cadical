@@ -1806,8 +1806,6 @@ unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
 }
 
 unsigned Internal::incomplete_variables () {
-  //if (terminated_asynchronously ())
-  //    return 0;
   unsigned res = 0;
   for (const auto &idx : vars) {
     Flags &f = flags (idx);

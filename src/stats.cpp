@@ -25,7 +25,6 @@ Stats::Stats () {
 
 /*------------------------------------------------------------------------*/
 #ifndef QUIET
-
 // Names are shortened to be 21 chars (22 with ':')
 // absolute numbers may be higher then 15 (should be rare though)
 // REF_OFFSET is 12 for old stat format but that spills over
