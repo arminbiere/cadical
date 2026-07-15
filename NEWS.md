@@ -5,9 +5,9 @@ Version 3.0.1
 
 - Changed default value for `preprocesslight` and `factor` to zero (off).
 
-- Improved external terminator reaction time
+- Improved external terminator reaction time.
 
-- Changed application signal handler to properly terminate the solver
+- Changed application signal handler to properly terminate the solver.
 
 Version 3.0.0
 -------------
