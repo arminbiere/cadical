@@ -317,6 +317,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
+    else if (terminated_asynchronously ()) // externally terminated
+      break;
     else if (!external_propagate () || unsat) { // external propagation
       if (unsat)
         continue;

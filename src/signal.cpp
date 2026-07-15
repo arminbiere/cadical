@@ -105,8 +105,9 @@ static void catch_signal (int sig) {
 #endif
   { 
     // Reraising should happen in solver control for SIGINT and SIGTERM.
+    // For SIGABRT and SIGSEGV we reraise immediately.
     switch (sig) {
-    case SIGABRT: // Better not return control for these two
+    case SIGABRT:
     case SIGSEGV: 
       Signal::reset ();
       ::raise (sig);

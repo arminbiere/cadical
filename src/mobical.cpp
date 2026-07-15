@@ -236,7 +236,7 @@ __attribute__ ((section ("__DATA,__mod_init_func")))
 #else
 __attribute__ ((section (".preinit_array")))
 #endif
-void (*init_allocators_ptr)(void) = initialize_allocators;
+void (*init_allocators_ptr) (void) = initialize_allocators;
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -5266,6 +5266,7 @@ void Trace::child_signal_handler (int sig) {
     }
   }
   reset_child_signal_handlers ();
+  Signal::reset ();
   raise (sig);
 }
 
@@ -5591,7 +5592,8 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         if (!ignore[i])
           tmp.push_back (calls[i]->copy ());
       progress (*tmp_notify);
-      if (tmp.fork_and_execute () != expected) { // failed
+      if (tmp.fork_and_execute () != expected || 
+          Signal::received ()) { // failed
         for (size_t i = l; i < r; i++)
           removed[i] = saved[i];
       } else {
@@ -6025,7 +6027,7 @@ bool Trace::shrink_disable (int expected) {
       if (!reduce)
         continue;
       progress ();
-      if (fork_and_execute () == expected)
+      if (fork_and_execute () == expected && !Signal::interrupted ())
         res = true;
       else {
         for (size_t j = i; j < n && j < i + granularity; j++) {
@@ -6120,7 +6122,8 @@ bool Trace::reduce_values (int expected) {
       c->val = lo;
       progress ();
 
-      bool success = fork_and_execute () == expected; 
+      bool success = 
+        (fork_and_execute () == expected && !Signal::interrupted ()); 
       if (success) {
         assert (c->val != old_val);
         changed = true;
@@ -6139,7 +6142,8 @@ bool Trace::reduce_values (int expected) {
         int old_val = c->val;
         c->val = hi;
         progress ();
-        success = fork_and_execute () == expected;
+        success = 
+        (fork_and_execute () == expected && !Signal::interrupted ());
         if (success) {
           assert (c->val != old_val);
           changed = true;
@@ -6167,7 +6171,7 @@ bool Trace::reduce_values (int expected) {
         assert (new_val <= hi);
         c->val = new_val;
         progress ();
-        if (fork_and_execute () == expected) {
+        if (fork_and_execute () == expected && !Signal::interrupted ()) {
           assert (c->val != old_val);
           changed = true;
         } else
@@ -6240,7 +6244,7 @@ void Trace::map_variables (int expected) {
       }
     }
     progress ();
-    if (mapped.fork_and_execute () == expected) {
+    if (mapped.fork_and_execute () == expected && !Signal::interrupted ()) {
       clear ();
       for (size_t i = 0; i < mapped.size (); i++)
         push_back (mapped[i]->copy ());
@@ -7351,8 +7355,12 @@ Mobical::~Mobical () {
 void Mobical::catch_signal (int sig) {
   Signal::set_received (sig); 
 
-  if (Trace::executed && !Trace::failed && !Trace::ok)
-    assert (mode & (INPUT | SEED)), Trace::failed = 1;
+  if (!(mode & RANDOM) && !shrinking) {
+    if (Trace::executed && !Trace::failed && !Trace::ok)
+      assert (mode & (INPUT | SEED)), Trace::failed = 1;
+    Signal::reset ();
+    ::raise (sig);
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -8469,6 +8477,11 @@ END_OF_BANNER_AND_OPTIONS:
   const int sig = Signal::received (); 
   const bool reraise = Signal::interrupted ();
   Signal::reset ();
+  
+  if (reraise)
+    if ((terminal && (mode & RANDOM)) || shrinking || running)
+      cerr << endl;
+
   terminal.reset ();
   print_statistics ();
 

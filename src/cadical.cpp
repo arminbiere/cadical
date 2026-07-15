@@ -1055,7 +1055,8 @@ void App::catch_alarm () {
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  timesup = true; // Wait for solver to call 'App::terminate ()'.
+  //timesup = true; // Wait for solver to call 'App::terminate ()'.
+  solver->internal->termination_forced = true;
 #endif
 }
 
