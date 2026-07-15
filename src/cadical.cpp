@@ -55,7 +55,7 @@ class App : public Handler, public Terminator {
   void print_usage (bool all = false);
   void print_witness (FILE *);
 
-#ifndef NQUIET
+#ifndef QUIET
   void signal_message (const char *msg, int sig);
 #endif
 
@@ -937,7 +937,7 @@ int App::main (int argc, char **argv) {
 
   if (signal_value) {
     CaDiCaL::Signal::reset ();
-#ifndef NQUIET
+#ifndef QUIET
     signal_message ("raising", signal_value);
 #endif
     raise (signal_value);
@@ -986,7 +986,7 @@ App::~App () {
 
 /*------------------------------------------------------------------------*/
 
-#ifndef NQUIET
+#ifndef QUIET
 
 void App::signal_message (const char *msg, int sig) {
   solver->message ("%s%s %ssignal %d%s (%s)%s", tout.red_code (), msg,
