@@ -4,6 +4,8 @@ Version 3.0.1
 - Less disruptive clause import with user propagators due to `elevate`.
 
 - Changed default value for `preprocesslight` and `factor` to zero (off).
+  Note that disabling `factor` by default means you now only have to declare
+  variables when enabling factor explicitly.
 
 - Improved external terminator reaction time.
 
