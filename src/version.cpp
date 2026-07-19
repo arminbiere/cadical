@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "3.0.0"
+#define VERSION "3.0.1"
 #endif // VERSION
 #endif // NBUILD
 
@@ -32,7 +32,7 @@
 
 // The copyright of the code is here.
 
-static const char *COPYRIGHT = "Copyright (c) 2016-2025";
+static const char *COPYRIGHT = "Copyright (c) 2016-2026";
 static const char *AUTHORS =
     "A. Biere, M. Fleury, N. Froleyks, K. Fazekas, F. Pollitt, T. Faller";
 static const char *AFFILIATIONS =
