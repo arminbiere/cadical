@@ -864,8 +864,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
       break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
-        if (active (lit)) 
-          occs (lit).push_back (c); 
+        if (active (lit))
+          occs (lit).push_back (c);
   }
 
 #ifndef QUIET

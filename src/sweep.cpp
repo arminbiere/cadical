@@ -627,9 +627,10 @@ void Internal::save_add_clear_core (Sweeper &sweeper) {
   // Else need full adding and clearing (including proof deletion steps)
   if (!terminated_asynchronously ()) {
     add_core (sweeper, 0);
-    clear_core (sweeper, 0);  
+    clear_core (sweeper, 0);
   } else
-    sweeper.core[0].clear (); // just clear the (possibly partially) filled vec
+    sweeper.core[0]
+        .clear (); // just clear the (possibly partially) filled vec
 }
 
 void Internal::init_backbone_and_partition (Sweeper &sweeper) {

@@ -101,7 +101,7 @@ static void catch_signal (int sig) {
     // Reraising should happen in solver control for SIGINT and SIGTERM.
     // For SIGABRT and SIGSEGV we reraise immediately.
     switch (sig) {
-    case SIGABRT: 
+    case SIGABRT:
     case SIGSEGV:
       Signal::reset ();
       ::raise (sig);
@@ -137,13 +137,9 @@ void Signal::alarm (int seconds) {
 
 #endif
 
-void Signal::set_received (int sig) {
-  signal_value = sig;
-}
+void Signal::set_received (int sig) { signal_value = sig; }
 
-int Signal::received () {
-  return signal_value;
-}
+int Signal::received () { return signal_value; }
 
 // Signals for which returning control is sensible
 bool Signal::interrupted () {

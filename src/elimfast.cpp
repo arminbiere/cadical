@@ -374,7 +374,7 @@ int Internal::elimfast_round (bool &completed,
         if (active (lit))
           occs (lit).push_back (c);
   }
-  
+
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
 #endif

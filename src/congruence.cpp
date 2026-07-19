@@ -217,7 +217,7 @@ void Closure::extract_binaries () {
     if (c->size > 2)
       continue;
     if (internal->terminated_asynchronously ()) {
-      STOP(extractbinaries);
+      STOP (extractbinaries);
       return;
     }
     assert (c->size == 2);
@@ -7840,7 +7840,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   bool reconnect = true;
   if (!internal->terminated_asynchronously ()) {
     closure.reset_extraction (); // reconnect watches
-    reconnect = false; // fresh watches
+    reconnect = false;           // fresh watches
   }
 
   if (!unsat && !internal->terminated_asynchronously ()) {
@@ -7861,15 +7861,16 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     }
     reconnect = true; // possibly stale watches
   }
-  closure.reset_closure (); 
+  closure.reset_closure ();
   if (reconnect) {
     internal->clear_watches ();
-    internal->connect_watches ();  
+    internal->connect_watches ();
   }
   if (!internal->unsat) {
     propagated2 = propagated = 0;
   }
-  assert (closure.new_unwatched_binary_clauses.empty () || internal->terminated_asynchronously ());
+  assert (closure.new_unwatched_binary_clauses.empty () ||
+          internal->terminated_asynchronously ());
   internal->reset_occs ();
   internal->reset_noccs ();
   assert (!internal->occurring ());
@@ -7878,7 +7879,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   PHASE ("congruence-phase", stats.congruence.rounds,
          "merged %" PRId64 " literals", new_merged - old_merged);
-  if (!internal->terminated_asynchronously () && !unsat && !internal->propagate ()) {
+  if (!internal->terminated_asynchronously () && !unsat &&
+      !internal->propagate ()) {
     learn_empty_clause ();
   }
 

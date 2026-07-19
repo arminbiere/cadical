@@ -218,7 +218,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     assert (!lit);
     --i;
     const int64_t id =
-        ((int64_t) * (i - 1) << 32) + static_cast<int64_t> (*i);
+        ((int64_t) *(i - 1) << 32) + static_cast<int64_t> (*i);
     assert (id);
     i -= 2;
     assert (!*i);

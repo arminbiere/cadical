@@ -1863,10 +1863,10 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // First way of asynchronous termination is through 'terminate' or 
-  // 'catch_signal' which sets the 'termination_forced' flag directly.  
-  // The second way is through a call back to a 'terminator' if it is non-zero,
-  // which however is costly.
+  // First way of asynchronous termination is through 'terminate' or
+  // 'catch_signal' which sets the 'termination_forced' flag directly.
+  // The second way is through a call back to a 'terminator' if it is
+  // non-zero, which however is costly.
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");

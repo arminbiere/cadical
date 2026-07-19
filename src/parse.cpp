@@ -269,7 +269,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         break;
       continue;
     }
-    if (internal->terminated_asynchronously ()) 
+    if (internal->terminated_asynchronously ())
       return "parsing interrupted by signal";
     if (ch == 'a' && found_inccnf_header)
       break;
