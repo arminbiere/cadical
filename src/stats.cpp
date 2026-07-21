@@ -56,7 +56,8 @@ void Stats::print (Internal *internal) {
   int64_t searchticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t inprobeticks = stats.ticks.vivify + stats.ticks.probe +
                          stats.ticks.factor + stats.ticks.ternary +
-                         stats.ticks.sweep + stats.ticks.backbone;
+                         stats.ticks.sweep + stats.ticks.backbone +
+                         stats.ticks.congruence;
   int64_t totalticks = searchticks + inprobeticks;
 
   size_t extendbytes = internal->external->extension.size ();
@@ -640,6 +641,9 @@ void Stats::print (Internal *internal) {
        inprobeticks, percent (inprobeticks, totalticks));
   PRT ("   backboneticks:%15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.backbone, percent (stats.ticks.backbone, searchticks));
+  PRT ("   congruenceticks:%13" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.congruence,
+       percent (stats.ticks.congruence, searchticks));
   PRT ("   factorticks:  %15" PRId64 "   %10.2f %%  searchticks",
        stats.ticks.factor, percent (stats.ticks.factor, searchticks));
   PRT ("   probeticks:   %15" PRId64 "   %10.2f %%  searchticks",

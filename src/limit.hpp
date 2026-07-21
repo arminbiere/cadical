@@ -91,7 +91,7 @@ struct Last {
   } transred;
   struct {
     int64_t ticks;
-  } backbone, probe, sweep, vivify, walk;
+  } backbone, congruence, probe, sweep, vivify, walk;
   struct {
     int64_t fixed, subsumephases, marked;
   } elim;
