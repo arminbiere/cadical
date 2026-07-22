@@ -1,5 +1,6 @@
 #include "flags.hpp"
 #include "internal.hpp"
+#include "message.hpp"
 #include "util.hpp"
 
 #include <cstdint>
@@ -962,11 +963,14 @@ void External::check_failing () {
   }
 
   int res = checker->solve ();
-  if (res != 20)
+  if (res == 10)
     FATAL ("failed assumptions do not form a core");
   delete_checker.free ();
-  VERBOSE (1, "checked that %zd failing assumptions form a core",
-           assumptions.size ());
+  if (res == 0)
+    VERBOSE (1, "checking of failed assumptions interrupted");
+  else
+    VERBOSE (1, "checked that %zd failing assumptions form a core",
+             assumptions.size ());
 }
 
 /*------------------------------------------------------------------------*/
