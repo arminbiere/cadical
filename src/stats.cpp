@@ -98,6 +98,10 @@ void Stats::print (Internal *internal) {
   if (internal->opts.profile)
     internal->print_profile ();
 
+  int verbosity = internal->opts.verbose + internal->opts.stats;
+  if (verbosity < 0)
+    return;
+
   SECTION ("statistics");
 
   print_internal_stats (internal);
@@ -106,6 +110,9 @@ void Stats::print (Internal *internal) {
   MSG ("%sseconds are measured in %s time for solving%s",
        tout.magenta_code (), internal->opts.realtime ? "real" : "process",
        tout.normal_code ());
+
+  if (verbosity <= 0)
+    return;
 
   SECTION ("glue usage");
 
