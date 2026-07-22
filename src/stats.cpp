@@ -45,9 +45,9 @@ Stats::Stats () {
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
-    if (VERBOSE > 1 && VERBOSE > verbose) \
+    if (VERBOSE > verbose) \
       break; \
-    if (verbose == 1 && VERBOSE == 1 && !NUM && VERBOSE > verbose) \
+    if (!NUM && VERBOSE == verbose) \
       break; \
     const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
@@ -64,13 +64,11 @@ void Stats::print_internal_stats (Internal *internal) {
 
   Stats stats = internal->stats;
   int verbose = internal->opts.verbose;
+  verbose += internal->opts.stats;
 
-  // TODO: verbosity is always 3 like this.
-  if (internal->opts.stats >= 2)
-    verbose = 2;
 #ifdef LOGGING
   if (internal->opts.log)
-    verbose = 3;
+    verbose = 4;
 #endif // ifdef LOGGING
 
   double t = internal->solve_time ();

@@ -244,12 +244,12 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     MSG ("found %s'p inccnf'%s header", tout.green_code (),
          tout.normal_code ());
 
-  #if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
     // Cube & Conquer 'inccnf' format is not compatible with factor:
     internal->opts.factor = 0;
-  #else
+#else
     PER ("icnf not compatible with NOPTIONS");
-  #endif
+#endif
 
     strict = FORCED;
   } else
@@ -273,7 +273,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
       continue;
     }
     if (internal->terminated_asynchronously ())
-        return "parsing interrupted by signal";
+      return "parsing interrupted by signal";
     if (ch == 'a' && found_inccnf_header)
       break;
     const char *err = parse_lit (ch, lit, vars, strict);
