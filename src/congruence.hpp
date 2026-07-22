@@ -324,6 +324,16 @@ struct Closure {
   vector<CompactBinary> binaries;
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
+
+  // Budget on 'internal->stats.ticks.congruence' for this run of the
+  // pass.  Set by 'Internal::extract_gates' from 'congruenceeffort' (and
+  // 'congruenceiniticks' for the first call).  Checked through
+  // 'ticks_limit_hit' at the same places where asynchronous termination
+  // is checked, which are known-safe points to abandon the pass.
+  int64_t ticks_limit = INT64_MAX;
+  bool ticks_limit_reported = false;
+  bool ticks_limit_hit ();
+
   std::array<uint64_t, 16> nonces;
   typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
 

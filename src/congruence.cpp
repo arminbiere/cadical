@@ -199,6 +199,20 @@ bool Closure::find_binary (int lit, int other) const {
   return found;
 }
 
+bool Closure::ticks_limit_hit () {
+  if (internal->stats.ticks.congruence <= ticks_limit)
+    return false;
+  if (!ticks_limit_reported) {
+    ticks_limit_reported = true;
+    VERBOSE (2,
+             "[congruence-%" PRId64 "] ticks limit %" PRId64
+             " hit after %" PRId64 " ticks",
+             internal->stats.congruence.rounds, ticks_limit,
+             internal->stats.ticks.congruence);
+  }
+  return true;
+}
+
 void Closure::extract_binaries () {
   if (!internal->opts.congruencebinaries)
     return;
@@ -206,6 +220,10 @@ void Closure::extract_binaries () {
     return;
   START (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
+
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (internal->clauses.size (),
+                                      sizeof (Clause *));
 
   // in kissat this is done during watch clearing. TODO: consider doing this
   // too.
@@ -216,10 +234,11 @@ void Closure::extract_binaries () {
       continue;
     if (c->size > 2)
       continue;
-    if (internal->terminated_asynchronously ()) {
+    if (internal->terminated_asynchronously () || ticks_limit_hit ()) {
       STOP (extractbinaries);
       return;
     }
+    ticks++;
     assert (c->size == 2);
     const int lit = c->literals[0];
     const int other = c->literals[1];
@@ -233,6 +252,8 @@ void Closure::extract_binaries () {
     STOP (extractbinaries);
     return;
   }
+  ticks +=
+      1 + internal->cache_lines (binaries.size (), sizeof (CompactBinary));
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (internal), compact_binary_order (internal));
 
@@ -257,8 +278,9 @@ void Closure::extract_binaries () {
   (void) extracted, (void) already_present, (void) duplicated;
 
   const size_t size = internal->clauses.size ();
+  ticks += 1 + internal->cache_lines (size, sizeof (Clause *));
   for (size_t i = 0; i < size; ++i) {
-    if (internal->terminated_asynchronously ()) {
+    if (internal->terminated_asynchronously () || ticks_limit_hit ()) {
       STOP (extractbinaries);
       return;
     }
@@ -270,6 +292,7 @@ void Closure::extract_binaries () {
       continue;
     if (d->size != 3)
       continue;
+    ticks++;
     const int *lits = d->literals;
     const int a = lits[0];
     const int b = lits[1];
@@ -308,10 +331,12 @@ void Closure::extract_binaries () {
 
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
-  if (internal->terminated_asynchronously ()) {
+  if (internal->terminated_asynchronously () || ticks_limit_hit ()) {
     STOP (extractbinaries);
     return;
   }
+  ticks +=
+      1 + internal->cache_lines (binaries.size (), sizeof (CompactBinary));
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (internal), compact_binary_order (internal));
   const size_t new_size = binaries.size ();
@@ -2125,6 +2150,8 @@ uint64_t &Closure::largecount (int lit) {
 // Initialization
 
 void Closure::init_closure () {
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (internal->max_var, 2 * sizeof (int));
   representant.resize (2 * internal->max_var + 3);
   eager_representant.resize (2 * internal->max_var + 3);
   if (internal->lrat) {
@@ -2170,6 +2197,9 @@ void Closure::init_closure () {
 
 void Closure::init_and_gate_extraction () {
   LOG ("[gate-extraction]");
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (internal->clauses.size (),
+                                      sizeof (Clause *));
   for (Clause *c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -2178,6 +2208,7 @@ void Closure::init_and_gate_extraction () {
     if (c->size > 2)
       continue;
     assert (c->size == 2);
+    ticks++;
     const int lit = c->literals[0];
     const int other = c->literals[1];
     internal->noccs (lit)++;
@@ -3011,6 +3042,9 @@ Gate *Closure::find_first_and_gate (Clause *base_clause, int lhs) {
 
   const size_t arity = lits.size () - 1;
 
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (internal->watches (not_lhs).size (),
+                                 sizeof (Watch));
   for (auto w : internal->watches (not_lhs)) {
     LOG (w.clause, "checking clause for candidates");
     assert (w.binary ());
@@ -3191,6 +3225,9 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
   size_t matched = 0;
   assert (1 < arity);
 
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (internal->watches (not_lhs).size (),
+                                 sizeof (Watch));
   for (auto w : internal->watches (not_lhs)) {
     assert (w.binary ());
 #ifdef LOGGING
@@ -3416,7 +3453,7 @@ void Closure::extract_and_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceand)
     return;
-  if (internal->terminated_asynchronously ())
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
     return;
   START (extractands);
 
@@ -3426,7 +3463,10 @@ void Closure::extract_and_gates () {
   const int64_t gates_before = internal->stats.congruence.and_gates;
 #endif
   const size_t size = internal->clauses.size ();
-  for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (size, sizeof (Clause *));
+  for (size_t i = 0; i < size && !internal->terminated_asynchronously () &&
+                     !ticks_limit_hit ();
        ++i) {
     // we can learn new binary clauses, but so no for loop
     assert (lrat_chain.empty ());
@@ -3439,6 +3479,7 @@ void Closure::extract_and_gates () {
       continue;
     if (c->redundant)
       continue;
+    ticks++;
     extract_and_gates_with_base_clause (c);
     assert (lrat_chain.empty ());
   }
@@ -4060,6 +4101,9 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   assert (arity_limit < 32); // we use unsigned int.
   const unsigned size_limit = arity_limit + 1;
   glargecounts.resize (2 * internal->vsize, 0);
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (internal->clauses.size (),
+                                      sizeof (Clause *));
 
   for (auto c : internal->clauses) {
     LOG (c, "considering clause for XOR");
@@ -4069,6 +4113,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
       continue;
     if (c->size < 3)
       continue;
+    ticks++;
     unsigned size = 0;
     for (auto lit : *c) {
       const signed char v = internal->val (lit);
@@ -4110,9 +4155,11 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     gnew_largecounts.resize (2 * internal->vsize);
     unsigned cand_size = candidates.size ();
     size_t j = 0;
+    ticks += 1 + internal->cache_lines (cand_size, sizeof (Clause *));
     for (size_t i = 0; i < cand_size; ++i) {
       Clause *c = candidates[i];
       LOG (c, "considering");
+      ticks++;
       unsigned size = 0;
       for (auto lit : *c) {
         if (!internal->val (lit))
@@ -4148,8 +4195,9 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   }
 
   for (auto c : candidates) {
-    if (internal->terminated_asynchronously ())
+    if (internal->terminated_asynchronously () || ticks_limit_hit ())
       return;
+    ticks++;
     for (auto lit : *c)
       internal->occs (lit).push_back (c);
   }
@@ -4185,6 +4233,10 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   LOG ("searching XOR side clause watched by %d#%u",
        least_occurring_literal, count_least_occurring);
   LOG ("searching for size %zu", size_lits);
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (
+              internal->occs (least_occurring_literal).size (),
+              sizeof (Clause *));
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
     assert (c->size != 2); // TODO kissat has break
@@ -4192,6 +4244,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
       continue;
     if ((size_t) c->size < size_lits)
       continue;
+    internal->stats.ticks.congruence++;
     size_t found = 0;
     for (auto other : *c) {
       const signed char value = internal->val (other);
@@ -4356,7 +4409,7 @@ void Closure::extract_xor_gates () {
   assert (!full_watching);
   if (!internal->opts.congruencexor)
     return;
-  if (internal->terminated_asynchronously ())
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
     return;
   START (extractxors);
 #ifndef QUIET
@@ -4365,15 +4418,17 @@ void Closure::extract_xor_gates () {
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
   init_xor_gate_extraction (candidates);
+  int64_t &ticks = internal->stats.ticks.congruence;
   for (auto c : candidates) {
     if (internal->unsat)
       break;
-    if (internal->terminated_asynchronously ()) {
+    if (internal->terminated_asynchronously () || ticks_limit_hit ()) {
       STOP (extractxors);
       return;
     }
     if (c->garbage)
       continue;
+    ticks++;
     extract_xor_gates_with_base_clause (c);
   }
   VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR gates",
@@ -4385,15 +4440,21 @@ void Closure::extract_xor_gates () {
 
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
-  if (internal->terminated_asynchronously ())
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
     return;
   size_t units = 0;
+  int64_t &ticks = internal->stats.ticks.congruence;
   for (auto v : internal->vars) {
   RESTART:
     if (!internal->flags (v).active ())
       continue;
+    if (ticks_limit_hit ())
+      break;
+    ticks++;
     for (int sgn = -1; sgn <= 1; sgn += 2) {
       int lit = v * sgn;
+      ticks += internal->cache_lines (internal->watches (lit).size (),
+                                      sizeof (Watch));
       for (auto w : internal->watches (lit)) {
         if (!w.binary ())
           break;
@@ -4429,13 +4490,19 @@ void Closure::find_units () {
 
 void Closure::find_equivalences () {
   assert (!internal->unsat);
-  if (internal->terminated_asynchronously ())
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
     return;
+  int64_t &ticks = internal->stats.ticks.congruence;
   for (auto v : internal->vars) {
   RESTART:
     if (!internal->flags (v).active ())
       continue;
+    if (ticks_limit_hit ())
+      break;
+    ticks++;
     int lit = v;
+    ticks += internal->cache_lines (internal->watches (lit).size (),
+                                    sizeof (Watch));
     for (auto w : internal->watches (lit)) {
       if (!w.binary ())
         break;
@@ -4684,8 +4751,11 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src, LRAT_ID id1,
 
 bool Closure::rewrite_gates (int dst, int src, LRAT_ID id1, LRAT_ID id2) {
   const auto &occs = goccs (src);
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (occs.size (), sizeof (Gate *));
   for (auto g : occs) {
     assert (lrat_chain.empty ());
+    internal->stats.ticks.congruence++;
     if (!rewrite_gate (g, dst, src, id1, id2))
       return false;
     else if (!g->garbage && gate_contains (g, dst))
@@ -4885,9 +4955,12 @@ size_t Closure::propagate_units_and_equivalences () {
   while (propagate_units () && !schedule.empty ()) {
     if (internal->terminated_asynchronously ())
       return 0;
+    if (ticks_limit_hit ())
+      break;
     assert (!internal->unsat);
     assert (lrat_chain.empty ());
     ++propagated;
+    internal->stats.ticks.congruence++;
     int lit = schedule.front ();
     schedule.pop ();
     scheduled[abs (lit)] = false;
@@ -4895,14 +4968,16 @@ size_t Closure::propagate_units_and_equivalences () {
       break;
   }
 
-  assert (internal->unsat || schedule.empty ());
+  assert (internal->unsat || ticks_limit_hit () || schedule.empty ());
   assert (internal->unsat || lrat_chain.empty ());
 
   LOG ("propagated %zu congruence units", units);
   LOG ("propagated %zu congruence equivalences", propagated);
 
 #ifndef NDEBUG
-  if (!internal->unsat) {
+  // These invariants only hold if the propagation loop above ran to
+  // completion, i.e., was not interrupted by the ticks budget.
+  if (!internal->unsat && !ticks_limit_hit ()) {
     for (const auto &occs : gtab) {
       for (auto g : occs) {
         if (g->garbage)
@@ -4987,10 +5062,14 @@ void Closure::reset_extraction () {
 }
 
 void Closure::forward_subsume_matching_clauses () {
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
+    return;
   START (congruencematching);
   reset_closure ();
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (internal->max_var, 1);
 #ifndef QUIET
   size_t count_matchable = 0;
 #endif
@@ -5028,6 +5107,8 @@ void Closure::forward_subsume_matching_clauses () {
   size_t potential = 0;
   (void) potential;
 
+  ticks += 1 + internal->cache_lines (internal->clauses.size (),
+                                      sizeof (Clause *));
   for (auto *c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -5035,6 +5116,7 @@ void Closure::forward_subsume_matching_clauses () {
       continue;
     if (c->size == 2)
       continue;
+    ticks++;
     ++potential;
     assert (analyzed.empty ());
     bool contains_matchable = false;
@@ -5092,7 +5174,7 @@ void Closure::forward_subsume_matching_clauses () {
   internal->init_occs ();
   for (auto c : candidates) {
     assert (c.size != 2);
-    if (internal->terminated_asynchronously ())
+    if (internal->terminated_asynchronously () || ticks_limit_hit ())
       break;
     ++tried;
     if (find_subsuming_clause (c.clause)) {
@@ -5169,11 +5251,14 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
       count_least_occurring = count;
       least_occuring_lit = repr_lit;
     }
+    internal->stats.ticks.congruence +=
+        1 + internal->cache_lines (count, sizeof (Clause *));
     for (auto d : internal->occs (repr_lit)) {
       assert (!d->garbage);
       assert (subsumed != d);
       if (!subsumed->redundant && d->redundant)
         continue;
+      internal->stats.ticks.congruence++;
       for (auto other : *d) {
         const signed char v = internal->val (other);
         if (v < 0)
@@ -7222,6 +7307,9 @@ void Closure::init_ite_gate_extraction (
     std::vector<ClauseSize> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
+  int64_t &ticks = internal->stats.ticks.congruence;
+  ticks += 1 + internal->cache_lines (internal->clauses.size (),
+                                      sizeof (Clause *));
   for (auto c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -7229,6 +7317,7 @@ void Closure::init_ite_gate_extraction (
       continue;
     if (c->size < 3)
       continue;
+    ticks++;
     unsigned size = 0;
 
     assert (!c->garbage);
@@ -7269,8 +7358,9 @@ void Closure::init_ite_gate_extraction (
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
-    if (internal->terminated_asynchronously ())
+    if (internal->terminated_asynchronously () || ticks_limit_hit ())
       break;
+    ticks++;
     unsigned positive = 0, negative = 0, twice = 0;
     for (auto lit : *c) {
       if (internal->val (lit))
@@ -7705,6 +7795,10 @@ void Closure::extract_ite_gates_of_variable (int idx) {
   auto not_lit_watches = internal->occs (not_lit);
   const size_t size_lit_watches = lit_watches.size ();
   const size_t size_not_lit_watches = not_lit_watches.size ();
+  internal->stats.ticks.congruence +=
+      1 + internal->cache_lines (
+              std::min (size_lit_watches, size_not_lit_watches),
+              sizeof (Clause *));
   if (size_lit_watches <= size_not_lit_watches) {
     if (size_lit_watches > 1)
       extract_ite_gates_of_literal (lit);
@@ -7718,7 +7812,7 @@ void Closure::extract_ite_gates () {
   assert (!full_watching);
   if (!internal->opts.congruenceite)
     return;
-  if (internal->terminated_asynchronously ())
+  if (internal->terminated_asynchronously () || ticks_limit_hit ())
     return;
   START (extractites);
   std::vector<ClauseSize> candidates;
@@ -7730,7 +7824,8 @@ void Closure::extract_ite_gates () {
   for (auto idx : internal->vars) {
     if (internal->flags (idx).active ()) {
       extract_ite_gates_of_variable (idx);
-      if (internal->unsat || internal->terminated_asynchronously ())
+      if (internal->unsat || internal->terminated_asynchronously () ||
+          ticks_limit_hit ())
         break;
     }
   }
@@ -7748,7 +7843,8 @@ void Closure::extract_gates () {
   extract_and_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());
-  if (internal->unsat || internal->terminated_asynchronously ()) {
+  if (internal->unsat || internal->terminated_asynchronously () ||
+      ticks_limit_hit ()) {
     STOP (extract);
     return;
   }
@@ -7766,7 +7862,8 @@ void Closure::extract_gates () {
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());
 
-  if (internal->unsat || internal->terminated_asynchronously ()) {
+  if (internal->unsat || internal->terminated_asynchronously () ||
+      ticks_limit_hit ()) {
     STOP (extract);
     return;
   }
@@ -7794,6 +7891,19 @@ bool Internal::extract_gates (bool remove_units_before_run) {
          congruence_delay.bumpreasons.limit);
     return false;
   }
+
+  // Bound the effort spent in this pass relative to the search ticks
+  // since the last call (like 'factor' and 'sweep').  The very first
+  // call happens during preprocessing where no search ticks exist yet,
+  // so it additionally gets 'congruenceiniticks' millions of ticks.
+  // Once the budget is exhausted the pass stops at the next safe point
+  // (the same points where asynchronous termination is checked); the
+  // equivalences merged so far are already materialized as binary
+  // clauses and are picked up by 'decompose' afterwards.
+  SET_EFFORT_LIMIT (congruence_ticks_limit, congruence,
+                    stats.congruence.rounds);
+  if (!stats.congruence.rounds)
+    congruence_ticks_limit += opts.congruenceiniticks * INT64_C (1000000);
 
   // congruencebinary is already doing it (and more actually)
   if (!internal->opts.congruencebinaries) {
@@ -7824,6 +7934,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   //  connect_binary_watches ();
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
+  closure.ticks_limit = congruence_ticks_limit;
 
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());

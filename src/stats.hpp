@@ -32,6 +32,7 @@ struct Stats {
   struct {
     int64_t search[2] = {0};
     int64_t backbone = 0;
+    int64_t congruence = 0;
     int64_t factor = 0;
     int64_t probe = 0;
     int64_t sweep = 0;
