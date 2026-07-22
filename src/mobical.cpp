@@ -3816,8 +3816,14 @@ public:
 
         if (c->type == Call::SET) {
           // ignore fixed options
-          if (mobical.mopts.get_fixed (c->name))
+          if (mobical.mopts.get_fixed (c->name)) {
+            if (mobical.verbose) {
+              std::cout << "c [mobical] skipping '";
+              c->print (std::cout);
+              std::cout << "'" << std::endl;
+            }
             continue;
+          }
         }
         if (c->process_type ()) {
           // Look ahead and collect LemmaCalls to be executed
@@ -3881,6 +3887,11 @@ public:
 #endif
           for (auto &o : mobical.mopts) {
             if (o.fix (&mobical.mopts)) {
+              if (mobical.verbose) {
+                std::cout << "c [mobical] forcing option '";
+                std::cout << "set " << o.name << " " << o.value;
+                std::cout << "'" << std::endl;
+              }
               solver->set (o.name, o.val (&mobical.mopts));
               if (!strcmp (o.name, "factorcheck"))
                 extendmap->factor_check = o.val (&mobical.mopts);
