@@ -122,7 +122,7 @@ OPTION( ematrailslow,       1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( exteagerreasons,      0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
 OPTION( exteagerrecalc,       1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( exttracecalls,        0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
-OPTION( factor,               1,  0,  1,0,1,1, "bounded variable addition") \
+OPTION( factor,               0,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,          1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,      0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
 OPTION( factorbumpheap,       1,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
@@ -182,7 +182,7 @@ OPTION( modelalllits,         0,  0,  1,0,0,1, "print all literals (including un
 OPTION( otfs,                 1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,                1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocessinit,     2e6,  0,2e9,2,0,1, "initial preprocessing base limit" ) \
-OPTION( preprocesslight,      1,  0,  1,0,1,1, "lightweight preprocessing" ) \
+OPTION( preprocesslight,      0,  0,  1,0,1,1, "lightweight preprocessing" ) \
 OPTION( probe,                1,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probeeffort,          8,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( probehbr,             1,  0,  1,0,0,1, "learn hyper binary clauses") \
