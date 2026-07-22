@@ -193,16 +193,21 @@ static const char *USAGE =
 
 extern "C" {
 #ifdef MOBICAL_MEMORY
+#define MOBICAL_PRINT_TRACE
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
 #endif
 #ifdef MOBICAL_TERMINATE
+#define MOBICAL_PRINT_TRACE
 #include <cxxabi.h>
 #include <execinfo.h>
 #endif
 #include <unistd.h>
 }
+#ifdef MOBICAL_PRINT_TRACE
+#include <regex>
+#endif
 
 #ifdef MOBICAL_MEMORY
 typedef void *(*malloc_t) (size_t);
@@ -1048,7 +1053,7 @@ struct Call {
 #endif
 #ifdef MOBICAL_TERMINATE
              | TERMINATE
-#endif     
+#endif
     ,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
@@ -3566,7 +3571,6 @@ public:
   static void reset_child_signal_handlers ();
 
 #ifdef MOBICAL_MEMORY
-#define MOBICAL_PRINT_TRACE
   static void hooks_install (void);
   static void hooks_uninstall (void);
   static void *hook_malloc (size_t);
@@ -3575,10 +3579,10 @@ public:
 #endif
 
 #ifdef MOBICAL_TERMINATE
-#define MOBICAL_PRINT_TRACE
 #endif
 
 #ifdef MOBICAL_PRINT_TRACE
+
   static void print_trace (void **, size_t, ostream &, size_t);
 #endif
 
@@ -4851,9 +4855,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int mallocall = random.pick_int (0, 2);
   int mallocallsize = random.pick_log (1e2, 1e6);
   int leakallocall = random.pick_int (0, 2);
-  int terminatecall = random.pick_int (0, 2);  
+  int terminatecall = random.pick_int (0, 2);
   int terminatecallsize = random.pick_log (1e1, 1e4);
-  
+
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && (mallocall == 0))
     push_back (new MaxAllocCall (mallocallsize));
@@ -5468,7 +5472,7 @@ int Trace::fork_and_execute () {
     rlimit64 limit;
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
-    setrlimit64(RLIMIT_CORE, &limit);
+    setrlimit64 (RLIMIT_CORE, &limit);
 #endif
 #endif
     int status;
@@ -5477,13 +5481,12 @@ int Trace::fork_and_execute () {
       res = 0;
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
-    else if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTSTP) {
-      kill (child, SIGKILL); // fork is just suspended. Now kill it,
+    else if (WIFSTOPPED (status) && WSTOPSIG (status) == SIGTSTP) {
+      kill (child, SIGKILL);       // fork is just suspended. Now kill it,
       waitpid (child, nullptr, 0); // and reap it
       // Termination caused signal.
       res = 5;
-    }
-    else if (!WIFSIGNALED (status))
+    } else if (!WIFSIGNALED (status))
       res = 0;
     else if (WTERMSIG (status) == SIGABRT)
       res = 1;
@@ -6121,11 +6124,11 @@ bool Trace::reduce_values (int expected) {
       c->val = lo;
       progress ();
 
-      bool success = fork_and_execute () == expected; 
+      bool success = fork_and_execute () == expected;
       if (success) {
         assert (c->val != old_val);
         changed = true;
-      } else 
+      } else
         c->val = old_val;
 
       if (Signal::interrupted ())
@@ -6249,7 +6252,7 @@ void Trace::map_variables (int expected) {
       with_gaps = 2;
     }
     notify ();
-    if (Signal::interrupted ()) 
+    if (Signal::interrupted ())
       break;
   }
 }
@@ -6314,7 +6317,7 @@ void Trace::shrink (int expected) {
   shrink_options (expected);
   // Execute one last time to get accurate results when memory fuzzing
   // is enabled.
-  if (!Signal::interrupted ()) 
+  if (!Signal::interrupted ())
     fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
@@ -7350,7 +7353,7 @@ Mobical::~Mobical () {
 }
 
 void Mobical::catch_signal (int sig) {
-  Signal::set_received (sig); 
+  Signal::set_received (sig);
 
   if (!(mode & RANDOM) && !shrinking) {
     if (Trace::executed && !Trace::failed && !Trace::ok)
@@ -8471,10 +8474,10 @@ END_OF_BANNER_AND_OPTIONS:
     }
   }
 
-  const int sig = Signal::received (); 
+  const int sig = Signal::received ();
   const bool reraise = Signal::interrupted ();
   Signal::reset ();
-  
+
   if (reraise)
     if ((terminal && (mode & RANDOM)) || shrinking || running)
       cerr << endl;
