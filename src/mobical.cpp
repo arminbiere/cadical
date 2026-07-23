@@ -83,7 +83,8 @@ static const char *USAGE =
 "\n"
 "Replay and record traces more faithfully with the following options\n"
 "\n"
-"  --replay                 '--do-not-mock-propagator' and '--do-not-extend-map'\n"
+"  --replay                  '--do-not-mock-propagator', '--do-not-extend-map', \n"
+"                            and '--do-not-enforce-contracts' (no shrinking)\n"
 "  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
 "  --do-not-extend-map       trust variable names in trace\n"
 #ifndef NTRACING
@@ -288,8 +289,9 @@ struct DoNot {
   bool fork = false;         // do not fork sub-process
   bool enforce = false;      // do not enforce contracts on read trace
   bool seeds = false;
-  bool extend_map = false;      // do not map variables
-  bool mock_propagator = false; // do not use mock propagator
+  bool extend_map = false;        // do not map variables
+  bool mock_propagator = false;   // do not use mock propagator
+  bool strict_propagator = false; // strict/relaxed replay propagator
   bool ignore_resource_limits = false;
 };
 
@@ -1264,7 +1266,8 @@ public:
   void notify_assignment (const std::vector<int> &lits) override {
     RLOGS ("notify_assignments(" << lits.size () << ")");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'notify_assignment'", current_action);
+      mobical.die ("out of actions %zd in 'notify_assignment'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("notify_assignments(" << lits.size () << ")",
              " (out of actions)");
@@ -1278,16 +1281,19 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::NOTIFY_ASSIGNMENT)
-      fatal ("expected callback '%s' does not match 'notify_assignment'",
-             ct_to_str (c->type));
+      mobical.die (
+          "expected callback '%s' does not match 'notify_assignment'",
+          ct_to_str (c->type));
     if (!relaxed && c->arg) {
       assert (c->val == 0);
       if (lits.size () != 1)
-        fatal ("expected single assignment, not %zd", lits.size ());
+        mobical.die ("expected single assignment, not %zd", lits.size ());
       if (lits[0] != c->arg)
-        fatal ("expected %d does not match assignment %d", c->val, lits[0]);
+        mobical.die ("expected %d does not match assignment %d", c->val,
+                     lits[0]);
     } else if (!relaxed && (size_t) c->val != lits.size ())
-      fatal ("expected %d assignments, not %zd", c->val, lits.size ());
+      mobical.die ("expected %d assignments, not %zd", c->val,
+                   lits.size ());
     if (c->type == Call::NOTIFY_ASSIGNMENT)
       RLOGE ("notify_assignments(" << lits.size () << ")",
              " " << lits.size () << " new assignments");
@@ -1301,8 +1307,8 @@ public:
   void notify_new_decision_level () override {
     RLOGS ("notify_new_decision_level");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'notify_new_decision_level'",
-             current_action);
+      mobical.die ("out of actions %zd in 'notify_new_decision_level'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("notify_new_decision_level", " (out of actions)");
       return;
@@ -1315,9 +1321,9 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::NOTIFY_LEVEL)
-      fatal ("expected callback '%s' does not match "
-             "'notify_new_decision_level'",
-             ct_to_str (c->type));
+      mobical.die ("expected callback '%s' does not match "
+                   "'notify_new_decision_level'",
+                   ct_to_str (c->type));
     if (c->type == Call::NOTIFY_LEVEL)
       RLOGE ("notify_new_decision_level",
              " " << c->val - 1 << " -> " << c->val);
@@ -1330,7 +1336,8 @@ public:
   void notify_backtrack (size_t new_level) override {
     RLOGS ("notify_backtrack(" << new_level << ")");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'notify_backtrack'", current_action);
+      mobical.die ("out of actions %zd in 'notify_backtrack'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("notify_backtrack(" << new_level << ")", " (out of actions)");
       return;
@@ -1343,11 +1350,12 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::NOTIFY_BACKTRACK)
-      fatal ("expected callback '%s' does not match 'notify_backtrack'",
-             ct_to_str (c->type));
+      mobical.die (
+          "expected callback '%s' does not match 'notify_backtrack'",
+          ct_to_str (c->type));
     if (!relaxed && new_level != (size_t) c->val)
-      fatal ("expected backtrack level %d does not match %zd", c->val,
-             new_level);
+      mobical.die ("expected backtrack level %d does not match %zd", c->val,
+                   new_level);
     if (c->type == Call::NOTIFY_BACKTRACK)
       RLOGE ("notify_backtrack(" << new_level << ")", "");
     else {
@@ -1361,8 +1369,8 @@ public:
     RLOGS ("cb_check_found_model(" << model.size () << ")");
     (void) model;
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_check_found_model'",
-             current_action);
+      mobical.die ("out of actions %zd in 'cb_check_found_model'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_check_found_model(" << model.size () << ")",
              " false (out of actions)");
@@ -1376,8 +1384,9 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_CHECK_MODEL)
-      fatal ("expected callback '%s' does not match 'cb_check_found_model'",
-             ct_to_str (c->type));
+      mobical.die (
+          "expected callback '%s' does not match 'cb_check_found_model'",
+          ct_to_str (c->type));
     else if (c->type == Call::CB_CHECK_MODEL) {
       RLOGE ("cb_check_found_model(" << model.size () << ")",
              " " << (c->res ? "true" : "false"));
@@ -1392,7 +1401,7 @@ public:
   int cb_decide () override {
     RLOGS ("cb_decide");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_decide'", current_action);
+      mobical.die ("out of actions %zd in 'cb_decide'", current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_decide", " 0 (out of actions)");
       return 0;
@@ -1405,8 +1414,8 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_DECIDE)
-      fatal ("expected callback '%s' does not match 'cb_decide'",
-             ct_to_str (c->type));
+      mobical.die ("expected callback '%s' does not match 'cb_decide'",
+                   ct_to_str (c->type));
     else if (c->type == Call::CB_DECIDE) {
       RLOGE ("cb_decide", " " << c->arg);
       return c->arg;
@@ -1419,7 +1428,7 @@ public:
   int cb_propagate () override {
     RLOGS ("cb_propagate");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_propagate'", current_action);
+      mobical.die ("out of actions %zd in 'cb_propagate'", current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_propagate", " 0 (out of actions)");
       return 0;
@@ -1432,8 +1441,8 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_PROPAGATE)
-      fatal ("expected callback '%s' does not match 'cb_propagate'",
-             ct_to_str (c->type));
+      mobical.die ("expected callback '%s' does not match 'cb_propagate'",
+                   ct_to_str (c->type));
     else if (c->type == Call::CB_PROPAGATE) {
       RLOGE ("cb_propagate", " " << c->arg);
       return c->arg;
@@ -1446,8 +1455,8 @@ public:
   int cb_add_reason_clause_lit (int propagated_lit) override {
     RLOGS ("cb_add_reason_clause_lit(" << propagated_lit << ")");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_add_reason_clause_lit'",
-             current_action);
+      mobical.die ("out of actions %zd in 'cb_add_reason_clause_lit'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
              " 0 (out of actions)");
@@ -1461,13 +1470,13 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_ADD_REASON)
-      fatal ("expected callback '%s' does not match "
-             "'cb_add_reason_clause_lit'",
-             ct_to_str (c->type));
+      mobical.die ("expected callback '%s' does not match "
+                   "'cb_add_reason_clause_lit'",
+                   ct_to_str (c->type));
     if (!relaxed && c->arg != propagated_lit)
-      fatal ("expected argument '%d' does not match "
-             "'cb_add_reason_clause_lit %d'",
-             c->arg, propagated_lit);
+      mobical.die ("expected argument '%d' does not match "
+                   "'cb_add_reason_clause_lit %d'",
+                   c->arg, propagated_lit);
     if (c->type == Call::CB_ADD_REASON) {
       RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
              " " << c->val);
@@ -1482,8 +1491,8 @@ public:
   bool cb_has_external_clause (bool &is_forgettable) override {
     RLOGS ("cb_has_external_clause");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_has_external_clause'",
-             current_action);
+      mobical.die ("out of actions %zd in 'cb_has_external_clause'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_has_external_clause", " false (out of action)");
       return 0;
@@ -1496,7 +1505,7 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_HAS_CLAUSE)
-      fatal (
+      mobical.die (
           "expected callback '%s' does not match 'cb_has_external_clause'",
           ct_to_str (c->type));
     else if (c->type == Call::CB_HAS_CLAUSE) {
@@ -1514,8 +1523,8 @@ public:
   int cb_add_external_clause_lit () override {
     RLOGS ("cb_add_external_clause");
     if (!relaxed && cb_actions.size () <= current_action)
-      fatal ("out of actions %zd in 'cb_add_external_clause_lit'",
-             current_action);
+      mobical.die ("out of actions %zd in 'cb_add_external_clause_lit'",
+                   current_action);
     else if (cb_actions.size () <= current_action) {
       RLOGE ("cb_add_external_clause", " 0 (out of actions)");
       return 0;
@@ -1528,9 +1537,9 @@ public:
       c = cb_actions[current_action++];
     }
     if (!relaxed && c->type != Call::CB_ADD_CLAUSE)
-      fatal ("expected callback '%s' does not match "
-             "'cb_add_external_clause_lit'",
-             ct_to_str (c->type));
+      mobical.die ("expected callback '%s' does not match "
+                   "'cb_add_external_clause_lit'",
+                   ct_to_str (c->type));
     else if (c->type == Call::CB_ADD_CLAUSE) {
       RLOGE ("cb_add_external_clause", " " << c->arg);
       return c->arg;
@@ -2780,11 +2789,12 @@ struct ConnectCall : public Call {
     } else {
       assert (!mobical.replay_pointer);
 #ifdef LOGGING
-      mobical.replay_pointer = new ReplayPropagator (
-          s, extendmap, mobical.add_set_log_to_true, mobical.donot.enforce);
-#else
       mobical.replay_pointer =
-          new ReplayPropagator (s, extendmap, 0, mobical.donot.enforce);
+          new ReplayPropagator (s, extendmap, mobical.add_set_log_to_true,
+                                mobical.donot.strict_propagator);
+#else
+      mobical.replay_pointer = new ReplayPropagator (
+          s, extendmap, 0, mobical.donot.strict_propagator);
 #endif
       s->connect_external_propagator (mobical.replay_pointer);
     }
@@ -3185,8 +3195,8 @@ struct PropagateAssumptionsCall : public Call {
     s->propagate ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << keyword () << " " << arg << " " << res; }
-  Call *copy () { return new PropagateAssumptionsCall (arg); }
+  void print (ostream &o) { o << keyword () << " " << res; }
+  Call *copy () { return new PropagateAssumptionsCall (res); }
   const char *keyword () { return "propagate_assumptions"; }
 };
 
@@ -3202,7 +3212,7 @@ struct ImpliedCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
-  Call *copy () { return new ImpliedCall (arg); }
+  Call *copy () { return new ImpliedCall (res); }
   const char *keyword () { return "implied"; }
 };
 
@@ -3889,7 +3899,8 @@ public:
             if (o.fix (&mobical.mopts)) {
               if (mobical.verbose) {
                 std::cout << "c [mobical] forcing option '";
-                std::cout << "set " << o.name << " " << o.value;
+                std::cout << "set " << o.name << " "
+                          << o.val (&mobical.mopts);
                 std::cout << "'" << std::endl;
               }
               solver->set (o.name, o.val (&mobical.mopts));
@@ -7116,9 +7127,17 @@ void Reader::parse () {
       c = new TerminateCall (val);
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
-      if (first)
+      if (!first)
+        lit = 0;
+      if (first && !parse_int_str (first, lit))
+        error ("invalid first argument '%s' to 'propagate_assumptions'",
+               first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'propagate_assumptions",
+               lit);
+      if (second)
         error ("additional argument to 'propagate_assumptions'");
-      c = new PropagateAssumptionsCall ();
+      c = new PropagateAssumptionsCall (lit);
     } else if (!strcmp (keyword, "implied")) {
       if (first)
         error ("additional argument to 'implied'");
@@ -7434,6 +7453,7 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--summary"))
       summary = 1;
     else if (!strcmp (argv[i], "--replay")) {
+      donot.enforce = true;
       donot.extend_map = true;
       donot.mock_propagator = true;
       donot.shrink.atall = true;

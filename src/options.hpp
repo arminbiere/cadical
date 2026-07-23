@@ -121,7 +121,7 @@ OPTION( ematrailfast,       1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,       1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( exteagerreasons,      0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
 OPTION( exteagerrecalc,       1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
-OPTION( exttracecalls,        0,  0,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
+OPTION( exttracecalls,        1,  1,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,               0,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,          1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,      0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
@@ -165,6 +165,7 @@ OPTION( instantiateocclim,    1,  1,2e9,2,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,      1,  0,  1,0,0,1, "instantiate each clause once") \
 OPTION( lidrup,               0,  0,  1,0,0,1, "linear incremental proof format") \
 LOGOPT( log,                  0,  0,  1,0,0,0, "enable logging") \
+LOGOPT( logpointer,           0,  0,  1,0,0,0, "log pointer of clauses") \
 LOGOPT( logsort,              0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,                 0,  0,  1,0,0,1, "use LRAT proof format") \
 OPTION( lucky,                1,  0,  1,0,0,1, "lucky phases") \
