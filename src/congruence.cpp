@@ -207,7 +207,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
 void Gate::delete_gate (Gate *&g) {
   if (g) {
     delete g->lrat_reasons;
-    delete [] (g);
+    delete[] (g);
   }
   g = 0;
 }
@@ -3423,7 +3423,8 @@ void Closure::extract_and_gates () {
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 #ifndef QUIET
-  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_and;
+  const int64_t gates_before =
+      (int64_t) internal->stats.congruence_gates_and;
 #endif
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
@@ -4369,7 +4370,8 @@ void Closure::extract_xor_gates () {
     return;
   START (extractxors);
 #ifndef QUIET
-  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_xor;
+  const int64_t gates_before =
+      (int64_t) internal->stats.congruence_gates_xor;
 #endif
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
@@ -4380,8 +4382,8 @@ void Closure::extract_xor_gates () {
     if (internal->terminated_asynchronously ()) {
       STOP (extractxors);
       return;
-    } 
-      
+    }
+
     if (c->garbage)
       continue;
     extract_xor_gates_with_base_clause (c);
@@ -4433,13 +4435,13 @@ void Closure::find_units () {
     }
     assert (internal->analyzed.empty ());
   }
-  LOG ("found %zd units", units); 
+  LOG ("found %zd units", units);
   (void) units;
 }
 
 void Closure::find_equivalences () {
   assert (!internal->unsat);
-  if (internal->terminated_asynchronously ()) 
+  if (internal->terminated_asynchronously ())
     return;
   for (auto v : internal->vars) {
   RESTART:
@@ -4964,8 +4966,10 @@ size_t Closure::propagate_units_and_equivalences () {
   do {
     found_new_unit = false;
     while (propagate_units () && !schedule.empty ()) {
-      if (internal->terminated_asynchronously ())
+      if (internal->terminated_asynchronously ()) {
+        STOP (congruencemerge);
         return 0;
+      }
       assert (!internal->unsat);
       assert (lrat_chain.empty ());
       ++propagated;
@@ -7831,14 +7835,15 @@ void Closure::extract_ite_gates () {
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
-  const int64_t gates_before = (int64_t)internal->stats.congruence_gates_ite;
+  const int64_t gates_before =
+      (int64_t) internal->stats.congruence_gates_ite;
 #endif
   init_ite_gate_extraction (candidates);
 
   for (auto idx : internal->vars) {
     if (internal->flags (idx).active ()) {
       extract_ite_gates_of_variable (idx);
-      if (internal->unsat || internal->terminated_asynchronously ()) 
+      if (internal->unsat || internal->terminated_asynchronously ())
         break;
     }
   }
@@ -7958,7 +7963,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   bool reconnect = true;
   if (!internal->terminated_asynchronously ()) {
     closure->reset_extraction (); // reconnect watches
-    reconnect = false; // fresh watches
+    reconnect = false;            // fresh watches
   }
 
   if (!unsat && !internal->terminated_asynchronously ()) {
@@ -7979,7 +7984,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     }
     reconnect = true;
   }
-  assert (closure->new_unwatched_binary_clauses.empty () || internal->terminated_asynchronously ());
+  assert (closure->new_unwatched_binary_clauses.empty () ||
+          internal->terminated_asynchronously ());
   delete_closure.free ();
   if (reconnect) {
     internal->clear_watches ();
@@ -7997,7 +8003,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   PHASE ("congruence-phase", stats.congruence_rounds,
          "merged %" PRId64 " literals", new_merged - old_merged);
-  if (!internal->terminated_asynchronously () && !unsat && !internal->propagate ()) {
+  if (!internal->terminated_asynchronously () && !unsat &&
+      !internal->propagate ()) {
     learn_empty_clause ();
   }
 
