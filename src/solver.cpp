@@ -481,11 +481,12 @@ int Solver::vars () const {
 void Solver::resize (int min_max_var) {
   TRACE (resize, "resize", min_max_var);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  /* TODO: fuzz without. this code is problematic
+  /* TODO: this code is problematic with
+   * REQUIRE_VALID_SOLVING_STATE ();
    * as it allows to add 1 -> resize -> solve
-  if (state () != SOLVING)
-    transition_to_steady_state ();
-  */
+   if (state () != SOLVING)
+     transition_to_steady_state ();
+   */
   // removing this triggers an assertion in
   // external but it maybe it is not necessary
   external->reset_extended ();

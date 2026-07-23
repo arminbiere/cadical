@@ -214,6 +214,12 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     MSG ("found %s'p cnf %d %" PRIu64 "'%s header", tout.green_code (),
          vars, clauses, tout.normal_code ());
 
+    // before, this transition was implicit in 'solver->resize'
+    // TODO:figure out a more consistent way to transition the
+    // state here.
+    // The transition is required before 'reserve_ids' as it
+    // implicitly initializes the proof
+    solver->transition_to_steady_state ();
     if (vars) {
       assert (vars > 0);
       solver->resize (vars);
