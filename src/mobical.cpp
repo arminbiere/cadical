@@ -4171,7 +4171,7 @@ public:
     if (!strcmp (p, "-"))
       path = "<stdin>", file = stdin, close = false;
     else if (!(file = fopen (p, "r")))
-      fatal ("can not read '%s'", p);
+      mobical.die ("can not read '%s'", p);
     else
       path = p, close = true;
   }
