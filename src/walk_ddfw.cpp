@@ -148,7 +148,7 @@ struct Walker_DDFW {
   int64_t ticks;              // ticks to approximate run time
   int64_t limit;              // limit on number of propagations
   vector<DDFW_Tagged> broken; // currently unsatisfied clauses
-  std::vector<std::pair<double,double>> var_weights; // unsat, sat
+  std::vector<std::pair<double, double>> var_weights; // unsat, sat
   std::vector<int>
       flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
@@ -191,13 +191,11 @@ struct Walker_DDFW {
     return woccs[idx];
   }
   const double &critical_sat_weight (int lit) const {
-    assert ((size_t) internal->vidx (lit) <
-            var_weights.size ());
+    assert ((size_t) internal->vidx (lit) < var_weights.size ());
     return var_weights[internal->vidx (lit)].second;
   }
   double &critical_sat_weight (int lit) {
-    assert ((size_t) internal->vidx (lit) <
-            var_weights.size ());
+    assert ((size_t) internal->vidx (lit) < var_weights.size ());
     return var_weights[internal->vidx (lit)].second;
   }
   const double &critical_unsat_weight (int lit) const {
@@ -1284,10 +1282,12 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 #ifndef QUIET
       flips++;
 #endif
+#if 0
 #ifndef NDEBUG
       // useful for debugging, but really really really expensive
       if (internal->stats.walk_flips % 100 == 000)
         walker.check_all ();
+#endif
 #endif
 
       // first check if there is a weight reducing variable

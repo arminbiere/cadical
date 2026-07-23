@@ -53,7 +53,6 @@
   STATISTIC (api_observe,               3, NOTHING, 0, 0) \
   STATISTIC (api_unobserve,             3, NOTHING, 0, 0) \
   STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
-  STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
   STATISTIC (api_is_witness,            3, NOTHING, 0, 0) \
   STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
@@ -318,7 +317,7 @@
   STATISTIC (ticks_sweep,            2, percent, "%", ticks) \
   STATISTIC (ticks_ternary,          2, percent, "%", ticks) \
   STATISTIC (ticks_vivify,           2, percent, "%", ticks) \
-  STATISTIC (ticks_walk,                2, percent, "%", ticks) \
+  STATISTIC (ticks_walk,             2, percent, "%", ticks) \
   METRIC (ticks_walk_break,          2, percent, "%", ticks_walk) \
   METRIC (ticks_walk_flip,           2, percent, "%", ticks_walk) \
   METRIC (ticks_walk_flip_broke,     2, percent, "%", ticks_walk) \
@@ -328,16 +327,16 @@
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
   STATISTIC (up_cb,                  2, relative, "per", searches) \
-  STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
-  STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
+  STATISTIC (up_cb_add,              2, percent, "%", up_cb) \
+  STATISTIC (up_cb_check_model,      2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decide,           2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decided,          2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_decide_force_bt,  2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_prop,             2, percent, "%", up_cb) \
   METRIC (up_cb_prop_assign,         2, percent, "%", up_cb_prop) \
   METRIC (up_cb_prop_clash,          2, percent, "%", up_cb_prop) \
   METRIC (up_cb_prop_explain,        2, percent, "%", up_cb_prop) \
-  STATISTIC (up_learn,               1, percent, "%", clauses) \
+  STATISTIC (up_learn,               2, percent, "%", clauses) \
   METRIC (up_learn_conflict,         2, percent, "%", up_learn) \
   METRIC (up_learn_elevating,        2, percent, "%", up_learn) \
   METRIC (up_learn_empty,            2, percent, "%", up_learn) \
@@ -346,7 +345,7 @@
   METRIC (up_learn_propagating,      2, percent, "%", up_learn) \
   METRIC (up_learn_satisfied,        2, percent, "%", up_learn) \
   METRIC (up_learn_unit,             2, percent, "%", up_learn) \
-  STATISTIC (variables_extension,       2, percent, "%", vars) \
+  STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \
   STATISTIC (vars_active,            2, percent, "%", vars) \

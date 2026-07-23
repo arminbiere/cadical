@@ -590,8 +590,10 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
   make_clauses (lit);
   break_clauses (-lit);
 
+#if 0 // disable very expensive check
   if (!broken.empty ())
     check_all ();
+#endif
   internal->stats.ticks_walk_flip += ticks - old;
 }
 
