@@ -484,29 +484,37 @@ public:
   // ====== END IPASIR-UP ==================================================
 
   //------------------------------------------------------------------------
-  // Adds a literal to the constraint clause. Same functionality as 'add'
-  // but the clause only exists for the next call to solve (same lifetime as
-  // assumptions). Only one constraint may exists at a time. A new
-  // constraint replaces the old. The main application of this functionality
-  // is the model checking algorithm IC3. See our FMCAD'21 paper
+  // Adds a literal to the current constraint. Adding '0' commits it to
+  // set of constraints and returns a new constraint index which acts as
+  // id for referencing constraints.
+  // This set is only active for one call to 'solve'.
+  // (same lifetime as assumptions).
+  // It inherits the API contracts of 'add'.
+  //
+  // The main application of a single constraint is the model checking
+  // algorithm IC3. See our FMCAD'21 paper
   // [FroleyksBiere-FMCAD'19] for more details.
   //
   // Add valid literal to the constraint clause or zero to terminate it.
+  // Adding zero returns the new constraint index, otherwise returns '0'
   //
-  //   require (VALID)                     // recall 'VALID = READY |
-  //   ADDING' if (lit) ensure (ADDING)            // and thus VALID but not
-  //   READY if (!lit) && !adding_clause ensure (STEADY ) // and thus READY
+  //   require (VALID)               // recall 'VALID = READY | ADDING'
+  //   if (lit)
+  //     ensure (ADDING)             // and thus VALID but not READY
+  //   if (!lit)
+  //     ensure (STEADY)             // and thus READY
   //
-  void constrain (int lit);
+  size_t constrain (int lit);
 
-  // Determine whether the constraint was used to proof the
-  // unsatisfiability. Note that the formula might still be unsatisfiable
-  // without the constraint.
+  // Determine whether the constraint corresponding to the specified index
+  // was used to proof the unsatisfiability.
+  // Note that the formula might still be unsatisfiable without the
+  // constraint.
   //
   //   require (UNSATISFIED)
   //   ensure (UNSATISFIED)
   //
-  bool constraint_failed ();
+  bool constraint_failed (size_t idx);
 
   // Collects a subset of those literals that are implied by unit
   // propagation by assuming the currently defined (potentially empty)

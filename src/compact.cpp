@@ -195,7 +195,7 @@ void Internal::compact () {
 
   const bool is_constraint = !constraint.empty ();
   if (is_constraint) {
-    assert (!external->constraint.empty ());
+    assert (!external->constraints.empty ());
     LOG ("temporarily reset internal constraint");
     reset_constraint ();
   }
@@ -425,8 +425,8 @@ void Internal::compact () {
   // 'constrain' uses 'val', so this code has to be after remapping that
   if (is_constraint) {
     assert (!level);
-    assert (!external->constraint.back ());
-    for (auto elit : external->constraint) {
+    assert (!external->constraints.back ());
+    for (auto elit : external->constraints) {
       assert (elit != INT_MIN);
       int eidx = abs (elit);
       assert (eidx <= external->max_var);
@@ -440,7 +440,7 @@ void Internal::compact () {
     }
     PHASE ("compact", stats.compacts,
            "added %zd external literals to constraint",
-           external->constraint.size () - 1);
+           external->constraints.size () - 1);
   }
 
   mapper.map_vector (i2e);
@@ -530,7 +530,8 @@ void Internal::compact () {
 
   stats.vars_unused = 0;
   stats.vars_inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;
-  stats.vars_now_substituted = stats.vars_now_eliminated = stats.vars_now_pure = 0;
+  stats.vars_now_substituted = stats.vars_now_eliminated =
+      stats.vars_now_pure = 0;
 
   check_var_stats ();
 

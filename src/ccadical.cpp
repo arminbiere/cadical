@@ -121,12 +121,12 @@ CCaDiCaL *ccadical_init (void) { return (CCaDiCaL *) new Wrapper (); }
 
 void ccadical_release (CCaDiCaL *wrapper) { delete (Wrapper *) wrapper; }
 
-void ccadical_constrain (CCaDiCaL *wrapper, int lit) {
-  ((Wrapper *) wrapper)->solver->constrain (lit);
+size_t ccadical_constrain (CCaDiCaL *wrapper, int lit) {
+  return ((Wrapper *) wrapper)->solver->constrain (lit);
 }
 
-int ccadical_constraint_failed (CCaDiCaL *wrapper) {
-  return ((Wrapper *) wrapper)->solver->constraint_failed ();
+bool ccadical_constraint_failed (CCaDiCaL *wrapper, size_t idx) {
+  return ((Wrapper *) wrapper)->solver->constraint_failed (idx);
 }
 
 void ccadical_set_option (CCaDiCaL *wrapper, const char *name, int val) {

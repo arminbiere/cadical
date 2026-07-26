@@ -251,7 +251,7 @@ void Internal::failing () {
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
     vector<int> econstraints;
-    for (auto &elit : external->constraint) {
+    for (auto &elit : external->constraints) {
       int lit = external->e2i[abs (elit)];
       if (elit < 0)
         lit = -lit;

@@ -123,7 +123,8 @@ void External::reset_concluded () {
 }
 
 void External::reset_constraint () {
-  constraint.clear ();
+  constraints.clear ();
+  constraint_idx.clear ();
   internal->reset_constraint ();
 }
 
@@ -320,25 +321,25 @@ bool External::failed (int elit) {
   return internal->failed (ilit);
 }
 
-void External::constrain (int elit) {
-  if (constraint.size () && !constraint.back ()) {
-    LOG (constraint, "replacing previous constraint");
-    reset_constraint ();
-  }
+size_t External::constrain (int elit) {
   assert (elit != INT_MIN);
   reset_extended ();
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
+  size_t idx = 0;
   if (elit)
-    LOG ("adding external %d as internal %d to constraint", elit, ilit);
+    LOG ("adding external %d as internal %d to constraints", elit, ilit);
   else if (!elit && internal->proof) {
-    internal->proof->add_constraint (constraint);
+    idx = constraint_idx.size () + 1;
+    constraint_idx.push_back (idx);
+    internal->proof->add_constraint (constraints);
   }
-  constraint.push_back (elit);
+  constraints.push_back (elit);
   internal->constrain (ilit);
+  return idx;
 }
 
-bool External::failed_constraint () {
+bool External::failed_constraint (size_t idx) {
   return internal->failed_constraint ();
 }
 
@@ -640,7 +641,7 @@ void External::check_satisfiable () {
     check_assignment (&External::ival);
   if (internal->opts.checkassumptions && !assumptions.empty ())
     check_assumptions_satisfied ();
-  if (internal->opts.checkconstraint && !constraint.empty ())
+  if (internal->opts.checkconstraint && !constraints.empty ())
     check_constraint_satisfied ();
 }
 
@@ -650,7 +651,7 @@ void External::check_unsatisfiable () {
   LOG ("checking unsatisfiable");
   if (!internal->opts.checkfailed)
     return;
-  if (!assumptions.empty () || !constraint.empty ())
+  if (!assumptions.empty () || !constraints.empty ())
     check_failing ();
 }
 
@@ -908,13 +909,22 @@ void External::check_assumptions_satisfied () {
 }
 
 void External::check_constraint_satisfied () {
-  for (const auto lit : constraint) {
-    if (ival (lit) == lit) {
-      VERBOSE (1, "checked that constraint is satisfied");
-      return;
+  size_t idx = 1;
+  bool success = false;
+  bool failed = false;
+  for (const auto lit : constraints) {
+    if (!lit) {
+      if (!success)
+        FATAL ("constraint %zd not satisfied", idx);
+      success = 0;
+      idx++;
+    }
+    if (ival (lit) == lit && !success) {
+      success = true;
+      VERBOSE (2, "checked that constraint %zd is satisfied", idx);
     }
   }
-  FATAL ("constraint not satisfied");
+  VERBOSE (1, "checked that all constraints are satisfied");
 }
 
 void External::check_failing () {
@@ -936,12 +946,21 @@ void External::check_failing () {
     checker->add (lit);
     checker->add (0);
   }
-  if (failed_constraint ()) {
-    LOG (constraint, "checking failed constraint");
-    for (const auto lit : constraint)
-      checker->add (lit);
-  } else if (constraint.size ())
-    LOG (constraint, "constraint satisfied and ignored");
+  for (const auto idx : constraint_idx) {
+    if (failed_constraint (idx)) {
+      LOG (constraints, "checking failed constraint %zd", idx);
+      size_t tmp_idx = 1;
+      for (const auto lit : constraints) {
+        if (tmp_idx == idx)
+          checker->add (lit);
+        if (!lit)
+          tmp_idx++;
+        if (tmp_idx > idx)
+          break;
+      }
+    }
+    LOG (constraints, "constraint %zd satisfied and ignored", idx);
+  }
 
   // Add original clauses as last step, failing () and failed_constraint ()
   // might add more external clauses (due to lazy explanation)

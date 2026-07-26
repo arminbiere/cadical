@@ -4544,25 +4544,21 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_constraint)
     return;
   assert (minvars <= maxvars);
-  int maxsize = maxvars - minvars + 1;
-  int size = uniform ? uniform : pick_size (random, maxsize);
+  const int num = random.pick_int (1, 10);
   vector<int> clause;
-  for (int i = 0; i < size; i++) {
-    int lit = pick_literal (random, minvars, maxvars, clause);
-    push_back (new ConstrainCall (lit));
-    clause.push_back (lit);
+  for (int i = 0; i < num; i++) {
+    int maxsize = maxvars - minvars + 1;
+    int size = uniform ? uniform : pick_size (random, maxsize);
+    for (int i = 0; i < size; i++) {
+      int lit = pick_literal (random, minvars, maxvars, clause);
+      push_back (new ConstrainCall (lit));
+      clause.push_back (lit);
+    }
+    push_back (new ConstrainCall (0));
+    clause.clear ();
+    if (random.generate_double () < 0.01)
+      push_back (new ResetAssumptionsCall ());
   }
-  push_back (new ConstrainCall (0));
-  if (random.generate_double () < 0.01)
-    return;
-  // Generating a new constraint deletes the old one.
-  clause.clear ();
-  for (int i = 0; i < size; i++) {
-    int lit = pick_literal (random, minvars, maxvars, clause);
-    push_back (new ConstrainCall (lit));
-    clause.push_back (lit);
-  }
-  push_back (new ConstrainCall (0));
 }
 
 /*------------------------------------------------------------------------*/

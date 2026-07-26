@@ -73,8 +73,9 @@ struct External {
   vector<bool> vals; // Current external (extended) assignment.
   std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
 
-  vector<int> assumptions; // External assumptions.
-  vector<int> constraint;  // External constraint. Terminated by zero.
+  vector<int> assumptions;    // External assumptions.
+  vector<int> constraint_idx; // index of each constraint.
+  vector<int> constraints;    // zero-terminated external constraints.
 
   vector<int64_t>
       ext_units; // External units. Needed to compute LRAT for eclause
@@ -388,15 +389,15 @@ struct External {
 
   // Add literal to external constraint.
   //
-  void constrain (int elit);
+  size_t constrain (int elit);
 
   // Returns true if 'solve' returned 20 because of the constraint.
   //
-  bool failed_constraint ();
+  bool failed_constraint (const size_t idx);
 
-  // Deletes the current constraint clause. Called on
-  // 'transition_to_unknown_state' and if a new constraint is added. Can be
-  // called directly using the API.
+  // Deletes the current set of constraint clauses. Called on
+  // 'transition_to_unknown_state' and 'reset_assumptions'.
+  // Can not be called directly using the API.
   //
   void reset_constraint ();
 
