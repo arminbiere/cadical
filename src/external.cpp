@@ -949,7 +949,7 @@ void External::check_failing () {
     checker->add (lit);
     checker->add (0);
   }
-  for (const auto idx : constraint_idx) {
+  for (const size_t idx : constraint_idx) {
     if (failed_constraint (idx)) {
       LOG (constraints, "checking failed constraint %zd", idx);
       size_t tmp_idx = 1;

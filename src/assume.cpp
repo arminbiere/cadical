@@ -242,7 +242,7 @@ void Internal::failing () {
     // unsat_constraint
     // The assumptions necessary to fail each literal in the constraint are
     // collected.
-    for (auto lit : constraint) {
+    for (auto lit : constraints) {
       lit *= -1;
       assert (lit != INT_MIN);
       flags (lit).seen = true;
@@ -335,7 +335,7 @@ void Internal::failing () {
     } else { // LRAT for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
-      for (auto lit : constraint) {
+      for (auto lit : constraints) {
         // make sure nothing gets marked failed twice
         // also might shortcut the case where
         // lrat_chain is empty because clause is tautological
@@ -391,9 +391,7 @@ void Internal::failing () {
         conclusion.push_back (clause_id);
       }
     } else {
-      assert (!lrat || (constraint.size () == constraint_clauses.size () &&
-                        constraint.size () == constraint_chains.size ()));
-      for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
+      for (auto p = constraints.rbegin (); p != constraints.rend (); p++) {
         const auto &lit = *p;
         if (lrat) {
           clause.clear ();

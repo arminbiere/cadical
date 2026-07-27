@@ -388,8 +388,7 @@ int Internal::propagate_assumptions () {
   int res = already_solved (); // root-level propagation is done here
 
   int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
+  last_assumption_level += constraint_vars.size ();
 
   if (!res) {
     restore_clauses ();
@@ -441,8 +440,7 @@ int Internal::propagate_assumptions () {
 
 void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
+  last_assumption_level += constraint_vars.size ();
 
   size_t trail_limit = trail.size ();
   if (level > last_assumption_level)
@@ -965,7 +963,7 @@ int Internal::local_search () {
     return 0;
   if (!opts.walk)
     return 0;
-  if (constraint.size ())
+  if (constraints.size ())
     return 0;
   if (!lim.localsearch)
     return 0;
@@ -1260,7 +1258,7 @@ void Internal::dump () {
 /*------------------------------------------------------------------------*/
 
 bool Internal::traverse_constraint (ClauseIterator &it) {
-  if (constraint.empty () && !unsat_constraint)
+  if (constraints.empty () && !unsat_constraint)
     return true;
 
   vector<int> eclause;
@@ -1269,7 +1267,7 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
 
   LOG (constraint, "traversing constraint");
   bool satisfied = false;
-  for (auto ilit : constraint) {
+  for (auto ilit : constraints) {
     const int tmp = fixed (ilit);
     if (tmp > 0) {
       satisfied = true;
@@ -1278,10 +1276,15 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
     if (tmp < 0)
       continue;
     const int elit = externalize (ilit);
-    eclause.push_back (elit);
+    if (elit)
+      eclause.push_back (elit);
+    else {
+      if (!satisfied && !it.clause (eclause))
+        return false;
+      eclause.clear ();
+      satisfied = false;
+    }
   }
-  if (!satisfied && !it.clause (eclause))
-    return false;
 
   return true;
 }

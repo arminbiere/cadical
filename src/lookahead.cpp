@@ -344,7 +344,7 @@ int Internal::lookahead_probing () {
 
   set_mode (PROBE);
 
-  MSG ("unsat = %d, terminating_asked () = %d ", unsat,
+  MSG ("unsat = %" PRId64 ", terminating_asked () = %d ", unsat,
        terminating_asked ());
   init_probehbr_lrat ();
   while (!unsat && !terminating_asked () &&

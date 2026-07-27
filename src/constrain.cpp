@@ -12,7 +12,7 @@ void Internal::constrain (int lit) {
     constraint_cat = KITTEN_NAMESPACE (kitten_init ());
     size_t idx = 0;
     for (auto &other : assumptions)
-      KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, lit));
+      KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, other));
   }
   if (lit) {
     constraint_tmp.push_back (lit);

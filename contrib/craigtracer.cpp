@@ -522,8 +522,10 @@ void CraigTracer::delete_clause (int64_t id, bool redundant,
 
 void CraigTracer::add_assumption (int lit) { assumptions.insert (lit); }
 
-void CraigTracer::add_constraint (const std::vector<int> &c) {
-  constraint = c;
+void CraigTracer::add_constraint (const std::vector<int> &c, size_t idx) {
+  if (constraint.size () < idx)
+    constraint.resize (idx);
+  constraint[idx] = c;
 }
 
 void CraigTracer::reset_assumptions () {
@@ -560,8 +562,11 @@ void CraigTracer::conclude_unsat (CaDiCaL::ConclusionType conclusion,
     interpolant = new CraigData (*craig_interpolants[proof_chain[0] - 1]);
   } else if (conclusion == CaDiCaL::ConclusionType::CONSTRAINT) {
     // The constraint clause is responsible for the conflict.
+    // TODO: support
+    assert (false);
 
     // Mark literals of conflicting clause.
+    /*
     for (auto &l : constraint)
       mark_literal (l);
 
@@ -583,6 +588,7 @@ void CraigTracer::conclude_unsat (CaDiCaL::ConclusionType conclusion,
     }
 
     unmark_all ();
+    */
   } else {
     assert (false); // No conclusion given!
   }

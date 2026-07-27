@@ -11,10 +11,10 @@ namespace CaDiCaL {
 // (forward or backward) or in the order of all clauses.  These lucky
 // assignments can be tested initially in a kind of pre-solving step.
 
-// We extended the search to do discrepency search to strengthen the original
-// idea. We try both direction of a literal if it leads to a conflict. On top of
-// that, as long as we are on level 1, we actually learn the unit, similarly to
-// how probing is done.
+// We extended the search to do discrepency search to strengthen the
+// original idea. We try both direction of a literal if it leads to a
+// conflict. On top of that, as long as we are on level 1, we actually learn
+// the unit, similarly to how probing is done.
 
 // This function factors out clean up code common among the 'lucky'
 // functions for backtracking and resetting a potential conflict.  One could
@@ -151,7 +151,7 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (flags (idx).unused())
+    if (flags (idx).unused ())
       continue;
     lucky_assume_decision (-idx);
     if (propagate ())
@@ -248,11 +248,13 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
   return false;
 }
 
-template<class Iterator>
-int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, std::string str) {
+template <class Iterator>
+int Internal::lucky_fixed_test (Iterator begin, Iterator end,
+                                signed char pol, std::string str) {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking %s variable index %s assignment", str.c_str (), pol == 1 ? "true" : "false");
+  VERBOSE (3, "checking %s variable index %s assignment", str.c_str (),
+           pol == 1 ? "true" : "false");
 #ifdef QUIET
   (void) str;
 #endif
@@ -261,7 +263,7 @@ int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, s
   if (pol == 1)
     stats.lucky_forward_one++;
   else
-   stats.lucky_forward_zero++;
+    stats.lucky_forward_zero++;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -283,19 +285,18 @@ int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, s
     } else
       goto START;
   }
-  VERBOSE (1, "%s assuming variables %s satisfies formula", str.c_str (), pol == 1 ? "true" : "false");
+  VERBOSE (1, "%s assuming variables %s satisfies formula", str.c_str (),
+           pol == 1 ? "true" : "false");
   assert (satisfied ());
   return 10;
 }
 
-
-
 int Internal::forward_false_satisfiable () {
-  return lucky_fixed_test (vars.begin(), vars.end (), -1, "forward");
+  return lucky_fixed_test (vars.begin (), vars.end (), -1, "forward");
 }
 
 int Internal::forward_true_satisfiable () {
-  return lucky_fixed_test (vars.begin(), vars.end (), 1, "forward");
+  return lucky_fixed_test (vars.begin (), vars.end (), 1, "forward");
 }
 
 /*------------------------------------------------------------------------*/
@@ -368,7 +369,7 @@ int Internal::backward_true_satisfiable () {
 
 int Internal::lucky_decide_assumptions () {
   assert (!level);
-  assert (!constraint.size ());
+  assert (!constraints.size ());
   int res = 0;
   while ((size_t) level < assumptions.size ()) {
     res = decide ();
@@ -404,49 +405,58 @@ int Internal::lucky_decide_assumptions () {
   return 0;
 }
 
-int Internal::random_lucky_assignment(signed char pol) {
+int Internal::random_lucky_assignment (signed char pol) {
   if (!opts.luckyrandom)
     return 0;
-  VERBOSE(3, "checking random variable order %s assignment", pol == 1 ? "true" : "false");
-  assert(!unsat);
-  assert(!level);
+  VERBOSE (3, "checking random variable order %s assignment",
+           pol == 1 ? "true" : "false");
+  assert (!unsat);
+  assert (!level);
   stats.lucky_random++;
 
   // Shuffle the variables
   std::vector<int> shuffle;
   for (int idx = max_var; idx; idx--) {
-    if (val(idx)) continue;
+    if (val (idx))
+      continue;
     if (flags (idx).unused ())
       continue;
     shuffle.push_back (idx);
   }
-  Random random (opts.seed); // global seed
-  random += stats.lucky_random;  // different every time
-  const int highest_var = (int)shuffle.size ();
+  Random random (opts.seed);    // global seed
+  random += stats.lucky_random; // different every time
+  const int highest_var = (int) shuffle.size ();
   for (int i = 0; i <= highest_var - 2; i++) {
     const int j = random.pick_int (i, highest_var - 1);
     swap (shuffle[i], shuffle[j]);
   }
 
-  int res = lucky_decide_assumptions();
-  if (res) return res;
+  int res = lucky_decide_assumptions ();
+  if (res)
+    return res;
 
   for (int idx : shuffle) {
-    START:
-    if (flags(idx).unused()) continue;
-    if (val(idx)) continue;
-    if (terminated_asynchronously(10)) return unlucky(-1);
+  START:
+    if (flags (idx).unused ())
+      continue;
+    if (val (idx))
+      continue;
+    if (terminated_asynchronously (10))
+      return unlucky (-1);
 
     int lit = idx * pol;
-    if (lucky_propagate_discrepency(lit)) {
-      if (unsat) return 20;
-      else return unlucky(0);
+    if (lucky_propagate_discrepency (lit)) {
+      if (unsat)
+        return 20;
+      else
+        return unlucky (0);
     } else {
       goto START;
     }
   }
-  VERBOSE(1, "random %s assignment satisfies formula", pol == 1 ? "true" : "false");
-  assert(satisfied());
+  VERBOSE (1, "random %s assignment satisfies formula",
+           pol == 1 ? "true" : "false");
+  assert (satisfied ());
   return 10;
 }
 /*------------------------------------------------------------------------*/
@@ -463,8 +473,10 @@ int Internal::lucky_phases (bool update_limit) {
     return 0;
   // TODO: Some of the lucky assignments can also be found if there are
   // constraint.
+  if (!constraints.empty ())
+    return 0;
   // External propagator assumes a CDCL loop, so lucky is not tried here.
-  if (!constraint.empty () || external_prop)
+  if (external_prop)
     return 0;
   if (unsat)
     return 20;
@@ -479,16 +491,15 @@ int Internal::lucky_phases (bool update_limit) {
   assert (!searching_lucky_phases);
   searching_lucky_phases = true;
   stats.lucky_tried++;
-  int64_t units =0;
+  int64_t units = 0;
   int res = 0, rounds = 0;
 #ifndef QUIET
   const int64_t active_initially = stats.vars_active;
 #endif
 
   constexpr int schedule_size = 6;
-  std::array<std::function<int ()>, schedule_size > schedule;
+  std::array<std::function<int ()>, schedule_size> schedule;
   int schedule_pos = 0;
-
 
   // The idea of the code is to:
   //
@@ -502,32 +513,72 @@ int Internal::lucky_phases (bool update_limit) {
   // b. then use first the phases proviveded by the user (by default '1')
   if (opts.phase) {
     if (!opts.varprioritizefirst) {
-      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
+      schedule[schedule_pos++] = [this] () {
+        return backward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_false_satisfiable ();
+      };
     } else {
-      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
+      schedule[schedule_pos++] = [this] () {
+        return forward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_false_satisfiable ();
+      };
     }
-    schedule[schedule_pos++] = [this]() { return random_lucky_assignment(1); };
-    schedule[schedule_pos++] = [this]() { return random_lucky_assignment(-1); };
+    schedule[schedule_pos++] = [this] () {
+      return random_lucky_assignment (1);
+    };
+    schedule[schedule_pos++] = [this] () {
+      return random_lucky_assignment (-1);
+    };
   } else {
     if (!opts.varprioritizefirst) {
-      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
+      schedule[schedule_pos++] = [this] () {
+        return backward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_true_satisfiable ();
+      };
     } else {
-      schedule[schedule_pos++] = [this]() {return forward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return forward_true_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_false_satisfiable();};
-      schedule[schedule_pos++] = [this]() {return backward_true_satisfiable();};
+      schedule[schedule_pos++] = [this] () {
+        return forward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return forward_true_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_false_satisfiable ();
+      };
+      schedule[schedule_pos++] = [this] () {
+        return backward_true_satisfiable ();
+      };
     }
-    schedule[schedule_pos++] = [this]() { return random_lucky_assignment(-1); };
-    schedule[schedule_pos++] = [this]() { return random_lucky_assignment(1); };
+    schedule[schedule_pos++] = [this] () {
+      return random_lucky_assignment (-1);
+    };
+    schedule[schedule_pos++] = [this] () {
+      return random_lucky_assignment (1);
+    };
   }
   assert (schedule_pos == schedule_size);
 
@@ -549,12 +600,13 @@ int Internal::lucky_phases (bool update_limit) {
   int64_t ticks = 0;
   res = trivially_false_satisfiable (ticks);
   if (!res)
-    res = trivially_true_satisfiable(ticks);
+    res = trivially_true_satisfiable (ticks);
   stats.ticks += ticks;
 
   const int64_t old_active = stats.vars_active;
   // abort the search if visit each clause too often
-  const int64_t limit = stats.ticks + stats.clauses_now_irr * opts.luckylimitpercls;
+  const int64_t limit =
+      stats.ticks + stats.clauses_now_irr * opts.luckylimitpercls;
   if (!res)
     do {
       const int64_t active_before = stats.vars_active;
@@ -579,21 +631,26 @@ int Internal::lucky_phases (bool update_limit) {
       stats.lucky_units += units;
 
       if (!res && units)
-        VERBOSE (3, "lucky-%" PRId64 " in round %d found %" PRId64 " units", stats.lucky_tried, rounds, units);
+        VERBOSE (3, "lucky-%" PRId64 " in round %d found %" PRId64 " units",
+                 stats.lucky_tried, rounds, units);
     } while (units && !res && ++rounds < opts.luckyrounds);
 
   report ('l', !res && (old_active == stats.vars_active));
   searching_lucky_phases = false;
-  PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
+  PHASE ("lucky", stats.lucky_tried,
+         " produced %" PRId64 " units after %d rounds",
+         active_initially - stats.vars_active, rounds);
 
-  // Here we should reset lim.terminate.check since in a lucky run this 
-  // may be set to up to 1000 (for terminateint=10). 
+  // Here we should reset lim.terminate.check since in a lucky run this
+  // may be set to up to 1000 (for terminateint=10).
   // This then may lead to a high latency for external termination.
   lim.terminate.check = opts.terminateint;
-  
+
   if (update_limit && !res && (old_active == stats.vars_active)) {
     lim.lucky = stats.conflicts + opts.luckymininterval;
-    VERBOSE (3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64, stats.lucky_tried, lim.lucky);
+    VERBOSE (
+        3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64,
+        stats.lucky_tried, lim.lucky);
   }
 
   STOP (lucky);

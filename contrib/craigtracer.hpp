@@ -152,7 +152,7 @@ public:
                       const std::vector<int> &c) override;
 
   void add_assumption (int lit) override;
-  void add_constraint (const std::vector<int> &c) override;
+  void add_constraint (const std::vector<int> &c, size_t) override;
   void reset_assumptions () override;
   void conclude_unsat (CaDiCaL::ConclusionType conclusion,
                        const std::vector<int64_t> &proof_chain) override;
@@ -171,7 +171,7 @@ private:
   void unmark_all ();
 
   std::set<int> assumptions;
-  std::vector<int> constraint;
+  std::vector<std::vector<int>> constraint;
   std::vector<int64_t> assumption_clauses;
 
   std::vector<int> marked_history;

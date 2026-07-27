@@ -1340,10 +1340,8 @@ int Internal::ask_decision () {
     // In case the external propagator forced to backtrack below the
     // pseduo decision levels, we must go back to the CDCL loop instead of
     // making a decision.
-    if ((size_t) level < assumptions.size () ||
-        ((size_t) level == assumptions.size () && constraint.size ())) {
+    if (is_constraint_level (level))
       return 0;
-    }
     return ask_decision ();
   }
 
