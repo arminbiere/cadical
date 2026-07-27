@@ -1526,16 +1526,30 @@ bool Internal::get_merged_literals (std::vector<int> &eq_class) {
   if (!lit_level) {
     // Collect all the variables that are merged and mapped to that ilit
     int ivar = abs (ilit);
-    for (size_t i = 0;  i < external->e2i.table.size (); ++i) {
-      auto id = std::pair<int, int>(i, external->e2i[i]);
-      int o_elit = id.second;
-      int o_ilit = id.first;
-      int other = abs (o_elit);
-      if (other == ivar) {
-        if (o_elit == ilit)
-          eq_class.push_back (o_ilit);
-        else
-          eq_class.push_back (-o_ilit);
+    if (external->e2i.use_hash_map) {
+      for (auto id : external->e2i.h_e2i) {
+        int o_elit = id.second;
+        int o_ilit = id.first;
+        int other = abs (o_elit);
+        if (other == ivar) {
+          if (o_elit == ilit)
+            eq_class.push_back (o_ilit);
+          else
+            eq_class.push_back (-o_ilit);
+        }
+      }
+    } else {
+      for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+        auto id = std::pair<int, int> (i, external->e2i[i]);
+        int o_elit = id.second;
+        int o_ilit = id.first;
+        int other = abs (o_elit);
+        if (other == ivar) {
+          if (o_elit == ilit)
+            eq_class.push_back (o_ilit);
+          else
+            eq_class.push_back (-o_ilit);
+        }
       }
     }
 
@@ -1556,19 +1570,31 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   fixed_lits.clear ();
   if (!trail.size ())
     return;
-
-  for (size_t i = 0;  i < external->e2i.table.size (); ++i) {
-    auto id = std::pair<int, int>(i, external->e2i[i]);
-    int ilit = id.second;
-    int eidx = id.first;
-    if (ilit && !external->ervars[eidx]) {
-      Flags &f = flags (ilit);
-      if (f.status == Flags::FIXED) {
-        fixed_lits.push_back (vals[abs (ilit)] * eidx);
+  if (external->e2i.use_hash_map)
+    for (auto id : external->e2i.h_e2i) {
+      int ilit = id.second;
+      int eidx = id.first;
+      if (ilit && !external->ervars[eidx]) {
+        Flags &f = flags (ilit);
+        if (f.status == Flags::FIXED) {
+          fixed_lits.push_back (vals[abs (ilit)] * eidx);
+        }
       }
     }
-  }
+  else
+    for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+      auto id = std::pair<int, int> (i, external->e2i[i]);
+      int ilit = id.second;
+      int eidx = id.first;
+      if (ilit && !external->ervars[eidx]) {
+        Flags &f = flags (ilit);
+        if (f.status == Flags::FIXED) {
+          fixed_lits.push_back (vals[abs (ilit)] * eidx);
+        }
+      }
+    }
 }
+
 #endif
 
 } // namespace CaDiCaL

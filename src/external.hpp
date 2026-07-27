@@ -3,6 +3,7 @@
 
 /*------------------------------------------------------------------------*/
 
+#include "exttoint.hpp"
 #include "range.hpp"
 #include "util.hpp"
 #include <climits>
@@ -58,7 +59,7 @@ class Learner;
 class Terminator;
 class WitnessIterator;
 
-#include "hashmap.hpp"
+#include "exttoint.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -74,25 +75,10 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  struct IntFirstHash {
-    public:
-    size_t operator () (int el) {return el;}
-  };
-  struct IntSecondHash {
-    public:
-    size_t operator () (int el) {return (321321353 * (size_t)el) | 1;}
-  };
-  struct IntTumb {
-    public:
-    std::pair<int,int> operator () () {return std::pair<int,int>(0,0);}
-  };
-  struct IntEqualTo {
-    public:
-    bool operator () (int a, int b) {return a == b;}
-  };
+
 public:
   // CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
-  CaDiCaL::array_hashmap e2i;
+  ExtToInt e2i;
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
@@ -204,7 +190,7 @@ public:
   }
 
   inline int internal_lit (int elit) const {
-    return find_or_default (e2i, elit, 0);
+    return e2i.find_or_default (elit, 0);
   }
   /*----------------------------------------------------------------------*/
 

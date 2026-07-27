@@ -528,6 +528,7 @@ void Internal::compact () {
   /*----------------------------------------------------------------------*/
 
   max_var = mapper.new_max_var;
+  external->e2i.maybe_compress (max_var);
 
   stats.vars_unused = 0;
   stats.vars_inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;

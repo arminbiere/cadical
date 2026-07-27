@@ -154,13 +154,6 @@ static Key find_or_default (const hashmap<Key, Element, FirstHash, SecondHash, T
   return it.second;
 }
 
-static Key find_or_default (const array_hashmap &map, int key,
-                          int default_el) {
-
-  if ((size_t)key >= map.table.size ())
-    return default_el;
-  return map[key];
-}
 // Clean-up class for bad_alloc error safety.
 
 template <typename T> struct DeferDeleteArray {

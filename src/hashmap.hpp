@@ -2,8 +2,8 @@
 #define _hashmap_hpp_INCLUDED
 
 #include <cassert>
+#include <cstddef>
 #include <functional>
-#include <iostream>
 #include <unordered_map>
 #include <vector>
 
@@ -73,7 +73,6 @@ private:
     size_t pos = reduce_hash1(k);
     assert (pos < capacity);
     const pair &e = table[pos];
-    size_t x = 0;
 
     if (!KeyEqual () (e.first, Tumb () ().first) && !KeyEqual () (table[pos].first, k)) {
       const size_t delta = reduce_hash2 (k);
@@ -84,8 +83,6 @@ private:
         if (pos >= capacity)
           pos -= capacity;
         assert (pos < capacity);
-        ++x;
-        assert (x <= capacity);
         MYPRINTF("testing pos %zd", pos);
       } while (!KeyEqual () (table[pos].first, Tumb () ().first) && !KeyEqual () (table[pos].first, k));
     }
@@ -260,8 +257,6 @@ using Element = int;
 class array_hashmap {
 public:
   std::vector<Element> table;
-  size_t size = 0;
-  size_t capacity = 0;
 
   void non_resizing_insert (Key k, Element el) {
     table[k] = el;
@@ -290,7 +285,7 @@ public:
     non_resizing_insert (k, el);
   }
   bool empty () const {
-    return !size;
+    return table.empty();
   }
 
   Element operator[] (Key k) const {
@@ -306,6 +301,14 @@ public:
     return table.end ();
   }
 
+
+  std::vector<int>::const_iterator cbegin () const {
+    return table.cbegin();
+  }
+
+  std::vector<int>::const_iterator cend () const {
+    return table.cend ();
+  }
 };
 
 
