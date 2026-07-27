@@ -75,10 +75,10 @@
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
   STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
-  METRIC (clause_promoted_tier1,     2, relative, "per", clause_improved_glue) \
-  METRIC (clause_promoted_tier2,     2, relative, "per", clause_improved_glue) \
-  /* cannot be a metric due do stamping! */\
-  STATISTIC (clause_recompute_glue,      2, relative, "per", clauses_redundant) \
+     METRIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
+     METRIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
+  /* cannot be a metric due do stamping! */ \
+  STATISTIC (clause_recompute_glue,  2, relative, "per", clauses_redundant) \
   STATISTIC (clauses,                0, NOTHING, 0, 0) \
   STATISTIC (clauses_irredundant,    2, percent, "%",  clauses) \
   STATISTIC (clauses_now_irr,        3, NOTHING, 0, 0) \
@@ -105,30 +105,36 @@
   STATISTIC (congruence_ands,        2, relative, "per", congruent) \
   STATISTIC (congruence_dummy_ands,  2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_gates,       2, relative, "per", congruence_rounds) \
-  METRIC (congruence_gates_and,      2, percent, "%", congruence_gates) \
-  METRIC (congruence_gates_ite,      2, percent, "%", congruence_gates) \
-  METRIC (congruence_gates_xor,      2, percent, "%", congruence_gates) \
+     METRIC (congruence_gates_and,   2, percent, "%", congruence_gates) \
+     METRIC (congruence_gates_ite,   2, percent, "%", congruence_gates) \
+     METRIC (congruence_gates_xor,   2, percent, "%", congruence_gates) \
   STATISTIC (congruence_ites,        2, relative, "per", congruent) \
   STATISTIC (congruence_rounds,      1, INTERVAL, "", interval) \
-  METRIC (congruence_rw_ands,        2, relative, "per", congruence_gates) \
-  METRIC (congruence_rw_ites,        2, relative, "per", congruence_gates) \
-  METRIC (congruence_rw_xors,        2, relative, "per", congruence_gates) \
-  METRIC (congruence_simp_ands,      2, relative, "per", congruence_rounds) \
-  METRIC (congruence_simp_ites,      2, relative, "per", congruence_rounds) \
-  METRIC (congruence_simplified,     2, relative, "per", congruence_rounds) \
-  METRIC (congruence_simp_xors,      2, relative, "per", congruence_rounds) \
+     METRIC (congruence_rw_ands,     2, relative, "per", congruence_gates) \
+     METRIC (congruence_rw_ites,     2, relative, "per", congruence_gates) \
+     METRIC (congruence_rw_xors,     2, relative, "per", congruence_gates) \
+     METRIC (congruence_simp_ands,   2, relative, "per", congruence_rounds) \
+     METRIC (congruence_simp_ites,   2, relative, "per", congruence_rounds) \
+     METRIC (congruence_simplified,  2, relative, "per", congruence_rounds) \
+     METRIC (congruence_simp_xors,   2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_subsumed,    2, relative, "per", congruence_rounds) \
-  METRIC (congruence_trite,          2, relative, "per", congruence_rounds) \
+     METRIC (congruence_trite,       2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_unary,       2, relative, "per", congruence_rounds) \
-  METRIC (congruence_unary_and,      2, relative, "per", congruence_rounds) \
-  METRIC (congruence_unary_ite,      2, relative, "per", congruence_rounds) \
+     METRIC (congruence_unary_and,   2, relative, "per", congruence_rounds) \
+     METRIC (congruence_unary_ite,   2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_units,       2, relative, "per", congruent) \
   STATISTIC (congruence_xors,        2, relative, "per", congruent) \
   STATISTIC (congruent,              1, relative, "per", congruence_rounds) \
-  STATISTIC (cover_asymmetric,       2, percent, "%",  cover_total) \
-  STATISTIC (cover_blocked,          2, percent, "%",  cover_total) \
-  STATISTIC (coverings,              2, INTERVAL, "", interval) \
-  STATISTIC (cover_total,            1, percent, "%",  clauses_irredundant) \
+  STATISTIC (constraints_added,      3, relative, "per", constraints_solved) \
+  STATISTIC (constraints_failed,     3, percent, "%", constraints_added) \
+  STATISTIC (constraints_lit,        3, relative, "per", constraints_added) \
+  STATISTIC (constraints_reset,      3, relative, "per", constraints_solved) \
+  STATISTIC (constraints_sat,        3, percent, "%", constraints_added) \
+  STATISTIC (constraints_solved,     3, percent, "%", solved) \
+  STATISTIC (cover_asymmetric,       3, percent, "%",  cover_total) \
+  STATISTIC (cover_blocked,          3, percent, "%",  cover_total) \
+  STATISTIC (coverings,              3, INTERVAL, "", interval) \
+  STATISTIC (cover_total,            2, percent, "%",  clauses_irredundant) \
   STATISTIC (decision_random,        2, percent, "%",  decisions) \
   STATISTIC (decision_random_phase,  2, INTERVAL, "", interval) \
   STATISTIC (decisions,              0, SECONDS, "per",  second) \
@@ -318,11 +324,11 @@
   STATISTIC (ticks_ternary,          2, percent, "%", ticks) \
   STATISTIC (ticks_vivify,           2, percent, "%", ticks) \
   STATISTIC (ticks_walk,             2, percent, "%", ticks) \
-  METRIC (ticks_walk_break,          2, percent, "%", ticks_walk) \
-  METRIC (ticks_walk_flip,           2, percent, "%", ticks_walk) \
-  METRIC (ticks_walk_flip_broke,     2, percent, "%", ticks_walk) \
-  METRIC (ticks_walk_flip_wl,        2, percent, "%", ticks_walk) \
-  METRIC (ticks_walk_pick,           2, percent, "%", ticks_walk) \
+     METRIC (ticks_walk_break,       2, percent, "%", ticks_walk) \
+     METRIC (ticks_walk_flip,        2, percent, "%", ticks_walk) \
+     METRIC (ticks_walk_flip_broke,  2, percent, "%", ticks_walk) \
+     METRIC (ticks_walk_flip_wl,     2, percent, "%", ticks_walk) \
+     METRIC (ticks_walk_pick,        2, percent, "%", ticks_walk) \
   STATISTIC (transitive_clauses,     1, percent, "%", subsumed) \
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
@@ -333,18 +339,18 @@
   STATISTIC (up_cb_decided,          2, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_decide_force_bt,  2, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_prop,             2, percent, "%", up_cb) \
-  METRIC (up_cb_prop_assign,         2, percent, "%", up_cb_prop) \
-  METRIC (up_cb_prop_clash,          2, percent, "%", up_cb_prop) \
-  METRIC (up_cb_prop_explain,        2, percent, "%", up_cb_prop) \
+     METRIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
+     METRIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
+     METRIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
   STATISTIC (up_learn,               2, percent, "%", clauses) \
-  METRIC (up_learn_conflict,         2, percent, "%", up_learn) \
-  METRIC (up_learn_elevating,        2, percent, "%", up_learn) \
-  METRIC (up_learn_empty,            2, percent, "%", up_learn) \
-  METRIC (up_learn_lazy_elevate,     2, percent, "%", up_learn) \
-  METRIC (up_learn_out_of_order,     2, percent, "%", up_learn) \
-  METRIC (up_learn_propagating,      2, percent, "%", up_learn) \
-  METRIC (up_learn_satisfied,        2, percent, "%", up_learn) \
-  METRIC (up_learn_unit,             2, percent, "%", up_learn) \
+     METRIC (up_learn_conflict,      2, percent, "%", up_learn) \
+     METRIC (up_learn_elevating,     2, percent, "%", up_learn) \
+     METRIC (up_learn_empty,         2, percent, "%", up_learn) \
+     METRIC (up_learn_lazy_elevate,  2, percent, "%", up_learn) \
+     METRIC (up_learn_out_of_order,  2, percent, "%", up_learn) \
+     METRIC (up_learn_propagating,   2, percent, "%", up_learn) \
+     METRIC (up_learn_satisfied,     2, percent, "%", up_learn) \
+     METRIC (up_learn_unit,          2, percent, "%", up_learn) \
   STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \
@@ -365,39 +371,39 @@
   STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
   STATISTIC (vivified,               1, percent, "%", clauses) \
-  METRIC (vivified_irr,              2, percent, "%", vivified) \
-  METRIC (vivified_tier1,            2, percent, "%", vivified) \
-  METRIC (vivified_tier2,            2, percent, "%", vivified) \
-  METRIC (vivified_tier3,            2, percent, "%", vivified) \
+     METRIC (vivified_irr,           2, percent, "%", vivified) \
+     METRIC (vivified_tier1,         2, percent, "%", vivified) \
+     METRIC (vivified_tier2,         2, percent, "%", vivified) \
+     METRIC (vivified_tier3,         2, percent, "%", vivified) \
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
-  METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
-  METRIC (vivify_demote,             2, percent, "%", vivify_strength) \
-  METRIC (vivify_flushed,            2, percent, "%", vivify_subsumed) \
-  METRIC (vivify_implied,            2, percent, "%", vivify_checks) \
-  METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
-  METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
+     METRIC (vivify_decisions,       2, relative, "per", vivify_checks) \
+     METRIC (vivify_demote,          2, percent, "%", vivify_strength) \
+     METRIC (vivify_flushed,         2, percent, "%", vivify_subsumed) \
+     METRIC (vivify_implied,         2, percent, "%", vivify_checks) \
+     METRIC (vivify_instantiated,    2, percent, "%", vivify_checks) \
+     METRIC (vivify_reused,          2, percent, "%", vivify_decisions) \
   STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
-  METRIC (vivify_strength,           2, percent, "%", strengthened) \
-  METRIC (vivify_strength_irr,       2, percent, "%", vivify_strength) \
-  METRIC (vivify_strength_tier1,     2, percent, "%", vivify_strength) \
-  METRIC (vivify_strength_tier2,     2, percent, "%", vivify_strength) \
-  METRIC (vivify_strength_tier3,     2, percent, "%", vivify_strength) \
-  METRIC (vivify_subsumed,           2, percent, "%", subsumed) \
-  METRIC (vivify_subsumed_irr,       2, percent, "%", vivify_subsumed) \
-  METRIC (vivify_subsumed_red,       2, percent, "%", vivify_subsumed) \
-  METRIC (vivify_units,              2, percent, "%", vivify_checks) \
+     METRIC (vivify_strength,        2, percent, "%", strengthened) \
+     METRIC (vivify_strength_irr,    2, percent, "%", vivify_strength) \
+     METRIC (vivify_strength_tier1,  2, percent, "%", vivify_strength) \
+     METRIC (vivify_strength_tier2,  2, percent, "%", vivify_strength) \
+     METRIC (vivify_strength_tier3,  2, percent, "%", vivify_strength) \
+     METRIC (vivify_subsumed,        2, percent, "%", subsumed) \
+     METRIC (vivify_subsumed_irr,    2, percent, "%", vivify_subsumed) \
+     METRIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
+     METRIC (vivify_units,           2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
-  METRIC (walk_broken,               2, relative, "per", walk_flips) \
+     METRIC (walk_broken,            2, relative, "per", walk_flips) \
   STATISTIC (walk_flips,             2, RELPROFW,"M", per second walk) \
-  METRIC (walk_flips_reducing,       2, percent, "%", walk_flips) \
-  METRIC (walk_flips_sideways,       2, percent, "%", walk_flips) \
-  METRIC (walk_flips_transfer,       2, percent, "%", walk_flips) \
+     METRIC (walk_flips_reducing,    2, percent, "%", walk_flips) \
+     METRIC (walk_flips_sideways,    2, percent, "%", walk_flips) \
+     METRIC (walk_flips_transfer,    2, percent, "%", walk_flips) \
   STATISTIC (walk_improved,          2, relative, "per", walk) \
   STATISTIC (walk_warmup,            2, percent, "%", walk) \
-  METRIC (walk_warmup_conflicts,     2, relative, "per", walk_warmup) \
-  METRIC (walk_warmup_decision,      2, relative, "per", walk_warmup) \
-  METRIC (walk_warmup_dummy,         2, relative, "per", walk_warmup) \
-  METRIC (walk_warmup_propagate,     2, relative, "per", walk_warmup) \
+     METRIC (walk_warmup_conflicts,  2, relative, "per", walk_warmup) \
+     METRIC (walk_warmup_decision,   2, relative, "per", walk_warmup) \
+     METRIC (walk_warmup_dummy,      2, relative, "per", walk_warmup) \
+     METRIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
   STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 
