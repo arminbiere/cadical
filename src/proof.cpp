@@ -230,14 +230,15 @@ void Proof::add_original_clause (int64_t id, bool r, const vector<int> &c) {
 
 void Proof::add_external_original_clause (int64_t id, bool r,
                                           const vector<int> &c,
-                                          bool restore) {
+                                          bool restored) {
   // literals of c are already external
   assert (clause.empty ());
   for (auto const &lit : c)
     clause.push_back (lit);
   clause_id = id;
   redundant = r;
-  add_original_clause (restore);
+  restore = restored;
+  add_original_clause ();
 }
 
 void Proof::delete_external_original_clause (int64_t id, bool r,
@@ -329,12 +330,13 @@ void Proof::add_assumption (int a) {
   add_assumption ();
 }
 
-void Proof::add_constraint (const vector<int> &c) {
+void Proof::add_constraint (const vector<int> &c, size_t idx) {
   // literals of c are already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
     clause.push_back (lit);
+  constraint_idx = idx;
   add_constraint ();
 }
 
@@ -516,15 +518,24 @@ void Proof::strengthen (int64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (bool restore) {
+void Proof::reset () {
+  clause.clear ();
+  proof_chain.clear ();
+  clause_id = 0;
+  constraint_idx = 0;
+  redundant = 0;
+  witness = 0;
+  restore = 0;
+}
+
+void Proof::add_original_clause () {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
 
   for (auto &tracer : tracers) {
     tracer->add_original_clause (clause_id, false, clause, restore);
   }
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::add_derived_clause () {
@@ -535,10 +546,7 @@ void Proof::add_derived_clause () {
     tracer->add_derived_clause (clause_id, redundant, witness, clause,
                                 proof_chain);
   }
-  proof_chain.clear ();
-  clause.clear ();
-  clause_id = 0;
-  witness = 0;
+  reset ();
 }
 
 void Proof::delete_clause () {
@@ -546,8 +554,7 @@ void Proof::delete_clause () {
   for (auto &tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
   }
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::demote_clause () {
@@ -556,8 +563,7 @@ void Proof::demote_clause () {
   for (auto &tracer : tracers) {
     tracer->demote_clause (clause_id, clause);
   }
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::weaken_minus () {
@@ -565,8 +571,7 @@ void Proof::weaken_minus () {
   for (auto &tracer : tracers) {
     tracer->weaken_minus (clause_id, clause);
   }
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::strengthen () {
@@ -574,15 +579,14 @@ void Proof::strengthen () {
   for (auto &tracer : tracers) {
     tracer->strengthen (clause_id);
   }
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::finalize_clause () {
   for (auto &tracer : tracers) {
     tracer->finalize_clause (clause_id, clause);
   }
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::add_assumption_clause () {
@@ -590,9 +594,7 @@ void Proof::add_assumption_clause () {
   for (auto &tracer : tracers) {
     tracer->add_assumption_clause (clause_id, clause, proof_chain);
   }
-  proof_chain.clear ();
-  clause.clear ();
-  clause_id = 0;
+  reset ();
 }
 
 void Proof::add_assumption () {
@@ -601,15 +603,15 @@ void Proof::add_assumption () {
   for (auto &tracer : tracers) {
     tracer->add_assumption (clause.back ());
   }
-  clause.clear ();
+  reset ();
 }
 
 void Proof::add_constraint () {
   LOG (clause, "PROOF adding constraint");
   for (auto &tracer : tracers) {
-    tracer->add_constraint (clause);
+    tracer->add_constraint (clause, constraint_idx);
   }
-  clause.clear ();
+  reset ();
 }
 
 void Proof::reset_assumptions () {
@@ -617,6 +619,7 @@ void Proof::reset_assumptions () {
   for (auto &tracer : tracers) {
     tracer->reset_assumptions ();
   }
+  reset ();
 }
 
 void Proof::report_status (int status, int64_t id) {
@@ -624,6 +627,7 @@ void Proof::report_status (int status, int64_t id) {
   for (auto &tracer : tracers) {
     tracer->report_status (status, id);
   }
+  reset ();
 }
 
 void Proof::begin_proof (int64_t id) {
@@ -631,6 +635,7 @@ void Proof::begin_proof (int64_t id) {
   for (auto &tracer : tracers) {
     tracer->begin_proof (id);
   }
+  reset ();
 }
 
 void Proof::solve_query () {
@@ -638,6 +643,7 @@ void Proof::solve_query () {
   for (auto &tracer : tracers) {
     tracer->solve_query ();
   }
+  reset ();
 }
 
 void Proof::conclude_unsat (ConclusionType con,
@@ -646,6 +652,7 @@ void Proof::conclude_unsat (ConclusionType con,
   for (auto &tracer : tracers) {
     tracer->conclude_unsat (con, conclusion);
   }
+  reset ();
 }
 
 void Proof::conclude_sat (const vector<int> &model) {
@@ -653,6 +660,7 @@ void Proof::conclude_sat (const vector<int> &model) {
   for (auto &tracer : tracers) {
     tracer->conclude_sat (model);
   }
+  reset ();
 }
 
 void Proof::conclude_unknown (const vector<int> &trail) {
@@ -660,6 +668,7 @@ void Proof::conclude_unknown (const vector<int> &trail) {
   for (auto &tracer : tracers) {
     tracer->conclude_unknown (trail);
   }
+  reset ();
 }
 
 } // namespace CaDiCaL

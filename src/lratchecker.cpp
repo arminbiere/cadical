@@ -1,3 +1,4 @@
+#include "lratchecker.hpp"
 #include "internal.hpp"
 
 namespace CaDiCaL {
@@ -38,9 +39,11 @@ LratCheckerClause *LratChecker::new_clause () {
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
+  res->constraint_idx = last_constraint;
   res->size = size;
   res->used = false;
   res->tautological = false;
+  res->temporary = is_tmp;
   int *literals = res->literals, *p = literals;
 #ifndef NDEBUG
   for (auto &b : checked_lits)
@@ -556,22 +559,28 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
 
 void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
 
-void LratChecker::add_constraint (const vector<int> &c) {
-  constraint.clear ();
+void LratChecker::add_constraint (const vector<int> &c, size_t idx) {
   for (auto &lit : c) {
-    assert (lit);
-    if (std::find (constraint.begin (), constraint.end (), lit) !=
-        constraint.end ())
-      continue;
     constraint.push_back (lit);
   }
+  is_tmp = true;
+  last_constraint = idx;
+  last_id = -idx;
+  import_clause (constraint);
+  last_constraint = 0;
+  constraint.clear ();
 }
 
 void LratChecker::reset_assumptions () {
-  assumption_clauses.clear ();
   assumptions.clear ();
   concluded = false;
-  // constraint.clear ();
+  for (auto &id : assumption_clauses) {
+    LratCheckerClause **res = find (id);
+    assert (*res);
+    assert ((*res)->temporary);
+    move_to_garbage (res);
+  }
+  assumption_clauses.clear ();
 }
 
 void LratChecker::conclude_unsat (ConclusionType conclusion,
@@ -630,6 +639,23 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
 }
 
 /*------------------------------------------------------------------------*/
+void LratChecker::move_to_garbage (LratCheckerClause **res) {
+  LratCheckerClause *tmp = *res;
+  // Remove from hash table, mark as garbage, connect to garbage list.
+  num_garbage++;
+  assert (num_clauses);
+  num_clauses--;
+  *res = tmp->next;
+  tmp->next = garbage;
+  garbage = tmp;
+  tmp->garbage = true;
+
+  // If there are enough garbage clauses collect them.
+  // TODO: probably can just delete clause directly without
+  // specific garbage collection phase.
+  if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+    collect_garbage_clauses ();
+}
 
 void LratChecker::delete_clause (int64_t id, bool, const vector<int> &c) {
   START (checking);
@@ -656,20 +682,7 @@ void LratChecker::delete_clause (int64_t id, bool, const vector<int> &c) {
     for (const auto &lit : imported_clause)
       mark (lit) = false;
 
-    // Remove from hash table, mark as garbage, connect to garbage list.
-    num_garbage++;
-    assert (num_clauses);
-    num_clauses--;
-    *p = d->next;
-    d->next = garbage;
-    garbage = d;
-    d->garbage = true;
-
-    // If there are enough garbage clauses collect them.
-    // TODO: probably can just delete clause directly without
-    // specific garbage collection phase.
-    if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
-      collect_garbage_clauses ();
+    move_to_garbage (p);
   } else {
     fatal_message_start ();
     fputs ("deleted clause not in proof:\n", stderr);

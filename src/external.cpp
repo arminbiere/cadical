@@ -327,12 +327,15 @@ size_t External::constrain (int elit) {
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   size_t idx = 0;
-  if (elit)
+  if (elit) {
+    if (internal->proof)
+      constraint_tmp.push_back (elit);
     LOG ("adding external %d as internal %d to constraints", elit, ilit);
-  else if (!elit && internal->proof) {
+  } else if (!elit && internal->proof) {
     idx = constraint_idx.size () + 1;
     constraint_idx.push_back (idx);
-    internal->proof->add_constraint (constraints);
+    internal->proof->add_constraint (constraint_tmp, idx);
+    constraint_tmp.clear ();
   }
   constraints.push_back (elit);
   internal->constrain (ilit);

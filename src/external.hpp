@@ -74,6 +74,7 @@ struct External {
   std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
 
   vector<int> assumptions;    // External assumptions.
+  vector<int> constraint_tmp; // current constraint.
   vector<int> constraint_idx; // index of each constraint.
   vector<int> constraints;    // zero-terminated external constraints.
 

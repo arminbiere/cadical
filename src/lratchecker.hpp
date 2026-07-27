@@ -22,10 +22,12 @@ struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
   int64_t id;              // id of clause
-  bool garbage;            // for garbage clauses
+  size_t constraint_idx;
+  bool garbage; // for garbage clauses
   unsigned size;
   bool used;
   bool tautological;
+  bool temporary;
   int literals[1]; // 'literals' of length 'size'
 };
 
@@ -70,10 +72,12 @@ class LratChecker : public StatTracer {
 
   static const unsigned num_nonces = 4;
 
-  uint64_t nonces[num_nonces];     // random numbers for hashing
-  uint64_t last_hash;              // last computed hash value of clause
-  int64_t last_id;                 // id of the last added/deleted clause
-  int64_t current_id;              // id of the last added clause
+  uint64_t nonces[num_nonces]; // random numbers for hashing
+  uint64_t last_hash;          // last computed hash value of clause
+  int64_t last_id;             // id of the last added/deleted clause
+  int64_t current_id;          // id of the last added clause
+  size_t last_constraint;
+  bool is_tmp;
   uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
@@ -90,6 +94,7 @@ class LratChecker : public StatTracer {
   void collect_garbage_clauses ();
 
   LratCheckerClause *new_clause ();
+  void move_to_garbage (LratCheckerClause **);
   void delete_clause (LratCheckerClause *);
 
   bool check (std::vector<int64_t>);            // check RUP
@@ -149,7 +154,7 @@ public:
   void add_assumption (int) override;
 
   // mark lits as constraint
-  void add_constraint (const std::vector<int> &) override;
+  void add_constraint (const std::vector<int> &, size_t) override;
 
   void reset_assumptions () override;
 

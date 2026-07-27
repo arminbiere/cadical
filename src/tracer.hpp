@@ -111,7 +111,7 @@ public:
   // Notify the observer that a constraint has been added
   // Arguments: constraint_clause
   //
-  virtual void add_constraint (const std::vector<int> &) {}
+  virtual void add_constraint (const std::vector<int> &, size_t idx) {}
 
   // Notify the observer that assumptions and constraints are reset
   //
