@@ -38,6 +38,7 @@ void KITTEN_NAMESPACE (kitten_clause) (kitten *, size_t size, unsigned *);
 void KITTEN_NAMESPACE (cat_clause_with_id) (kitten *, unsigned id,
                                             size_t size, int *);
 void KITTEN_NAMESPACE (kitten_unit) (kitten *, unsigned);
+void KITTEN_NAMESPACE (cat_unit_with_id) (kitten *, unsigned, int);
 void KITTEN_NAMESPACE (kitten_binary) (kitten *, unsigned, unsigned);
 
 void KITTEN_NAMESPACE (kitten_clause_with_id_and_exception) (

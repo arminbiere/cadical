@@ -4,8 +4,15 @@
 namespace CaDiCaL {
 
 void Internal::constrain (int lit) {
+  if (unsat)
+    return;
+  if (level)
+    backtrack_without_updating_phases (0);
   if (!constraint_cat) {
     constraint_cat = KITTEN_NAMESPACE (kitten_init ());
+    size_t idx = 0;
+    for (auto &other : assumptions)
+      KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, lit));
   }
   if (lit) {
     constraint_tmp.push_back (lit);
@@ -50,7 +57,7 @@ void Internal::constrain (int lit) {
   if (constraint_tmp.empty ()) {
     constraints.push_back (0);
     unsat_constraint = true;
-    if (!conflict_id)
+    if (!unsat)
       marked_failed = false; // allow to trigger failing ()
   } else {
     for (const auto lit : constraint_tmp) {
@@ -67,10 +74,13 @@ void Internal::constrain (int lit) {
   }
 }
 
-bool Internal::failed_constraint () {
+bool Internal::failed_constraint (size_t idx) {
+  if (unsat) {
+    assert (!unsat_constraint);
+    return false;
+  }
   if (!marked_failed) {
-    if (!conflict_id)
-      failing ();
+    failing ();
     marked_failed = true;
   }
   conclude_unsat ();

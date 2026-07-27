@@ -21,6 +21,10 @@ void Internal::assume (int lit) {
   f.assumed |= bit;
   assumptions.push_back (lit);
   freeze (lit);
+  if (constraint_cat) {
+    KITTEN_NAMESPACE (
+        cat_unit_with_id (constraint_cat, -assumptions.size (), lit));
+  }
 }
 
 // for LRAT we actually need to implement recursive DFS
@@ -84,7 +88,7 @@ void Internal::failing () {
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   assert (!marked_failed);
-  assert (!conflict_id);
+  assert (!unsat);
 
   if (!unsat_constraint) {
     // Search for failing assumptions in the (internal) assumption stack.
@@ -234,6 +238,7 @@ void Internal::failing () {
       clause.push_back (-first_failed);
     }
   } else {
+    assert (constraint_cat);
     // unsat_constraint
     // The assumptions necessary to fail each literal in the constraint are
     // collected.
@@ -448,7 +453,7 @@ DONE:
 
 bool Internal::failed (int lit) {
   if (!marked_failed) {
-    if (!conflict_id)
+    if (!unsat)
       failing ();
     marked_failed = true;
   }
@@ -464,12 +469,12 @@ void Internal::conclude_unsat () {
   concluded = true;
   if (!marked_failed) {
     assert (conclusion.empty ());
-    if (!conflict_id)
+    if (!unsat)
       failing ();
     marked_failed = true;
   }
   ConclusionType con;
-  if (conflict_id)
+  if (unsat)
     con = CONFLICT;
   else if (unsat_constraint)
     con = CONSTRAINT;
@@ -485,7 +490,7 @@ void Internal::reset_concluded () {
     LOG ("reset concluded");
     concluded = false;
   }
-  if (conflict_id) {
+  if (unsat) {
     assert (conclusion.size () == 1);
     return;
   }

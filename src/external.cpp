@@ -343,7 +343,7 @@ size_t External::constrain (int elit) {
 }
 
 bool External::failed_constraint (size_t idx) {
-  return internal->failed_constraint ();
+  return internal->failed_constraint (idx);
 }
 
 void External::phase (int elit) {

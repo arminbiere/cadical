@@ -178,7 +178,7 @@ struct Internal {
       2, 2}; // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
   int tier2[2] = {
       6, 6};      // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
-  bool unsat;     // empty clause found or learned
+  int64_t unsat;  // empty clause found or learned
   bool iterating; // report learned unit ('i' line)
   bool localsearching;         // true during local search
   bool lookingahead;           // true during look ahead
@@ -209,7 +209,6 @@ struct Internal {
   int64_t clause_id;          // last used id for clauses
   int64_t original_id;        // ids for original clauses to produce LRAT
   int64_t reserved_ids;       // number of reserved ids for original clauses
-  int64_t conflict_id;        // store conflict id for finalize (frat)
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion; // store ids of conclusion clauses
@@ -1522,8 +1521,7 @@ struct Internal {
   // Add temporary clause as constraint.
   //
   void constrain (int); // Add literal to constraint.
-  bool
-  failed_constraint ();     // Was constraint used to proof unsatisfiablity?
+  bool failed_constraint (size_t idx);
   void reset_constraint (); // Reset after 'solve' call.
 
   // Propagate the current set of assumptions and return the
@@ -1565,6 +1563,8 @@ struct Internal {
   int decide_phase (int idx, bool target);
   int likely_phase (int idx);
   bool better_decision (int lit, int other);
+  bool is_assumption_level (size_t);
+  bool is_constraint_level (size_t);
   int decide (); // 0=decision, 20=failed
 
   // Internal functions to enable explicit search limits.

@@ -7,16 +7,16 @@ namespace CaDiCaL {
 static Clause external_reason_clause;
 
 Internal::Internal ()
-    : mode (SEARCH), unsat (false), iterating (false),
-      localsearching (false), lookingahead (false), preprocessing (false),
+    : mode (SEARCH), unsat (0), iterating (false), localsearching (false),
+      lookingahead (false), preprocessing (false),
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), forced_backt_allowed (false),
       private_steps (false), out_of_order_level (-1),
       out_of_order_trail (-1), rephased (0), vsize (0), max_var (0),
-      clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      saved_decisions (0), concluded (false), lrat (false), frat (false),
+      clause_id (0), original_id (0), reserved_ids (0), saved_decisions (0),
+      concluded (false), lrat (false), frat (false),
       new_binary_since_dedup (true), level (0), vals (0), score_inc (1.0),
       scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
@@ -1204,11 +1204,11 @@ void Internal::finalize (int res) {
         proof->finalize_clause (c);
 
     // finalize conflict and proof
-    if (conflict_id) {
-      proof->finalize_clause (conflict_id, {});
+    if (unsat) {
+      proof->finalize_clause (unsat, {});
     }
   }
-  proof->report_status (res, conflict_id);
+  proof->report_status (res, unsat);
   if (res == 10)
     external->conclude_sat ();
   else if (res == 20)

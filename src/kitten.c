@@ -1845,6 +1845,11 @@ void KITTEN_NAMESPACE (cat_clause_with_id) (kitten *kitten, unsigned id,
                                                        elits, INVALID);
 }
 
+void KITTEN_NAMESPACE (cat_unit_with_id) (kitten *kitten, unsigned id,
+                                          int lit) {
+  KITTEN_NAMESPACE (cat_clause_with_id_and_exception) (kitten, id, 1, &lit,
+                                                       INVALID);
+}
 void KITTEN_NAMESPACE (kitten_unit) (kitten *kitten, unsigned lit) {
   KITTEN_NAMESPACE (kitten_clause) (kitten, 1, &lit);
 }

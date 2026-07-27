@@ -31,8 +31,7 @@ void Internal::learn_empty_clause () {
   if (proof) {
     proof->add_derived_empty_clause (id, lrat_chain);
   }
-  unsat = true;
-  conflict_id = id;
+  unsat = id;
   marked_failed = true;
   conclusion.push_back (id);
   lrat_chain.clear ();

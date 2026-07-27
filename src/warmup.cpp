@@ -231,6 +231,7 @@ int Internal::warmup_decide_assumptions () {
     }
   } else if ((size_t) level == assumptions.size () &&
              constraint_idx.size () == 1) {
+    assert (false); // not supported for now with constraints.
 
     int satisfied_lit = 0;  // The literal satisfying the constrain.
     int unassigned_lit = 0; // Highest score unassigned literal.
