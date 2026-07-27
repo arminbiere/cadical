@@ -259,38 +259,42 @@ struct Internal {
   bool unsat_constraint;        // constraint used for unsatisfiability?
   bool marked_failed;           // are the failed assumptions marked?
   bool sweep_incomplete;        // sweep
-  int earliest_changed_val;  // earliest literal whose value was changed but
-                             // was not notified yet. Only relevant for ILB
-                             // (otherwise, we backtrack, so no
-                             // renotification is needed).
-  size_t notified;           // next trail position to notify external prop
-  int notified_level;        // current level of external prop
-  Clause *probe_reason;      // set during probing
-  size_t propagated;         // next trail position to propagate
-  size_t propagated2;        // next binary trail position to propagate
-  size_t propergated;        // propagated without blocking literals
-  size_t best_assigned;      // best maximum assigned ever
-  size_t target_assigned;    // maximum assigned without conflict
-  size_t no_conflict_until;  // largest trail prefix without conflict
-  vector<int> trail;         // currently assigned literals
-  vector<int> clause;        // simplified in parsing & learning
-  vector<int> assumptions;   // assumed literals
-  vector<int> constraint;    // literals of the constraint
-  vector<int> original;      // original added literals
-  vector<int> levels;        // decision levels in learned clause
-  vector<int> analyzed;      // analyzed literals in 'analyze'
-  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
-  vector<int> sign_marked;   // literals skipped in 'decompose'
-  vector<int> minimized;     // removable or poison in 'minimize'
-  vector<int> shrinkable;    // removable or poison in 'shrink'
-  Reap reap;                 // radix heap for shrink
+  int earliest_changed_val; // earliest literal whose value was changed but
+                            // was not notified yet. Only relevant for ILB
+                            // (otherwise, we backtrack, so no
+                            // renotification is needed).
+  size_t notified;          // next trail position to notify external prop
+  int notified_level;       // current level of external prop
+  Clause *probe_reason;     // set during probing
+  size_t propagated;        // next trail position to propagate
+  size_t propagated2;       // next binary trail position to propagate
+  size_t propergated;       // propagated without blocking literals
+  size_t best_assigned;     // best maximum assigned ever
+  size_t target_assigned;   // maximum assigned without conflict
+  size_t no_conflict_until; // largest trail prefix without conflict
+  vector<int> trail;        // currently assigned literals
+  vector<int> clause;       // simplified in parsing & learning
+  vector<int> assumptions;  // assumed literals
+  vector<int> constraints;  // literals of the constraints
+  vector<int> constraint_vars; // variables of the constraints
+  vector<int> constraint_idx;  // indeces of the constraints
+  vector<int> constraint_tmp;  // currently added constraint
+  vector<int> original;        // original added literals
+  vector<int> levels;          // decision levels in learned clause
+  vector<int> analyzed;        // analyzed literals in 'analyze'
+  vector<int> unit_analyzed;   // to avoid duplicate units in lrat_chain
+  vector<int> sign_marked;     // literals skipped in 'decompose'
+  vector<int> minimized;       // removable or poison in 'minimize'
+  vector<int> shrinkable;      // removable or poison in 'shrink'
+  Reap reap;                   // radix heap for shrink
 
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
   uint64_t randomized_deciding;
   vector<int>
       imports; // impported literals (ordered by order of appearance)
 
-  kitten *citten;
+  kitten *constraint_cat;
+  kitten *cat;
 
   size_t num_assigned; // check for satisfied
 
@@ -438,7 +442,7 @@ struct Internal {
     return res;
   }
 
-  int citten2lit (unsigned ulit) const {
+  int cat2lit (unsigned ulit) const {
     assert (ulit <= INT32_MAX);
     int res = (int) (ulit / 2) + 1;
     assert (res <= max_var);
@@ -447,7 +451,7 @@ struct Internal {
     return res;
   }
 
-  unsigned lit2citten (int lit) const {
+  unsigned lit2cat (int lit) const {
     int idx = vidx (lit) - 1;
     return (lit < 0) + 2u * (unsigned) idx;
   }
@@ -1265,9 +1269,9 @@ struct Internal {
   // mine definitions for kitten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
-  void init_citten ();
-  void reset_citten ();
-  void citten_clear_track_log_terminate ();
+  void init_cat ();
+  void reset_cat ();
+  void cat_clear_track_log_terminate ();
 
   // Bounded variable elimination in 'elim.cpp'.
   //

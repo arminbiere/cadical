@@ -34,12 +34,15 @@ struct Flags { // Variable flags.
   unsigned char skip : 2;  // skip this literal as blocking literal
   bool backbone1 : 1;
   bool backbone0 : 1;
+
   // Bits for handling assumptions.
+  // 0 if not part of failure
+  // 1 if positive lit is in failure
+  // 2 if negated lit is in failure
   //
   unsigned char assumed : 2;
-  unsigned char failed : 2; // 0 if not part of failure
-                            // 1 if positive lit is in failure
-  // 2 if negated lit is in failure
+  unsigned char constrained : 1;
+  unsigned char failed : 2;
 
   enum {
     UNUSED = 0,
@@ -60,7 +63,7 @@ struct Flags { // Variable flags.
         factored = backbone1 = backbone0 = false;
     subsume = elim = ternary = true;
     block = 3u;
-    skip = assumed = failed = marked_signed = factor = 0;
+    skip = assumed = constrained = failed = marked_signed = factor = 0;
     status = UNUSED;
   }
 

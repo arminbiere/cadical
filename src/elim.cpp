@@ -1037,17 +1037,17 @@ void Internal::increase_elimination_bound () {
   report ('^');
 }
 
-void Internal::init_citten () {
+void Internal::init_cat () {
   if (!opts.elimdef)
     return;
-  assert (!citten);
-  citten = KITTEN_NAMESPACE (kitten_init) ();
+  assert (!cat);
+  cat = KITTEN_NAMESPACE (kitten_init) ();
 }
 
-void Internal::reset_citten () {
-  if (citten) {
-    KITTEN_NAMESPACE (kitten_release) (citten);
-    citten = 0;
+void Internal::reset_cat () {
+  if (cat) {
+    KITTEN_NAMESPACE (kitten_release) (cat);
+    cat = 0;
   }
 }
 
@@ -1088,7 +1088,7 @@ void Internal::elim (bool update_limits) {
 
   reset_watches (); // saves lots of memory
 
-  init_citten ();
+  init_cat ();
 
   // Alternate one round of bounded variable elimination ('elim_round')
   // and subsumption ('subsume_round'), blocked ('block') and covered
@@ -1170,9 +1170,9 @@ void Internal::elim (bool update_limits) {
              stats.eliminate_complete + 1, lim.elimbound);
     }
 
-    reset_citten ();
+    reset_cat ();
   } catch (std::bad_alloc &exception) {
-    reset_citten ();
+    reset_cat ();
     throw exception;
   }
 

@@ -26,8 +26,8 @@ Internal::Internal ()
       earliest_changed_val (0), notified (0), notified_level (0),
       probe_reason (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
-      randomized_deciding (false), citten (nullptr), num_assigned (0),
-      proof (0), opts (this),
+      randomized_deciding (false), constraint_cat (nullptr), cat (nullptr),
+      num_assigned (0), proof (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -316,7 +316,7 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate_wrapper ())
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
-      iterate ();                               // report learned unit
+      iterate ();                          // report learned unit
     else if (terminated_asynchronously ()) // externally terminated
       break;
     else if (!external_propagate () || unsat) { // external propagation

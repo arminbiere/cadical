@@ -73,7 +73,7 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
     pc.literals.push_back (unit);
     const unsigned *end = lits + size;
     for (const unsigned *p = lits; p != end; p++)
-      pc.literals.push_back (internal->citten2lit (*p)); // conversion
+      pc.literals.push_back (internal->cat2lit (*p)); // conversion
     proof_clauses.push_back (pc);
     assert (proof);
     proof->add_derived_clause (pc.id, true, pc.literals, pc.chain);
@@ -129,7 +129,7 @@ static void traverse_one_sided_core_lemma_with_lrat (
       pc.literals.push_back (unit);
       const unsigned *end = lits + size;
       for (const unsigned *p = lits; p != end; p++)
-        pc.literals.push_back (internal->citten2lit (*p)); // conversion
+        pc.literals.push_back (internal->cat2lit (*p)); // conversion
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
         int64_t id = 0;
         for (const auto &cpc : proof_clauses) {
@@ -172,10 +172,10 @@ static void traverse_one_sided_core_lemma_with_lrat (
 
 // Code ported from kissat. Kitten (and kissat) use unsigned representation
 // for literals whereas CaDiCaL uses signed representation. Conversion is
-// necessary for communication using lit2citten and citten2lit.
+// necessary for communication using lit2cat and cat2lit.
 // This code is called in elim and kitten is initialized beforehand.
 // To avoid confusion all cadical interal definitions with kitten are called
-// citten.
+// cat.
 //
 void Internal::find_definition (Eliminator &eliminator, int lit) {
   if (!opts.elimdef)
@@ -188,7 +188,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     return;
   assert (!val (lit));
   assert (!level);
-  assert (citten);
+  assert (cat);
   const int not_lit = -lit;
   definition_extractor extractor;
   extractor.lit = lit;
@@ -196,39 +196,39 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   extractor.clauses[1] = occs (not_lit);
   extractor.eliminator = &eliminator;
   extractor.internal = internal;
-  citten_clear_track_log_terminate ();
+  cat_clear_track_log_terminate ();
   unsigned exported = 0;
   for (unsigned sign = 0; sign < 2; sign++) {
-    const unsigned except = sign ? lit2citten (not_lit) : lit2citten (lit);
+    const unsigned except = sign ? lit2cat (not_lit) : lit2cat (lit);
     for (auto c : extractor.clauses[sign]) {
       // to avoid copying the literals of c in their unsigned
       // representation we instead implement the translation in kitten
       if (!c->garbage) {
         LOG (c, "adding to kitten");
-        KITTEN_NAMESPACE (citten_clause_with_id_and_exception) (
-            citten, exported, c->size, c->literals, except);
+        KITTEN_NAMESPACE (cat_clause_with_id_and_exception) (
+            cat, exported, c->size, c->literals, except);
       }
       exported++;
     }
   }
   stats.eliminate_def_check++;
   const size_t limit = opts.elimdefticks;
-  KITTEN_NAMESPACE (kitten_set_ticks_limit) (citten, limit);
-  int status = KITTEN_NAMESPACE (kitten_solve) (citten);
+  KITTEN_NAMESPACE (kitten_set_ticks_limit) (cat, limit);
+  int status = KITTEN_NAMESPACE (kitten_solve) (cat);
   if (!exported)
     goto ABORT;
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
     uint64_t learned;
     unsigned reduced =
-        KITTEN_NAMESPACE (kitten_compute_clausal_core) (citten, &learned);
+        KITTEN_NAMESPACE (kitten_compute_clausal_core) (cat, &learned);
     LOG ("1st sub-solver core of size %u original clauses out of %u",
          reduced, exported);
     for (int i = 2; i <= opts.elimdefcores; i++) {
-      KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (citten);
-      KITTEN_NAMESPACE (kitten_shuffle_clauses) (citten);
-      KITTEN_NAMESPACE (kitten_set_ticks_limit) (citten, 10 * limit);
-      int tmp = KITTEN_NAMESPACE (kitten_solve) (citten);
+      KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (cat);
+      KITTEN_NAMESPACE (kitten_shuffle_clauses) (cat);
+      KITTEN_NAMESPACE (kitten_set_ticks_limit) (cat, 10 * limit);
+      int tmp = KITTEN_NAMESPACE (kitten_solve) (cat);
       assert (!tmp || tmp == 20);
       if (!tmp) {
         LOG ("aborting core extraction");
@@ -238,7 +238,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       unsigned previous = reduced;
 #endif
       reduced =
-          KITTEN_NAMESPACE (kitten_compute_clausal_core) (citten, &learned);
+          KITTEN_NAMESPACE (kitten_compute_clausal_core) (cat, &learned);
       LOG ("%d sub-solver core of size %u original clauses out of %u", i,
            reduced, exported);
       assert (reduced <= previous);
@@ -249,7 +249,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     stats.eliminate_def_success++;
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
-    KITTEN_NAMESPACE (kitten_traverse_core_ids) (citten, &extractor,
+    KITTEN_NAMESPACE (kitten_traverse_core_ids) (cat, &extractor,
                                                  traverse_definition_core);
     assert (eliminator.definition_unit);
     int unit = 0;
@@ -267,11 +267,11 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
         if (lrat) {
           extractor.unit = unit;
           KITTEN_NAMESPACE (kitten_trace_core) (
-              citten, &extractor, traverse_one_sided_core_lemma_with_lrat);
+              cat, &extractor, traverse_one_sided_core_lemma_with_lrat);
         } else {
           extractor.unit = unit;
           KITTEN_NAMESPACE (kitten_traverse_core_clauses) (
-              citten, &extractor, traverse_one_sided_core_lemma);
+              cat, &extractor, traverse_one_sided_core_lemma);
         }
       } else
         assign_unit (unit);
@@ -282,7 +282,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     LOG ("sub-solver failed to show that definition exists");
   }
   stats.eliminate_def_ticks +=
-      KITTEN_NAMESPACE (kitten_current_ticks) (citten);
+      KITTEN_NAMESPACE (kitten_current_ticks) (cat);
   return;
 }
 

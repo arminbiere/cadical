@@ -24,9 +24,9 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   assert (lrat_chain.empty ());
   Var &v = var (idx);
   int lit_level;
-  assert (
-      !(reason == external_reason &&
-        ((size_t) level <= assumptions.size () + (!!constraint.size ()))));
+  assert (reason != external_reason ||
+          (size_t) level <=
+              assumptions.size () + !!constraint_idx.empty ());
   assert (reason);
   assert (level || reason == decision_reason);
   // we  purely assign in order here
@@ -229,25 +229,26 @@ int Internal::warmup_decide_assumptions () {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
     }
-  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
+  } else if ((size_t) level == assumptions.size () &&
+             constraint_idx.size () == 1) {
 
     int satisfied_lit = 0;  // The literal satisfying the constrain.
     int unassigned_lit = 0; // Highest score unassigned literal.
     int previous_lit = 0;   // Move satisfied literals to the front.
 
-    const size_t size_constraint = constraint.size ();
+    const size_t size_constraint = constraints.size () - 1; // 0-terminated
 
 #ifndef NDEBUG
     unsigned sum = 0;
-    for (auto lit : constraint)
+    for (auto lit : constraints)
       sum += lit;
 #endif
-    for (size_t i = 0; i != size_constraint; i++) {
+    for (size_t i = 0; i < size_constraint; i++) {
 
-      // Get literal and move 'constraint[i] = constraint[i-1]'.
+      // Get literal and move 'constraints[i] = constraints[i-1]'.
 
-      int lit = constraint[i];
-      constraint[i] = previous_lit;
+      int lit = constraints[i];
+      constraints[i] = previous_lit;
       previous_lit = lit;
 
       const signed char tmp = val (lit);
@@ -271,7 +272,7 @@ int Internal::warmup_decide_assumptions () {
 
     if (satisfied_lit) {
 
-      constraint[0] = satisfied_lit; // Move satisfied to the front.
+      constraints[0] = satisfied_lit; // Move satisfied to the front.
 
       LOG ("literal %d satisfies constraint and "
            "is implied by assumptions",
@@ -289,10 +290,10 @@ int Internal::warmup_decide_assumptions () {
 
       if (size_constraint) {
 
-        for (size_t i = 0; i + 1 != size_constraint; i++)
-          constraint[i] = constraint[i + 1];
+        for (size_t i = 0; i + 1 < size_constraint; i++)
+          constraints[i] = constraints[i + 1];
 
-        constraint[size_constraint - 1] = previous_lit;
+        constraints[size_constraint - 1] = previous_lit;
       }
 
       if (unassigned_lit) {
@@ -309,12 +310,13 @@ int Internal::warmup_decide_assumptions () {
     }
 
 #ifndef NDEBUG
-    for (auto lit : constraint)
+    for (auto lit : constraints)
       sum -= lit;
     assert (!sum); // Checksum of literal should not change!
 #endif
 
   } else {
+    // TODO: do constraints with kitten or just don't do walk
     assert (false);
   }
   if (res)
@@ -327,7 +329,7 @@ void Internal::warmup_decide () {
   assert (!satisfied ());
   START (decide);
   assert ((size_t) level >= assumptions.size ());
-  assert (!constraint.size () || (size_t) level > assumptions.size ());
+  assert (constraints.empty () || (size_t) level > assumptions.size ());
   const bool target = (stable || opts.target == 2);
   stats.walk_warmup_decision++;
   int idx = next_decision_variable ();
@@ -339,14 +341,15 @@ void Internal::warmup_decide () {
   STOP (decide);
 }
 
-int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_literals) {
+int Internal::decide_and_propagate_all_assumptions (
+    std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
   int res = 0;
   int last_assumption_level = assumptions.size ();
   if (!last_assumption_level)
     return res;
-  if (constraint.size ())
+  if (constraint_idx.size () == 1)
     last_assumption_level++;
   while (!res) {
     if (unsat)
@@ -358,11 +361,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
       if (!unsat)
         analyze ();
       else
-       break;
+        break;
     } else if (satisfied ()) {
       assert (!res);
       if (external) {
-        LOG ("found satisfied assignment ignoring the external propagator, so probably not valid");
+        LOG ("found satisfied assignment ignoring the external propagator, "
+             "so probably not valid");
       } else {
         res = 10;
       }
@@ -378,12 +382,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
   if (unsat || unsat_constraint)
     res = 20;
 
-
-  set_literals.reserve(trail.size ());
-  for (auto lit: trail)
-    set_literals.push_back(lit);
+  set_literals.reserve (trail.size ());
+  for (auto lit : trail)
+    set_literals.push_back (lit);
   if (!res) {
-    // we need to repropagate now due to out-of-order units and renotify them
+    // we need to repropagate now due to out-of-order units and renotify
+    // them
     backtrack ();
     if (propagated < trail.size () && !propagate ()) {
       LOG ("empty clause after root level propagation");
@@ -408,9 +412,9 @@ int Internal::warmup () {
   int res = 0;
 
 #ifndef QUIET
-  const int64_t warmup_propagated = (int64_t)stats.walk_warmup_propagate;
-  const int64_t decision = (int64_t)stats.walk_warmup_decision;
-  const int64_t dummydecision = (int64_t)stats.walk_warmup_dummy;
+  const int64_t warmup_propagated = (int64_t) stats.walk_warmup_propagate;
+  const int64_t decision = (int64_t) stats.walk_warmup_decision;
+  const int64_t dummydecision = (int64_t) stats.walk_warmup_dummy;
 #endif
   LOG ("starting warmup");
 
@@ -421,7 +425,7 @@ int Internal::warmup () {
   // ignore conflicts at all, meaning that we cannot use our special
   // propagation function, even if it could counts ticks.
   const size_t assms_contraint_level =
-      assumptions.size () + !constraint.empty ();
+      assumptions.size () + !constraint_idx.empty ();
   while (!res && !conflict && (size_t) level < assms_contraint_level &&
          num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);
@@ -435,8 +439,11 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (level == 0); // if no assumptions or only already satisfied ones, don't notify
-  LOG ("no_backtrack_notification = %d, notified_level= %d", no_backtrack_notification, notified_level);
+  const bool no_backtrack_notification =
+      (level ==
+       0); // if no assumptions or only already satisfied ones, don't notify
+  LOG ("no_backtrack_notification = %d, notified_level= %d",
+       no_backtrack_notification, notified_level);
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
   assert (!private_steps);
@@ -457,9 +464,9 @@ int Internal::warmup () {
   VERBOSE (3,
            "warming-up needed %" PRIu64 " propagations including %" PRIu64
            " decisions (with %" PRIu64 " dummy ones)",
-           (int64_t)stats.walk_warmup_propagate - warmup_propagated,
-           (int64_t)stats.walk_warmup_decision - decision,
-           (int64_t)stats.walk_warmup_dummy - dummydecision);
+           (int64_t) stats.walk_warmup_propagate - warmup_propagated,
+           (int64_t) stats.walk_warmup_decision - decision,
+           (int64_t) stats.walk_warmup_dummy - dummydecision);
 #endif
 
   // now we backtrack, notifying only if there was something to
