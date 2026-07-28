@@ -569,8 +569,44 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
            stderr);
     fatal_message_end ();
   }
-  add_derived_clause (id, true, 0, c, chain);
-  delete_clause (id, true, c);
+  is_tmp = true;
+  last_id = id;
+  import_clause (c);
+  current_id = id;
+  if (size_clauses) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (d) {
+      fatal_message_start ();
+      fputs ("different clause with id ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" already present\n", stderr);
+      fatal_message_end ();
+    }
+  }
+  assert (id);
+  bool failed = true;
+  if (check (chain, true) && check_resolution (chain, true)) {
+    failed = false;
+  }
+  if (failed) {
+    LOG (chain, "LRAT CHECKER check failed with chain");
+#ifdef LOGGING
+    for (const auto &pid : chain) {
+      const int64_t aid = abs (pid);
+      LratCheckerClause **p = find (aid), *d = *p;
+      LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
+    }
+#endif
+    fatal_message_start ();
+    fputs ("failed to check assumption clause:\n", stderr);
+    for (const auto &lit : imported_clause)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  insert ();
+  imported_clause.clear ();
+  is_tmp = false;
   assumption_clauses.push_back (id);
 }
 
@@ -583,6 +619,17 @@ void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
   is_tmp = true;
   last_id = id;
   import_clause (c);
+  current_id = id;
+  if (size_clauses) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (d) {
+      fatal_message_start ();
+      fputs ("different clause with id ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" already present\n", stderr);
+      fatal_message_end ();
+    }
+  }
   insert ();
   imported_clause.clear ();
   is_tmp = false;
@@ -617,7 +664,8 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
       fatal_message_end ();
     }
     return;
-  } else if (conclusion == ASSUMPTIONS) {
+  }
+  if (conclusion == ASSUMPTIONS) {
     if (ids.size () != 1 || assumption_clauses.size () != 1) {
       fatal_message_start ();
       fputs ("expected exactly one assumption clause\n", stderr);
@@ -628,13 +676,44 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
       fputs ("conclusion is not an assumption clause\n", stderr);
       fatal_message_end ();
     }
+    LratCheckerClause **p = find (ids.back ()), *d = *p;
+    for (auto &lit : d->literals) {
+      if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
+          assumptions.end ())
+        continue;
+      fatal_message_start ();
+      fputs ("clause contains non assumption literal ", stderr);
+      fprintf (stderr, "%d", lit);
+      fputs ("\n", stderr);
+      fatal_message_end ();
+    }
     return;
-  } else {
-    assert (conclusion == CONSTRAINT);
-    // TODO: conclude
-
+  }
+  assert (conclusion == CONSTRAINT);
+  // TODO: conclude
+  for (auto &id : ids) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (!d) {
+      fatal_message_start ();
+      fputs ("deleted clause not in proof:\n", stderr);
+      for (const auto &lit : imported_clause)
+        fprintf (stderr, "%d ", lit);
+      fputc ('0', stderr);
+      fatal_message_end ();
+    }
+  }
+  if (ids.empty ()) {
     fatal_message_start ();
-    fputs ("failed constraint check ", stderr);
+    fputs ("conclusion does not exist ", stderr);
+    fatal_message_end ();
+  }
+  LratCheckerClause **p = find (ids.back ()), *d = *p;
+  assert (d);
+  if (d->size) {
+    fatal_message_start ();
+    fputs ("failed constraint check clause ", stderr);
+    fprintf (stderr, "%" PRId64, ids.back ());
+    fputs (" non-empty\n", stderr);
     fatal_message_end ();
   }
 }
