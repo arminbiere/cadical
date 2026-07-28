@@ -691,29 +691,31 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
   }
   assert (conclusion == CONSTRAINT);
   // TODO: conclude
+  if (ids.empty ()) {
+    fatal_message_start ();
+    fputs ("empty conclusion for constraint", stderr);
+    fatal_message_end ();
+  }
   for (auto &id : ids) {
     LratCheckerClause **p = find (id), *d = *p;
     if (!d) {
       fatal_message_start ();
-      fputs ("deleted clause not in proof:\n", stderr);
-      for (const auto &lit : imported_clause)
-        fprintf (stderr, "%d ", lit);
-      fputc ('0', stderr);
+      fputs ("clause ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" missing\n", stderr);
       fatal_message_end ();
     }
   }
-  if (ids.empty ()) {
-    fatal_message_start ();
-    fputs ("conclusion does not exist ", stderr);
-    fatal_message_end ();
-  }
   LratCheckerClause **p = find (ids.back ()), *d = *p;
   assert (d);
-  if (d->size) {
+  for (auto &lit : d->literals) {
+    if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
+        assumptions.end ())
+      continue;
     fatal_message_start ();
-    fputs ("failed constraint check clause ", stderr);
-    fprintf (stderr, "%" PRId64, ids.back ());
-    fputs (" non-empty\n", stderr);
+    fputs ("clause contains non assumption literal ", stderr);
+    fprintf (stderr, "%d", lit);
+    fputs ("\n", stderr);
     fatal_message_end ();
   }
 }
