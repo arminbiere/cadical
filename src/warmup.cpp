@@ -24,9 +24,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   assert (lrat_chain.empty ());
   Var &v = var (idx);
   int lit_level;
-  assert (reason != external_reason ||
-          (size_t) level <=
-              assumptions.size () + !!constraint_idx.empty ());
+  assert (reason != external_reason || is_assumption_level (level));
   assert (reason);
   assert (level || reason == decision_reason);
   // we  purely assign in order here
@@ -265,8 +263,6 @@ int Internal::decide_and_propagate_all_assumptions (
   int last_assumption_level = assumptions.size ();
   if (!last_assumption_level)
     return res;
-  if (constraint_idx.size () == 1)
-    last_assumption_level++;
   while (!res) {
     if (unsat)
       res = 20;
@@ -295,6 +291,7 @@ int Internal::decide_and_propagate_all_assumptions (
     }
   }
 
+  assert (!unsat_constraint);
   if (unsat || unsat_constraint)
     res = 20;
 

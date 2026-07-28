@@ -152,7 +152,7 @@ public:
                       const std::vector<int> &c) override;
 
   void add_assumption (int lit) override;
-  void add_constraint (const std::vector<int> &c, size_t) override;
+  void add_constraint (int64_t, const std::vector<int> &c) override;
   void reset_assumptions () override;
   void conclude_unsat (CaDiCaL::ConclusionType conclusion,
                        const std::vector<int64_t> &proof_chain) override;

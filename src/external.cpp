@@ -124,7 +124,7 @@ void External::reset_concluded () {
 
 void External::reset_constraint () {
   constraints.clear ();
-  constraint_idx.clear ();
+  constraint_ids.clear ();
   internal->reset_constraint ();
 }
 

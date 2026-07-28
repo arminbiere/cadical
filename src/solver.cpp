@@ -202,6 +202,13 @@ static void log_api_call_returns (Internal *internal, const char *name,
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, int64_t res) {
+  char fmt[32];
+  snprintf (fmt, sizeof fmt, "returns '%" PRId64 "'", res);
+  log_api_call (internal, name, lit, fmt);
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
                                   const char *arg, bool res) {
   log_api_call (internal, name, arg,
                 res ? "returns 'true'" : "returns 'false'");

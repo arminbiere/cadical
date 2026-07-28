@@ -543,8 +543,8 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
     if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
         assumptions.end ())
       continue;
-    if (std::find (constraint.begin (), constraint.end (), -lit) !=
-        constraint.end ())
+    if (std::find (constraint_lits.begin (), constraint_lits.end (),
+                   -lit) != constraint_lits.end ())
       continue;
     fatal_message_start ();
     fputs ("clause contains non assumptions or constraint literals\n",
@@ -560,13 +560,14 @@ void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
 
 void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
   for (auto &lit : c) {
-    constraint.push_back (lit);
+    constraint_lits.insert (lit);
   }
   is_tmp = true;
   last_id = id;
-  import_clause (constraint);
+  import_clause (c);
+  insert ();
+  imported_clause.clear ();
   is_tmp = false;
-  constraint.clear ();
 }
 
 void LratChecker::reset_assumptions () {
@@ -611,28 +612,11 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
     return;
   } else {
     assert (conclusion == CONSTRAINT);
-    if (constraint.size () != ids.size ()) {
-      fatal_message_start ();
-      fputs ("not complete conclusion given for constraint\n", stderr);
-      fputs ("The constraint contains the literals: ", stderr);
-      for (auto c : constraint) {
-        fprintf (stderr, "%d ", c);
-      }
+    // TODO: conclude
 
-      fputs ("\nThe ids are: ", stderr);
-      for (auto c : ids) {
-        fprintf (stderr, "%" PRId64 " ", c);
-      }
-      fatal_message_end ();
-    }
-    for (auto &id : ids) {
-      if (std::find (assumption_clauses.begin (), assumption_clauses.end (),
-                     id) != assumption_clauses.end ())
-        continue;
-      fatal_message_start ();
-      fputs ("assumption clause for constraint missing\n", stderr);
-      fatal_message_end ();
-    }
+    fatal_message_start ();
+    fputs ("Failed constraint check ", stderr);
+    fatal_message_end ();
   }
 }
 

@@ -522,10 +522,9 @@ void CraigTracer::delete_clause (int64_t id, bool redundant,
 
 void CraigTracer::add_assumption (int lit) { assumptions.insert (lit); }
 
-void CraigTracer::add_constraint (const std::vector<int> &c, size_t idx) {
-  if (constraint.size () < idx)
-    constraint.resize (idx);
-  constraint[idx] = c;
+void CraigTracer::add_constraint (int64_t, const std::vector<int> &c) {
+  constraint.emplace_back ();
+  constraint.back () = c;
 }
 
 void CraigTracer::reset_assumptions () {
