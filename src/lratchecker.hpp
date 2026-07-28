@@ -59,6 +59,8 @@ class LratChecker : public StatTracer {
 
   uint64_t num_clauses; // number of clauses in hash table
   uint64_t num_finalized;
+  uint64_t num_tmp;            // number of temporary clauses
+  uint64_t num_permanent;      // number of permanent clauses
   uint64_t num_garbage;        // number of garbage clauses
   uint64_t size_clauses;       // size of clause hash table
   LratCheckerClause **clauses; // hash table of clauses
@@ -98,8 +100,9 @@ class LratChecker : public StatTracer {
   void move_to_garbage (LratCheckerClause **);
   void delete_clause (LratCheckerClause *);
 
-  bool check (std::vector<int64_t>);            // check RUP
-  bool check_resolution (std::vector<int64_t>); // check resolution
+  bool check (std::vector<int64_t>, bool use_tmp = false); // check RUP
+  bool check_resolution (std::vector<int64_t>,
+                         bool use_tmp = false); // check resolution
   bool check_blocked (std::vector<int64_t>);    // check ER
 
   struct {

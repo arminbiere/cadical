@@ -59,6 +59,10 @@ LratCheckerClause *LratChecker::new_clause () {
   for (const auto &lit : imported_clause)
     checked_lit (-lit) = false;
   num_clauses++;
+  if (is_tmp)
+    num_tmp++;
+  else
+    num_permanent++;
 
   return res;
 }
@@ -68,6 +72,10 @@ void LratChecker::delete_clause (LratCheckerClause *c) {
   if (!c->garbage) {
     assert (num_clauses);
     num_clauses--;
+    if (c->temporary)
+      num_tmp--;
+    else
+      num_permanent--;
   } else {
     assert (num_garbage);
     num_garbage--;
@@ -117,8 +125,9 @@ void LratChecker::collect_garbage_clauses () {
 
 LratChecker::LratChecker (Internal *i)
     : internal (i), size_vars (0), concluded (false), num_clauses (0),
-      num_finalized (0), num_garbage (0), size_clauses (0), clauses (0),
-      garbage (0), last_hash (0), last_id (0), current_id (0) {
+      num_finalized (0), num_tmp (0), num_permanent (0), num_garbage (0),
+      size_clauses (0), clauses (0), garbage (0), last_hash (0),
+      last_id (0), current_id (0) {
 
   // Initialize random number table for hash function.
   //
@@ -232,7 +241,8 @@ void LratChecker::insert () {
 /*------------------------------------------------------------------------*/
 
 // "strict" resolution check instead of rup check
-bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
+bool LratChecker::check_resolution (vector<int64_t> proof_chain,
+                                    bool use_tmp) {
   if (proof_chain.empty ()) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
@@ -246,7 +256,9 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
     return false;
   auto p = proof_chain.rbegin ();
   LratCheckerClause *c = *find (*p);
+  // these are already checked in previous 'check'
   assert (c);
+  assert (use_tmp || !c->temporary);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
     int lit = *i;
     checked_lit (lit) = true;
@@ -304,7 +316,7 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
 
 /*------------------------------------------------------------------------*/
 
-bool LratChecker::check (vector<int64_t> proof_chain) {
+bool LratChecker::check (vector<int64_t> proof_chain, bool use_tmp) {
   LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
 #ifndef NDEBUG
@@ -337,6 +349,12 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
     LratCheckerClause *c = *find (id);
     if (!c) {
       LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %" PRIu64,
+           id);
+      break;
+    }
+    if (!use_tmp && c->temporary) {
+      LOG ("LRAT CHECKER LRAT failed. Not allowed to use temporary clause "
+           "with id %" PRIu64,
            id);
       break;
     }
@@ -579,6 +597,7 @@ void LratChecker::reset_assumptions () {
     assert ((*res)->temporary);
     move_to_garbage (res);
   }
+  assert (!num_tmp);
   assumption_clauses.clear ();
 }
 
@@ -615,7 +634,7 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
     // TODO: conclude
 
     fatal_message_start ();
-    fputs ("Failed constraint check ", stderr);
+    fputs ("failed constraint check ", stderr);
     fatal_message_end ();
   }
 }
@@ -627,6 +646,10 @@ void LratChecker::move_to_garbage (LratCheckerClause **res) {
   num_garbage++;
   assert (num_clauses);
   num_clauses--;
+  if (tmp->temporary)
+    num_tmp--;
+  else
+    num_permanent--;
   *res = tmp->next;
   tmp->next = garbage;
   garbage = tmp;
@@ -799,14 +822,14 @@ void LratChecker::finalize_clause (int64_t id, const vector<int> &c) {
 // check if all clauses have been deleted
 void LratChecker::report_status (int, int64_t) {
   START (checking);
-  if (num_finalized == num_clauses) {
+  if (num_finalized == num_permanent) {
     num_finalized = 0;
     LOG ("LRAT CHECKER successful finalize check, all clauses have been "
          "deleted");
   } else {
     fatal_message_start ();
     fputs ("finalize check failed ", stderr);
-    fprintf (stderr, "%" PRIu64, num_clauses);
+    fprintf (stderr, "%" PRIu64, num_permanent);
     fputs (" are not finalized", stderr);
     fatal_message_end ();
   }
