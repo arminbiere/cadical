@@ -742,20 +742,20 @@ void Solver::clause (const std::vector<int> &lits) {
 
 bool Solver::inconsistent () { return internal->unsat; }
 
-size_t Solver::constrain (int lit) {
+int64_t Solver::constrain (int lit) {
   TRACE (constrain, "constrain", lit);
   REQUIRE_VALID_STATE ();
   if (lit)
     REQUIRE_VALID_LIT (lit);
   transition_to_steady_state ();
-  const size_t idx = external->constrain (lit);
+  const int64_t id = external->constrain (lit);
   adding_constraint = lit;
   if (adding_constraint)
     STATE (ADDING);
   else if (!adding_clause)
     STATE (STEADY);
-  LOG_API_CALL_RETURNS ("constrain", lit, idx);
-  return idx;
+  LOG_API_CALL_RETURNS ("constrain", lit, id);
+  return id;
 }
 
 void Solver::assume (int lit) {
@@ -970,13 +970,13 @@ bool Solver::failed (int lit) {
   return res;
 }
 
-bool Solver::constraint_failed (size_t idx) {
-  TRACE (constraint_failed, "constraint_failed", idx);
+bool Solver::constraint_failed (int64_t id) {
+  TRACE (constraint_failed, "constraint_failed", id);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == UNSATISFIED,
            "can only determine if constraint failed in unsatisfied state");
-  bool res = external->failed_constraint (idx);
-  LOG_API_CALL_RETURNS ("constraint_failed", idx, res);
+  bool res = external->failed_constraint (id);
+  LOG_API_CALL_RETURNS ("constraint_failed", id, res);
   assert (state () == UNSATISFIED);
   return res;
 }

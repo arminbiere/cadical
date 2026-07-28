@@ -240,37 +240,10 @@ void Internal::failing () {
   } else {
     assert (constraint_cat);
     // unsat_constraint
-    // The assumptions necessary to fail each literal in the constraint are
-    // collected.
-    for (auto lit : constraints) {
-      lit *= -1;
-      assert (lit != INT_MIN);
-      flags (lit).seen = true;
-      analyzed.push_back (lit);
-    }
+    // TODO: analyze failing constraints with kitten
   }
 
   {
-    // used for unsat_constraint lrat
-    vector<vector<int64_t>> constraint_chains;
-    vector<vector<int>> constraint_clauses;
-    vector<int> sum_constraints;
-    vector<int> econstraints;
-    for (auto &elit : external->constraints) {
-      int lit = external->e2i[abs (elit)];
-      if (elit < 0)
-        lit = -lit;
-      if (!lit)
-        continue;
-      Flags &f = flags (lit);
-      if (f.seen)
-        continue;
-      if (std::find (econstraints.begin (), econstraints.end (), elit) !=
-          econstraints.end ())
-        continue;
-      econstraints.push_back (elit);
-    }
-
     // no LRAT do bfs as it was before
     if (!lrat) {
       size_t next = 0;
@@ -332,38 +305,7 @@ void Internal::failing () {
           f.failed |= bit;
       }
       clear_analyzed_literals ();
-    } else { // LRAT for unsat_constraint
-      assert (clause.empty ());
-      clear_analyzed_literals ();
-      for (auto lit : constraints) {
-        // make sure nothing gets marked failed twice
-        // also might shortcut the case where
-        // lrat_chain is empty because clause is tautological
-        assert (lit != INT_MIN);
-        assume_analyze_literal (lit);
-        vector<int64_t> empty;
-        vector<int> empty2;
-        constraint_chains.push_back (empty);
-        constraint_clauses.push_back (empty2);
-        for (auto ign : clause) {
-          constraint_clauses.back ().push_back (ign);
-          Flags &f = flags (ign);
-          const unsigned bit = bign (-ign);
-          if (!(f.failed & bit)) {
-            sum_constraints.push_back (ign);
-            assert (!(f.failed & bit));
-            f.failed |= bit;
-          }
-        }
-        clause.clear ();
-        clear_analyzed_literals ();
-        for (auto p : lrat_chain) {
-          constraint_chains.back ().push_back (p);
-        }
-        lrat_chain.clear ();
-      }
-      for (auto &lit : sum_constraints)
-        clause.push_back (lit);
+    } else { // TODO: LRAT for unsat_constraint
     }
     clear_analyzed_literals ();
 
@@ -391,54 +333,7 @@ void Internal::failing () {
         conclusion.push_back (clause_id);
       }
     } else {
-      for (auto p = constraints.rbegin (); p != constraints.rend (); p++) {
-        const auto &lit = *p;
-        if (lrat) {
-          clause.clear ();
-          for (auto &ign : constraint_clauses.back ())
-            clause.push_back (ign);
-          constraint_clauses.pop_back ();
-        }
-        clause.push_back (-lit);
-        external->check_learned_clause ();
-        if (proof) {
-          if (lrat) {
-            for (auto p : constraint_chains.back ()) {
-              lrat_chain.push_back (p);
-            }
-            constraint_chains.pop_back ();
-            LOG (lrat_chain, "assume proof chain with constraints");
-          }
-          vector<int> eclause;
-          for (auto &lit : clause)
-            eclause.push_back (externalize (lit));
-          proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
-          conclusion.push_back (clause_id);
-          lrat_chain.clear ();
-        }
-        clause.pop_back ();
-      }
-      if (proof) {
-        for (auto &elit : econstraints) {
-          if (lrat) {
-            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
-            assert ((size_t) eidx < external->ext_units.size ());
-            const int64_t id = external->ext_units[eidx];
-            if (id) {
-              lrat_chain.push_back (id);
-            } else {
-              int lit = external->e2i[abs (elit)];
-              if (elit < 0)
-                lit = -lit;
-              int64_t id = unit_id (-lit);
-              lrat_chain.push_back (id);
-            }
-          }
-          proof->add_assumption_clause (++clause_id, -elit, lrat_chain);
-          conclusion.push_back (clause_id);
-          lrat_chain.clear ();
-        }
-      }
+      // TODO: unsat_constraint
     }
     lrat_chain.clear ();
     clause.clear ();
@@ -450,11 +345,6 @@ DONE:
 }
 
 bool Internal::failed (int lit) {
-  if (!marked_failed) {
-    if (!unsat)
-      failing ();
-    marked_failed = true;
-  }
   conclude_unsat ();
   Flags &f = flags (lit);
   const unsigned bit = bign (lit);
@@ -462,15 +352,21 @@ bool Internal::failed (int lit) {
 }
 
 void Internal::conclude_unsat () {
-  if (!proof || concluded)
+  if (concluded) {
+    assert (marked_failed);
     return;
+  }
   concluded = true;
-  if (!marked_failed) {
+  if (unsat)
+    assert (marked_failed && conclusion.size () == 1 &&
+            conclusion.back () == unsat);
+  else if (!marked_failed) {
     assert (conclusion.empty ());
-    if (!unsat)
-      failing ();
+    failing ();
     marked_failed = true;
   }
+  if (!proof)
+    return;
   ConclusionType con;
   if (unsat)
     con = CONFLICT;

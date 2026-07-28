@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 /*------------------------------------------------------------------------*/
@@ -75,8 +76,9 @@ struct External {
 
   vector<int> assumptions;    // External assumptions.
   vector<int> constraint_tmp; // current constraint.
-  vector<int> constraint_idx; // index of each constraint.
-  vector<int> constraints;    // zero-terminated external constraints.
+  std::unordered_map<int64_t, size_t>
+      constraint_ids;      // id-to-index mapping of each constraint.
+  vector<int> constraints; // zero-terminated external constraints.
 
   vector<int64_t>
       ext_units; // External units. Needed to compute LRAT for eclause
@@ -390,11 +392,11 @@ struct External {
 
   // Add literal to external constraint.
   //
-  size_t constrain (int elit);
+  int64_t constrain (int elit);
 
   // Returns true if 'solve' returned 20 because of the constraint.
   //
-  bool failed_constraint (const size_t idx);
+  bool failed_constraint (const int64_t id);
 
   // Deletes the current set of constraint clauses. Called on
   // 'transition_to_unknown_state' and 'reset_assumptions'.

@@ -5,6 +5,7 @@
 #include "tracer.hpp"
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace CaDiCaL {
 
@@ -22,8 +23,7 @@ struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
   int64_t id;              // id of clause
-  size_t constraint_idx;
-  bool garbage; // for garbage clauses
+  bool garbage;            // for garbage clauses
   unsigned size;
   bool used;
   bool tautological;
@@ -53,7 +53,7 @@ class LratChecker : public StatTracer {
   std::vector<signed char> marks; // mark bits of literals
   std::unordered_map<int64_t, std::vector<int>> clauses_to_reconstruct;
   std::vector<int> assumptions;
-  std::vector<int> constraint;
+  std::unordered_set<int64_t> constraints;
   bool concluded;
 
   uint64_t num_clauses; // number of clauses in hash table
@@ -154,7 +154,7 @@ public:
   void add_assumption (int) override;
 
   // mark lits as constraint
-  void add_constraint (const std::vector<int> &, size_t) override;
+  void add_constraint (int64_t, const std::vector<int> &) override;
 
   void reset_assumptions () override;
 

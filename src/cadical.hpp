@@ -496,7 +496,7 @@ public:
   // [FroleyksBiere-FMCAD'19] for more details.
   //
   // Add valid literal to the constraint clause or zero to terminate it.
-  // Adding zero returns the new constraint index, otherwise returns '0'
+  // Adding zero returns the new constraint ID, otherwise returns '0'
   //
   //   require (VALID)               // recall 'VALID = READY | ADDING'
   //   if (lit)
@@ -504,9 +504,9 @@ public:
   //   if (!lit)
   //     ensure (STEADY)             // and thus READY
   //
-  size_t constrain (int lit);
+  int64_t constrain (int lit);
 
-  // Determine whether the constraint corresponding to the specified index
+  // Determine whether the constraint corresponding to the specified ID
   // was used to proof the unsatisfiability.
   // Note that the formula might still be unsatisfiable without the
   // constraint.
@@ -514,7 +514,7 @@ public:
   //   require (UNSATISFIED)
   //   ensure (UNSATISFIED)
   //
-  bool constraint_failed (size_t idx);
+  bool constraint_failed (int64_t id);
 
   // Collects a subset of those literals that are implied by unit
   // propagation by assuming the currently defined (potentially empty)

@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "flags.hpp"
+#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -80,6 +81,8 @@ Internal::~Internal () {
     vals -= vsize;
     delete[] vals;
   }
+  if (constraint_cat)
+    KITTEN_NAMESPACE (kitten_release (constraint_cat));
 }
 
 /*------------------------------------------------------------------------*/
@@ -1265,7 +1268,7 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
   if (unsat)
     return it.clause (eclause);
 
-  LOG (constraint, "traversing constraint");
+  LOG (constraints, "traversing constraints");
   bool satisfied = false;
   for (auto ilit : constraints) {
     const int tmp = fixed (ilit);

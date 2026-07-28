@@ -255,7 +255,7 @@ struct Internal {
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
   bool ext_clause_forgettable;  // Is new clause from propagator forgettable
-  bool unsat_constraint;        // constraint used for unsatisfiability?
+  bool unsat_constraint;        // constraints used for unsatisfiability?
   bool marked_failed;           // are the failed assumptions marked?
   bool sweep_incomplete;        // sweep
   int earliest_changed_val; // earliest literal whose value was changed but
@@ -276,16 +276,17 @@ struct Internal {
   vector<int> assumptions;  // assumed literals
   vector<int> constraints;  // literals of the constraints
   vector<int> constraint_vars; // variables of the constraints
-  vector<int> constraint_idx;  // indeces of the constraints
-  vector<int> constraint_tmp;  // currently added constraint
-  vector<int> original;        // original added literals
-  vector<int> levels;          // decision levels in learned clause
-  vector<int> analyzed;        // analyzed literals in 'analyze'
-  vector<int> unit_analyzed;   // to avoid duplicate units in lrat_chain
-  vector<int> sign_marked;     // literals skipped in 'decompose'
-  vector<int> minimized;       // removable or poison in 'minimize'
-  vector<int> shrinkable;      // removable or poison in 'shrink'
-  Reap reap;                   // radix heap for shrink
+  unordered_map<int64_t, bool> constraint_fail; // failing constraints
+  unordered_map<int64_t, int> constraint_ids; // indeces of the constraints
+  vector<int> constraint_tmp;                 // currently added constraint
+  vector<int> original;                       // original added literals
+  vector<int> levels;        // decision levels in learned clause
+  vector<int> analyzed;      // analyzed literals in 'analyze'
+  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
+  vector<int> sign_marked;   // literals skipped in 'decompose'
+  vector<int> minimized;     // removable or poison in 'minimize'
+  vector<int> shrinkable;    // removable or poison in 'shrink'
+  Reap reap;                 // radix heap for shrink
 
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
   uint64_t randomized_deciding;
@@ -1521,7 +1522,7 @@ struct Internal {
   // Add temporary clause as constraint.
   //
   void constrain (int); // Add literal to constraint.
-  bool failed_constraint (size_t idx);
+  bool failed_constraint (int64_t id);
   void reset_constraint (); // Reset after 'solve' call.
 
   // Propagate the current set of assumptions and return the

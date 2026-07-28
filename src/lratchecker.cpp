@@ -39,7 +39,6 @@ LratCheckerClause *LratChecker::new_clause () {
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
-  res->constraint_idx = last_constraint;
   res->size = size;
   res->used = false;
   res->tautological = false;
@@ -559,15 +558,14 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
 
 void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
 
-void LratChecker::add_constraint (const vector<int> &c, size_t idx) {
+void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
   for (auto &lit : c) {
     constraint.push_back (lit);
   }
   is_tmp = true;
-  last_constraint = idx;
-  last_id = -idx;
+  last_id = id;
   import_clause (constraint);
-  last_constraint = 0;
+  is_tmp = false;
   constraint.clear ();
 }
 

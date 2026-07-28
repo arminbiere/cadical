@@ -25,7 +25,6 @@ class Proof {
   std::vector<int> clause;          // of external literals
   std::vector<int64_t> proof_chain; // LRAT style proof chain of clause
   int64_t clause_id;                // id of added clause
-  size_t constraint_idx;
   bool redundant;
   int witness;
   bool restore;
@@ -65,7 +64,7 @@ public:
                               const std::vector<int64_t> &);
   void add_assumption_clause (int64_t, int, const std::vector<int64_t> &);
   void add_assumption (int);
-  void add_constraint (const std::vector<int> &, size_t idx);
+  void add_constraint (int64_t id, const std::vector<int> &);
   void reset_assumptions ();
 
   // Add/delete original clauses to/from the proof using their original

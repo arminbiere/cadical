@@ -77,7 +77,7 @@ int Internal::next_random_decision () {
     return 0;
 
   if (!randomized_deciding) {
-    if (level > (int) assumptions.size () + constraint_vars.size ()) {
+    if (is_constraint_level (level)) {
       LOG ("random decision delayed because too deep");
       return 0;
     }
@@ -195,7 +195,7 @@ void Internal::new_trail_level (int lit) {
 bool Internal::satisfied () {
   check_var_stats ();
   LOG ("checking satisfied");
-  if ((size_t) level < assumptions.size () + constraint_vars.size ())
+  if (is_constraint_level (level))
     return false;
   if (num_assigned + stats.vars_unused < (size_t) max_var)
     return false;

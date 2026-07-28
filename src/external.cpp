@@ -321,29 +321,34 @@ bool External::failed (int elit) {
   return internal->failed (ilit);
 }
 
-size_t External::constrain (int elit) {
+int64_t External::constrain (int elit) {
   assert (elit != INT_MIN);
   reset_extended ();
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
-  size_t idx = 0;
+  int64_t id = 0;
   if (elit) {
-    if (internal->proof)
-      constraint_tmp.push_back (elit);
+    constraint_tmp.push_back (elit);
     LOG ("adding external %d as internal %d to constraints", elit, ilit);
-  } else if (!elit && internal->proof) {
-    idx = constraint_idx.size () + 1;
-    constraint_idx.push_back (idx);
-    internal->proof->add_constraint (constraint_tmp, idx);
+  } else if (!elit) {
+    const size_t mapped = constraints.size ();
+    id = ++internal->clause_id;
+    constraint_ids[id] = mapped;
+    for (auto &lit : constraint_tmp)
+      constraints.push_back (lit);
+    if (internal->proof)
+      internal->proof->add_constraint (id, constraint_tmp);
     constraint_tmp.clear ();
   }
-  constraints.push_back (elit);
   internal->constrain (ilit);
-  return idx;
+  return id;
 }
 
-bool External::failed_constraint (size_t idx) {
-  return internal->failed_constraint (idx);
+bool External::failed_constraint (int64_t id) {
+  if (auto contains = constraint_ids.find (id);
+      contains == constraint_ids.end ())
+    return false;
+  return internal->failed_constraint (id);
 }
 
 void External::phase (int elit) {
@@ -914,7 +919,6 @@ void External::check_assumptions_satisfied () {
 void External::check_constraint_satisfied () {
   size_t idx = 1;
   bool success = false;
-  bool failed = false;
   for (const auto lit : constraints) {
     if (!lit) {
       if (!success)
@@ -949,16 +953,16 @@ void External::check_failing () {
     checker->add (lit);
     checker->add (0);
   }
-  for (const size_t idx : constraint_idx) {
-    if (failed_constraint (idx)) {
+  for (const auto p : constraint_ids) {
+    const int64_t id = p.first;
+    const size_t idx = p.second;
+    if (failed_constraint (id)) {
       LOG (constraints, "checking failed constraint %zd", idx);
       size_t tmp_idx = 1;
-      for (const auto lit : constraints) {
-        if (tmp_idx == idx)
-          checker->add (lit);
+      for (size_t i = idx; i < constraints.size (); i++) {
+        const auto &lit = constraints[i];
+        checker->add (lit);
         if (!lit)
-          tmp_idx++;
-        if (tmp_idx > idx)
           break;
       }
     }

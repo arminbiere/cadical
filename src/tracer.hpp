@@ -109,9 +109,9 @@ public:
   virtual void add_assumption (int) {}
 
   // Notify the observer that a constraint has been added
-  // Arguments: constraint_clause, index
+  // Arguments: ID, constraint_clause
   //
-  virtual void add_constraint (const std::vector<int> &, size_t) {}
+  virtual void add_constraint (int64_t, const std::vector<int> &) {}
 
   // Notify the observer that assumptions and constraints are reset
   //

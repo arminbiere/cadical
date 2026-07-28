@@ -104,7 +104,7 @@ public:
   void begin_proof (int64_t) override {}
   void finalize_clause (int64_t, const std::vector<int> &) override {}
   void strengthen (int64_t) override {}
-  void add_constraint (const std::vector<int> &, size_t) override {}
+  void add_constraint (int64_t, const std::vector<int> &) override {}
 
   // logging and file io
   void connect_internal (Internal *i) override;

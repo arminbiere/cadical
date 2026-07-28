@@ -213,7 +213,7 @@ int Internal::warmup_decide_assumptions () {
   assert (!satisfied ());
   START (decide);
   int res = 0;
-  if ((size_t) level < assumptions.size ()) {
+  if (is_assumption_level (level)) {
     const int lit = assumptions[level];
     assert (assumed (lit));
     const signed char tmp = val (lit);
@@ -229,93 +229,8 @@ int Internal::warmup_decide_assumptions () {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
     }
-  } else if ((size_t) level == assumptions.size () &&
-             constraint_idx.size () == 1) {
+  } else if (is_constraint_level (level)) {
     assert (false); // not supported for now with constraints.
-
-    int satisfied_lit = 0;  // The literal satisfying the constrain.
-    int unassigned_lit = 0; // Highest score unassigned literal.
-    int previous_lit = 0;   // Move satisfied literals to the front.
-
-    const size_t size_constraint = constraints.size () - 1; // 0-terminated
-
-#ifndef NDEBUG
-    unsigned sum = 0;
-    for (auto lit : constraints)
-      sum += lit;
-#endif
-    for (size_t i = 0; i < size_constraint; i++) {
-
-      // Get literal and move 'constraints[i] = constraints[i-1]'.
-
-      int lit = constraints[i];
-      constraints[i] = previous_lit;
-      previous_lit = lit;
-
-      const signed char tmp = val (lit);
-      if (tmp < 0) {
-        LOG ("constraint literal %d falsified", lit);
-        continue;
-      }
-
-      if (tmp > 0) {
-        LOG ("constraint literal %d satisfied", lit);
-        satisfied_lit = lit;
-        break;
-      }
-
-      assert (!tmp);
-      LOG ("constraint literal %d unassigned", lit);
-
-      if (!unassigned_lit || better_decision (lit, unassigned_lit))
-        unassigned_lit = lit;
-    }
-
-    if (satisfied_lit) {
-
-      constraints[0] = satisfied_lit; // Move satisfied to the front.
-
-      LOG ("literal %d satisfies constraint and "
-           "is implied by assumptions",
-           satisfied_lit);
-
-      new_trail_level (0);
-      LOG ("added pseudo decision level for constraint");
-      notify_decision ();
-
-    } else {
-
-      // Just move all the literals back.  If we found an unsatisfied
-      // literal then it will be satisfied (most likely) at the next
-      // decision and moved then to the first position.
-
-      if (size_constraint) {
-
-        for (size_t i = 0; i + 1 < size_constraint; i++)
-          constraints[i] = constraints[i + 1];
-
-        constraints[size_constraint - 1] = previous_lit;
-      }
-
-      if (unassigned_lit) {
-
-        LOG ("deciding %d to satisfy constraint", unassigned_lit);
-        search_assume_decision (unassigned_lit);
-
-      } else {
-
-        LOG ("failing constraint");
-        unsat_constraint = true;
-        res = 20;
-      }
-    }
-
-#ifndef NDEBUG
-    for (auto lit : constraints)
-      sum -= lit;
-    assert (!sum); // Checksum of literal should not change!
-#endif
-
   } else {
     // TODO: do constraints with kitten or just don't do walk
     assert (false);
@@ -425,9 +340,8 @@ int Internal::warmup () {
   // at all (not even the `backtrack ()` at the end). Also, we cannot not
   // ignore conflicts at all, meaning that we cannot use our special
   // propagation function, even if it could counts ticks.
-  const size_t assms_contraint_level =
-      assumptions.size () + !constraint_idx.empty ();
-  while (!res && !conflict && (size_t) level < assms_contraint_level &&
+  assert (constraints.empty ());
+  while (!res && !conflict && is_assumption_level (level) &&
          num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);
     res = warmup_decide_assumptions ();
@@ -440,9 +354,8 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification =
-      (level ==
-       0); // if no assumptions or only already satisfied ones, don't notify
+  // if no assumptions or only already satisfied ones, don't notify
+  const bool no_backtrack_notification = (level == 0);
   LOG ("no_backtrack_notification = %d, notified_level= %d",
        no_backtrack_notification, notified_level);
   // now we do not need any notification and can simply propagate

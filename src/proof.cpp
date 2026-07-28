@@ -330,13 +330,13 @@ void Proof::add_assumption (int a) {
   add_assumption ();
 }
 
-void Proof::add_constraint (const vector<int> &c, size_t idx) {
+void Proof::add_constraint (int64_t id, const vector<int> &c) {
   // literals of c are already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
     clause.push_back (lit);
-  constraint_idx = idx;
+  clause_id = id;
   add_constraint ();
 }
 
@@ -522,7 +522,6 @@ void Proof::reset () {
   clause.clear ();
   proof_chain.clear ();
   clause_id = 0;
-  constraint_idx = 0;
   redundant = 0;
   witness = 0;
   restore = 0;
@@ -609,7 +608,7 @@ void Proof::add_assumption () {
 void Proof::add_constraint () {
   LOG (clause, "PROOF adding constraint");
   for (auto &tracer : tracers) {
-    tracer->add_constraint (clause, constraint_idx);
+    tracer->add_constraint (clause_id, clause);
   }
   reset ();
 }
