@@ -127,7 +127,7 @@ LratChecker::LratChecker (Internal *i)
     : internal (i), size_vars (0), concluded (false), num_clauses (0),
       num_finalized (0), num_tmp (0), num_permanent (0), num_garbage (0),
       size_clauses (0), clauses (0), garbage (0), last_hash (0),
-      last_id (0), current_id (0) {
+      last_id (0), current_id (0), is_tmp (0) {
 
   // Initialize random number table for hash function.
   //

@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -285,14 +286,47 @@ int Internal::decide () {
       search_assume_decision (lit);
     }
   } else if (is_constraint_level (level)) {
+  DECIDE_CONSTRAINT:
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
-    if (!cat_res)
+    if (!cat_res) {
+      stats.constraints_solved++;
       cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+      if (cat_res == 20)
+        stats.constraints_unsat++;
+      else if (cat_res == 10)
+        stats.constraints_sat++;
+    }
     assert (cat_res);
     if (cat_res == 20) { // unsat
       LOG ("constraints falsified");
       unsat_constraint = true;
       res = 20;
+    } else {
+      LOG ("using kitten model");
+      for (auto &lit : constraint_vars) {
+        const signed char tmp =
+            KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
+        assert (tmp);
+        const signed char tmp_lit = val (lit);
+        int decision = lit;
+        if (tmp < 0)
+          decision = -decision;
+        if (!tmp_lit) {
+          stats.decisions++;
+          assert (!flags (decision).unused ());
+          search_assume_decision (decision);
+        } else if (tmp_lit == tmp) {
+          LOG ("constraint literal %d already satisfied", lit);
+          new_trail_level (0);
+          LOG ("added pseudo decision level");
+          notify_decision ();
+        } else {
+          assert (tmp_lit == -tmp);
+          LOG ("constraint literal %d falsified", lit);
+          analyze_failing_constraint (lit);
+          goto DECIDE_CONSTRAINT;
+        }
+      }
     }
   } else {
     check_queue ();

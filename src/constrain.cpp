@@ -125,4 +125,10 @@ void Internal::reset_constraint () {
   marked_failed = true;
 }
 
+void Internal::analyze_failing_constraint (int lit) {
+  stats.constraints_analyzed++;
+  // TODO:
+  assert (false);
+}
+
 } // namespace CaDiCaL

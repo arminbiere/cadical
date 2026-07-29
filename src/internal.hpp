@@ -1524,6 +1524,7 @@ struct Internal {
   void constrain (int); // Add literal to constraint.
   bool failed_constraint (int64_t id);
   void reset_constraint (); // Reset after 'solve' call.
+  void analyze_failing_constraint (int lit);
 
   // Propagate the current set of assumptions and return the
   // non-witness assigned literals

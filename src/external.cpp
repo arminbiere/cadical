@@ -958,7 +958,6 @@ void External::check_failing () {
     const size_t idx = p.second;
     if (failed_constraint (id)) {
       LOG (constraints, "checking failed constraint %zd", idx);
-      size_t tmp_idx = 1;
       for (size_t i = idx; i < constraints.size (); i++) {
         const auto &lit = constraints[i];
         checker->add (lit);
