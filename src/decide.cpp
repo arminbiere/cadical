@@ -320,6 +320,8 @@ int Internal::decide () {
           new_trail_level (0);
           LOG ("added pseudo decision level");
           notify_decision ();
+        } else if (!var (lit).reason && var (lit).level) {
+          backtrack (var (lit).level - 1);
         } else {
           assert (tmp_lit == -tmp);
           LOG ("constraint literal %d falsified", lit);

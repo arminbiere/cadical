@@ -144,60 +144,59 @@ void External::reset_limits () { internal->reset_limits (); }
 // This is then used in the API contracts, that extension variables are
 // never part of the input
 int External::internalize (int elit, bool extension) {
+  if (!elit)
+    return 0;
   int ilit;
-  if (elit) {
-    assert (elit != INT_MIN);
-    const int eidx = abs (elit);
-    if (extension && eidx <= max_var)
-      FATAL ("can not add a definition for an already used variable %d",
-             eidx);
-    if (eidx > max_var) {
-      init (eidx, extension);
-    }
-    if (extension) {
-      assert (ervars.size () > (size_t) eidx);
-      ervars[eidx] = true;
-    }
-    ilit = e2i[eidx];
-    if (!ilit)
-      ilit = declare_var (eidx, false);
+  assert (elit != INT_MIN);
+  const int eidx = abs (elit);
+  if (extension && eidx <= max_var)
+    FATAL ("can not add a definition for an already used variable %d",
+           eidx);
+  if (eidx > max_var) {
+    init (eidx, extension);
+  }
+  if (extension) {
+    assert (ervars.size () > (size_t) eidx);
+    ervars[eidx] = true;
+  }
+  ilit = e2i[eidx];
+  if (!ilit)
+    ilit = declare_var (eidx, false);
+  if (elit < 0)
+    ilit = -ilit;
+  if (!ilit) {
+    assert (internal->max_var < INT_MAX);
+    ilit = internal->max_var + 1u;
+    internal->reserve_vars (ilit);
+    LOG ("mapping external %d to internal %d", eidx, ilit);
+    e2i[eidx] = ilit;
+    internal->i2e.push_back (eidx);
+    assert (internal->i2e[ilit] == eidx);
+    assert (e2i[eidx] == ilit);
     if (elit < 0)
       ilit = -ilit;
-    if (!ilit) {
-      assert (internal->max_var < INT_MAX);
-      ilit = internal->max_var + 1u;
-      internal->reserve_vars (ilit);
-      LOG ("mapping external %d to internal %d", eidx, ilit);
-      e2i[eidx] = ilit;
-      internal->i2e.push_back (eidx);
-      assert (internal->i2e[ilit] == eidx);
-      assert (e2i[eidx] == ilit);
-      if (elit < 0)
-        ilit = -ilit;
-    }
-    if (internal->opts.checkfrozen) {
-      assert (eidx < (int64_t) moltentab.size ());
-      if (moltentab[eidx])
-        FATAL ("can not reuse molten literal %d", eidx);
-    }
-    Flags &f = internal->flags (ilit);
-    if (f.status == Flags::UNUSED)
-      internal->declare_variable (ilit);
-    else if (f.status != Flags::DECLARED && f.status != Flags::ACTIVE &&
-             f.status != Flags::FIXED) {
-      internal->reactivate (ilit);
-    }
-    f.factored = extension;
-    assert (!extension || f.elim);
-    if (extension)
-      f.elim = false;
-    if (!marked (tainted, elit) && marked (witness, -elit)) {
-      assert (!internal->opts.checkfrozen);
-      LOG ("marking tainted %d", elit);
-      mark (tainted, elit);
-    }
-  } else
-    ilit = 0;
+  }
+  if (internal->opts.checkfrozen) {
+    assert (eidx < (int64_t) moltentab.size ());
+    if (moltentab[eidx])
+      FATAL ("can not reuse molten literal %d", eidx);
+  }
+  Flags &f = internal->flags (ilit);
+  if (f.status == Flags::UNUSED)
+    internal->declare_variable (ilit);
+  else if (f.status != Flags::DECLARED && f.status != Flags::ACTIVE &&
+           f.status != Flags::FIXED) {
+    internal->reactivate (ilit);
+  }
+  f.factored = extension;
+  assert (!extension || f.elim);
+  if (extension)
+    f.elim = false;
+  if (!marked (tainted, elit) && marked (witness, -elit)) {
+    assert (!internal->opts.checkfrozen);
+    LOG ("marking tainted %d", elit);
+    mark (tainted, elit);
+  }
   return ilit;
 }
 
