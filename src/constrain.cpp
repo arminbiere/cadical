@@ -108,16 +108,18 @@ void Internal::reset_constraint () {
   if (!constraints.empty ())
     stats.constraints_reset++;
   for (auto lit : constraints) {
-    if (lit)
+    if (lit) {
       melt (lit);
-    flags (lit).constrained = 0;
+      flags (lit).constrained = 0;
+    }
   }
   LOG ("cleared %zd constraint literals", constraints.size ());
   constraints.clear ();
   constraint_vars.clear ();
   constraint_ids.clear ();
   constraint_fail.clear ();
-  KITTEN_NAMESPACE (kitten_release (constraint_cat));
+  if (constraint_cat)
+    KITTEN_NAMESPACE (kitten_release (constraint_cat));
   constraint_cat = 0;
   unsat_constraint = 0;
   marked_failed = true;
