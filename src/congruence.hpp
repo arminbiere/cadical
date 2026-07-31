@@ -419,7 +419,6 @@ struct Gate {
     vector<LitClausePair> pos_lhs_ids;
     my_dummy_optional neg_lhs_id;
   } *lrat_reasons;
-  size_t hash;
   int lhs;
   Gate_Type tag;
   bool garbage : 1;
