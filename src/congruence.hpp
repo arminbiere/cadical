@@ -419,8 +419,8 @@ struct Gate {
     vector<LitClausePair> pos_lhs_ids;
     my_dummy_optional neg_lhs_id;
   } *lrat_reasons;
-  int lhs;
   size_t hash;
+  int lhs;
   Gate_Type tag;
   bool garbage : 1;
   bool indexed : 1;
@@ -548,9 +548,9 @@ struct Rewrite {
 
 /*------------------------------------------------------------------------*/
 // This is a more compact representation of binary clauses. Sadly we have to
-// include the IDs in the clause making it larger than necessary. We also need
-// to include the clause pointer in order to be able to delete the subsumed
-// clause.
+// include the IDs in the clause making it larger than necessary. We also
+// need to include the clause pointer in order to be able to delete the
+// subsumed clause.
 struct CompactBinary {
   Clause *clause;
   LRAT_ID id;
