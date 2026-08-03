@@ -11,6 +11,7 @@ void Internal::constrain (int lit) {
     backtrack_without_updating_phases (0);
   if (!constraint_cat) {
     constraint_cat = KITTEN_NAMESPACE (kitten_init ());
+    KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
     size_t idx = 0;
     for (auto &other : assumptions)
       KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, other));
@@ -97,7 +98,8 @@ void Internal::constrain (int lit) {
       stats.constraints_lit++;
       Flags &f = flags (lit);
       if (!f.constrained) {
-        constraint_vars.push_back (lit);
+        constraint_vars.push_back (abs (lit));
+        stats.constraints_vars++;
         f.constrained = true;
         freeze (lit);
       }

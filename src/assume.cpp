@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "kitten.h"
 #include "options.hpp"
 
 namespace CaDiCaL {
@@ -73,6 +74,42 @@ void Internal::assume_analyze_reason (int lit, Clause *reason) {
       assume_analyze_literal (other);
   lrat_chain.push_back (reason->id);
 }
+
+extern "C" {
+
+// used to extract constraint core from kitten
+//
+static void traverse_constraint_core (void *state, unsigned id) {
+  Internal *internal = (Internal *) state;
+  // TODO: mark failing constraints.
+  assert (false);
+}
+
+// extracts relevant learned clauses from kitten for drat proofs
+//
+static void traverse_constraint_drat (void *state, unsigned id,
+                                      bool learned, size_t size,
+                                      const unsigned *lits) {
+  if (!learned)
+    return;
+  // TODO: extract DRAT proof.
+  assert (false);
+}
+
+// extract lrat proofs for relevant clauses
+//
+static void traverse_constraint_lrat (void *state, unsigned cid,
+                                      unsigned id, bool learned,
+                                      size_t size, const unsigned *lits,
+                                      size_t chain_size,
+                                      const unsigned *chain) {
+  if (!learned)
+    return;
+  // TODO: extract LRAT proof.
+  assert (false);
+}
+
+} // end extern C
 
 // Find all failing assumptions starting from the one on the assumption
 // stack with the lowest decision level.  This goes back to MiniSAT and is
@@ -241,6 +278,20 @@ void Internal::failing () {
     assert (constraint_cat);
     // unsat_constraint
     // TODO: analyze failing constraints with kitten
+    uint64_t learned;
+    int reduced =
+        KITTEN_NAMESPACE (kitten_compute_clausal_core) (cat, &learned);
+    KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
+                                                 traverse_constraint_core);
+    if (proof) {
+      if (lrat) {
+        KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,
+                                              traverse_constraint_lrat);
+      } else {
+        KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
+            constraint_cat, this, traverse_constraint_drat);
+      }
+    }
   }
 
   {

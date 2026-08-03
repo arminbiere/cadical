@@ -259,6 +259,7 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain,
   // these are already checked in previous 'check'
   assert (c);
   assert (use_tmp || !c->temporary);
+  (void) use_tmp;
   for (int *i = c->literals; i < c->literals + c->size; i++) {
     int lit = *i;
     checked_lit (lit) = true;

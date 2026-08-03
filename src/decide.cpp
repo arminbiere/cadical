@@ -321,7 +321,15 @@ int Internal::decide () {
           LOG ("added pseudo decision level");
           notify_decision ();
         } else if (!var (lit).reason && var (lit).level) {
+          // TODO: should  not happen
+          assert (false);
           backtrack (var (lit).level - 1);
+        } else if (KITTEN_NAMESPACE (
+                       kitten_flip_signed_literal (constraint_cat, lit))) {
+          stats.constraints_flipped++;
+          stats.decisions++;
+          assert (!flags (decision).unused ());
+          search_assume_decision (decision);
         } else {
           assert (tmp_lit == -tmp);
           LOG ("constraint literal %d falsified", lit);

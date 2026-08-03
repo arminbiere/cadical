@@ -1519,9 +1519,8 @@ struct Internal {
     return (f.assumed & bit) != 0;
   }
   bool constrained (int lit) { // Marked as constraint.
-    Flags &f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.constrained & bit) != 0;
+    const Flags &f = flags (lit);
+    return f.constrained;
   }
 
   // Add temporary clause as constraint.
