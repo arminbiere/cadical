@@ -287,14 +287,22 @@ int Internal::decide () {
     }
   } else if (is_constraint_level (level)) {
   DECIDE_CONSTRAINT:
+    START (constraints);
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
+      START (constraintssolve);
       cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+      STOP (constraintssolve);
       if (cat_res == 20)
         stats.constraints_unsat++;
       else if (cat_res == 10)
         stats.constraints_sat++;
+      else {
+        // Kitten was terminated
+        assert (terminated_asynchronously ());
+        goto DONE;
+      }
     }
     assert (cat_res);
     if (cat_res == 20) { // unsat
@@ -338,6 +346,8 @@ int Internal::decide () {
         }
       }
     }
+  DONE:
+    STOP (constraints);
   } else {
     check_queue ();
     int decision = ask_decision ();

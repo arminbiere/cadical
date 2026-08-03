@@ -4,18 +4,35 @@
 
 namespace CaDiCaL {
 
+extern "C" {
+static int cat_terminate (void *data) {
+  return ((Internal *) data)->terminated_asynchronously ();
+}
+}
+
+void Internal::init_constraint_cat () {
+  assert (!constraint_cat);
+  constraint_cat = KITTEN_NAMESPACE (kitten_init ());
+  if (external->terminator)
+    KITTEN_NAMESPACE (kitten_set_terminator) (constraint_cat, internal,
+                                              cat_terminate);
+#ifdef LOGGING
+  if (opts.log)
+    KITTEN_NAMESPACE (kitten_set_logging) (constraint_cat);
+#endif
+  KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
+  size_t idx = 0;
+  for (auto &other : assumptions)
+    KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, other));
+}
+
 void Internal::constrain (int lit) {
   if (unsat)
     return;
   if (level)
     backtrack_without_updating_phases (0);
-  if (!constraint_cat) {
-    constraint_cat = KITTEN_NAMESPACE (kitten_init ());
-    KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
-    size_t idx = 0;
-    for (auto &other : assumptions)
-      KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, other));
-  }
+  if (!constraint_cat)
+    init_constraint_cat ();
   if (lit) {
     constraint_tmp.push_back (lit);
     return;

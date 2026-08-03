@@ -61,6 +61,8 @@ struct Internal;
   PROFILE (congruencemerge, 4) \
   PROFILE (congruencematching, 4) \
   PROFILE (connect, 3) \
+  PROFILE (constraints, 2) \
+  PROFILE (constraintssolve, 4) \
   PROFILE (copy, 4) \
   PROFILE (cover, 2) \
   PROFILE (decide, 3) \
