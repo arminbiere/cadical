@@ -121,7 +121,11 @@ void Internal::constrain (int lit) {
         freeze (lit);
       }
     }
+    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
+                                           constraint_tmp.size (),
+                                           constraint_tmp.data ());
     constraints.push_back (0);
+    constraint_tmp.clear ();
   }
 }
 
@@ -167,7 +171,6 @@ void Internal::analyze_failing_constraint (int failed) {
   assert (analyzed.empty ());
   assert (clause.empty ());
   assert (lrat_chain.empty ());
-  assert (!marked_failed);
   assert (!unsat);
 
   Var &w = var (failed);

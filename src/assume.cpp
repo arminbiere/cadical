@@ -279,8 +279,8 @@ void Internal::failing () {
     // unsat_constraint
     // TODO: analyze failing constraints with kitten
     uint64_t learned;
-    int reduced =
-        KITTEN_NAMESPACE (kitten_compute_clausal_core) (cat, &learned);
+    int reduced = KITTEN_NAMESPACE (kitten_compute_clausal_core) (
+        constraint_cat, &learned);
     KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
                                                  traverse_constraint_core);
     if (proof) {

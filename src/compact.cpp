@@ -196,6 +196,7 @@ void Internal::compact () {
   // TODO: remap constraint_cat?
   const bool is_constraint = constraint_vars.size ();
   if (is_constraint) {
+    assert (false);
     assert (!external->constraints.empty ());
     LOG ("temporarily reset internal constraint");
     reset_constraint ();

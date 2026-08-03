@@ -286,8 +286,8 @@ int Internal::decide () {
       search_assume_decision (lit);
     }
   } else if (is_constraint_level (level)) {
-  DECIDE_CONSTRAINT:
     START (constraints);
+  DECIDE_CONSTRAINT:
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
@@ -323,21 +323,25 @@ int Internal::decide () {
           stats.decisions++;
           assert (!flags (decision).unused ());
           search_assume_decision (decision);
+          break;
         } else if (tmp_lit == tmp) {
           LOG ("constraint literal %d already satisfied", lit);
           new_trail_level (0);
           LOG ("added pseudo decision level");
           notify_decision ();
+          break;
         } else if (!var (lit).reason && var (lit).level) {
           // TODO: should  not happen
           assert (false);
-          backtrack (var (lit).level - 1);
+          // backtrack (var (lit).level - 1);
         } else if (KITTEN_NAMESPACE (
                        kitten_flip_signed_literal (constraint_cat, lit))) {
           stats.constraints_flipped++;
           stats.decisions++;
           assert (!flags (decision).unused ());
+          // Happens at the end...
           search_assume_decision (decision);
+          break;
         } else {
           assert (tmp_lit == -tmp);
           LOG ("constraint literal %d falsified", lit);
