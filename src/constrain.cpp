@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "kitten.h"
+#include <cstdint>
 
 namespace CaDiCaL {
 
@@ -138,11 +139,11 @@ void Internal::reset_constraint () {
   marked_failed = true;
 }
 
-void Internal::analyze_failing_constraint (int lit) {
+void Internal::analyze_failing_constraint (int failed) {
   stats.constraints_analyzed++;
   START (analyze);
 
-  LOG ("analyzing failing constraint %d", lit);
+  LOG ("analyzing failing constraint %d", failed);
 
   assert (analyzed.empty ());
   assert (clause.empty ());
@@ -150,131 +151,112 @@ void Internal::analyze_failing_constraint (int lit) {
   assert (!marked_failed);
   assert (!unsat);
 
-  Var &v = var (lit);
-  Flags &f = flags (lit);
-  int failed_unit = 0;
-  int failed_clashing = 0;
-  int first_failed = 0;
-  int failed_level = v.level;
-  int efailed = externalize (lit);
-  if (!failed_level)
-    failed_unit = lit;
-  else if (!v.reason && f.assumed)
-    assert (false); // kitten should know
-  else
-    first_failed = lit;
+  Var &w = var (failed);
+  Flags &g = flags (failed);
+  int efailed = externalize (failed);
+  assert (w.reason || !w.level);
 
   assert (clause.empty ());
 
-  // Get the 'failed' assumption from one of the three cases.
-  int failed;
-  if (failed_unit)
-    failed = failed_unit;
-  else if (failed_clashing)
-    failed = failed_clashing;
-  else
-    failed = first_failed;
-  assert (failed);
-  assert (efailed);
-
-  // First case (1).
-  if (failed_unit) {
-    assert (failed == failed_unit);
-    LOG ("root-level falsified constraint %d", failed);
-    int64_t id = 0;
+  if (w.reason == external_reason) {
+    w.reason = learn_external_reason_clause (failed, 0, true);
+    if (!w.reason) {
+      // TODO: cover this
+      assert (!w.level);
+      w.level = 0;
+    }
+  }
+  // unit.
+  if (!w.level) {
+    LOG ("root-level falsified constraint literal %d", failed);
+    const int64_t id = ++clause_id;
     if (lrat) {
       unsigned eidx = (efailed > 0) + 2u * (unsigned) abs (efailed);
       assert ((size_t) eidx < external->ext_units.size ());
-      id = external->ext_units[eidx];
-      if (!id) {
-        id = unit_id (-failed_unit);
+      int64_t uid = external->ext_units[eidx];
+      if (!uid) {
+        uid = unit_id (-failed);
       }
-      assert (id);
+      lrat_chain.push_back (uid);
     }
+
+    if (proof)
+      proof->add_assumption_clause (id, -failed, lrat_chain);
+
     KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, id, -failed));
     goto DONE;
   }
 
-  // Second case (2).
-  if (failed_clashing) {
-    assert (false);
-    goto DONE;
-  }
-
   // Fall through to third case (3).
-  LOG ("starting with constraint %d falsified on minimum decision level "
-       "%d",
-       first_failed, failed_level);
+  LOG ("starting with constraint literal %s", LOGLIT (failed));
 
-  assert (first_failed);
-  assert (failed_level > 0);
-
-  // The 'analyzed' stack serves as working stack for a BFS through the
+  // The 'trail' serves as working stack for a DFS through the
   // implication graph until decisions, which are all assumptions, or
-  // units are reached.  This is simpler than corresponding code in
-  // 'analyze'.
+  // units are reached.
   {
-    LOG ("failed assumption %d", first_failed);
-    Flags &f = flags (first_failed);
-    assert (!f.seen);
-    f.seen = true;
-    analyzed.push_back (-first_failed);
-    clause.push_back (-first_failed);
+    LOG ("failed constraint literal %d", failed);
+    assert (!g.seen);
+    g.seen = true;
+    analyzed.push_back (-failed);
+    assert (w.reason);
+    assert (w.reason != external_reason);
+    for (const auto &other : *w.reason) {
+      Flags &f = flags (other);
+      if (f.seen)
+        continue;
+      f.seen = true;
+      assert (val (other) < 0);
+      analyzed.push_back (-other);
+    }
+    if (lrat)
+      lrat_chain.push_back (w.reason->id);
   }
 
   {
-    // no LRAT do bfs as it was before
-    if (!lrat) {
-      size_t next = 0;
-      while (next < analyzed.size ()) {
-        const int lit = analyzed[next++];
-        assert (val (lit) > 0);
-        Var &v = var (lit);
-        if (!v.level)
-          continue;
-        if (v.reason == external_reason) {
-          v.reason = learn_external_reason_clause (lit, 0, true);
-          if (!v.reason) {
-            v.level = 0;
-            continue;
-          }
-        }
-        assert (v.reason != external_reason);
-        if (v.reason) {
-          assert (v.level);
-          LOG (v.reason, "analyze reason");
-          for (const auto &other : *v.reason) {
-            Flags &f = flags (other);
-            if (f.seen)
-              continue;
-            f.seen = true;
-            assert (val (other) < 0);
-            analyzed.push_back (-other);
-          }
-        } else {
-          assert (assumed (lit));
-          LOG ("failed assumption %d", lit);
-          clause.push_back (-lit);
-        }
-      }
-      clear_analyzed_literals ();
-    } else if (!unsat_constraint) { // LRAT for case (3)
-      assert (clause.size () == 1);
-      const int lit = clause[0];
+    size_t next = var (failed).trail;
+    while (next != 0) {
+      const int lit = trail[--next];
+      Flags &f = flags (lit);
+      if (!f.seen)
+        continue;
+      assert (val (lit) > 0);
       Var &v = var (lit);
-      assert (v.reason);
-      if (v.reason == external_reason) { // does this even happen?
+      if (!v.level) {
+        if (lrat) {
+          lrat_chain.push_back (unit_id (lit));
+        }
+        continue;
+      }
+      if (v.reason == external_reason) {
         v.reason = learn_external_reason_clause (lit, 0, true);
+        if (!v.reason) {
+          assert (!v.level);
+          v.level = 0;
+          if (lrat) {
+            lrat_chain.push_back (unit_id (lit));
+          }
+          continue;
+        }
       }
       assert (v.reason != external_reason);
-      if (v.reason)
-        assume_analyze_reason (lit, v.reason);
-      else {
-        int64_t id = unit_id (lit);
-        lrat_chain.push_back (id);
+      if (v.reason) {
+        assert (v.level);
+        LOG (v.reason, "analyze reason");
+        for (const auto &other : *v.reason) {
+          Flags &f = flags (other);
+          if (f.seen)
+            continue;
+          f.seen = true;
+          assert (val (other) < 0);
+          analyzed.push_back (-other);
+        }
+        if (lrat)
+          lrat_chain.push_back (v.reason->id);
+      } else {
+        assert (assumed (lit) || constrained (lit));
+        LOG ("failed assumption %d", lit);
+        clause.push_back (-lit);
       }
-      clear_analyzed_literals ();
-    } else { // TODO: LRAT for unsat_constraint
     }
     clear_analyzed_literals ();
 
@@ -283,27 +265,21 @@ void Internal::analyze_failing_constraint (int lit) {
     // and minimization can never reduce the number of levels
 
     VERBOSE (1, "found %zd failed assumptions %.0f%%", clause.size (),
-             percent (clause.size (), assumptions.size ()));
+             percent (clause.size (),
+                      assumptions.size () + constraint_vars.size ()));
 
     // We do not actually need to learn this clause, since the conflict is
     // forced already by some other clauses.  There is also no bumping
     // of variables nor clauses necessary.  But we still want to check
     // correctness of the claim that the determined subset of failing
     // assumptions are a high-level core or equivalently their negations
-    // form a unit-implied clause.
+    // form a unit-implied clause. Finally add the clause to kitten.
     //
-    if (!unsat_constraint) {
-      external->check_learned_clause ();
-      if (proof) {
-        vector<int> eclause;
-        for (auto &lit : clause)
-          eclause.push_back (externalize (lit));
-        proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
-        conclusion.push_back (clause_id);
-      }
-    } else {
-      // TODO: unsat_constraint
-    }
+    const int64_t id = ++clause_id;
+    if (proof)
+      proof->add_assumption_clause (id, clause, lrat_chain);
+    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
+                                           clause.size (), clause.data ());
     lrat_chain.clear ();
     clause.clear ();
   }
