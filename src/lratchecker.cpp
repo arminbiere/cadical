@@ -634,6 +634,7 @@ void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
   insert ();
   imported_clause.clear ();
   is_tmp = false;
+  assumption_clauses.push_back (id);
 }
 
 void LratChecker::reset_assumptions () {
