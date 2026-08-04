@@ -339,9 +339,10 @@ int Internal::decide () {
                        kitten_flip_signed_literal (constraint_cat, lit))) {
           stats.constraints_flipped++;
           stats.decisions++;
-          assert (!flags (decision).unused ());
-          // Happens at the end...
-          search_assume_decision (decision);
+          LOG ("constraint literal %d satisfied after flipping", lit);
+          new_trail_level (0);
+          LOG ("added pseudo decision level");
+          notify_decision ();
           break;
         } else {
           assert (tmp_lit == -tmp);

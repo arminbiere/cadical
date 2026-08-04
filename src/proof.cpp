@@ -606,7 +606,7 @@ void Proof::add_assumption () {
 }
 
 void Proof::add_constraint () {
-  LOG (clause, "PROOF adding constraint");
+  LOG (clause, "PROOF adding constraint[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->add_constraint (clause_id, clause);
   }

@@ -101,9 +101,8 @@ static void traverse_constraint_core (void *state, unsigned id) {
 
 // extracts relevant learned clauses from kitten for drat proofs
 //
-static void traverse_constraint_drat (void *state, unsigned id,
-                                      bool learned, size_t size,
-                                      const unsigned *lits) {
+static void traverse_constraint_drat (void *state, unsigned, bool learned,
+                                      size_t size, const unsigned *lits) {
   if (!learned)
     return;
   Internal *internal = (Internal *) state;
@@ -115,7 +114,7 @@ static void traverse_constraint_drat (void *state, unsigned id,
   for (auto &lit : internal->failing_assumptions)
     clause.push_back (lit);
   for (size_t i = 0; i < size; i++)
-    clause.push_back (lits[i]);
+    clause.push_back (internal->cat2lit (lits[i]));
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           internal->lrat_chain);
   internal->conclusion.push_back (internal->clause_id);
@@ -124,9 +123,9 @@ static void traverse_constraint_drat (void *state, unsigned id,
 
 // extract lrat proofs for relevant clauses
 //
-static void traverse_constraint_lrat (void *state, unsigned cid,
-                                      unsigned id, bool learned,
-                                      size_t size, const unsigned *lits,
+static void traverse_constraint_lrat (void *state, unsigned, unsigned,
+                                      bool learned, size_t size,
+                                      const unsigned *lits,
                                       size_t chain_size,
                                       const unsigned *chain) {
   if (!learned)
@@ -140,7 +139,7 @@ static void traverse_constraint_lrat (void *state, unsigned cid,
   assert (lrat_chain.empty ());
   for (size_t i = 0; i < chain_size; i++) {
     const unsigned kid = chain[i];
-    const unsigned aid = -id;
+    const unsigned aid = -kid;
     // TODO: mapping from kitten id to cadical id
     // would allow INT_MAX constraints (also see
     // comment in constrain.cpp)
@@ -150,7 +149,7 @@ static void traverse_constraint_lrat (void *state, unsigned cid,
       lrat_chain.push_back (kid);
   }
   for (size_t i = 0; i < size; i++)
-    clause.push_back (lits[i]);
+    clause.push_back (internal->cat2lit (lits[i]));
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           lrat_chain);
   internal->conclusion.push_back (internal->clause_id);

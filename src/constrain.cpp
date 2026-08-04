@@ -110,8 +110,10 @@ void Internal::constrain (int lit) {
     constraints.push_back (0);
     unsat_constraint = true;
     constraint_fail[int_id] = 1;
-    conclusion.push_back (int_id);
     conclusion.push_back (ext_id);
+    if (int_id != ext_id)
+      conclusion.push_back (int_id);
+    LOG (conclusion, "empty constraint conclusion");
     // unsat_constraint already contains the information...
     // marked_failed = false; // allow to trigger failing ()
   } else {
@@ -170,6 +172,7 @@ void Internal::reset_constraint () {
   constraint_fail.clear ();
   if (constraint_cat)
     KITTEN_NAMESPACE (kitten_release (constraint_cat));
+  constraints_without_assumptions = 0;
   constraint_cat = 0;
   unsat_constraint = 0;
   marked_failed = true;
