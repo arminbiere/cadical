@@ -338,8 +338,8 @@ int64_t External::constrain (int elit) {
     if (internal->proof)
       internal->proof->add_constraint (id, constraint_tmp);
     constraint_tmp.clear ();
+    constraints.push_back (0);
   }
-  constraints.push_back (0);
   internal->constrain (ilit);
   return id;
 }
@@ -920,6 +920,7 @@ void External::check_constraint_satisfied () {
   size_t idx = 1;
   bool success = false;
   for (const auto lit : constraints) {
+    LOG ("checking constraint literal %d=%d", lit, ival (lit));
     if (!lit) {
       if (!success)
         FATAL ("constraint %zd not satisfied", idx);
