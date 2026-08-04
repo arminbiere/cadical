@@ -118,6 +118,7 @@ static void traverse_constraint_drat (void *state, unsigned id,
     clause.push_back (lits[i]);
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           internal->lrat_chain);
+  internal->conclusion.push_back (internal->clause_id);
   clause.clear ();
 }
 
@@ -152,6 +153,7 @@ static void traverse_constraint_lrat (void *state, unsigned cid,
     clause.push_back (lits[i]);
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           lrat_chain);
+  internal->conclusion.push_back (internal->clause_id);
   clause.clear ();
   lrat_chain.clear ();
 }
@@ -322,6 +324,7 @@ void Internal::failing () {
         constraint_cat, &learned);
     KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
                                                  traverse_constraint_core);
+    assert (!conclusion.empty ());
     if (proof) {
       if (lrat) {
         KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,

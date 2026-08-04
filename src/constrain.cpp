@@ -138,6 +138,8 @@ void Internal::constrain (int lit) {
 
 void Internal::mark_failed_constraint (int64_t id) {
   constraint_fail[id] = true;
+  // TODO: external id?
+  conclusion.push_back (id);
 }
 
 bool Internal::failed_constraint (int64_t id) {
