@@ -339,6 +339,7 @@ int64_t External::constrain (int elit) {
       internal->proof->add_constraint (id, constraint_tmp);
     constraint_tmp.clear ();
   }
+  constraints.push_back (0);
   internal->constrain (ilit);
   return id;
 }
@@ -963,8 +964,8 @@ void External::check_failing () {
         if (!lit)
           break;
       }
-    }
-    LOG (constraints, "constraint %zd satisfied and ignored", idx);
+    } else
+      LOG (constraints, "constraint %zd satisfied and ignored", idx);
   }
 
   // Add original clauses as last step, failing () and failed_constraint ()

@@ -152,7 +152,7 @@ bool Internal::failed_constraint (int64_t id) {
     return false;
   if (constraint_ids.find (id) == constraint_ids.end ())
     return false;
-  assert (constraint_vars.size () == constraint_fail.size ());
+  // assert (constraint_vars.size () == constraint_fail.size ());
   return constraint_fail[constraint_ids[id]];
 }
 

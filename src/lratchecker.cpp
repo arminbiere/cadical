@@ -678,7 +678,8 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
       fatal_message_end ();
     }
     LratCheckerClause **p = find (ids.back ()), *d = *p;
-    for (auto &lit : d->literals) {
+    for (int *i = d->literals; i < d->literals + d->size; i++) {
+      const int lit = *i;
       if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
           assumptions.end ())
         continue;
@@ -709,16 +710,18 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
   }
   LratCheckerClause **p = find (ids.back ()), *d = *p;
   assert (d);
-  for (auto &lit : d->literals) {
-    if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
-        assumptions.end ())
-      continue;
-    fatal_message_start ();
-    fputs ("clause contains non assumption literal ", stderr);
-    fprintf (stderr, "%d", lit);
-    fputs ("\n", stderr);
-    fatal_message_end ();
-  }
+  if (d->size)
+    for (int *i = d->literals; i < d->literals + d->size; i++) {
+      const int lit = *i;
+      if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
+          assumptions.end ())
+        continue;
+      fatal_message_start ();
+      fputs ("clause contains non assumption literal ", stderr);
+      fprintf (stderr, "%d", lit);
+      fputs ("\n", stderr);
+      fatal_message_end ();
+    }
 }
 
 /*------------------------------------------------------------------------*/
