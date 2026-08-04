@@ -100,6 +100,11 @@ void Internal::constrain (int lit) {
       lrat_chain.clear ();
     }
   }
+  // TODO: relies on int_id < INT_MAX. This is a hard limit for kitten,
+  // but mapping the ids again, before adding them to kitten would get
+  // rid of the dependence on the 'clause_id' counter and would allow
+  // adding INT_MAX constraints per query (instead of INT_MAX - clause_id).
+  assert (int_id < INT_MAX);
   constraint_ids[ext_id] = int_id;
   if (constraint_tmp.empty ()) {
     constraints.push_back (0);
@@ -119,6 +124,8 @@ void Internal::constrain (int lit) {
         stats.constraints_vars++;
         f.constrained = true;
         freeze (lit);
+        if (!f.assumed)
+          constraints_without_assumptions++;
       }
     }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
@@ -127,6 +134,10 @@ void Internal::constrain (int lit) {
     constraints.push_back (0);
     constraint_tmp.clear ();
   }
+}
+
+void Internal::mark_failed_constraint (int64_t id) {
+  constraint_fail[id] = true;
 }
 
 bool Internal::failed_constraint (int64_t id) {

@@ -253,7 +253,8 @@ bool Internal::is_assumption_level (size_t level) {
   return level < assumptions.size ();
 }
 bool Internal::is_constraint_level (size_t level) {
-  return level < assumptions.size () + constraint_vars.size ();
+  assert (constraints_without_assumptions <= constraint_vars.size ());
+  return level < assumptions.size () + constraints_without_assumptions;
 }
 
 // Search for the next decision and assign it to the saved phase. Requires

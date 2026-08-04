@@ -276,6 +276,8 @@ struct Internal {
   vector<int> assumptions;  // assumed literals
   vector<int> constraints;  // literals of the constraints
   vector<int> constraint_vars; // variables of the constraints
+  vector<int> failing_assumptions;
+  size_t constraints_without_assumptions;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
   unordered_map<int64_t, int> constraint_ids; // indeces of the constraints
   vector<int> constraint_tmp;                 // currently added constraint
@@ -1504,6 +1506,7 @@ struct Internal {
 
   // Assumption handling.
   //
+  void mark_failing_assumption (int);
   void assume_analyze_literal (int lit);
   void assume_analyze_reason (int lit, Clause *reason);
   void assume (int);                  // New assumption literal.
@@ -1527,6 +1530,7 @@ struct Internal {
   //
   void init_constraint_cat ();
   void constrain (int); // Add literal to constraint.
+  void mark_failed_constraint (int64_t);
   bool failed_constraint (int64_t id);
   void reset_constraint (); // Reset after 'solve' call.
   void analyze_failing_constraint (int lit);

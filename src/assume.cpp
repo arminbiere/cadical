@@ -18,14 +18,15 @@ void Internal::assume (int lit) {
     LOG ("ignoring already assumed %d", lit);
     return;
   }
+  if (f.constrained && !f.assumed)
+    constraints_without_assumptions--;
   LOG ("assume %d", lit);
   f.assumed |= bit;
   assumptions.push_back (lit);
   freeze (lit);
-  if (constraint_cat) {
+  if (constraint_cat)
     KITTEN_NAMESPACE (
         cat_unit_with_id (constraint_cat, -assumptions.size (), lit));
-  }
 }
 
 // for LRAT we actually need to implement recursive DFS
@@ -75,14 +76,27 @@ void Internal::assume_analyze_reason (int lit, Clause *reason) {
   lrat_chain.push_back (reason->id);
 }
 
+void Internal::mark_failing_assumption (int failed) {
+  Flags &f = flags (failed);
+  const unsigned bit = bign (failed);
+  assert (f.assumed & bit);
+  assert (!(f.failed & bit));
+  f.failed |= bit;
+  failing_assumptions.push_back (failed);
+}
+
 extern "C" {
 
-// used to extract constraint core from kitten
+// mark failing assumptions and constraints.
 //
 static void traverse_constraint_core (void *state, unsigned id) {
   Internal *internal = (Internal *) state;
   // TODO: mark failing constraints.
-  assert (false);
+  const unsigned aid = -id;
+  if (aid < internal->assumptions.size ()) // failing assumption
+    internal->mark_failing_assumption (internal->assumptions[aid]);
+  else // failing constraint
+    internal->mark_failed_constraint (id);
 }
 
 // extracts relevant learned clauses from kitten for drat proofs
@@ -92,8 +106,19 @@ static void traverse_constraint_drat (void *state, unsigned id,
                                       const unsigned *lits) {
   if (!learned)
     return;
-  // TODO: extract DRAT proof.
-  assert (false);
+  Internal *internal = (Internal *) state;
+  auto &clause = internal->clause;
+  assert (clause.empty ());
+  assert (internal->proof);
+  assert (!internal->lrat);
+  assert (internal->lrat_chain.empty ());
+  for (auto &lit : internal->failing_assumptions)
+    clause.push_back (lit);
+  for (size_t i = 0; i < size; i++)
+    clause.push_back (lits[i]);
+  internal->proof->add_assumption_clause (++internal->clause_id, clause,
+                                          internal->lrat_chain);
+  clause.clear ();
 }
 
 // extract lrat proofs for relevant clauses
@@ -105,8 +130,30 @@ static void traverse_constraint_lrat (void *state, unsigned cid,
                                       const unsigned *chain) {
   if (!learned)
     return;
-  // TODO: extract LRAT proof.
-  assert (false);
+  Internal *internal = (Internal *) state;
+  auto &clause = internal->clause;
+  auto &lrat_chain = internal->lrat_chain;
+  assert (clause.empty ());
+  assert (internal->proof);
+  assert (internal->lrat);
+  assert (lrat_chain.empty ());
+  for (size_t i = 0; i < chain_size; i++) {
+    const unsigned kid = chain[i];
+    const unsigned aid = -id;
+    // TODO: mapping from kitten id to cadical id
+    // would allow INT_MAX constraints (also see
+    // comment in constrain.cpp)
+    if (aid < internal->assumptions.size ())
+      clause.push_back (internal->assumptions[aid]);
+    else
+      lrat_chain.push_back (kid);
+  }
+  for (size_t i = 0; i < size; i++)
+    clause.push_back (lits[i]);
+  internal->proof->add_assumption_clause (++internal->clause_id, clause,
+                                          lrat_chain);
+  clause.clear ();
+  lrat_chain.clear ();
 }
 
 } // end extern C
@@ -207,12 +254,7 @@ void Internal::failing () {
     assert (efailed);
 
     // In any case mark literal 'failed' as failed assumption.
-    {
-      Flags &f = flags (failed);
-      const unsigned bit = bign (failed);
-      assert (!(f.failed & bit));
-      f.failed |= bit;
-    }
+    mark_failing_assumption (failed);
 
     // First case (1).
     if (failed_unit) {
@@ -241,10 +283,7 @@ void Internal::failing () {
     if (failed_clashing) {
       assert (failed == failed_clashing);
       LOG ("clashing assumptions %d and %d", failed, -failed);
-      Flags &f = flags (-failed);
-      const unsigned bit = bign (-failed);
-      assert (!(f.failed & bit));
-      f.failed |= bit;
+      mark_failing_assumption (-failed);
       if (proof) {
         vector<int> clash = {externalize (failed), externalize (-failed)};
         proof->add_assumption_clause (++clause_id, clash, lrat_chain);
@@ -327,10 +366,7 @@ void Internal::failing () {
           assert (assumed (lit));
           LOG ("failed assumption %d", lit);
           clause.push_back (-lit);
-          Flags &f = flags (lit);
-          const unsigned bit = bign (lit);
-          assert (!(f.failed & bit));
-          f.failed |= bit;
+          mark_failing_assumption (lit);
         }
       }
       clear_analyzed_literals ();
@@ -455,6 +491,7 @@ void Internal::reset_assumptions () {
   }
   LOG ("cleared %zd assumptions", assumptions.size ());
   assumptions.clear ();
+  failing_assumptions.clear ();
   marked_failed = true;
 }
 
