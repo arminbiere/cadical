@@ -270,7 +270,46 @@ int Internal::decide () {
   check_queue ();
   CHECK_MISSED ();
   int res = 0;
-  if (is_assumption_level (level)) {
+  // TODO: refactor this part
+  if (is_assumption_level (level) && constraint_cat) {
+    int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
+    if (!cat_res) {
+      stats.constraints_solved++;
+      START (constraintssolve);
+      cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+      STOP (constraintssolve);
+      if (cat_res == 20)
+        stats.constraints_unsat++;
+      else if (cat_res == 10)
+        stats.constraints_sat++;
+      else {
+        // Kitten was terminated
+        assert (terminated_asynchronously ());
+      }
+    }
+    if (cat_res == 20) { // unsat
+      LOG ("constraints falsified");
+      unsat_constraint = true;
+      res = 20;
+    }
+    if (cat_res == 10) {
+      const int lit = assumptions[level];
+      assert (assumed (lit));
+      const signed char tmp = val (lit);
+      if (tmp < 0) {
+        LOG ("assumption %d falsified", lit);
+        res = 20;
+      } else if (tmp > 0) {
+        LOG ("assumption %d already satisfied", lit);
+        new_trail_level (0);
+        LOG ("added pseudo decision level");
+        notify_decision ();
+      } else {
+        LOG ("deciding assumption %d", lit);
+        search_assume_decision (lit);
+      }
+    }
+  } else if (is_assumption_level (level)) {
     const int lit = assumptions[level];
     assert (assumed (lit));
     const signed char tmp = val (lit);

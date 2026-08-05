@@ -280,15 +280,16 @@ struct Internal {
   size_t constraints_without_assumptions;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
   unordered_map<int64_t, int> constraint_ids; // indeces of the constraints
-  vector<int> constraint_tmp;                 // currently added constraint
-  vector<int> original;                       // original added literals
-  vector<int> levels;        // decision levels in learned clause
-  vector<int> analyzed;      // analyzed literals in 'analyze'
-  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
-  vector<int> sign_marked;   // literals skipped in 'decompose'
-  vector<int> minimized;     // removable or poison in 'minimize'
-  vector<int> shrinkable;    // removable or poison in 'shrink'
-  Reap reap;                 // radix heap for shrink
+  unordered_map<unsigned, int> constraint_refs; // kitten references
+  vector<int> constraint_tmp; // currently added constraint
+  vector<int> original;       // original added literals
+  vector<int> levels;         // decision levels in learned clause
+  vector<int> analyzed;       // analyzed literals in 'analyze'
+  vector<int> unit_analyzed;  // to avoid duplicate units in lrat_chain
+  vector<int> sign_marked;    // literals skipped in 'decompose'
+  vector<int> minimized;      // removable or poison in 'minimize'
+  vector<int> shrinkable;     // removable or poison in 'shrink'
+  Reap reap;                  // radix heap for shrink
 
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
   uint64_t randomized_deciding;

@@ -595,7 +595,10 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
     for (const auto &pid : chain) {
       const int64_t aid = abs (pid);
       LratCheckerClause **p = find (aid), *d = *p;
-      LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
+      if (d)
+        LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
+      else
+        LOG ("could not find clause[%" PRId64 "]", pid);
     }
 #endif
     fatal_message_start ();
@@ -668,7 +671,8 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
     return;
   }
   if (conclusion == ASSUMPTIONS) {
-    if (ids.size () != 1 || assumption_clauses.size () != 1) {
+    // can have multiple assumption clauses anyways if there are constraints
+    if (ids.size () != 1) { // || assumption_clauses.size () != 1) {
       fatal_message_start ();
       fputs ("expected exactly one assumption clause\n", stderr);
       fatal_message_end ();

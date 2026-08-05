@@ -92,11 +92,15 @@ extern "C" {
 static void traverse_constraint_core (void *state, unsigned id) {
   Internal *internal = (Internal *) state;
   // TODO: mark failing constraints.
-  const unsigned aid = -id;
-  if (aid < internal->assumptions.size ()) // failing assumption
-    internal->mark_failing_assumption (internal->assumptions[aid]);
-  else // failing constraint
+  const unsigned aid = -id - 1;
+  if (aid < internal->assumptions.size ()) { // failing assumption
+    const int lit = internal->assumptions[aid];
+    LOG ("traversing core assumption[%d] = %d", aid, lit);
+    internal->mark_failing_assumption (lit);
+  } else { // failing constraint
+    LOG ("traversing core constraint[%d]", id);
     internal->mark_failed_constraint (id);
+  }
 }
 
 // extracts relevant learned clauses from kitten for drat proofs
@@ -112,9 +116,9 @@ static void traverse_constraint_drat (void *state, unsigned, bool learned,
   assert (!internal->lrat);
   assert (internal->lrat_chain.empty ());
   for (auto &lit : internal->failing_assumptions)
-    clause.push_back (lit);
+    clause.push_back (internal->externalize (lit));
   for (size_t i = 0; i < size; i++)
-    clause.push_back (internal->cat2lit (lits[i]));
+    clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           internal->lrat_chain);
   internal->conclusion.push_back (internal->clause_id);
@@ -123,14 +127,15 @@ static void traverse_constraint_drat (void *state, unsigned, bool learned,
 
 // extract lrat proofs for relevant clauses
 //
-static void traverse_constraint_lrat (void *state, unsigned, unsigned,
-                                      bool learned, size_t size,
-                                      const unsigned *lits,
+static void traverse_constraint_lrat (void *state, unsigned ref,
+                                      unsigned id, bool learned,
+                                      size_t size, const unsigned *lits,
                                       size_t chain_size,
                                       const unsigned *chain) {
+  Internal *internal = (Internal *) state;
+  internal->constraint_refs[ref] = id;
   if (!learned)
     return;
-  Internal *internal = (Internal *) state;
   auto &clause = internal->clause;
   auto &lrat_chain = internal->lrat_chain;
   assert (clause.empty ());
@@ -138,18 +143,24 @@ static void traverse_constraint_lrat (void *state, unsigned, unsigned,
   assert (internal->lrat);
   assert (lrat_chain.empty ());
   for (size_t i = 0; i < chain_size; i++) {
-    const unsigned kid = chain[i];
-    const unsigned aid = -kid;
-    // TODO: mapping from kitten id to cadical id
+    const unsigned kref = chain[i];
+    // kid is kitten internal representation,
+    // not cadical representation. Mapping needed.
+    assert (internal->constraint_refs.find (kref) !=
+            internal->constraint_refs.end ());
+    const unsigned cid = internal->constraint_refs[kref];
+    const unsigned aid = -cid - 1;
+    // TODO: mapping from intermediary kitten id to cadical id
     // would allow INT_MAX constraints (also see
     // comment in constrain.cpp)
     if (aid < internal->assumptions.size ())
-      clause.push_back (internal->assumptions[aid]);
+      clause.push_back (
+          -internal->externalize (internal->assumptions[aid]));
     else
-      lrat_chain.push_back (kid);
+      lrat_chain.push_back (cid);
   }
   for (size_t i = 0; i < size; i++)
-    clause.push_back (internal->cat2lit (lits[i]));
+    clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
   internal->proof->add_assumption_clause (++internal->clause_id, clause,
                                           lrat_chain);
   internal->conclusion.push_back (internal->clause_id);
@@ -326,8 +337,10 @@ void Internal::failing () {
     assert (!conclusion.empty ());
     if (proof) {
       if (lrat) {
+        assert (constraint_refs.empty ());
         KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,
                                               traverse_constraint_lrat);
+        constraint_refs.clear ();
       } else {
         KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
             constraint_cat, this, traverse_constraint_drat);
