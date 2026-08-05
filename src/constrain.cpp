@@ -64,7 +64,7 @@ void Internal::constrain (int lit) {
         if (lrat) {
           mark (*j);
           analyzed.push_back (*j);
-          lrat_chain.push_back (unit_id (*j));
+          lrat_chain.push_back (unit_id (-*j));
         }
         derived_constraint = true;
         LOG ("removing falsified literal %d from constraint clause", *j);

@@ -562,8 +562,8 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
     if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
         assumptions.end ())
       continue;
-    if (std::find (constraint_lits.begin (), constraint_lits.end (),
-                   -lit) != constraint_lits.end ())
+    if (std::find (constraint_lits.begin (), constraint_lits.end (), lit) !=
+        constraint_lits.end ())
       continue;
     fatal_message_start ();
     fputs ("clause contains non assumptions or constraint literals\n",
