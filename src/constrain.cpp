@@ -13,13 +13,13 @@ static int cat_terminate (void *data) {
 void Internal::init_constraint_cat () {
   assert (!constraint_cat);
   constraint_cat = KITTEN_NAMESPACE (kitten_init ());
-  if (external->terminator)
-    KITTEN_NAMESPACE (kitten_set_terminator) (constraint_cat, internal,
-                                              cat_terminate);
 #ifdef LOGGING
   if (opts.log)
     KITTEN_NAMESPACE (kitten_set_logging) (constraint_cat);
 #endif
+  if (external->terminator)
+    KITTEN_NAMESPACE (kitten_set_terminator) (constraint_cat, internal,
+                                              cat_terminate);
   KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
   size_t idx = 0;
   for (auto &other : assumptions)
@@ -86,6 +86,7 @@ void Internal::constrain (int lit) {
       unmark (lit);
   analyzed.clear ();
   if (satisfied_constraint) {
+    lrat_chain.clear ();
     constraint_tmp.clear ();
     stats.constraints_sat++;
     return;

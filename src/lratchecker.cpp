@@ -1,5 +1,6 @@
 #include "lratchecker.hpp"
 #include "internal.hpp"
+#include "logging.hpp"
 
 namespace CaDiCaL {
 
@@ -318,7 +319,8 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain,
 /*------------------------------------------------------------------------*/
 
 bool LratChecker::check (vector<int64_t> proof_chain, bool use_tmp) {
-  LOG (imported_clause, "LRAT CHECKER checking clause");
+  LOG (imported_clause, "LRAT CHECKER checking clause[%" PRId64 "]",
+       last_id);
   stats.checks++;
 #ifndef NDEBUG
   for (auto &b : checked_lits)
@@ -558,6 +560,7 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
 
 void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
                                          const vector<int64_t> &chain) {
+  LOG (c, "LRAT CHECKER adding assumption clause[%" PRId64 "]", id);
   for (auto &lit : c) {
     if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
         assumptions.end ())
@@ -614,9 +617,13 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
   assumption_clauses.push_back (id);
 }
 
-void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
+void LratChecker::add_assumption (int a) {
+  LOG ("LRAT CHECKER adding assumption %d", a);
+  assumptions.push_back (a);
+}
 
 void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
+  LOG (c, "LRAT CHECKER adding constraint[%" PRId64 "]", id);
   for (auto &lit : c) {
     constraint_vars.insert (abs (lit));
   }
@@ -641,6 +648,7 @@ void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
 }
 
 void LratChecker::reset_assumptions () {
+  LOG ("LRAT CHECKER reset assumptions");
   assumptions.clear ();
   concluded = false;
   for (auto &id : assumption_clauses) {
@@ -655,6 +663,7 @@ void LratChecker::reset_assumptions () {
 
 void LratChecker::conclude_unsat (ConclusionType conclusion,
                                   const vector<int64_t> &ids) {
+  LOG ("LRAT CHECKER conclude unsat");
   if (concluded) {
     fatal_message_start ();
     fputs ("already concluded\n", stderr);

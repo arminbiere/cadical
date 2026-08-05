@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
@@ -528,7 +529,7 @@ void Proof::reset () {
 }
 
 void Proof::add_original_clause () {
-  LOG (clause, "PROOF adding original external clause");
+  LOG (clause, "PROOF adding original clause[%" PRId64 "]", clause_id);
   assert (clause_id);
 
   for (auto &tracer : tracers) {
@@ -538,8 +539,8 @@ void Proof::add_original_clause () {
 }
 
 void Proof::add_derived_clause () {
-  LOG (clause, "PROOF adding derived external clause (redundant: %d)",
-       redundant);
+  LOG (clause, "PROOF adding derived %sredundant clause[%" PRId64 "]",
+       redundant ? "" : "ir", clause_id);
   assert (clause_id);
   for (auto &tracer : tracers) {
     tracer->add_derived_clause (clause_id, redundant, witness, clause,
@@ -549,7 +550,8 @@ void Proof::add_derived_clause () {
 }
 
 void Proof::delete_clause () {
-  LOG (clause, "PROOF deleting external clause");
+  LOG (clause, "PROOF deleting %sredundant clause[%" PRId64 "]",
+       redundant ? "" : "ir", clause_id);
   for (auto &tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
   }
@@ -557,7 +559,7 @@ void Proof::delete_clause () {
 }
 
 void Proof::demote_clause () {
-  LOG (clause, "PROOF demoting external clause");
+  LOG (clause, "PROOF demoting clause[%" PRId64 "]", clause_id);
   assert (!redundant);
   for (auto &tracer : tracers) {
     tracer->demote_clause (clause_id, clause);
@@ -566,7 +568,7 @@ void Proof::demote_clause () {
 }
 
 void Proof::weaken_minus () {
-  LOG (clause, "PROOF marking as clause to restore");
+  LOG (clause, "PROOF weaken clause[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->weaken_minus (clause_id, clause);
   }
@@ -574,7 +576,7 @@ void Proof::weaken_minus () {
 }
 
 void Proof::strengthen () {
-  LOG ("PROOF strengthen clause with id %" PRId64, clause_id);
+  LOG ("PROOF strengthen clause[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->strengthen (clause_id);
   }
@@ -582,6 +584,7 @@ void Proof::strengthen () {
 }
 
 void Proof::finalize_clause () {
+  LOG (clause, "PROOF finalizing clause[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->finalize_clause (clause_id, clause);
   }
@@ -589,7 +592,7 @@ void Proof::finalize_clause () {
 }
 
 void Proof::add_assumption_clause () {
-  LOG (clause, "PROOF adding assumption clause");
+  LOG (clause, "PROOF adding assumption clause[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->add_assumption_clause (clause_id, clause, proof_chain);
   }
@@ -630,7 +633,7 @@ void Proof::report_status (int status, int64_t id) {
 }
 
 void Proof::begin_proof (int64_t id) {
-  LOG (clause, "PROOF begin proof");
+  LOG ("PROOF begin proof at %" PRId64, id);
   for (auto &tracer : tracers) {
     tracer->begin_proof (id);
   }
@@ -638,7 +641,7 @@ void Proof::begin_proof (int64_t id) {
 }
 
 void Proof::solve_query () {
-  LOG (clause, "PROOF solve query");
+  LOG ("PROOF solve query");
   for (auto &tracer : tracers) {
     tracer->solve_query ();
   }
@@ -647,7 +650,11 @@ void Proof::solve_query () {
 
 void Proof::conclude_unsat (ConclusionType con,
                             const vector<int64_t> &conclusion) {
-  LOG (clause, "PROOF conclude unsat");
+  LOG (conclusion, "PROOF conclude unsat %s",
+       con == ConclusionType::CONSTRAINT
+           ? "CONSTRAINT"
+           : (con == ConclusionType::ASSUMPTIONS ? "ASSUMPTIONS"
+                                                 : "CONFLICT"));
   for (auto &tracer : tracers) {
     tracer->conclude_unsat (con, conclusion);
   }
@@ -655,7 +662,7 @@ void Proof::conclude_unsat (ConclusionType con,
 }
 
 void Proof::conclude_sat (const vector<int> &model) {
-  LOG (clause, "PROOF conclude sat");
+  LOG (model, "PROOF conclude sat");
   for (auto &tracer : tracers) {
     tracer->conclude_sat (model);
   }
@@ -663,7 +670,7 @@ void Proof::conclude_sat (const vector<int> &model) {
 }
 
 void Proof::conclude_unknown (const vector<int> &trail) {
-  LOG (clause, "PROOF conclude unknown");
+  LOG (trail, "PROOF conclude unknown");
   for (auto &tracer : tracers) {
     tracer->conclude_unknown (trail);
   }
