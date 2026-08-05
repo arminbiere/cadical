@@ -182,12 +182,14 @@ void Internal::analyze_failing_constraint (int failed) {
   stats.constraints_analyzed++;
   START (analyze);
 
-  LOG ("analyzing failing constraint %d", failed);
+  LOG ("analyzing failing constraint %s", LOGLIT (failed));
 
   assert (analyzed.empty ());
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   assert (!unsat);
+
+  assert (val (failed) < 0);
 
   Var &w = var (failed);
   Flags &g = flags (failed);
@@ -220,6 +222,7 @@ void Internal::analyze_failing_constraint (int failed) {
 
     if (proof)
       proof->add_assumption_clause (id, -failed, lrat_chain);
+    lrat_chain.clear ();
 
     KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, id, -failed));
     goto DONE;

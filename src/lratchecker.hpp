@@ -54,7 +54,7 @@ class LratChecker : public StatTracer {
   std::unordered_map<int64_t, std::vector<int>> clauses_to_reconstruct;
   std::vector<int> assumptions;
   std::unordered_set<int64_t> constraints;
-  std::unordered_set<int> constraint_lits;
+  std::unordered_set<int> constraint_vars;
   bool concluded;
 
   uint64_t num_clauses; // number of clauses in hash table

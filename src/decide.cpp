@@ -386,7 +386,10 @@ int Internal::decide () {
         } else {
           assert (tmp_lit == -tmp);
           LOG ("constraint literal %d falsified", lit);
-          analyze_failing_constraint (lit);
+          int failed = lit;
+          if (tmp_lit > 0)
+            failed = -failed;
+          analyze_failing_constraint (failed);
           goto DECIDE_CONSTRAINT;
         }
       }
