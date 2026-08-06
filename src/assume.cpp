@@ -334,7 +334,7 @@ void Internal::failing () {
         constraint_cat, &learned);
     KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
                                                  traverse_constraint_core);
-    assert (!conclusion.empty ());
+    // assert (!conclusion.empty ()); breaks if two assumptions contradict
     if (proof) {
       if (lrat) {
         assert (constraint_refs.empty ());

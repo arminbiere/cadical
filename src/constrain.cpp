@@ -154,7 +154,9 @@ bool Internal::failed_constraint (int64_t id) {
   if (constraint_ids.find (id) == constraint_ids.end ())
     return false;
   // assert (constraint_vars.size () == constraint_fail.size ());
-  return constraint_fail[constraint_ids[id]];
+  const bool res = constraint_fail[constraint_ids[id]];
+  LOG ("%s constraint[%" PRId64 "]", res ? "failing" : "not failing", id);
+  return res;
 }
 
 void Internal::reset_constraint () {

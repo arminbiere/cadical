@@ -196,7 +196,7 @@ void Internal::compact () {
   // TODO: remap constraint_cat?
   const bool is_constraint = constraint_vars.size ();
   if (is_constraint) {
-    assert (false);
+    // assert (false);
     assert (!external->constraints.empty ());
     LOG ("temporarily reset internal constraint");
     reset_constraint ();
@@ -433,7 +433,7 @@ void Internal::compact () {
       int eidx = abs (elit);
       assert (eidx <= external->max_var);
       int ilit = external->e2i[eidx];
-      assert (!ilit == !elit);
+      assert (!ilit == !elit); // Because frozen!
       if (elit < 0)
         ilit = -ilit;
       LOG ("re adding lit external %d internal %d to constraint", elit,

@@ -659,6 +659,8 @@ void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   // TODO: temporary flag
   // insert();
   assumption_clauses.push_back (id);
+  unsimplified.clear ();
+  simplified.clear ();
 }
 void Checker::add_assumption (int a) { assumptions.push_back (a); }
 void Checker::reset_assumptions () {
