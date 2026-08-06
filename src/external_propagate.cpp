@@ -665,7 +665,7 @@ void Internal::add_external_clause (int propagated_elit,
         "cb_propagate", elit,
         "external reason clause must only contain falsified literals");
 
-    CB_REQUIRE (!propagated_elit ||
+    CB_REQUIRE (!propagated_elit || elit == propagated_elit ||
                     external->current_val (propagated_elit) < 0 ||
                     var (external->internalize (elit)).trail <
                         var (external->internalize (propagated_elit)).trail,
