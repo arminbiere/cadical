@@ -1,3 +1,4 @@
+#include "contract.hpp"
 #include "internal.hpp"
 
 #include <algorithm>
@@ -98,8 +99,8 @@ void Internal::add_observed_var (int ilit) {
   // backtrack and re-play again every levels' notification to the
   // propagator
   if (val (ilit) && level && !fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    REQUIRE (!force_no_backtrack,
+             "can not observe assigned variable during conflict analysis");
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
     // To not break the stack-like view of the trail, we simply backtrack to
@@ -107,8 +108,8 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    REQUIRE (!force_no_backtrack,
+             "can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }
   activating_all_new_imported_literals ();
@@ -123,8 +124,8 @@ void Internal::add_observed_var (int ilit) {
 //
 void Internal::remove_observed_var (int ilit) {
   if (!fixed (ilit) && level && val (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not remove observed assigned variable during conflict "
+    REQUIRE (!force_no_backtrack,
+             "can not remove observed assigned variable during conflict "
              "analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
@@ -378,8 +379,8 @@ bool Internal::external_propagate () {
     int elit = external->propagator->cb_propagate ();
     LOG_INTERACTION_RETURN (cb_propagate, elit);
 
-    if (elit && !external->observed (elit))
-      FATAL ("external propagations are only allowed over observed "
+    REQUIRE (!elit || external->observed (elit),
+             "external propagations are only allowed over observed "
              "variables.");
 
     stats.up_cb++;
@@ -656,20 +657,26 @@ void Internal::add_external_clause (int propagated_elit,
     if (elit == propagated_elit)
       propagated_lit_found = true;
 
-    if (!external->observed (elit))
-      FATAL ("external clause must contain only observed variables.");
-    if (propagated_elit && elit != propagated_elit &&
-        external->current_val (elit) >= 0)
-      FATAL ("external reason clause must only contain falsified literals");
-    if (propagated_elit && external->current_val (propagated_elit) > 0 &&
-        var (external->internalize (elit)).trail >
-            var (external->internalize (propagated_elit)).trail)
-      FATAL ("external reason clause does not respect the trail order: %d "
-             "was assigned after %d",
-             elit, propagated_elit);
+    CB_REQUIRE (external->observed (elit), "cb_propagate", elit,
+                "external clause must contain only observed variables.");
+    CB_REQUIRE (
+        !propagated_elit || elit == propagated_elit ||
+            external->current_val (elit) < 0,
+        "cb_propagate", elit,
+        "external reason clause must only contain falsified literals");
+
+    CB_REQUIRE (!propagated_elit ||
+                    external->current_val (propagated_elit) < 0 ||
+                    var (external->internalize (elit)).trail <
+                        var (external->internalize (propagated_elit)).trail,
+                "cb_propagate", elit,
+                "external reason clause must respect the trail order (%d "
+                "was assigned after %d)",
+                elit, propagated_elit);
   }
-  if (propagated_elit && !propagated_lit_found)
-    FATAL ("external reason clause must contain the propagated literal.");
+  CB_REQUIRE (
+      !propagated_elit || propagated_lit_found, "cb_propagate", elit,
+      "external reason clause must contain the propagated literal.");
 
   // copy the state from adding clauses to enable adding external clauses
   // everywhere.
@@ -1357,8 +1364,11 @@ int Internal::ask_decision () {
     return 0;
   LOG ("external propagator proposes decision: %d", elit);
 
-  if (elit && !external->observed (elit))
-    FATAL ("external decisions are only allowed over observed variables.");
+  CB_REQUIRE (
+      (size_t) abs (elit) < external->is_observed.size () &&
+          external->is_observed[abs (elit)],
+      "cb_decide", elit,
+      "external decisions are only allowed over observed variables.");
 
   assert (external->is_observed[abs (elit)]);
 
@@ -1372,9 +1382,9 @@ int Internal::ask_decision () {
        "%d, fixed: %d, val: %d)",
        elit, ilit, fixed (ilit), val (ilit));
 
-  if (fixed (ilit) || val (ilit))
-    FATAL (
-        "external decisions are only allowed over unassigned variables.");
+  CB_REQUIRE (
+      !fixed (ilit) && !val (ilit), "cb_decide", elit,
+      "external decisions are only allowed over unassigned variables.");
 
   return ilit;
 }
