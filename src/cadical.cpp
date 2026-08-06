@@ -1042,7 +1042,7 @@ void App::signal_message (const char *msg, int sig) {
 void App::catch_signal (int sig) {
   signal_value = sig; // Store copy to re-raise signal in main
   solver->terminate (); // Immediate asynchronous call into solver.
-  Signal::reset (); // Use the first signal cought only
+  Signal::reset (); // Use the first signal caught only
 }
 
 void App::catch_alarm () {
