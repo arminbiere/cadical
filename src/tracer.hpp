@@ -54,7 +54,7 @@ public:
   // Includes ID and redundant/irredundant
   // Arguments: ID, redundant, clause
   //
-  virtual void demote_clause (uint64_t, const std::vector<int> &) {}
+  virtual void demote_clause (int64_t, const std::vector<int> &) {}
 
   // Notify the observer to remember that the clause might be restored later
   // Arguments: ID, clause

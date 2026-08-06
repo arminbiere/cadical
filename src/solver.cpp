@@ -44,8 +44,9 @@ void Solver::transition_to_steady_state () {
   if (state () == CONFIGURING) {
     LOG ("API leaves state %sCONFIGURING%s", tout.emph_code (),
          tout.normal_code ());
-    if (internal->opts.check && internal->opts.checkproof) {
-      internal->check ();
+    if (internal->opts.check) {
+      if (internal->opts.checkidrup || internal->opts.checklidrup)
+        internal->check ();
     }
   } else if (state () == SATISFIED) {
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
@@ -862,7 +863,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   if (res == 20 && !external->assumptions.empty ()) {
     Solver checker;
     // checking restored clauses does not work (because the clauses are not added)
-    checker.set("checkproof", 1);
+    checker.set("checkidrup", 1);
     checker.set("lrat", 0);
     checker.set("factorcheck", 0);
     checker.prefix ("checker ");

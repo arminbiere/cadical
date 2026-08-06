@@ -259,6 +259,10 @@ inline void Checker::import_literal (int lit) {
 }
 
 void Checker::import_clause (const vector<int> &c) {
+  assert (simplified.empty ());
+  assert (unsimplified.empty ());
+  simplified.clear ();   // Can be non-empty if clause allocation fails.
+  unsimplified.clear (); // Can be non-empty if clause allocation fails.
   for (const auto &lit : c)
     import_literal (lit);
 }
@@ -600,8 +604,6 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
-  simplified.clear ();   // Can be non-empty if clause allocation fails.
-  unsimplified.clear (); // Can be non-empty if clause allocation fails.
   import_clause (c);
   last_id = id;
   if (!tautological ()) {
@@ -631,12 +633,77 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 }
 
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
-                                     const vector<int64_t> &chain) {
+                                     const vector<int64_t> &) {
   // TODO: constraints...
   /*
   add_derived_clause (id, true, 0, c, chain);
   delete_clause (id, true, c);
   */
+  assumption_clauses.push_back (id);
+}
+
+// TODO: Semantics of these three?
+void Checker::demote_clause (int64_t, const std::vector<int> &) {}
+void Checker::weaken_minus (int64_t, const std::vector<int> &) {}
+void Checker::strengthen (int64_t) {}
+
+// TODO: restrict interactions? e.g. no reset_assumptions before any
+// type of conclusion
+void Checker::solve_query () {}
+
+// TODO: import constraint as temporary clause which is only propagated
+// for add_assumption_clause checks.
+void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
+  import_clause (c);
+  last_id = id;
+  // TODO: temporary flag
+  // insert();
+  assumption_clauses.push_back (id);
+}
+void Checker::add_assumption (int a) { assumptions.push_back (a); }
+void Checker::reset_assumptions () {
+  for (auto &id : assumption_clauses) {
+    // TODO: find and delete id.
+  }
+  assumption_clauses.clear ();
+  assumptions.clear ();
+}
+
+// TODO: check that conclusion clauses exist and last one is directly
+// falsified by query assumptions
+void Checker::conclude_unsat (ConclusionType,
+                              const std::vector<int64_t> &) {}
+
+// TODO: check that model satisfies formula
+void Checker::conclude_sat (const std::vector<int> &) {}
+
+// TODO: check that query assumptions -> trail
+void Checker::conclude_unknown (const std::vector<int> &) {}
+
+// check both sides of the equivalence but do not add to the clause set.
+void Checker::notify_equivalence (int a, int b) {
+  vector<int> c;
+  c.push_back (-a);
+  c.push_back (b);
+  import_clause (c);
+  if (!check ()) {
+    fatal_message_start ();
+    fprintf (stderr, "failed to check implication %d -> %d\n", -a, b);
+    fatal_message_end ();
+  }
+  simplified.clear ();
+  unsimplified.clear ();
+  c.clear ();
+  c.push_back (a);
+  c.push_back (-b);
+  import_clause (c);
+  if (!check ()) {
+    fatal_message_start ();
+    fprintf (stderr, "failed to check implication %d -> %d\n", a, -b);
+    fatal_message_end ();
+  }
+  simplified.clear ();
+  unsimplified.clear ();
 }
 
 /*------------------------------------------------------------------------*/

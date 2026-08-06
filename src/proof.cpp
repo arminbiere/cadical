@@ -158,7 +158,7 @@ void Internal::trace (File *file) {
 
 void Internal::check () {
   new_proof_on_demand ();
-  if (opts.checkproof > 1) {
+  if (opts.checklidrup > 1) {
     StatTracer *lratchecker = new LratChecker (this);
     DeferDeletePtr<LratChecker> delete_lratchecker (
         (LratChecker *) lratchecker);
@@ -170,7 +170,7 @@ void Internal::check () {
     stat_tracers.push_back (lratchecker);
     delete_lratchecker.release ();
   }
-  if (opts.checkproof == 1 || opts.checkproof == 3) {
+  if (opts.checkidrup == 1) {
     StatTracer *checker = new Checker (this);
     DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
     LOG ("PROOF connecting proof checker");

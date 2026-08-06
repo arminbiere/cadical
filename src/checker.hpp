@@ -9,8 +9,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// This checker implements an online forward DRUP proof checker enabled by
-// 'opts.checkproof' (requires 'opts.check' also to be enabled).  This is
+// This checker implements an online forward (I)DRUP proof checker enabled
+// by 'opts.checkidrup' (requires 'opts.check' also to be enabled).  This is
 // useful for model basted testing (and delta-debugging), where we can not
 // rely on an external proof checker such as 'drat-trim'.  We also do not
 // have yet  a flow for offline incremental proof checking, while this
@@ -30,6 +30,8 @@ namespace CaDiCaL {
 struct CheckerClause {
   CheckerClause *next; // collision chain link for hash table
   uint64_t hash;       // previously computed full 64-bit hash
+  int64_t id;          // id for computing hash
+  bool temp;           // constraints and assumption clauses
   unsigned size;       // zero if this is a garbage clause
 #ifndef NFLEXIBLE
   int literals[]; // otherwise 'literals' of length 'size'
@@ -86,6 +88,8 @@ class Checker : public StatTracer {
   std::vector<int> unsimplified; // original clause for reporting
   std::vector<int> simplified;   // clause for sorting
 
+  std::vector<int> assumptions;
+  std::vector<int64_t> assumption_clauses;
   std::vector<int> trail; // for propagation
 
   unsigned next_to_propagate; // next to propagate on trail
@@ -168,6 +172,20 @@ public:
   void begin_proof (int64_t) override {}        // skip
   void add_assumption_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
+
+  void demote_clause (int64_t, const std::vector<int> &) override;
+  void weaken_minus (int64_t, const std::vector<int> &) override;
+  void strengthen (int64_t) override;
+  void solve_query () override;
+  void add_assumption (int) override;
+  void add_constraint (int64_t, const std::vector<int> &) override;
+  void reset_assumptions () override;
+  void conclude_unsat (ConclusionType,
+                       const std::vector<int64_t> &) override;
+  void conclude_sat (const std::vector<int> &) override;
+  void conclude_unknown (const std::vector<int> &) override;
+  void notify_equivalence (int, int) override;
+
   void print_stats () override;
   void dump (); // for debugging purposes only
 };
