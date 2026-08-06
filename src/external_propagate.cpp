@@ -379,9 +379,9 @@ bool Internal::external_propagate () {
     int elit = external->propagator->cb_propagate ();
     LOG_INTERACTION_RETURN (cb_propagate, elit);
 
-    REQUIRE (!elit || external->observed (elit),
-             "external propagations are only allowed over observed "
-             "variables.");
+    CB_REQUIRE (!elit || external->observed (elit), "cb_propagate", elit,
+                "external propagations are only allowed over observed "
+                "variables.");
 
     stats.up_cb++;
     stats.up_cb_prop++;
@@ -642,10 +642,16 @@ void Internal::add_external_clause (int propagated_elit,
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
       LOG_INTERACTION_RETURN_FOR (cb_add_reason_clause_lit, propagated_elit,
                                   elit);
+      CB_REQUIRE (!elit || external->observed (elit),
+                  "cb_add_reason_clause_lit", elit,
+                  "reason clause must contain only observed variables.");
     } else {
       LOG_INTERACTION_START (cb_add_external_clause_lit);
       elit = external->propagator->cb_add_external_clause_lit ();
       LOG_INTERACTION_RETURN (cb_add_external_clause_lit, elit);
+      CB_REQUIRE (!elit || external->observed (elit),
+                  "cb_add_external_clause_lit", elit,
+                  "external clause must contain only observed variables.");
     }
     LOG ("cb_add %d", elit);
 
@@ -657,26 +663,24 @@ void Internal::add_external_clause (int propagated_elit,
     if (elit == propagated_elit)
       propagated_lit_found = true;
 
-    CB_REQUIRE (external->observed (elit), "cb_propagate", elit,
-                "external clause must contain only observed variables.");
     CB_REQUIRE (
         !propagated_elit || elit == propagated_elit ||
             external->current_val (elit) < 0,
-        "cb_propagate", elit,
+        "cb_add_reason_clause_lit", elit,
         "external reason clause must only contain falsified literals");
 
     CB_REQUIRE (!propagated_elit || elit == propagated_elit ||
                     external->current_val (propagated_elit) < 0 ||
                     var (external->internalize (elit)).trail <
                         var (external->internalize (propagated_elit)).trail,
-                "cb_propagate", elit,
+                "cb_add_reason_clause_lit", elit,
                 "external reason clause must respect the trail order (%d "
                 "was assigned after %d)",
                 elit, propagated_elit);
   }
   CB_REQUIRE (
-      !propagated_elit || propagated_lit_found, "cb_propagate", elit,
-      "external reason clause must contain the propagated literal.");
+      !propagated_elit || propagated_lit_found, "cb_add_reason_clause_lit",
+      elit, "external reason clause must contain the propagated literal.");
 
   // copy the state from adding clauses to enable adding external clauses
   // everywhere.
