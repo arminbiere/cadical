@@ -661,6 +661,12 @@ void Internal::add_external_clause (int propagated_elit,
     if (propagated_elit && elit != propagated_elit &&
         external->current_val (elit) >= 0)
       FATAL ("external reason clause must only contain falsified literals");
+    if (propagated_elit && external->current_val (propagated_elit) > 0 &&
+        var (external->internalize (elit)).trail >
+            var (external->internalize (propagated_elit)).trail)
+      FATAL ("external reason clause does not respect the trail order: %d "
+             "was assigned after %d",
+             elit, propagated_elit);
   }
   if (propagated_elit && !propagated_lit_found)
     FATAL ("external reason clause must contain the propagated literal.");
