@@ -311,12 +311,17 @@ void Proof::add_derived_rat_clause (int64_t id, bool r, int l,
 }
 
 void Proof::add_assumption_clause (int64_t id, const vector<int> &c,
-                                   const vector<int64_t> &chain) {
+                                   const vector<int64_t> &chain,
+                                   bool external) {
   // literals of c are already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
-  for (const auto &lit : c)
-    clause.push_back (lit);
+  if (external)
+    for (const auto &lit : c)
+      clause.push_back (lit);
+  else
+    for (const auto &lit : c)
+      add_literal (lit);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   clause_id = id;
@@ -342,10 +347,15 @@ void Proof::add_constraint (int64_t id, const vector<int> &c) {
 }
 
 void Proof::add_assumption_clause (int64_t id, int lit,
-                                   const vector<int64_t> &chain) {
+                                   const vector<int64_t> &chain,
+                                   bool external) {
   assert (clause.empty ());
   assert (proof_chain.empty ());
-  clause.push_back (lit);
+
+  if (external)
+    clause.push_back (lit);
+  else
+    add_literal (lit);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   clause_id = id;

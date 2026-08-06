@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "kitten.h"
+#include <algorithm>
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -97,7 +98,8 @@ void Internal::constrain (int lit) {
     if (proof) {
       if (lrat)
         lrat_chain.push_back (ext_id);
-      proof->add_assumption_clause (int_id, constraint_tmp, lrat_chain);
+      proof->add_assumption_clause (int_id, constraint_tmp, lrat_chain,
+                                    false);
       lrat_chain.clear ();
     }
   }
@@ -224,7 +226,7 @@ void Internal::analyze_failing_constraint (int failed) {
     }
 
     if (proof)
-      proof->add_assumption_clause (id, -failed, lrat_chain);
+      proof->add_assumption_clause (id, -failed, lrat_chain, false);
     lrat_chain.clear ();
 
     KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, id, -failed));
@@ -242,6 +244,7 @@ void Internal::analyze_failing_constraint (int failed) {
     assert (!g.seen);
     g.seen = true;
     analyzed.push_back (-failed);
+    clause.push_back (-failed);
     assert (w.reason);
     assert (w.reason != external_reason);
     for (const auto &other : *w.reason) {
@@ -320,8 +323,10 @@ void Internal::analyze_failing_constraint (int failed) {
     // form a unit-implied clause. Finally add the clause to kitten.
     //
     const int64_t id = ++clause_id;
-    if (proof)
-      proof->add_assumption_clause (id, clause, lrat_chain);
+    if (proof) {
+      std::reverse (lrat_chain.begin (), lrat_chain.end ());
+      proof->add_assumption_clause (id, clause, lrat_chain, false);
+    }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
                                            clause.size (), clause.data ());
     lrat_chain.clear ();

@@ -133,9 +133,12 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
                                       size_t chain_size,
                                       const unsigned *chain) {
   Internal *internal = (Internal *) state;
-  internal->constraint_refs[ref] = id;
-  if (!learned)
+  if (!learned) {
+    assert (id);
+    internal->constraint_refs[ref] = id;
     return;
+  }
+  assert (!id);
   auto &clause = internal->clause;
   auto &lrat_chain = internal->lrat_chain;
   assert (clause.empty ());
@@ -149,6 +152,7 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
     assert (internal->constraint_refs.find (kref) !=
             internal->constraint_refs.end ());
     const unsigned cid = internal->constraint_refs[kref];
+    assert (cid);
     const unsigned aid = -cid - 1;
     // TODO: mapping from intermediary kitten id to cadical id
     // would allow INT_MAX constraints (also see
@@ -161,8 +165,10 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
   }
   for (size_t i = 0; i < size; i++)
     clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
-  internal->proof->add_assumption_clause (++internal->clause_id, clause,
-                                          lrat_chain);
+  const int64_t new_id = ++internal->clause_id;
+  reverse (lrat_chain.begin (), lrat_chain.end ());
+  internal->proof->add_assumption_clause (new_id, clause, lrat_chain);
+  internal->constraint_refs[ref] = new_id;
   internal->conclusion.push_back (internal->clause_id);
   clause.clear ();
   lrat_chain.clear ();
@@ -330,8 +336,8 @@ void Internal::failing () {
     // unsat_constraint
     // TODO: analyze failing constraints with kitten
     uint64_t learned;
-    int reduced = KITTEN_NAMESPACE (kitten_compute_clausal_core) (
-        constraint_cat, &learned);
+    KITTEN_NAMESPACE (kitten_compute_clausal_core) (constraint_cat,
+                                                    &learned);
     KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
                                                  traverse_constraint_core);
     // assert (!conclusion.empty ()); breaks if two assumptions contradict

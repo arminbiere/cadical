@@ -301,8 +301,8 @@ struct TraceGen {
   int generate_resize = 10;
   int generate_declare_one_more_variable = 10;
   int generate_declare_more_variables = 10;
-  int generate_constraint = 50;
-  int generate_assume = 850;
+  int generate_constraint = 30;
+  int generate_assume = 700;
   int generate_values = 900;
   int generate_flipped = 500;
   int generate_frozen = 500;
@@ -5050,8 +5050,10 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_forces (random, minvars, maxvars);
 
     /* -------  generate BEFORE ------------ */
+    generate_assume (random, maxvars);
     generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);
+    generate_constraint (random, minvars, maxvars, uniform);
     generate_melt (random);
     generate_freeze (random, maxvars);
     generate_limits (random);

@@ -561,6 +561,7 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
 void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
                                          const vector<int64_t> &chain) {
   LOG (c, "LRAT CHECKER adding assumption clause[%" PRId64 "]", id);
+  LOG (chain, "LRAT CHECKER with reason chain");
   for (auto &lit : c) {
     if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
         assumptions.end ())

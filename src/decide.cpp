@@ -351,6 +351,7 @@ int Internal::decide () {
       res = 20;
     } else {
       LOG ("using kitten model");
+      bool all_constraints_assigned = true;
       for (auto &lit : constraint_vars) {
         const signed char tmp =
             KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
@@ -363,28 +364,19 @@ int Internal::decide () {
           stats.decisions++;
           assert (!flags (decision).unused ());
           search_assume_decision (decision);
+          all_constraints_assigned = false;
           break;
-        } else if (tmp_lit == tmp && is_decision (lit)) {
-          continue;
         } else if (tmp_lit == tmp) {
           LOG ("constraint literal %d already satisfied", lit);
-          new_trail_level (0);
-          LOG ("added pseudo decision level");
-          notify_decision ();
-          break;
+          continue;
         } else if (is_decision (lit)) {
           // happens if we have to recompute kitten model
           // assert (false);
+          all_constraints_assigned = false;
           backtrack (var (lit).level - 1);
         } else if (KITTEN_NAMESPACE (
                        kitten_flip_signed_literal (constraint_cat, lit))) {
           stats.constraints_flipped++;
-          stats.decisions++;
-          LOG ("constraint literal %d satisfied after flipping", lit);
-          new_trail_level (0);
-          LOG ("added pseudo decision level");
-          notify_decision ();
-          break;
         } else {
           assert (tmp_lit == -tmp);
           LOG ("constraint literal %d falsified", lit);
@@ -392,8 +384,17 @@ int Internal::decide () {
           if (tmp_lit > 0)
             failed = -failed;
           analyze_failing_constraint (failed);
+          if (var (lit).level)
+            backtrack (var (lit).level - 1);
+          all_constraints_assigned = false;
           goto DECIDE_CONSTRAINT;
         }
+      }
+      if (all_constraints_assigned) {
+        stats.decisions++;
+        LOG ("added pseudo decision level(s) due to constraints");
+        new_trail_level (0);
+        notify_decision ();
       }
     }
   DONE:

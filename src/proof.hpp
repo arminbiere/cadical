@@ -61,8 +61,10 @@ public:
   void add_original_clause (int64_t, bool, const std::vector<int> &);
 
   void add_assumption_clause (int64_t, const std::vector<int> &,
-                              const std::vector<int64_t> &);
-  void add_assumption_clause (int64_t, int, const std::vector<int64_t> &);
+                              const std::vector<int64_t> &,
+                              bool external = true);
+  void add_assumption_clause (int64_t, int, const std::vector<int64_t> &,
+                              bool external = true);
   void add_assumption (int);
   void add_constraint (int64_t id, const std::vector<int> &);
   void reset_assumptions ();
