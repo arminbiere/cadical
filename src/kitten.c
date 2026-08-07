@@ -134,6 +134,7 @@ struct kitten {
   bool logging;
 #endif
   bool antecedents;
+  bool keep_assumptions;
   bool learned;
 
   unsigned level;
@@ -298,7 +299,7 @@ static void log_reference (kitten *kitten, unsigned ref, const char *fmt,
       printf ("[%u]", c->aux);
   } else {
     fputs (" original", stdout);
-    if (c->aux != INVALID)
+    if (c->aux)
       printf ("[%u]", c->aux);
   }
   printf (" size %u clause[%u]", c->size, ref);
@@ -617,6 +618,13 @@ void KITTEN_NAMESPACE (kitten_track_antecedents) (kitten *kitten) {
 
   LOG ("enabling antecedents tracking");
   kitten->antecedents = true;
+}
+
+void KITTEN_NAMESPACE (kitten_keep_assumptions) (kitten *kitten) {
+  REQUIRE_STATUS (0);
+
+  LOG ("not resetting assumptions after solve");
+  kitten->keep_assumptions = true;
 }
 
 void KITTEN_NAMESPACE (kitten_randomize_phases) (kitten *kitten) {
@@ -1625,15 +1633,18 @@ static void reset_core (kitten *kitten) {
 
 static void reset_assumptions (kitten *kitten) {
   LOG ("reset %zu assumptions", SIZE_STACK (kitten->assumptions));
-  while (!EMPTY_STACK (kitten->assumptions)) {
-    const unsigned assumption = POP_STACK (kitten->assumptions);
+  unsigned *q = BEGIN_STACK (kitten->assumptions);
+  const unsigned *end = END_STACK (kitten->assumptions);
+  while (q != end) {
+    const unsigned assumption = *q++;
     kitten->failed[assumption] = false;
   }
 #ifndef NDEBUG
   for (size_t i = 0; i < kitten->size; i++)
     assert (!kitten->failed[i]);
 #endif
-  CLEAR_STACK (kitten->assumptions);
+  if (!kitten->keep_assumptions)
+    CLEAR_STACK (kitten->assumptions);
   if (kitten->failing != INVALID) {
     ROG (kitten->failing, "reset failed assumption reason");
     kitten->failing = INVALID;
@@ -2291,4 +2302,10 @@ bool KITTEN_NAMESPACE (kitten_failed) (kitten *kitten, unsigned elit) {
     return false;
   const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
   return kitten->failed[ilit];
+}
+
+bool KITTEN_NAMESPACE (kitten_failed_signed) (kitten *kitten, int elit) {
+  REQUIRE_STATUS (20);
+  unsigned kelit = int2u (elit);
+  return KITTEN_NAMESPACE (kitten_failed) (kitten, kelit);
 }

@@ -25,8 +25,7 @@ void Internal::assume (int lit) {
   assumptions.push_back (lit);
   freeze (lit);
   if (constraint_cat)
-    KITTEN_NAMESPACE (
-        cat_unit_with_id (constraint_cat, -assumptions.size (), lit));
+    KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, lit));
 }
 
 // for LRAT we actually need to implement recursive DFS
@@ -92,15 +91,16 @@ extern "C" {
 static void traverse_constraint_core (void *state, unsigned id) {
   Internal *internal = (Internal *) state;
   // TODO: mark failing constraints.
+  /*
   const unsigned aid = -id - 1;
   if (aid < internal->assumptions.size ()) { // failing assumption
     const int lit = internal->assumptions[aid];
-    LOG ("traversing core assumption[%d] = %d", aid, lit);
+    LOG ("traversing core assumption[%d] = %s", aid, LOGLIT (lit));
     internal->mark_failing_assumption (lit);
   } else { // failing constraint
-    LOG ("traversing core constraint[%d]", id);
-    internal->mark_failed_constraint (id);
-  }
+           // */
+  LOG ("traversing core constraint[%d]", id);
+  internal->mark_failed_constraint (id);
 }
 
 // extracts relevant learned clauses from kitten for drat proofs
@@ -135,6 +135,7 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
   Internal *internal = (Internal *) state;
   if (!learned) {
     assert (id);
+    LOG ("original kitten[%d] = %d", ref, id);
     internal->constraint_refs[ref] = id;
     return;
   }
@@ -153,15 +154,20 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
             internal->constraint_refs.end ());
     const unsigned cid = internal->constraint_refs[kref];
     assert (cid);
+    /*
     const unsigned aid = -cid - 1;
     // TODO: mapping from intermediary kitten id to cadical id
     // would allow INT_MAX constraints (also see
     // comment in constrain.cpp)
-    if (aid < internal->assumptions.size ())
-      clause.push_back (
-          -internal->externalize (internal->assumptions[aid]));
-    else
-      lrat_chain.push_back (cid);
+    if (aid < internal->assumptions.size ()) {
+      const int lit = -internal->assumptions[aid];
+      const int elit = internal->externalize (lit);
+      LOG ("adding negated assumption[%d] = %s external %d", aid,
+           LOGLIT (lit), elit);
+      clause.push_back (elit);
+    } else
+    */
+    lrat_chain.push_back (cid);
   }
   for (size_t i = 0; i < size; i++)
     clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
@@ -337,6 +343,10 @@ void Internal::failing () {
     // unsat_constraint
     // TODO: analyze failing constraints with kitten
     uint64_t learned;
+    for (auto &lit : assumptions) {
+      if (KITTEN_NAMESPACE (kitten_failed_signed) (constraint_cat, lit))
+        mark_failing_assumption (lit);
+    }
     KITTEN_NAMESPACE (kitten_compute_clausal_core) (constraint_cat,
                                                     &learned);
     KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
@@ -566,6 +576,11 @@ void Internal::sort_and_reuse_assumptions () {
       LOG ("no assumptions, reusing everything (ilb == 2)");
       return;
     }
+  }
+  if (constraint_cat) {
+    LOG ("cannot sort assumptions with constraints, reusing nothing");
+    backtrack (0);
+    return;
   }
   MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
          sort_assumptions_positive_rank (this),

@@ -392,7 +392,7 @@ int Internal::propagate_assumptions () {
   int res = already_solved (); // root-level propagation is done here
 
   int last_assumption_level = assumptions.size ();
-  last_assumption_level += constraint_vars.size ();
+  last_assumption_level += constraints_without_assumptions;
 
   if (!res) {
     restore_clauses ();

@@ -22,9 +22,10 @@ void Internal::init_constraint_cat () {
     KITTEN_NAMESPACE (kitten_set_terminator) (constraint_cat, internal,
                                               cat_terminate);
   KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
+  KITTEN_NAMESPACE (kitten_keep_assumptions) (constraint_cat);
   size_t idx = 0;
   for (auto &other : assumptions)
-    KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, -++idx, other));
+    KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, other));
 }
 
 void Internal::constrain (int lit) {

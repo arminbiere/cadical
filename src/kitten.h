@@ -26,6 +26,7 @@ void KITTEN_NAMESPACE (kitten_set_logging) (kitten *kitten);
 #endif
 
 void KITTEN_NAMESPACE (kitten_track_antecedents) (kitten *);
+void KITTEN_NAMESPACE (kitten_keep_assumptions) (kitten *);
 
 void KITTEN_NAMESPACE (kitten_shuffle_clauses) (kitten *);
 void KITTEN_NAMESPACE (kitten_flip_phases) (kitten *);
@@ -66,6 +67,7 @@ signed char KITTEN_NAMESPACE (kitten_fixed) (kitten *, unsigned);
 signed char KITTEN_NAMESPACE (kitten_fixed_signed) (kitten *,
                                                     int); // converts
 bool KITTEN_NAMESPACE (kitten_failed) (kitten *, unsigned);
+bool KITTEN_NAMESPACE (kitten_failed_signed) (kitten *, int);
 bool KITTEN_NAMESPACE (kitten_flip_literal) (kitten *, unsigned);
 bool KITTEN_NAMESPACE (kitten_flip_signed_literal) (kitten *, int);
 

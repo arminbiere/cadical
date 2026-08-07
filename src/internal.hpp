@@ -280,7 +280,7 @@ struct Internal {
   size_t constraints_without_assumptions;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
   unordered_map<int64_t, int> constraint_ids; // indeces of the constraints
-  unordered_map<unsigned, int> constraint_refs; // kitten references
+  unordered_map<unsigned, unsigned> constraint_refs; // kitten references
   vector<int> constraint_tmp; // currently added constraint
   vector<int> original;       // original added literals
   vector<int> levels;         // decision levels in learned clause
