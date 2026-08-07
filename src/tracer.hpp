@@ -117,17 +117,30 @@ public:
   //
   virtual void reset_assumptions () {}
 
-  // Notify the observer that this clause could be derived, which
-  // is the negation of a core of failing assumptions/constraints.
+  // Notify the observer that this clause could be derived.
+  // It may only contraint negated assumptions and
+  // variables from constraints, but will not use constraints
+  // in the derivation.
   // If antecedents are derived they will be included here.
   // Arguments: ID, clause, antecedents
   //
   virtual void add_assumption_clause (int64_t, const std::vector<int> &,
                                       const std::vector<int64_t> &) {}
 
+  // Notify the observer that this clause could be derived.
+  // It may only contraint negated assumptions and
+  // variables from constraints, and might use constraints
+  // in the derivation.
+  // If antecedents are derived they will be included here.
+  // Arguments: ID, clause, antecedents
+  //
+  virtual void add_constraint_clause (int64_t, const std::vector<int> &,
+                                      const std::vector<int64_t> &) {}
+
   // Notify the observer that conclude unsat was requested.
   // will give either the id of the empty clause, the id of a failing
-  // assumption clause or the ids of the failing constrain clauses
+  // assumption clause or a derivation of the empty clause using
+  // the failing constraints, constraint- and assumption clauses.
   // Arguments: conclusion_type, clause_ids
   //
   virtual void conclude_unsat (ConclusionType,

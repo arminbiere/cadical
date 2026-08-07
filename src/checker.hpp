@@ -137,6 +137,8 @@ class Checker : public StatTracer {
     int64_t added;    // number of added clauses
     int64_t original; // number of added original clauses
     int64_t derived;  // number of added derived clauses
+    int64_t derived_redundant;
+    int64_t derived_irredundant;
 
     int64_t deleted; // number of deleted clauses
 
@@ -171,6 +173,8 @@ public:
   void report_status (int, int64_t) override {} // skip
   void begin_proof (int64_t) override {}        // skip
   void add_assumption_clause (int64_t, const std::vector<int> &,
+                              const std::vector<int64_t> &) override;
+  void add_constraint_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
 
   void demote_clause (int64_t, const std::vector<int> &) override;

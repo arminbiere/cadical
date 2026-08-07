@@ -505,20 +505,20 @@ void LratChecker::add_original_clause (int64_t id, bool,
   STOP (checking);
 }
 
-void LratChecker::add_derived_clause (int64_t id, bool, int w,
+void LratChecker::add_derived_clause (int64_t id, bool, int witness,
                                       const vector<int> &c,
                                       const vector<int64_t> &proof_chain) {
   START (checking);
-  LOG (c, "LRAT CHECKER addition of derived %d clause[%" PRId64 "]", w, id);
-  assert (!w || c[0] == w);
-  if (w)
+  LOG (c, "LRAT CHECKER addition of derived %d clause[%" PRId64 "]",
+       witness, id);
+  if (witness)
     stats.rat++;
   stats.added++;
   stats.derived++;
   import_clause (c);
   last_id = id;
   assert (id == current_id + 1);
-  assert (!w || w == c[0]);
+  assert (!witness || witness == c[0]);
   current_id = id;
   if (size_clauses) {
     LratCheckerClause **p = find (id), *d = *p;
@@ -532,9 +532,9 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
   }
   assert (id);
   bool failed = true;
-  if (check (proof_chain) && check_resolution (proof_chain)) {
+  if (!witness && check (proof_chain) && check_resolution (proof_chain)) {
     failed = false;
-  } else if (check_blocked (proof_chain)) {
+  } else if (witness && check_blocked (proof_chain)) {
     failed = false;
   }
   if (failed) {
@@ -557,10 +557,69 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
   imported_clause.clear ();
   STOP (checking);
 }
-
 void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
                                          const vector<int64_t> &chain) {
   LOG (c, "LRAT CHECKER adding assumption clause[%" PRId64 "]", id);
+  LOG (chain, "LRAT CHECKER with reason chain");
+  for (auto &lit : c) {
+    if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
+        assumptions.end ())
+      continue;
+    if (std::find (constraint_vars.begin (), constraint_vars.end (),
+                   abs (lit)) != constraint_vars.end ())
+      continue;
+    fatal_message_start ();
+    fputs ("clause contains non assumptions or constraint literals\n",
+           stderr);
+    fatal_message_end ();
+  }
+  is_tmp = true;
+  last_id = id;
+  import_clause (c);
+  current_id = id;
+  if (size_clauses) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (d) {
+      fatal_message_start ();
+      fputs ("different clause with id ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" already present\n", stderr);
+      fatal_message_end ();
+    }
+  }
+  assert (id);
+  bool failed = true;
+  if (check (chain, false) && check_resolution (chain, false)) {
+    failed = false;
+  }
+  if (failed) {
+    LOG (chain, "LRAT CHECKER check failed with chain");
+#ifdef LOGGING
+    for (const auto &pid : chain) {
+      const int64_t aid = abs (pid);
+      LratCheckerClause **p = find (aid), *d = *p;
+      if (d)
+        LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
+      else
+        LOG ("could not find clause[%" PRId64 "]", pid);
+    }
+#endif
+    fatal_message_start ();
+    fputs ("failed to check assumption clause:\n", stderr);
+    for (const auto &lit : imported_clause)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  insert ();
+  imported_clause.clear ();
+  is_tmp = false;
+  assumption_clauses.push_back (id);
+}
+
+void LratChecker::add_constraint_clause (int64_t id, const vector<int> &c,
+                                         const vector<int64_t> &chain) {
+  LOG (c, "LRAT CHECKER adding constraint clause[%" PRId64 "]", id);
   LOG (chain, "LRAT CHECKER with reason chain");
   for (auto &lit : c) {
     if (std::find (assumptions.begin (), assumptions.end (), -lit) !=

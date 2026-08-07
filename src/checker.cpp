@@ -569,7 +569,7 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
   STOP (checking);
 }
 
-void Checker::add_derived_clause (int64_t id, bool, int,
+void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
                                   const vector<int> &c,
                                   const vector<int64_t> &) {
   if (inconsistent)
@@ -578,11 +578,20 @@ void Checker::add_derived_clause (int64_t id, bool, int,
   LOG (c, "CHECKER addition of derived clause");
   stats.added++;
   stats.derived++;
+  stats.derived_redundant += redundant;
+  stats.derived_irredundant += !redundant;
   import_clause (c);
   last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
-  else if (!check () && !check_blocked ()) { // needed for ER proof support
+  else if (!witness && !check ()) {
+    fatal_message_start ();
+    fputs ("failed to check derived clause:\n", stderr);
+    for (const auto &lit : unsimplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  } else if (witness && !check_blocked ()) {
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -633,6 +642,16 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 }
 
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
+                                     const vector<int64_t> &) {
+  // TODO: constraints...
+  /*
+  add_derived_clause (id, true, 0, c, chain);
+  delete_clause (id, true, c);
+  */
+  assumption_clauses.push_back (id);
+}
+
+void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   // TODO: constraints...
   /*

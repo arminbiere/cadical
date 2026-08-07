@@ -152,6 +152,8 @@ public:
   // constraints
   void add_assumption_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
+  void add_constraint_clause (int64_t, const std::vector<int> &,
+                              const std::vector<int64_t> &) override;
 
   // mark lit as assumption
   void add_assumption (int) override;
