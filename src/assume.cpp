@@ -167,7 +167,8 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
     clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
   const int64_t new_id = ++internal->clause_id;
   reverse (lrat_chain.begin (), lrat_chain.end ());
-  internal->proof->add_assumption_clause (new_id, clause, lrat_chain);
+  // using constraints in the derivation.
+  internal->proof->add_constraint_clause (new_id, clause, lrat_chain);
   internal->constraint_refs[ref] = new_id;
   internal->conclusion.push_back (internal->clause_id);
   clause.clear ();
@@ -356,7 +357,7 @@ void Internal::failing () {
 
   {
     // no LRAT do bfs as it was before
-    if (!lrat) {
+    if (!unsat_constraint && !lrat) {
       size_t next = 0;
       while (next < analyzed.size ()) {
         const int lit = analyzed[next++];
@@ -391,7 +392,7 @@ void Internal::failing () {
         }
       }
       clear_analyzed_literals ();
-    } else if (!unsat_constraint) { // LRAT for case (3)
+    } else if (!unsat_constraint && lrat) { // LRAT for case (3)
       assert (clause.size () == 1);
       const int lit = clause[0];
       Var &v = var (lit);

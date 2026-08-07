@@ -310,6 +310,22 @@ void Proof::add_derived_rat_clause (int64_t id, bool r, int l,
   add_derived_clause ();
 }
 
+void Proof::add_constraint_clause (int64_t id, const vector<int> &c,
+                                   const vector<int64_t> &chain,
+                                   bool external) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  if (external)
+    for (const auto &lit : c)
+      clause.push_back (lit); // already external
+  else
+    for (const auto &lit : c)
+      add_literal (lit); // map to external
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_constraint_clause ();
+}
 void Proof::add_assumption_clause (int64_t id, const vector<int> &c,
                                    const vector<int64_t> &chain,
                                    bool external) {
@@ -360,6 +376,22 @@ void Proof::add_assumption_clause (int64_t id, int lit,
     proof_chain.push_back (cid);
   clause_id = id;
   add_assumption_clause ();
+}
+
+void Proof::add_constraint_clause (int64_t id, int lit,
+                                   const vector<int64_t> &chain,
+                                   bool external) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+
+  if (external)
+    clause.push_back (lit);
+  else
+    add_literal (lit);
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_constraint_clause ();
 }
 
 void Proof::delete_clause (Clause *c) {
@@ -605,6 +637,14 @@ void Proof::add_assumption_clause () {
   LOG (clause, "PROOF adding assumption clause[%" PRId64 "]", clause_id);
   for (auto &tracer : tracers) {
     tracer->add_assumption_clause (clause_id, clause, proof_chain);
+  }
+  reset ();
+}
+
+void Proof::add_constraint_clause () {
+  LOG (clause, "PROOF adding constraint clause[%" PRId64 "]", clause_id);
+  for (auto &tracer : tracers) {
+    tracer->add_constraint_clause (clause_id, clause, proof_chain);
   }
   reset ();
 }

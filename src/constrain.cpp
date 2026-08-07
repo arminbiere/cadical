@@ -98,7 +98,7 @@ void Internal::constrain (int lit) {
     if (proof) {
       if (lrat)
         lrat_chain.push_back (ext_id);
-      proof->add_assumption_clause (int_id, constraint_tmp, lrat_chain,
+      proof->add_constraint_clause (int_id, constraint_tmp, lrat_chain,
                                     false);
       lrat_chain.clear ();
     }
@@ -225,7 +225,7 @@ void Internal::analyze_failing_constraint (int failed) {
       lrat_chain.push_back (uid);
     }
 
-    if (proof)
+    if (proof) // assumption clauses do not use constraints
       proof->add_assumption_clause (id, -failed, lrat_chain, false);
     lrat_chain.clear ();
 
@@ -325,6 +325,7 @@ void Internal::analyze_failing_constraint (int failed) {
     const int64_t id = ++clause_id;
     if (proof) {
       std::reverse (lrat_chain.begin (), lrat_chain.end ());
+      // not using constraints
       proof->add_assumption_clause (id, clause, lrat_chain, false);
     }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,

@@ -327,7 +327,6 @@ int Internal::decide () {
     }
   } else if (is_constraint_level (level)) {
     START (constraints);
-  DECIDE_CONSTRAINT:
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
@@ -341,15 +340,14 @@ int Internal::decide () {
       else {
         // Kitten was terminated
         assert (terminated_asynchronously ());
-        goto DONE;
       }
     }
-    assert (cat_res);
+    // assert (cat_res);
     if (cat_res == 20) { // unsat
       LOG ("constraints falsified");
       unsat_constraint = true;
       res = 20;
-    } else {
+    } else if (cat_res == 10) {
       LOG ("using kitten model");
       bool all_constraints_assigned = true;
       for (auto &lit : constraint_vars) {
@@ -374,6 +372,7 @@ int Internal::decide () {
           // assert (false);
           all_constraints_assigned = false;
           backtrack (var (lit).level - 1);
+          break;
         } else if (KITTEN_NAMESPACE (
                        kitten_flip_signed_literal (constraint_cat, lit))) {
           stats.constraints_flipped++;
@@ -387,7 +386,7 @@ int Internal::decide () {
           if (var (lit).level)
             backtrack (var (lit).level - 1);
           all_constraints_assigned = false;
-          goto DECIDE_CONSTRAINT;
+          break;
         }
       }
       if (all_constraints_assigned) {
@@ -397,7 +396,6 @@ int Internal::decide () {
         notify_decision ();
       }
     }
-  DONE:
     STOP (constraints);
   } else {
     check_queue ();
