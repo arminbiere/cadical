@@ -470,17 +470,13 @@ const char *Parser::parse_solution_non_profiled () {
 
 const char *Parser::parse_dimacs (int &vars, int strict) {
   assert (strict == FORCED || strict == RELAXED || strict == STRICT);
-  START (parse);
-  const char *err = parse_dimacs_non_profiled (vars, strict);
-  STOP (parse);
-  return err;
+  PROFILE_SCOPE (parse);
+  return parse_dimacs_non_profiled (vars, strict);
 }
 
 const char *Parser::parse_solution () {
-  START (parse);
-  const char *err = parse_solution_non_profiled ();
-  STOP (parse);
-  return err;
+  PROFILE_SCOPE (parse);
+  return parse_solution_non_profiled ();
 }
 
 } // namespace CaDiCaL

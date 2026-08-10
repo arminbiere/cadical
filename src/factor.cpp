@@ -1559,7 +1559,8 @@ bool Internal::factor () {
 
   mark_duplicated_binary_clauses_as_garbage ();
 
-  START_SIMPLIFIER (factor, FACTOR);
+  MODE_SCOPE_SIMPLIFY (FACTOR);
+  PROFILE_SCOPE_SIMPLIFY (factor);
   stats.factorings++;
 
   struct {
@@ -1605,7 +1606,6 @@ bool Internal::factor () {
 
   if (completed)
     last.factor.marked = stats.mark_factor;
-  STOP_SIMPLIFIER (factor, FACTOR);
   return true;
 }
 

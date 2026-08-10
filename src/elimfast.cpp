@@ -287,8 +287,8 @@ int Internal::elimfast_round (bool &completed,
   if (terminated_asynchronously ())
     return 0;
 
-  START_SIMPLIFIER (fastelim, ELIM);
-
+  MODE_SCOPE_SIMPLIFY (ELIM);
+  PROFILE_SCOPE_SIMPLIFY (fastelim);
   stats.eliminate_fast_rounds++;
 
   assert (!level);
@@ -462,8 +462,6 @@ int Internal::elimfast_round (bool &completed,
 
   const int units = stats.vars_all_fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
-  STOP_SIMPLIFIER (fastelim, ELIM);
-
   return eliminated; // non-zero if successful
 }
 

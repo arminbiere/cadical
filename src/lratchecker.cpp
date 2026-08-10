@@ -455,7 +455,7 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
 
 void LratChecker::add_original_clause (int64_t id, bool,
                                        const vector<int> &c, bool restore) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "LRAT CHECKER addition of original clause[%" PRId64 "]", id);
   if (restore)
     restore_clause (id, c);
@@ -479,13 +479,12 @@ void LratChecker::add_original_clause (int64_t id, bool,
   assert (id);
   insert ();
   imported_clause.clear ();
-  STOP (checking);
 }
 
 void LratChecker::add_derived_clause (int64_t id, bool, int w,
                                       const vector<int> &c,
                                       const vector<int64_t> &proof_chain) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "LRAT CHECKER addition of derived %d clause[%" PRId64 "]", w, id);
   assert (!w || c[0] == w);
   if (w)
@@ -532,7 +531,6 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
   } else
     insert ();
   imported_clause.clear ();
-  STOP (checking);
 }
 
 void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
@@ -632,7 +630,7 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
 /*------------------------------------------------------------------------*/
 
 void LratChecker::delete_clause (int64_t id, bool, const vector<int> &c) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "LRAT CHECKER checking deletion of clause[%" PRId64 "]", id);
   stats.deleted++;
   import_clause (c);
@@ -679,7 +677,6 @@ void LratChecker::delete_clause (int64_t id, bool, const vector<int> &c) {
     fatal_message_end ();
   }
   imported_clause.clear ();
-  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/
@@ -763,7 +760,7 @@ void LratChecker::restore_clause (int64_t id, const vector<int> &c) {
 }
 
 void LratChecker::finalize_clause (int64_t id, const vector<int> &c) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "LRAT CHECKER checking finalize of clause[%" PRId64 "]", id);
   stats.finalized++;
   num_finalized++;
@@ -798,12 +795,11 @@ void LratChecker::finalize_clause (int64_t id, const vector<int> &c) {
     fatal_message_end ();
   }
   imported_clause.clear ();
-  STOP (checking);
 }
 
 // check if all clauses have been deleted
 void LratChecker::report_status (int, int64_t) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (num_finalized == num_clauses) {
     num_finalized = 0;
     LOG ("LRAT CHECKER successful finalize check, all clauses have been "
@@ -815,7 +811,6 @@ void LratChecker::report_status (int, int64_t) {
     fputs (" are not finalized", stderr);
     fatal_message_end ();
   }
-  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/

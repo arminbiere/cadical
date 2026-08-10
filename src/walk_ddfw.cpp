@@ -637,7 +637,7 @@ void Walker_DDFW::make_clauses_along_occurrences (int lit) {
 }
 
 void Walker_DDFW::make_clauses (int lit) {
-  START (walkflipWL);
+  PROFILE_SCOPE (walkflipWL);
   const int64_t old = ticks;
   // In babywalk this work because there are not counter
   // if (this->occs(lit).size() > broken.size())
@@ -645,11 +645,10 @@ void Walker_DDFW::make_clauses (int lit) {
   // else
   make_clauses_along_occurrences (lit);
   internal->stats.ticks_walk_flip_wl += ticks - old;
-  STOP (walkflipWL);
 }
 
 void Walker_DDFW::break_clauses (int lit) {
-  START (walkflipbroken);
+  PROFILE_SCOPE (walkflipbroken);
   const int64_t old = ticks;
   LOG ("breaking clauses on %s", LOGLIT (lit));
   // Finally add all new unsatisfied (broken) clauses.
@@ -702,12 +701,11 @@ void Walker_DDFW::break_clauses (int lit) {
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
   internal->stats.ticks_walk_flip_broke += ticks - old;
-  STOP (walkflipbroken);
 }
 
 void Walker_DDFW::walk_ddfw_flip_lit (int lit) {
-  START (walkflip);
-  internal->require_mode (internal->WALK);
+  MODE_REQUIRE (WALK);
+  PROFILE_SCOPE (walkflip);
   LOG ("flipping assign %s", LOGLIT (lit));
   assert (internal->val (lit) < 0);
   assert (internal->active (lit));
@@ -724,7 +722,6 @@ void Walker_DDFW::walk_ddfw_flip_lit (int lit) {
   break_clauses (-lit);
 
   internal->stats.ticks_walk_flip += ticks - old;
-  STOP (walkflip);
 }
 
 /*------------------------------------------------------------------------*/
@@ -805,7 +802,7 @@ void Walker_DDFW::do_sideways_jump () {
 }
 
 void Walker_DDFW::transfer_weights () {
-  START (walktransferweights);
+  PROFILE_SCOPE (walktransferweights);
   LOG ("transfering weights");
   // In TaSSAT, the value is different in each thread by taking a value
   // between 10% + thread_id / number_of_threads.
@@ -900,7 +897,6 @@ void Walker_DDFW::transfer_weights () {
     update_unsat_weights (c.counter_pos, weight_difference);
     update_sat_weights (robbed_pos, weight_difference);
   }
-  STOP (walktransferweights);
 }
 
 void Walker_DDFW::update_unsat_weights (position_type pos,
@@ -984,7 +980,7 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
 // Also the only store the literals for sideways jumps (yal-lin and ddfw
 // only), only when the option is activated.
 std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
-  START (walkwrv);
+  PROFILE_SCOPE (walkwrv);
   int weight_reducing_var = 0;
   double best_new_satisfied = 0.0;
   int loop_iterations = 0;
@@ -1048,7 +1044,6 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
          best_new_satisfied);
   else
     LOG ("no literal to flip");
-  STOP (walkwrv);
   return make_pair (weight_reducing_var, best_new_satisfied);
 }
 /*------------------------------------------------------------------------*/
@@ -1411,13 +1406,13 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 }
 
 void Internal::walk_ddfw () {
-  START_INNER_WALK ();
+  MODE_SCOPE_WALK (WALK);
+  PROFILE_SCOPE_WALK (walk);
 
   backtrack ();
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
     learn_empty_clause ();
-    STOP_INNER_WALK ();
     return;
   }
 
@@ -1426,7 +1421,6 @@ void Internal::walk_ddfw () {
     res = warmup ();
   if (res) {
     LOG ("stopping walk due to warmup");
-    STOP_INNER_WALK ();
     return;
   }
   const int64_t ticks =
@@ -1447,7 +1441,6 @@ void Internal::walk_ddfw () {
     limit = 1e3 * opts.walkmaxeff;
   }
   (void) walk_ddfw_round (limit, false);
-  STOP_INNER_WALK ();
 }
 
 } // namespace CaDiCaL

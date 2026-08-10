@@ -25,7 +25,7 @@ void Internal::reset_watches () {
 // random fashion, and thus we optionally profile it.
 
 void Internal::connect_watches (bool irredundant_only) {
-  START (connect);
+  PROFILE_SCOPE (connect);
   assert (watching ());
 
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
@@ -73,15 +73,13 @@ void Internal::connect_watches (bool irredundant_only) {
       }
     }
   }
-
-  STOP (connect);
 }
 
 // This can be quite costly since lots of memory is accessed in a rather
 // random fashion, and thus we optionally profile it.
 
 void Internal::connect_binary_watches () {
-  START (connect);
+  PROFILE_SCOPE (connect);
   assert (watching ());
 
   LOG ("watching binary clauses");
@@ -93,8 +91,6 @@ void Internal::connect_binary_watches () {
       continue;
     watch_clause (c);
   }
-
-  STOP (connect);
 }
 
 void Internal::sort_watches () {

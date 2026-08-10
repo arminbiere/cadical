@@ -760,8 +760,8 @@ bool Internal::block () {
       return false;
   }
 
-  START_SIMPLIFIER (block, BLOCK);
-
+  MODE_SCOPE_SIMPLIFY (BLOCK);
+  PROFILE_SCOPE_SIMPLIFY (block);
   stats.blockings++;
 
   LOG ("block-%" PRId64 "", stats.blockings);
@@ -816,8 +816,6 @@ bool Internal::block () {
     PHASE ("block", stats.blockings, "no pure literals found");
 
   report ('b', !opts.reportall && !blocked);
-
-  STOP_SIMPLIFIER (block, BLOCK);
 
   return blocked;
 }
