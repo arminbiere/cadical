@@ -90,14 +90,12 @@ template <class T> void erase_vector (std::vector<T> &v) {
   assert (!v.capacity ()); // not guaranteed though
 }
 
-// The standard 'Effective STL' way (though not guaranteed) to shrink the
+// The C++11 way (though not guaranteed) to shrink the
 // capacity of a vector to its size thus kind of releasing all the internal
 // excess memory not needed at the moment any more.
 
 template <class T> void shrink_vector (std::vector<T> &v) {
-  if (v.capacity () > v.size ()) {
-    std::vector<T> (v).swap (v);
-  }
+  v.shrink_to_fit ();
   assert (v.capacity () == v.size ()); // not guaranteed though
 }
 
