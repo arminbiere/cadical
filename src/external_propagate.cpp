@@ -631,7 +631,7 @@ void Internal::add_external_clause (int propagated_elit,
   from_propagator = true;
 
   int elit = 0;
-#ifdef CONTRACTS
+#ifndef NCONTRACTS
   bool propagated_lit_found = false;
 #endif
 
@@ -662,7 +662,7 @@ void Internal::add_external_clause (int propagated_elit,
     if (!elit)
       break;
 
-#ifdef CONTRACTS
+#ifndef NCONTRACTS
     if (elit == propagated_elit)
       propagated_lit_found = true;
 #endif
