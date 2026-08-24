@@ -180,10 +180,10 @@ void Checker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 Checker::Checker (Internal *i)
-    : internal (i), size_vars (0), vals (0), assumed (0),
-      inconsistent (false), solving (false), num_clauses (0),
-      num_garbage (0), size_clauses (0), clauses (0), garbage (0),
-      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false) {
+    : internal (i), size_vars (0), vals (0), assumed (0), inconsistent (0),
+      solving (false), num_clauses (0), num_garbage (0), size_clauses (0),
+      clauses (0), garbage (0), next_to_propagate (0), last_hash (0),
+      last_id (0), is_tmp (false) {
 
   // Initialize random number table for hash function.
   //
@@ -529,7 +529,7 @@ bool Checker::check_blocked () {
 
 /*------------------------------------------------------------------------*/
 
-void Checker::add_clause (const char *type) {
+void Checker::add_clause (bool temporary, const char *type) {
 #ifndef LOGGING
   (void) type;
 #endif
@@ -553,27 +553,29 @@ void Checker::add_clause (const char *type) {
 
   if (simplified.empty ()) {
     LOG ("CHECKER added empty %s clause", type);
-    inconsistent = true;
+    inconsistent = last_id;
   }
   if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause", type);
-    inconsistent = true;
+    if (!inconsistent)
+      inconsistent = -1;
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     assign (unit);
     stats.units++;
     if (!propagate (false)) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
-      inconsistent = true;
+      if (!inconsistent)
+        inconsistent = -1;
     }
-  } else
+  } else {
+    is_tmp = temporary;
     insert ();
+  }
 }
 
 void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
                                    bool) {
-  if (inconsistent)
-    return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
   stats.added++;
@@ -583,7 +585,7 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
   if (tautological ())
     LOG ("CHECKER ignoring satisfied original clause");
   else
-    add_clause ("original");
+    add_clause (false, "original");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
@@ -592,8 +594,6 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
 void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
                                   const vector<int> &c,
                                   const vector<int64_t> &) {
-  if (inconsistent)
-    return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
   stats.added++;
@@ -619,7 +619,7 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
     fputc ('0', stderr);
     fatal_message_end ();
   } else
-    add_clause ("derived");
+    add_clause (false, "derived");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
@@ -628,8 +628,6 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
 /*------------------------------------------------------------------------*/
 
 void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
-  if (inconsistent)
-    return;
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
@@ -666,8 +664,7 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
   // TODO: constraints...
   import_clause (c);
   last_id = id;
-  is_tmp = true;
-  if (!tautological () && !check (true)) {
+  if (!tautological () && !check (false)) {
     fatal_message_start ();
     fputs ("failed to check assumption clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -675,11 +672,10 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  insert ();
-  is_tmp = false;
+  add_clause (true, "assumption");
   assumption_clauses.push_back (id);
-  unsimplified.clear ();
   simplified.clear ();
+  unsimplified.clear ();
 }
 
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
@@ -687,12 +683,18 @@ void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
   // TODO: constraints...
   import_clause (c);
   last_id = id;
-  is_tmp = true;
-  insert ();
-  is_tmp = false;
+  if (!tautological () && !check (true)) {
+    fatal_message_start ();
+    fputs ("failed to check constraint clause:\n", stderr);
+    for (const auto &lit : unsimplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  add_clause (true, "derived constraint");
   assumption_clauses.push_back (id);
-  unsimplified.clear ();
   simplified.clear ();
+  unsimplified.clear ();
 }
 
 // TODO: Semantics of these three?
@@ -709,12 +711,10 @@ void Checker::solve_query () { solving = true; }
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   import_clause (c);
   last_id = id;
-  is_tmp = true;
-  insert ();
-  is_tmp = false;
+  add_clause (true, "original constraint");
   assumption_clauses.push_back (id);
-  unsimplified.clear ();
   simplified.clear ();
+  unsimplified.clear ();
 }
 
 void Checker::add_assumption (int a) {
@@ -765,6 +765,11 @@ void Checker::conclude_unsat (ConclusionType,
   solving = false;
   bool falsified = false;
   for (auto &id : ids) {
+    if (inconsistent && id == inconsistent) {
+      falsified = true;
+      break;
+    }
+
     CheckerClause **p = find (false), *d = *p;
     if (!d) {
       fatal ("did not find conclusion clause[%" PRId64 "]", id);

@@ -41,6 +41,7 @@ struct CheckerClause {
 };
 
 struct CheckerWatch {
+  bool temporary;
   int blit;
   unsigned size;
   CheckerClause *clause;
@@ -74,11 +75,12 @@ class Checker : public StatTracer {
   static unsigned l2u (int lit);
   std::vector<CheckerWatcher> watchers; // watchers of literals
   std::vector<signed char> marks;       // mark bits of literals
+  std::vector<int> temporary_units;
 
   signed char &mark (int lit);
   CheckerWatcher &watcher (int lit);
 
-  bool inconsistent; // found or added empty clause
+  int64_t inconsistent; // found or added empty clause
   bool solving;
 
   uint64_t num_clauses;    // number of clauses in hash table
@@ -118,7 +120,7 @@ class Checker : public StatTracer {
   CheckerClause **
   find (bool check_lits = true); // find clause position in hash table
 
-  void add_clause (const char *type);
+  void add_clause (bool temporary, const char *type);
 
   void collect_garbage_clauses ();
 
