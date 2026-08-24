@@ -631,7 +631,9 @@ void Internal::add_external_clause (int propagated_elit,
   from_propagator = true;
 
   int elit = 0;
+#ifdef CONTRACTS
   bool propagated_lit_found = false;
+#endif
 
   assert (tmp_elits.empty ());
 
@@ -660,8 +662,10 @@ void Internal::add_external_clause (int propagated_elit,
     if (!elit)
       break;
 
+#ifdef CONTRACTS
     if (elit == propagated_elit)
       propagated_lit_found = true;
+#endif
 
     CB_REQUIRE (
         !propagated_elit || elit == propagated_elit ||
