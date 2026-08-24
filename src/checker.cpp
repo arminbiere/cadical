@@ -54,6 +54,8 @@ CheckerClause *Checker::new_clause () {
   res->id = last_id;
   res->size = size;
   res->temporary = is_tmp;
+  res->garbage = false;
+  res->satisfied = false;
   int *literals = res->literals, *p = literals;
   for (const auto &lit : simplified)
     *p++ = lit;
@@ -83,7 +85,7 @@ CheckerClause *Checker::new_clause () {
 }
 
 void Checker::delete_clause (CheckerClause *c) {
-  if (c->size) {
+  if (c->garbage) {
     assert (c->size > 1);
     assert (num_clauses);
     num_clauses--;
@@ -135,16 +137,9 @@ void Checker::collect_garbage_clauses () {
   for (size_t i = 0; i < size_clauses; i++) {
     CheckerClause **p = clauses + i, *c;
     while ((c = *p)) {
-      if (clause_satisfied (c) && !c->temporary) {
-        c->size = 0; // mark as garbage
-        *p = c->next;
-        c->next = garbage;
-        garbage = c;
-        num_garbage++;
-        assert (num_clauses);
-        num_clauses--;
-      } else
-        p = &c->next;
+      if (clause_satisfied (c) && !c->temporary)
+        c->satisfied = true;
+      p = &c->next;
     }
   }
 
@@ -159,7 +154,7 @@ void Checker::collect_garbage_clauses () {
     auto j = ws.begin (), i = j;
     for (; i != end; i++) {
       CheckerWatch &w = *i;
-      if (w.clause->size)
+      if (!w.clause->garbage && !w.clause->satisfied)
         *j++ = w;
     }
     if (j == ws.end ())
@@ -181,9 +176,9 @@ void Checker::collect_garbage_clauses () {
 
 Checker::Checker (Internal *i)
     : internal (i), size_vars (0), vals (0), assumed (0), inconsistent (0),
-      solving (false), num_clauses (0), num_garbage (0), size_clauses (0),
-      clauses (0), garbage (0), next_to_propagate (0), last_hash (0),
-      last_id (0), is_tmp (false) {
+      tmp_inconsistent (0), solving (false), num_clauses (0),
+      num_garbage (0), size_clauses (0), clauses (0), garbage (0),
+      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false) {
 
   // Initialize random number table for hash function.
   //
@@ -439,7 +434,7 @@ bool Checker::propagate (bool propagate_temporary) {
       } else {
         assert (size > 2);
         CheckerClause *c = w.clause;
-        if (!c->size) {
+        if (c->garbage) {
           j--;
           continue;
         } // skip garbage clauses
@@ -480,7 +475,22 @@ bool Checker::check (bool propagate_temporary) {
   stats.checks++;
   if (inconsistent)
     return true;
+  if (propagate_temporary && tmp_inconsistent)
+    return true;
   unsigned previously_propagated = next_to_propagate;
+  if (propagate_temporary) {
+    for (const auto &lit : temporary_units) {
+      if (val (lit) > 0)
+        continue;
+      if (val (lit) < 0) {
+        assert (!tmp_inconsistent);
+        tmp_inconsistent = -1;
+        backtrack (previously_propagated);
+        return true;
+      }
+      assume (lit);
+    }
+  }
   for (const auto &lit : simplified)
     assume (-lit);
   bool res = !propagate (propagate_temporary);
@@ -495,6 +505,7 @@ bool Checker::check_blocked () {
   vector<int> not_blocked;
   for (size_t i = 0; i < size_clauses; i++) {
     for (CheckerClause *c = clauses[i], *next; c; c = next) {
+      assert (!c->garbage);
       next = c->next;
       unsigned count = 0;
       int first;
@@ -533,6 +544,7 @@ void Checker::add_clause (bool temporary, const char *type) {
 #ifndef LOGGING
   (void) type;
 #endif
+  const bool satisfied = tautological ();
 
   // If there are enough garbage clauses collect them first.
   if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
@@ -553,20 +565,29 @@ void Checker::add_clause (bool temporary, const char *type) {
 
   if (simplified.empty ()) {
     LOG ("CHECKER added empty %s clause", type);
-    inconsistent = last_id;
+    if (temporary)
+      tmp_inconsistent = last_id;
+    else
+      inconsistent = last_id;
   }
   if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause", type);
-    if (!inconsistent)
+    if (!temporary && !inconsistent)
       inconsistent = -1;
+    else if (temporary && !tmp_inconsistent)
+      tmp_inconsistent = -1;
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
-    assign (unit);
-    stats.units++;
-    if (!propagate (false)) {
-      LOG ("CHECKER inconsistent after propagating %s unit", type);
-      if (!inconsistent)
-        inconsistent = -1;
+    if (temporary) {
+      temporary_units.push_back (unit);
+    } else {
+      assign (unit);
+      stats.units++;
+      if (!propagate (false)) {
+        LOG ("CHECKER inconsistent after propagating %s unit", type);
+        if (!inconsistent)
+          inconsistent = -1;
+      }
     }
   } else {
     is_tmp = temporary;
@@ -582,10 +603,7 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
   stats.original++;
   import_clause (c);
   last_id = id;
-  if (tautological ())
-    LOG ("CHECKER ignoring satisfied original clause");
-  else
-    add_clause (false, "original");
+  add_clause (false, "original");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
@@ -618,8 +636,8 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
       fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
     fatal_message_end ();
-  } else
-    add_clause (false, "derived");
+  }
+  add_clause (false, "derived");
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
@@ -769,7 +787,10 @@ void Checker::conclude_unsat (ConclusionType,
       falsified = true;
       break;
     }
-
+    if (tmp_inconsistent && id == tmp_inconsistent) {
+      falsified = true;
+      break;
+    }
     CheckerClause **p = find (false), *d = *p;
     if (!d) {
       fatal ("did not find conclusion clause[%" PRId64 "]", id);
@@ -820,7 +841,7 @@ void Checker::notify_equivalence (int a, int b) {
   c.push_back (-a);
   c.push_back (b);
   import_clause (c);
-  if (!check ()) {
+  if (!tautological () && !check ()) {
     fatal_message_start ();
     fprintf (stderr, "failed to check implication %d -> %d\n", -a, b);
     fatal_message_end ();
@@ -831,7 +852,7 @@ void Checker::notify_equivalence (int a, int b) {
   c.push_back (a);
   c.push_back (-b);
   import_clause (c);
-  if (!check ()) {
+  if (!tautological () && !check ()) {
     fatal_message_start ();
     fprintf (stderr, "failed to check implication %d -> %d\n", a, -b);
     fatal_message_end ();

@@ -32,7 +32,9 @@ struct CheckerClause {
   uint64_t hash;       // previously computed full 64-bit hash
   int64_t id;          // id for computing hash
   bool temporary;      // constraints and assumption clauses
-  unsigned size;       // zero if this is a garbage clause
+  bool satisfied;      // satisfied or tautological
+  bool garbage;        // watched
+  unsigned size;
 #ifndef NFLEXIBLE
   int literals[]; // otherwise 'literals' of length 'size'
 #else
@@ -80,7 +82,8 @@ class Checker : public StatTracer {
   signed char &mark (int lit);
   CheckerWatcher &watcher (int lit);
 
-  int64_t inconsistent; // found or added empty clause
+  int64_t inconsistent;     // found or added empty clause
+  int64_t tmp_inconsistent; // found or added empty clause
   bool solving;
 
   uint64_t num_clauses;    // number of clauses in hash table
