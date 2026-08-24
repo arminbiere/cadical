@@ -410,7 +410,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   }
 
   lookingahead = true;
-  START (lookahead);
+  PROFILE_SCOPE (lookahead);
   MSG ("Generating cubes of depth %i", depth);
 
   // presimplify required due to assumptions
@@ -428,7 +428,6 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
     CubesWithStatus cubes;
     cubes.status = res;
     lookingahead = false;
-    STOP (lookahead);
     return cubes;
   }
 
@@ -500,7 +499,6 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   for (auto lit : current_assumptions)
     assume (lit);
 
-  STOP (lookahead);
   lookingahead = false;
 
   if (unsat) {

@@ -372,7 +372,8 @@ bool Internal::ternary () {
 
   SET_EFFORT_LIMIT (limit, ternary, true);
 
-  START_SIMPLIFIER (ternary, TERNARY);
+  MODE_SCOPE_SIMPLIFY (TERNARY);
+  PROFILE_SCOPE_SIMPLIFY (ternary);
   stats.ternary++;
 
   assert (!level);
@@ -445,8 +446,6 @@ bool Internal::ternary () {
 
   if (completed)
     last.ternary.marked = stats.mark_ternary;
-
-  STOP_SIMPLIFIER (ternary, TERNARY);
 
   return resolved_binary_clause;
 }

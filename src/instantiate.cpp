@@ -76,7 +76,7 @@ inline void Internal::inst_assign (int lit) {
 // attempt succeeds.
 //
 bool Internal::inst_propagate () { // Adapted from 'propagate'.
-  START (propagate);
+  PROFILE_SCOPE (propagate);
   int64_t before = propagated;
   bool ok = true;
   while (ok && propagated != trail.size ()) {
@@ -165,7 +165,6 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
   int64_t delta = propagated - before;
   stats.propagations_inst += delta;
   stats.propagations += delta;
-  STOP (propagate);
   return ok;
 }
 
@@ -312,7 +311,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
 
 void Internal::instantiate (Instantiator &instantiator) {
   assert (opts.instantiate);
-  START (instantiate);
+  PROFILE_SCOPE (instantiate);
   stats.instantiations++;
 #ifndef QUIET
   const int64_t candidates = instantiator.candidates.size ();
@@ -360,7 +359,6 @@ void Internal::instantiate (Instantiator &instantiator) {
          instantiated, tried, percent (instantiated, tried));
   report ('I', !instantiated);
   reset_watches ();
-  STOP (instantiate);
 }
 
 } // namespace CaDiCaL

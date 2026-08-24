@@ -158,8 +158,7 @@ void inline Internal::shrunken_block_no_uip (
     const std::vector<int>::reverse_iterator &rbegin_block,
     const std::vector<int>::reverse_iterator &rend_block,
     unsigned &block_minimized, const int uip0) {
-  STOP (shrink);
-  START (minimize);
+  PROFILE_SCOPE_INTERRUPT_WITH (shrink, minimize);
   assert (rend_block > rbegin_block);
   LOG ("no UIP found, now minimizing");
   for (auto p = rbegin_block; p != rend_block; ++p) {
@@ -174,8 +173,6 @@ void inline Internal::shrunken_block_no_uip (
       assert (flags (lit).keep);
     }
   }
-  STOP (minimize);
-  START (shrink);
 }
 
 void Internal::push_literals_of_block (
@@ -429,7 +426,7 @@ void Internal::shrink_and_minimize_clause () {
   assert (opts.minimize || opts.shrink > 0);
   LOG (clause, "shrink first UIP clause");
 
-  START (shrink);
+  PROFILE_SCOPE (shrink);
   external->check_learned_clause (); // check 1st UIP learned clause first
   MSORT (opts.radixsortlim, clause.begin (), clause.end (),
          shrink_trail_negative_rank (this), shrink_trail_larger (this));
@@ -494,16 +491,15 @@ void Internal::shrink_and_minimize_clause () {
 
   stats.shrunken += total_shrunken;
   stats.shrunken_minimize += total_minimized;
-  STOP (shrink);
+  PROFILE_SCOPE_EARLY_EXIT (shrink);
 
-  START (minimize);
+  PROFILE_SCOPE (minimize);
   clear_minimized_literals ();
   for (auto p = minimize_chain.rbegin (); p != minimize_chain.rend ();
        p++) {
     lrat_chain.push_back (*p);
   }
   minimize_chain.clear ();
-  STOP (minimize);
 }
 
 } // namespace CaDiCaL

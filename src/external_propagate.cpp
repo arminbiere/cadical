@@ -358,7 +358,7 @@ void Internal::force_backtrack (int new_level) {
 //
 bool Internal::external_propagate () {
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
   assert (!unsat);
 
   size_t before = num_assigned;

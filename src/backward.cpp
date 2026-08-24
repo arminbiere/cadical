@@ -217,13 +217,12 @@ void Internal::elim_backward_clauses (Eliminator &eliminator) {
     assert (eliminator.backward.empty ());
     return;
   }
-  START (backward);
+  PROFILE_SCOPE (backward);
   LOG ("attempting backward subsumption and strengthening with %zd clauses",
        eliminator.backward.size ());
   Clause *c;
   while (!unsat && (c = eliminator.dequeue ()))
     elim_backward_clause (eliminator, c);
-  STOP (backward);
 }
 
 /*------------------------------------------------------------------------*/

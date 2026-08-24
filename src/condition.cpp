@@ -901,7 +901,8 @@ void Internal::condition (bool update_limits) {
   if (!stats.clauses_now_irr)
     return;
 
-  START_SIMPLIFIER (condition, CONDITION);
+  MODE_SCOPE_SIMPLIFY (CONDITION);
+  PROFILE_SCOPE_SIMPLIFY (condition);
   stats.conditionings++;
 
   // Propagation limit to avoid too much work in 'condition'.  We mark
@@ -924,8 +925,6 @@ void Internal::condition (bool update_limits) {
          stats.conflicts, limit);
 
   long blocked = condition_round (limit);
-
-  STOP_SIMPLIFIER (condition, CONDITION);
   report ('g', !blocked);
 
   if (!update_limits)

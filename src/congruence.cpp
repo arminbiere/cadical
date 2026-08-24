@@ -312,7 +312,7 @@ void Closure::extract_binaries () {
     return;
   if (internal->terminated_asynchronously ())
     return;
-  START (extractbinaries);
+  PROFILE_SCOPE (extractbinaries);
   offsetsize.resize (internal->max_var * 2 + 3, make_pair (0, 0));
 
   // in kissat this is done during watch clearing. TODO: consider doing this
@@ -325,7 +325,6 @@ void Closure::extract_binaries () {
     if (c->size > 2)
       continue;
     if (internal->terminated_asynchronously ()) {
-      STOP (extractbinaries);
       return;
     }
     assert (c->size == 2);
@@ -338,7 +337,6 @@ void Closure::extract_binaries () {
                                        already_sorted ? other : lit));
   }
   if (internal->terminated_asynchronously ()) {
-    STOP (extractbinaries);
     return;
   }
 
@@ -368,7 +366,6 @@ void Closure::extract_binaries () {
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size; ++i) {
     if (internal->terminated_asynchronously ()) {
-      STOP (extractbinaries);
       return;
     }
 
@@ -419,7 +416,6 @@ void Closure::extract_binaries () {
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
   if (internal->terminated_asynchronously ()) {
-    STOP (extractbinaries);
     return;
   }
 
@@ -445,7 +441,6 @@ void Closure::extract_binaries () {
     binaries.resize (i);
   }
   binaries.clear ();
-  STOP (extractbinaries);
   VERBOSE (2,
            "[congruence-%" PRId64
            "] extracted %zu binaries (plus %zu already "
@@ -3418,7 +3413,7 @@ void Closure::extract_and_gates () {
     return;
   if (internal->terminated_asynchronously ())
     return;
-  START (extractands);
+  PROFILE_SCOPE (extractands);
 
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
@@ -3450,7 +3445,6 @@ void Closure::extract_and_gates () {
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_and - gates_before);
   reset_and_gate_extraction ();
-  STOP (extractands);
 }
 
 /*------------------------------------------------------------------------*/
@@ -4368,7 +4362,7 @@ void Closure::extract_xor_gates () {
     return;
   if (internal->terminated_asynchronously ())
     return;
-  START (extractxors);
+  PROFILE_SCOPE (extractxors);
 #ifndef QUIET
   const int64_t gates_before =
       (int64_t) internal->stats.congruence_gates_xor;
@@ -4380,7 +4374,6 @@ void Closure::extract_xor_gates () {
     if (internal->unsat)
       break;
     if (internal->terminated_asynchronously ()) {
-      STOP (extractxors);
       return;
     }
 
@@ -4392,7 +4385,6 @@ void Closure::extract_xor_gates () {
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_xor - gates_before);
   reset_xor_gate_extraction ();
-  STOP (extractxors);
 }
 
 /*------------------------------------------------------------------------*/
@@ -4957,7 +4949,7 @@ bool Closure::propagate_binary_clauses_in_and_gates () {
 size_t Closure::propagate_units_and_equivalences () {
   if (internal->terminated_asynchronously ())
     return 0;
-  START (congruencemerge);
+  PROFILE_SCOPE (congruencemerge);
   size_t propagated = 0;
   LOG ("propagating at least %zd units", schedule.size ());
   assert (lrat_chain.empty ());
@@ -4967,7 +4959,6 @@ size_t Closure::propagate_units_and_equivalences () {
     found_new_unit = false;
     while (propagate_units () && !schedule.empty ()) {
       if (internal->terminated_asynchronously ()) {
-        STOP (congruencemerge);
         return 0;
       }
       assert (!internal->unsat);
@@ -5009,7 +5000,6 @@ size_t Closure::propagate_units_and_equivalences () {
     }
   }
 #endif
-  STOP (congruencemerge);
   return propagated;
 }
 
@@ -5075,7 +5065,7 @@ void Closure::reset_extraction () {
 }
 
 void Closure::forward_subsume_matching_clauses () {
-  START (congruencematching);
+  PROFILE_SCOPE (congruencematching);
   reset_closure ();
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
@@ -5192,7 +5182,6 @@ void Closure::forward_subsume_matching_clauses () {
            "clauses out of %zu tried %.0f%% clauses",
            internal->stats.congruence_rounds, subsumed, tried,
            percent (subsumed, tried));
-  STOP (congruencematching);
 }
 
 /*------------------------------------------------------------------------*/
@@ -7832,7 +7821,7 @@ void Closure::extract_ite_gates () {
     return;
   if (internal->terminated_asynchronously ())
     return;
-  START (extractites);
+  PROFILE_SCOPE (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
   const int64_t gates_before =
@@ -7852,17 +7841,15 @@ void Closure::extract_ite_gates () {
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_ite - gates_before);
   reset_ite_gate_extraction ();
-  STOP (extractites);
 }
 
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates () {
-  START (extract);
+  PROFILE_SCOPE (extract);
   extract_and_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());
   if (internal->unsat || internal->terminated_asynchronously ()) {
-    STOP (extract);
     return;
   }
   if (internal->lrat) { // save some memory
@@ -7880,11 +7867,9 @@ void Closure::extract_gates () {
   assert (internal->unsat || chain.empty ());
 
   if (internal->unsat || internal->terminated_asynchronously ()) {
-    STOP (extract);
     return;
   }
   extract_ite_gates ();
-  STOP (extract);
 }
 
 /*------------------------------------------------------------------------*/
@@ -7942,7 +7927,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   clear_watches ();
   //  connect_binary_watches ();
 
-  START_SIMPLIFIER (congruence, CONGRUENCE);
+  MODE_SCOPE_SIMPLIFY (CONGRUENCE);
+  PROFILE_SCOPE_SIMPLIFY (congruence);
   Closure *closure = new Closure (this);
   DeferDeletePtr<Closure> delete_closure (closure);
 
@@ -8008,7 +7994,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     learn_empty_clause ();
   }
 
-  STOP_SIMPLIFIER (congruence, CONGRUENCE);
   report ('c', !opts.reportall && !(stats.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;

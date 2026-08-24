@@ -110,7 +110,7 @@ struct minimize_trail_level_smaller {
 };
 
 void Internal::minimize_clause () {
-  START (minimize);
+  PROFILE_SCOPE (minimize);
   LOG (clause, "minimizing first UIP clause");
 
   external->check_learned_clause (); // check 1st UIP learned clause first
@@ -144,7 +144,6 @@ void Internal::minimize_clause () {
     lrat_chain.push_back (*p);
   }
   minimize_chain.clear ();
-  STOP (minimize);
 }
 
 // go backwards in reason graph and add ids
