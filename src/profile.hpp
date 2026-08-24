@@ -255,6 +255,7 @@ struct PauseProfile {
 #else // !QUIET
 
 #define PROFILE_SCOPE(P)
+#define PROFILE_SCOPE2(P, P2)
 #define PROFILE_SCOPE_EARLY_EXIT(P)
 #define PROFILE_SCOPE_INTERRUPT_WITH(P, NEW)
 
