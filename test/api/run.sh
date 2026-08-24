@@ -122,6 +122,7 @@ run example_declare_one_more_variable
 run example_constraint
 run example_tracer
 run terminate
+run terminator
 run learn
 run cfreeze
 run traverse
