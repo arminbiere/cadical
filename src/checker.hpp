@@ -66,6 +66,7 @@ class Checker : public StatTracer {
   // is actually valid in the range [-size_vars+1, ..., size_vars-1].
   //
   signed char *vals;
+  bool *assumed;
 
   // The 'watchers' and 'marks' data structures are not that time critical
   // and thus we access them by first mapping a literal to 'unsigned'.

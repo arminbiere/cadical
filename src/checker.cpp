@@ -180,10 +180,10 @@ void Checker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 Checker::Checker (Internal *i)
-    : internal (i), size_vars (0), vals (0), inconsistent (false),
-      solving (false), num_clauses (0), num_garbage (0), size_clauses (0),
-      clauses (0), garbage (0), next_to_propagate (0), last_hash (0),
-      last_id (0), is_tmp (false) {
+    : internal (i), size_vars (0), vals (0), assumed (0),
+      inconsistent (false), solving (false), num_clauses (0),
+      num_garbage (0), size_clauses (0), clauses (0), garbage (0),
+      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false) {
 
   // Initialize random number table for hash function.
   //
@@ -208,6 +208,8 @@ Checker::~Checker () {
   LOG ("CHECKER delete");
   vals -= size_vars;
   delete[] vals;
+  assumed -= size_vars;
+  delete[] assumed;
   for (size_t i = 0; i < size_clauses; i++)
     for (CheckerClause *c = clauses[i], *next; c; c = next)
       next = c->next, delete_clause (c);
@@ -243,6 +245,18 @@ void Checker::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete[] vals;
   vals = new_vals;
+
+  bool *new_assumed;
+  new_assumed = new bool[2 * new_size_vars];
+  clear_n (new_assumed, 2 * new_size_vars);
+  new_assumed += new_size_vars;
+  if (size_vars) // To make sanitizer happy (without '-O').
+    memcpy ((void *) (new_assumed - size_vars),
+            (void *) (assumed - size_vars), 2 * size_vars);
+  assumed -= size_vars;
+  delete[] assumed;
+  assumed = new_assumed;
+
   size_vars = new_size_vars;
 
   watchers.resize (2 * new_size_vars);
@@ -653,7 +667,7 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
   import_clause (c);
   last_id = id;
   is_tmp = true;
-  if (!check (true)) {
+  if (!tautological () && !check (true)) {
     fatal_message_start ();
     fputs ("failed to check assumption clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -702,7 +716,17 @@ void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   unsimplified.clear ();
   simplified.clear ();
 }
-void Checker::add_assumption (int a) { assumptions.push_back (a); }
+
+void Checker::add_assumption (int a) {
+  assumptions.push_back (a);
+  assert (a);
+  assert (a != INT_MIN);
+  int idx = abs (a);
+  if (idx >= size_vars)
+    enlarge_vars (idx);
+  assumed[a] = 1;
+}
+
 void Checker::reset_assumptions () {
   if (solving)
     fatal ("can not 'reset_assumptions' before 'conclude'");
@@ -725,6 +749,10 @@ void Checker::reset_assumptions () {
     }
   }
   assumption_clauses.clear ();
+  for (auto &a : assumptions) {
+    assert (assumed[a]);
+    assumed[a] = 0;
+  }
   assumptions.clear ();
 }
 
@@ -743,16 +771,26 @@ void Checker::conclude_unsat (ConclusionType,
     }
     if (!d->size)
       falsified = true;
-    // TODO: falsified by assumptions
+    else if (!falsified) {
+      // falsified by assumptions
+      falsified = true;
+      for (size_t i = 0; i < d->size; i++) {
+        const int lit = d->literals[i];
+        if (!assumed[-lit]) {
+          falsified = false;
+          break;
+        }
+      }
+    }
   }
   if (!falsified) {
     fatal_message_start ();
-    fputs ("failed conclude_unsat, no clause in :\n", stderr);
+    fputs ("failed conclude_unsat, no clause from ", stderr);
     for (const auto &id : ids)
-      fprintf (stderr, "%" PRId64 " ", id);
-    fputs ("contradicts with assumptions:\n", stderr);
+      fprintf (stderr, "%" PRId64 ", ", id);
+    fputs ("contradicts with assumptions ", stderr);
     for (const auto &lit : assumptions)
-      fprintf (stderr, "%d ", lit);
+      fprintf (stderr, "%d, ", lit);
     fatal_message_end ();
   }
 }
