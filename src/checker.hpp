@@ -31,7 +31,7 @@ struct CheckerClause {
   CheckerClause *next; // collision chain link for hash table
   uint64_t hash;       // previously computed full 64-bit hash
   int64_t id;          // id for computing hash
-  bool temp;           // constraints and assumption clauses
+  bool temporary;      // constraints and assumption clauses
   unsigned size;       // zero if this is a garbage clause
 #ifndef NFLEXIBLE
   int literals[]; // otherwise 'literals' of length 'size'
@@ -78,6 +78,7 @@ class Checker : public StatTracer {
   CheckerWatcher &watcher (int lit);
 
   bool inconsistent; // found or added empty clause
+  bool solving;
 
   uint64_t num_clauses;    // number of clauses in hash table
   uint64_t num_garbage;    // number of garbage clauses
@@ -104,6 +105,7 @@ class Checker : public StatTracer {
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
   int64_t last_id;
+  bool is_tmp;
   uint64_t compute_hash (); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
@@ -112,7 +114,8 @@ class Checker : public StatTracer {
 
   void enlarge_clauses (); // enlarge hash table for clauses
   void insert ();          // insert clause in hash table
-  CheckerClause **find (); // find clause position in hash table
+  CheckerClause **
+  find (bool check_lits = true); // find clause position in hash table
 
   void add_clause (const char *type);
 
@@ -127,10 +130,11 @@ class Checker : public StatTracer {
 
   void assign (int lit);     // assign a literal to true
   void assume (int lit);     // assume a literal
-  bool propagate ();         // propagate and check for conflicts
+  bool propagate (bool);     // propagate and check for conflicts
   void backtrack (unsigned); // prepare for next clause
-  bool check ();             // check simplified clause is implied
-  bool check_blocked ();     // check if clause is blocked
+  bool check (bool propagate_temporary =
+                  false); // check simplified clause is implied
+  bool check_blocked ();  // check if clause is blocked
 
   struct {
 

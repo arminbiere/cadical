@@ -51,7 +51,9 @@ CheckerClause *Checker::new_clause () {
   DeferDeleteArray<char> delete_res ((char *) res);
   res->next = 0;
   res->hash = last_hash;
+  res->id = last_id;
   res->size = size;
+  res->temporary = is_tmp;
   int *literals = res->literals, *p = literals;
   for (const auto &lit : simplified)
     *p++ = lit;
@@ -133,7 +135,7 @@ void Checker::collect_garbage_clauses () {
   for (size_t i = 0; i < size_clauses; i++) {
     CheckerClause **p = clauses + i, *c;
     while ((c = *p)) {
-      if (clause_satisfied (c)) {
+      if (clause_satisfied (c) && !c->temporary) {
         c->size = 0; // mark as garbage
         *p = c->next;
         c->next = garbage;
@@ -179,8 +181,9 @@ void Checker::collect_garbage_clauses () {
 
 Checker::Checker (Internal *i)
     : internal (i), size_vars (0), vals (0), inconsistent (false),
-      num_clauses (0), num_garbage (0), size_clauses (0), clauses (0),
-      garbage (0), next_to_propagate (0), last_hash (0) {
+      solving (false), num_clauses (0), num_garbage (0), size_clauses (0),
+      clauses (0), garbage (0), next_to_propagate (0), last_hash (0),
+      last_id (0), is_tmp (false) {
 
   // Initialize random number table for hash function.
   //
@@ -319,16 +322,19 @@ uint64_t Checker::compute_hash () {
   return last_hash = tmp;
 }
 
-CheckerClause **Checker::find () {
+CheckerClause **Checker::find (bool check_lits) {
   stats.searches++;
   CheckerClause **res, *c;
   const uint64_t hash = compute_hash ();
+  const int64_t id = last_id;
   const unsigned size = simplified.size ();
   const uint64_t h = reduce_hash (hash, size_clauses);
   for (const auto &lit : simplified)
     mark (lit) = true;
   for (res = clauses + h; (c = *res); res = &c->next) {
-    if (c->hash == hash && c->size == size) {
+    if (c->hash == hash && c->id == id && !check_lits)
+      break;
+    if (c->hash == hash && c->id == id && c->size == size) {
       bool found = true;
       const int *literals = c->literals;
       for (unsigned i = 0; found && i != size; i++)
@@ -393,7 +399,7 @@ void Checker::backtrack (unsigned previously_propagated) {
 // This is a standard propagation routine without using blocking literals
 // nor without saving the last replacement position.
 
-bool Checker::propagate () {
+bool Checker::propagate (bool propagate_temporary) {
   bool res = true;
   while (res && next_to_propagate < trail.size ()) {
     int lit = trail[next_to_propagate++];
@@ -456,14 +462,14 @@ bool Checker::propagate () {
   return res;
 }
 
-bool Checker::check () {
+bool Checker::check (bool propagate_temporary) {
   stats.checks++;
   if (inconsistent)
     return true;
   unsigned previously_propagated = next_to_propagate;
   for (const auto &lit : simplified)
     assume (-lit);
-  bool res = !propagate ();
+  bool res = !propagate (propagate_temporary);
   backtrack (previously_propagated);
   return res;
 }
@@ -542,7 +548,7 @@ void Checker::add_clause (const char *type) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     assign (unit);
     stats.units++;
-    if (!propagate ()) {
+    if (!propagate (false)) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
       inconsistent = true;
     }
@@ -644,21 +650,35 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   // TODO: constraints...
-  /*
-  add_derived_clause (id, true, 0, c, chain);
-  delete_clause (id, true, c);
-  */
+  import_clause (c);
+  last_id = id;
+  is_tmp = true;
+  if (!check (true)) {
+    fatal_message_start ();
+    fputs ("failed to check assumption clause:\n", stderr);
+    for (const auto &lit : unsimplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  insert ();
+  is_tmp = false;
   assumption_clauses.push_back (id);
+  unsimplified.clear ();
+  simplified.clear ();
 }
 
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   // TODO: constraints...
-  /*
-  add_derived_clause (id, true, 0, c, chain);
-  delete_clause (id, true, c);
-  */
+  import_clause (c);
+  last_id = id;
+  is_tmp = true;
+  insert ();
+  is_tmp = false;
   assumption_clauses.push_back (id);
+  unsimplified.clear ();
+  simplified.clear ();
 }
 
 // TODO: Semantics of these three?
@@ -668,23 +688,41 @@ void Checker::strengthen (int64_t) {}
 
 // TODO: restrict interactions? e.g. no reset_assumptions before any
 // type of conclusion
-void Checker::solve_query () {}
+void Checker::solve_query () { solving = true; }
 
 // TODO: import constraint as temporary clause which is only propagated
 // for add_assumption_clause checks.
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   import_clause (c);
   last_id = id;
-  // TODO: temporary flag
-  // insert();
+  is_tmp = true;
+  insert ();
+  is_tmp = false;
   assumption_clauses.push_back (id);
   unsimplified.clear ();
   simplified.clear ();
 }
 void Checker::add_assumption (int a) { assumptions.push_back (a); }
 void Checker::reset_assumptions () {
+  if (solving)
+    fatal ("can not 'reset_assumptions' before 'conclude'");
   for (auto &id : assumption_clauses) {
-    // TODO: find and delete id.
+    // find and delete id.
+    CheckerClause **p = find (false), *d = *p;
+    if (d) {
+      assert (d->temporary);
+      // Remove from hash table, mark as garbage, connect to garbage list.
+      num_garbage++;
+      assert (num_clauses);
+      num_clauses--;
+      *p = d->next;
+      d->next = garbage;
+      garbage = d;
+      d->size = 0;
+    } else {
+      LOG ("error, did not find assumption clause %" PRId64, id);
+      assert (false);
+    }
   }
   assumption_clauses.clear ();
   assumptions.clear ();
@@ -693,13 +731,45 @@ void Checker::reset_assumptions () {
 // TODO: check that conclusion clauses exist and last one is directly
 // falsified by query assumptions
 void Checker::conclude_unsat (ConclusionType,
-                              const std::vector<int64_t> &) {}
+                              const std::vector<int64_t> &ids) {
+  if (!solving)
+    fatal ("can not 'conclude_unsat' before 'solve_query'");
+  solving = false;
+  bool falsified = false;
+  for (auto &id : ids) {
+    CheckerClause **p = find (false), *d = *p;
+    if (!d) {
+      fatal ("did not find conclusion clause[%" PRId64 "]", id);
+    }
+    if (!d->size)
+      falsified = true;
+    // TODO: falsified by assumptions
+  }
+  if (!falsified) {
+    fatal_message_start ();
+    fputs ("failed conclude_unsat, no clause in :\n", stderr);
+    for (const auto &id : ids)
+      fprintf (stderr, "%" PRId64 " ", id);
+    fputs ("contradicts with assumptions:\n", stderr);
+    for (const auto &lit : assumptions)
+      fprintf (stderr, "%d ", lit);
+    fatal_message_end ();
+  }
+}
 
 // TODO: check that model satisfies formula
-void Checker::conclude_sat (const std::vector<int> &) {}
+void Checker::conclude_sat (const std::vector<int> &) {
+  if (!solving)
+    fatal ("can not 'conclude_sat' before 'solve_query'");
+  solving = false;
+}
 
 // TODO: check that query assumptions -> trail
-void Checker::conclude_unknown (const std::vector<int> &) {}
+void Checker::conclude_unknown (const std::vector<int> &) {
+  if (!solving)
+    fatal ("can not 'conclude_unknown' before 'solve_query'");
+  solving = false;
+}
 
 // check both sides of the equivalence but do not add to the clause set.
 void Checker::notify_equivalence (int a, int b) {
