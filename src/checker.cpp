@@ -37,7 +37,8 @@ inline CheckerWatcher &Checker::watcher (int lit) {
 
 CheckerClause *Checker::new_clause () {
   const size_t size = simplified.size ();
-  assert (size > 1), assert (size <= UINT_MAX);
+  // assert (size > 1);
+  assert (size <= UINT_MAX);
 
   const size_t header_bytes = sizeof (CheckerClause);
   const size_t actual_literal_bytes = size * sizeof (int);
@@ -55,7 +56,7 @@ CheckerClause *Checker::new_clause () {
   res->size = size;
   res->temporary = is_tmp;
   res->garbage = false;
-  res->satisfied = false;
+  res->satisfied = is_taut;
   int *literals = res->literals, *p = literals;
   for (const auto &lit : simplified)
     *p++ = lit;
@@ -63,23 +64,24 @@ CheckerClause *Checker::new_clause () {
 
   // First two literals are used as watches and should not be false.
   //
-  for (unsigned i = 0; i < 2; i++) {
-    int lit = literals[i];
-    if (!val (lit))
-      continue;
-    for (unsigned j = i + 1; j < size; j++) {
-      int other = literals[j];
-      if (val (other))
+  if (res->size > 1 && !is_taut) {
+    for (unsigned i = 0; i < 2; i++) {
+      int lit = literals[i];
+      if (!val (lit))
         continue;
-      swap (literals[i], literals[j]);
-      break;
+      for (unsigned j = i + 1; j < size; j++) {
+        int other = literals[j];
+        if (val (other))
+          continue;
+        swap (literals[i], literals[j]);
+        break;
+      }
     }
+    assert (!val (literals[0]));
+    assert (!val (literals[1]));
+    watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
+    watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
   }
-  assert (!val (literals[0]));
-  assert (!val (literals[1]));
-  watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
-  watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
-
   delete_res.release ();
   return res;
 }
@@ -101,9 +103,13 @@ void Checker::move_to_garbage (CheckerClause **res) {
 }
 
 void Checker::delete_clause (CheckerClause *c) {
-  if (c->garbage) {
+  if (!c->garbage) {
     assert (num_clauses);
     num_clauses--;
+    if (c->temporary)
+      num_temporary--;
+    else
+      num_permanent--;
   } else {
     assert (num_garbage);
     num_garbage--;
@@ -389,7 +395,6 @@ void Checker::insert () {
     enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (), size_clauses);
   CheckerClause *c = new_clause ();
-  c->satisfied = is_taut;
   c->next = clauses[h];
   clauses[h] = c;
 }
