@@ -237,6 +237,7 @@ void ModeResumeContext::enterContext () {
 void ModeResumeContext::leaveContext () {
   if (entered)
     internal->reset_mode (static_cast<Internal::Mode> (mode));
+  entered = !entered;
 }
 
 ModePauseContext::ModePauseContext (Internal *internal, int mode)
@@ -255,6 +256,7 @@ void ModePauseContext::enterContext () {
 void ModePauseContext::leaveContext () {
   if (entered)
     internal->set_mode (static_cast<Internal::Mode> (mode));
+  entered = !entered;
 }
 
 } // namespace CaDiCaL

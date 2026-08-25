@@ -306,7 +306,7 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate_wrapper ())
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
-      iterate ();                               // report learned unit
+      iterate ();                          // report learned unit
     else if (terminated_asynchronously ()) // externally terminated
       break;
     else if (!external_propagate () || unsat) { // external propagation
@@ -911,7 +911,7 @@ int Internal::local_search_round (int round) {
   if (terminated_asynchronously ())
     return false;
 
-  MODE_SCOPE_WALK (SEARCH);
+  MODE_SCOPE_WALK (WALK);
   PROFILE_SCOPE_WALK (walk);
   assert (!localsearching);
   localsearching = true;
