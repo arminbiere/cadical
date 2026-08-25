@@ -86,8 +86,12 @@ class Checker : public StatTracer {
   int64_t tmp_inconsistent; // found or added empty clause
   bool solving;
 
-  uint64_t num_clauses;    // number of clauses in hash table
-  uint64_t num_garbage;    // number of garbage clauses
+  uint64_t num_clauses;   // number of clauses in hash table
+  uint64_t num_garbage;   // number of garbage clauses
+  uint64_t num_finalized; // number of finalized clauses
+  uint64_t num_temporary; // number of temporary clauses
+  uint64_t num_permanent; // number of permanent clauses
+
   uint64_t size_clauses;   // size of clause hash table
   CheckerClause **clauses; // hash table of clauses
   CheckerClause *garbage;  // linked list of garbage clauses
@@ -103,7 +107,7 @@ class Checker : public StatTracer {
 
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
-  void import_clause (const std::vector<int> &);
+  void import_clause (const std::vector<int> &, int64_t, bool);
   bool tautological ();
 
   static const unsigned num_nonces = 4;
@@ -112,23 +116,25 @@ class Checker : public StatTracer {
   uint64_t last_hash;          // last computed hash value of clause
   int64_t last_id;
   bool is_tmp;
+  bool is_taut;
   uint64_t compute_hash (); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
-  void enlarge_clauses ();      // enlarge hash table for clauses
-  void insert (bool satisfied); // insert clause in hash table
+  void enlarge_clauses (); // enlarge hash table for clauses
+  void insert ();          // insert clause in hash table
   CheckerClause **
   find (bool check_lits = true); // find clause position in hash table
 
-  void add_clause (bool temporary, const char *type);
+  void add_clause (const char *type);
 
   void collect_garbage_clauses ();
 
   CheckerClause *new_clause ();
   void delete_clause (CheckerClause *);
+  void move_to_garbage (CheckerClause **);
 
   signed char val (int lit); // returns '-1', '0' or '1'
 
@@ -149,6 +155,7 @@ class Checker : public StatTracer {
     int64_t derived;  // number of added derived clauses
     int64_t derived_redundant;
     int64_t derived_irredundant;
+    int64_t finalized;
 
     int64_t deleted; // number of deleted clauses
 
@@ -178,10 +185,9 @@ public:
                            const std::vector<int64_t> &) override;
   void delete_clause (int64_t, bool, const std::vector<int> &) override;
 
-  void finalize_clause (int64_t, const std::vector<int> &) override {
-  } // skip
-  void report_status (int, int64_t) override {} // skip
-  void begin_proof (int64_t) override {}        // skip
+  void finalize_clause (int64_t, const std::vector<int> &) override;
+  void report_status (int, int64_t) override;
+  void begin_proof (int64_t) override {} // skip
   void add_assumption_clause (int64_t, const std::vector<int> &,
                               const std::vector<int64_t> &) override;
   void add_constraint_clause (int64_t, const std::vector<int> &,

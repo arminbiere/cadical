@@ -57,11 +57,12 @@ class LratChecker : public StatTracer {
   std::unordered_set<int> constraint_vars;
   bool concluded;
 
-  uint64_t num_clauses; // number of clauses in hash table
-  uint64_t num_finalized;
-  uint64_t num_tmp;            // number of temporary clauses
-  uint64_t num_permanent;      // number of permanent clauses
-  uint64_t num_garbage;        // number of garbage clauses
+  uint64_t num_clauses;   // number of clauses in hash table
+  uint64_t num_garbage;   // number of garbage clauses
+  uint64_t num_finalized; // number of finalized clauses
+  uint64_t num_temporary; // number of temporary clauses
+  uint64_t num_permanent; // number of permanent clauses
+
   uint64_t size_clauses;       // size of clause hash table
   LratCheckerClause **clauses; // hash table of clauses
   LratCheckerClause *garbage;  // linked list of garbage clauses

@@ -84,9 +84,24 @@ CheckerClause *Checker::new_clause () {
   return res;
 }
 
+void Checker::move_to_garbage (CheckerClause **res) {
+  CheckerClause *tmp = *res;
+  // Remove from hash table, mark as garbage, connect to garbage list.
+  num_garbage++;
+  assert (num_clauses);
+  num_clauses--;
+  if (tmp->temporary)
+    num_temporary--;
+  else
+    num_permanent--;
+  *res = tmp->next;
+  tmp->next = garbage;
+  garbage = tmp;
+  tmp->garbage = true;
+}
+
 void Checker::delete_clause (CheckerClause *c) {
   if (c->garbage) {
-    assert (c->size > 1);
     assert (num_clauses);
     num_clauses--;
   } else {
@@ -181,8 +196,10 @@ void Checker::collect_garbage_clauses () {
 Checker::Checker (Internal *i)
     : internal (i), size_vars (0), vals (0), assumed (0), inconsistent (0),
       tmp_inconsistent (0), solving (false), num_clauses (0),
-      num_garbage (0), size_clauses (0), clauses (0), garbage (0),
-      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false) {
+      num_garbage (0), num_finalized (0), num_temporary (0),
+      num_permanent (0), size_clauses (0), clauses (0), garbage (0),
+      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false),
+      is_taut (false) {
 
   // Initialize random number table for hash function.
   //
@@ -274,13 +291,17 @@ inline void Checker::import_literal (int lit) {
   unsimplified.push_back (lit);
 }
 
-void Checker::import_clause (const vector<int> &c) {
+void Checker::import_clause (const vector<int> &c, int64_t id,
+                             bool temporary) {
   assert (simplified.empty ());
   assert (unsimplified.empty ());
   // simplified.clear ();   // Can be non-empty if clause allocation fails.
   // unsimplified.clear (); // Can be non-empty if clause allocation fails.
   for (const auto &lit : c)
     import_literal (lit);
+  is_taut = tautological ();
+  is_tmp = temporary;
+  last_id = id;
 }
 
 struct lit_smaller {
@@ -362,13 +383,13 @@ CheckerClause **Checker::find (bool check_lits) {
   return res;
 }
 
-void Checker::insert (bool satisfied) {
+void Checker::insert () {
   stats.insertions++;
   if (num_clauses == size_clauses)
     enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (), size_clauses);
   CheckerClause *c = new_clause ();
-  c->satisfied = satisfied;
+  c->satisfied = is_taut;
   c->next = clauses[h];
   clauses[h] = c;
 }
@@ -485,6 +506,8 @@ bool Checker::check (bool propagate_temporary) {
     return true;
   if (propagate_temporary && tmp_inconsistent)
     return true;
+  if (is_taut)
+    return true;
   unsigned previously_propagated = next_to_propagate;
   if (propagate_temporary) {
     for (const auto &lit : temporary_units) {
@@ -548,12 +571,10 @@ bool Checker::check_blocked () {
 
 /*------------------------------------------------------------------------*/
 
-void Checker::add_clause (bool temporary, const char *type) {
+void Checker::add_clause (const char *type) {
 #ifndef LOGGING
   (void) type;
 #endif
-  const bool satisfied = tautological ();
-
   // If there are enough garbage clauses collect them first.
   if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
     collect_garbage_clauses ();
@@ -573,20 +594,20 @@ void Checker::add_clause (bool temporary, const char *type) {
 
   if (simplified.empty ()) {
     LOG ("CHECKER added empty %s clause", type);
-    if (temporary)
+    if (is_tmp)
       tmp_inconsistent = last_id;
     else
       inconsistent = last_id;
   }
   if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause", type);
-    if (!temporary && !inconsistent)
+    if (!is_tmp && !inconsistent)
       inconsistent = -1;
-    else if (temporary && !tmp_inconsistent)
+    else if (is_tmp && !tmp_inconsistent)
       tmp_inconsistent = -1;
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
-    if (temporary) {
+    if (is_tmp) {
       temporary_units.push_back (unit);
     } else {
       assign (unit);
@@ -598,8 +619,7 @@ void Checker::add_clause (bool temporary, const char *type) {
       }
     }
   }
-  is_tmp = temporary;
-  insert (satisfied);
+  insert ();
   simplified.clear ();
   unsimplified.clear ();
 }
@@ -610,9 +630,8 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
   LOG (c, "CHECKER addition of original clause");
   stats.added++;
   stats.original++;
-  import_clause (c);
-  last_id = id;
-  add_clause (false, "original");
+  import_clause (c, id, false);
+  add_clause ("original");
   STOP (checking);
 }
 
@@ -625,9 +644,8 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
   stats.derived++;
   stats.derived_redundant += redundant;
   stats.derived_irredundant += !redundant;
-  import_clause (c);
-  last_id = id;
-  if (tautological ())
+  import_clause (c, id, false);
+  if (is_taut)
     LOG ("CHECKER ignoring satisfied derived clause");
   else if (!witness && !check ()) {
     fatal_message_start ();
@@ -644,7 +662,7 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  add_clause (false, "derived");
+  add_clause ("derived");
   STOP (checking);
 }
 
@@ -654,28 +672,18 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
-  import_clause (c);
-  last_id = id;
-  if (!tautological ()) {
-    CheckerClause **p = find (), *d = *p;
-    if (d) {
-      assert (d->size > 1);
-      // Remove from hash table, mark as garbage, connect to garbage list.
-      num_garbage++;
-      assert (num_clauses);
-      num_clauses--;
-      *p = d->next;
-      d->next = garbage;
-      garbage = d;
-      d->size = 0;
-    } else {
-      fatal_message_start ();
-      fputs ("deleted clause not in proof:\n", stderr);
-      for (const auto &lit : unsimplified)
-        fprintf (stderr, "%d ", lit);
-      fputc ('0', stderr);
-      fatal_message_end ();
-    }
+  import_clause (c, id, false);
+  CheckerClause **p = find (), *d = *p;
+  if (d) {
+    // Remove from hash table, mark as garbage, connect to garbage list.
+    move_to_garbage (p);
+  } else {
+    fatal_message_start ();
+    fputs ("deleted clause not in proof:\n", stderr);
+    for (const auto &lit : unsimplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
   }
   simplified.clear ();
   unsimplified.clear ();
@@ -684,10 +692,8 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
-  // TODO: constraints...
-  import_clause (c);
-  last_id = id;
-  if (!tautological () && !check (false)) {
+  import_clause (c, id, true);
+  if (!check (false)) {
     fatal_message_start ();
     fputs ("failed to check assumption clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -695,16 +701,14 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  add_clause (true, "assumption");
+  add_clause ("assumption");
   assumption_clauses.push_back (id);
 }
 
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
-  // TODO: constraints...
-  import_clause (c);
-  last_id = id;
-  if (!tautological () && !check (true)) {
+  import_clause (c, id, true);
+  if (!check (true)) {
     fatal_message_start ();
     fputs ("failed to check constraint clause:\n", stderr);
     for (const auto &lit : unsimplified)
@@ -712,7 +716,7 @@ void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  add_clause (true, "derived constraint");
+  add_clause ("derived constraint");
   assumption_clauses.push_back (id);
 }
 
@@ -728,9 +732,8 @@ void Checker::solve_query () { solving = true; }
 // TODO: import constraint as temporary clause which is only propagated
 // for add_assumption_clause checks.
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
-  import_clause (c);
-  last_id = id;
-  add_clause (true, "original constraint");
+  import_clause (c, id, true);
+  add_clause ("original constraint");
   assumption_clauses.push_back (id);
 }
 
@@ -753,13 +756,7 @@ void Checker::reset_assumptions () {
     if (d) {
       assert (d->temporary);
       // Remove from hash table, mark as garbage, connect to garbage list.
-      num_garbage++;
-      assert (num_clauses);
-      num_clauses--;
-      *p = d->next;
-      d->next = garbage;
-      garbage = d;
-      d->size = 0;
+      move_to_garbage (p);
     } else {
       LOG ("error, did not find assumption clause %" PRId64, id);
       assert (false);
@@ -840,8 +837,8 @@ void Checker::notify_equivalence (int a, int b) {
   vector<int> c;
   c.push_back (-a);
   c.push_back (b);
-  import_clause (c);
-  if (!tautological () && !check ()) {
+  import_clause (c, 0, true);
+  if (!check ()) {
     fatal_message_start ();
     fprintf (stderr, "failed to check implication %d -> %d\n", -a, b);
     fatal_message_end ();
@@ -851,14 +848,70 @@ void Checker::notify_equivalence (int a, int b) {
   c.clear ();
   c.push_back (a);
   c.push_back (-b);
-  import_clause (c);
-  if (!tautological () && !check ()) {
+  import_clause (c, 0, true);
+  if (!check ()) {
     fatal_message_start ();
     fprintf (stderr, "failed to check implication %d -> %d\n", a, -b);
     fatal_message_end ();
   }
   simplified.clear ();
   unsimplified.clear ();
+}
+
+void Checker::finalize_clause (int64_t id, const vector<int> &c) {
+  START (checking);
+  LOG (c, "CHECKER checking finalize of clause[%" PRId64 "]", id);
+  stats.finalized++;
+  num_finalized++;
+  import_clause (c, id, false);
+  CheckerClause **p = find (id), *d = *p;
+  if (d) {
+    /*
+    for (const auto &lit : simplified)
+      mark (lit) = true;
+    const int *dp = d->literals;
+    for (unsigned i = 0; i < d->size; i++) {
+      int lit = *(dp + i);
+      if (!mark (lit)) {        // should never happen since ids
+        fatal_message_start (); // are unique.
+        fputs ("finalized clause not in proof:\n", stderr);
+        for (const auto &lit : simplified)
+          fprintf (stderr, "%d ", lit);
+        fputc ('0', stderr);
+        fatal_message_end ();
+      }
+    }
+    for (const auto &lit : simplified)
+      mark (lit) = false;
+*/
+  } else {
+    fatal_message_start ();
+    fputs ("finalized clause not in proof:\n", stderr);
+    for (const auto &lit : simplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  unsimplified.clear ();
+  simplified.clear ();
+  STOP (checking);
+}
+
+// check if all clauses have been deleted
+void Checker::report_status (int, int64_t) {
+  START (checking);
+  if (num_finalized == num_permanent) {
+    num_finalized = 0;
+    LOG ("CHECKER successful finalize check, all clauses have been "
+         "deleted");
+  } else {
+    fatal_message_start ();
+    fputs ("finalize check failed ", stderr);
+    fprintf (stderr, "%" PRIu64, num_permanent);
+    fputs (" are not finalized", stderr);
+    fatal_message_end ();
+  }
+  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/

@@ -61,7 +61,7 @@ LratCheckerClause *LratChecker::new_clause () {
     checked_lit (-lit) = false;
   num_clauses++;
   if (is_tmp)
-    num_tmp++;
+    num_temporary++;
   else
     num_permanent++;
 
@@ -74,7 +74,7 @@ void LratChecker::delete_clause (LratCheckerClause *c) {
     assert (num_clauses);
     num_clauses--;
     if (c->temporary)
-      num_tmp--;
+      num_temporary--;
     else
       num_permanent--;
   } else {
@@ -126,9 +126,9 @@ void LratChecker::collect_garbage_clauses () {
 
 LratChecker::LratChecker (Internal *i)
     : internal (i), size_vars (0), concluded (false), num_clauses (0),
-      num_finalized (0), num_tmp (0), num_permanent (0), num_garbage (0),
-      size_clauses (0), clauses (0), garbage (0), last_hash (0),
-      last_id (0), current_id (0), is_tmp (0) {
+      num_garbage (0), num_finalized (0), num_temporary (0),
+      num_permanent (0), size_clauses (0), clauses (0), garbage (0),
+      last_hash (0), last_id (0), current_id (0), is_tmp (0) {
 
   // Initialize random number table for hash function.
   //
@@ -717,7 +717,7 @@ void LratChecker::reset_assumptions () {
     assert ((*res)->temporary);
     move_to_garbage (res);
   }
-  assert (!num_tmp);
+  assert (!num_temporary);
   assumption_clauses.clear ();
 }
 
@@ -806,7 +806,7 @@ void LratChecker::move_to_garbage (LratCheckerClause **res) {
   assert (num_clauses);
   num_clauses--;
   if (tmp->temporary)
-    num_tmp--;
+    num_temporary--;
   else
     num_permanent--;
   *res = tmp->next;

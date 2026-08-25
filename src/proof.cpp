@@ -174,6 +174,7 @@ void Internal::check () {
     StatTracer *checker = new Checker (this);
     DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
     LOG ("PROOF connecting proof checker");
+    frat = true;
     proof->connect (checker);
     stat_tracers.push_back (checker);
     delete_checker.release ();
