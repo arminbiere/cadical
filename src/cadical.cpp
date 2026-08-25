@@ -21,7 +21,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-class App : public Handler, public Terminator {
+class App : public Handler {
 
   Solver *solver; // Global solver.
 
@@ -47,9 +47,8 @@ class App : public Handler, public Terminator {
 
   // Internal variables.
   //
-  int max_var;                            // Set after parsing.
-  volatile bool timesup;                  // Asynchronous termination.
-  volatile sig_atomic_t signal_value = 0; // Caught signal.
+  int max_var;                        // Set after parsing.
+  volatile sig_atomic_t signal_value; // Caught signal.
   // Printing.
   //
   void print_usage (bool all = false);
@@ -71,10 +70,6 @@ class App : public Handler, public Terminator {
   // The actual initialization.
   //
   void init ();
-
-  // Terminator interface.
-  //
-  bool terminate () { return timesup; }
 
   // Handler interface.
   //
@@ -699,7 +694,6 @@ int App::main (int argc, char **argv) {
           "setting time limit to %d seconds real time (due to '-t %s')",
           time_limit, time_limit_specified);
       Signal::alarm (time_limit);
-      solver->connect_terminator (this);
     }
 #endif
     if (conflict_limit >= 0) {
@@ -888,8 +882,6 @@ int App::main (int argc, char **argv) {
         } else {
           assert (!res);
           inconclusive++;
-          if (timesup)
-            break;
         }
         cube.clear ();
       }
@@ -964,7 +956,7 @@ int App::main (int argc, char **argv) {
   solver->section ("shutting down");
   solver->message ("exit %d", res);
 #ifndef QUIET
-  if (!res && timesup && !get ("quiet")) {
+  if (!res && !get ("quiet")) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"
@@ -1007,7 +999,6 @@ void App::init () {
   force_strict_parsing = 1;
   force_writing = false;
   max_var = 0;
-  timesup = false;
 
 #if !defined(NOPTIONS)
   // Call 'new Solver' only after setting 'reportdefault' and do not
@@ -1026,7 +1017,7 @@ void App::init () {
 
 App::App ()
     : solver (0), time_limit (-1), force_strict_parsing (false),
-      force_writing (false), max_var (0), timesup (false) {
+      force_writing (false), max_var (0), signal_value (0) {
 } // Only partially initialize the app.
 
 App::~App () {
@@ -1049,19 +1040,13 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-  signal_value = sig;
-  solver->internal->termination_forced = true;
-  Signal::reset (); // Send signal again -> instant termination but no stats
+  signal_value = sig; // Store copy to re-raise signal in main
+  solver->terminate (); // Immediate asynchronous call into solver.
+  Signal::reset (); // Use the first signal caught only
 }
 
 void App::catch_alarm () {
-  // Both approaches work. We keep them here for illustration purposes.
-#if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
-#else
-  // timesup = true; // Wait for solver to call 'App::terminate ()'.
-  solver->internal->termination_forced = true;
-#endif
 }
 
 } // namespace CaDiCaL

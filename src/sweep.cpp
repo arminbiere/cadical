@@ -15,7 +15,7 @@ Sweeper::~Sweeper () { internal->release_sweeper (*this); }
 #define INVALID UINT_MAX
 
 int Internal::sweep_solve () {
-  START (sweepsolve);
+  PROFILE_SCOPE (sweepsolve);
   KITTEN_NAMESPACE (kitten_randomize_phases) (cat);
   stats.sweep_solved++;
   int res = KITTEN_NAMESPACE (kitten_solve) (cat);
@@ -25,14 +25,12 @@ int Internal::sweep_solve () {
     stats.sweep_solved_unsat++;
   else
     stats.sweep_solved_to++;
-  STOP (sweepsolve);
   return res;
 }
 
 bool Internal::sweep_flip (int lit) {
-  START (sweepflip);
+  PROFILE_SCOPE (sweepflip);
   bool res = KITTEN_NAMESPACE (kitten_flip_signed_literal) (cat, lit);
-  STOP (sweepflip);
   return res;
 }
 
@@ -1628,20 +1626,18 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     uint64_t units = stats.sweep_units;
     uint64_t solved = stats.sweep_solved;
 #endif
-    START (sweepbackbone);
+    PROFILE_SCOPE (sweepbackbone);
     while (sweeper.backbone.size ()) {
       if (unsat || terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
-      STOP_SWEEP_BACKBONE:
-        STOP (sweepbackbone);
         goto DONE;
       }
       flip_backbone_literals (sweeper);
       if (terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
-        goto STOP_SWEEP_BACKBONE;
+        goto DONE;
       }
       if (sweeper.backbone.empty ())
         break;
@@ -1652,7 +1648,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       if (sweep_bb_candidate (sweeper, lit))
         success = true;
     }
-    STOP (sweepbackbone);
+    PROFILE_SCOPE_EARLY_EXIT (sweepbackbone);
 #ifndef QUIET
     units = stats.sweep_units - units;
     solved = stats.sweep_solved - solved;
@@ -1666,20 +1662,18 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     uint64_t equivalences = stats.sweep_eq;
     solved = stats.sweep_solved;
 #endif
-    START (sweepequivalences);
+    PROFILE_SCOPE (sweepequivalences);
     while (sweeper.partition.size ()) {
       if (unsat || terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "partition refinement")) {
         limit_reached = true;
-      STOP_SWEEP_EQUIVALENCES:
-        STOP (sweepequivalences);
         goto DONE;
       }
       flip_partition_literals (sweeper);
       if (terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
-        goto STOP_SWEEP_EQUIVALENCES;
+        goto DONE;
       }
       if (sweeper.partition.empty ())
         break;
@@ -1693,7 +1687,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       } else
         sweeper.partition.clear ();
     }
-    STOP (sweepequivalences);
+    PROFILE_SCOPE_EARLY_EXIT (sweepequivalences);
 #ifndef QUIET
     equivalences = stats.sweep_eq - equivalences;
     solved = stats.sweep_solved - solved;
@@ -1911,7 +1905,8 @@ bool Internal::sweep () {
   delaying_sweep.bumpreasons.unbypass_delay ();
 
   assert (!level);
-  START_SIMPLIFIER (sweep, SWEEP);
+  MODE_SCOPE_SIMPLIFY (SWEEP);
+  PROFILE_SCOPE_SIMPLIFY (sweep);
   stats.sweepings++;
   uint64_t equivalences = stats.sweep_eq;
   uint64_t units = stats.sweep_units;
@@ -1978,7 +1973,6 @@ bool Internal::sweep () {
   } else {
     delaying_sweep.bumpreasons.reduce_delay ();
   }
-  STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }
 

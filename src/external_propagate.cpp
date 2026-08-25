@@ -358,7 +358,7 @@ void Internal::force_backtrack (int new_level) {
 //
 bool Internal::external_propagate () {
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
   assert (!unsat);
 
   size_t before = num_assigned;
@@ -631,7 +631,9 @@ void Internal::add_external_clause (int propagated_elit,
   from_propagator = true;
 
   int elit = 0;
+#ifndef NCONTRACTS
   bool propagated_lit_found = false;
+#endif
 
   assert (tmp_elits.empty ());
 
@@ -660,8 +662,10 @@ void Internal::add_external_clause (int propagated_elit,
     if (!elit)
       break;
 
+#ifndef NCONTRACTS
     if (elit == propagated_elit)
       propagated_lit_found = true;
+#endif
 
     CB_REQUIRE (
         !propagated_elit || elit == propagated_elit ||

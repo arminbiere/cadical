@@ -799,7 +799,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   assert (opts.elim);
   assert (!unsat);
 
-  START_SIMPLIFIER (elim, ELIM);
+  MODE_SCOPE_SIMPLIFY (ELIM);
+  PROFILE_SCOPE_SIMPLIFY (elim);
   stats.eliminations++;
 
   int64_t marked_before = last.elim.marked;
@@ -981,7 +982,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   last.elim.subsumephases = stats.subsume_phases;
   const int units = stats.vars_all_fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
-  STOP_SIMPLIFIER (elim, ELIM);
+  MODE_SCOPE_EARLY_EXIT (ELIM);
+  PROFILE_SCOPE_EARLY_EXIT (elim);
 
   if (!unsat && !terminated_asynchronously () &&
       instantiator) // Do we have candidate pairs?

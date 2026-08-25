@@ -210,7 +210,7 @@ bool Internal::propagate_out_of_order_units () {
 // clauses in the solver. This impact will decrease over time.
 
 void Internal::reduce () {
-  START (reduce);
+  PROFILE_SCOPE (reduce);
 
   stats.reductions++;
   report ('.', 1);
@@ -271,7 +271,6 @@ void Internal::reduce () {
 DONE:
 
   report (flush ? 'f' : '-');
-  STOP (reduce);
 }
 
 } // namespace CaDiCaL

@@ -189,7 +189,7 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
 
 void Internal::failing () {
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   LOG ("analyzing failing assumptions");
 
@@ -301,7 +301,7 @@ void Internal::failing () {
         conclusion.push_back (clause_id);
         lrat_chain.clear ();
       }
-      goto DONE;
+      return;
     }
 
     // Second case (2).
@@ -314,7 +314,7 @@ void Internal::failing () {
         proof->add_assumption_clause (++clause_id, clash, lrat_chain);
         conclusion.push_back (clause_id);
       }
-      goto DONE;
+      return;
     }
 
     // Fall through to third case (3).
@@ -457,10 +457,6 @@ void Internal::failing () {
     lrat_chain.clear ();
     clause.clear ();
   }
-
-DONE:
-
-  STOP (analyze);
 }
 
 bool Internal::failed (int lit) {

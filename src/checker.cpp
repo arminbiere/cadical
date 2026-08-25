@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "profile.hpp"
 
 namespace CaDiCaL {
 
@@ -643,19 +644,18 @@ void Checker::add_clause (const char *type) {
 
 void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
                                    bool) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER addition of original clause");
   stats.added++;
   stats.original++;
   import_clause (c, id, false);
   add_clause ("original");
-  STOP (checking);
 }
 
 void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
                                   const vector<int> &c,
                                   const vector<int64_t> &) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER addition of derived clause");
   stats.added++;
   stats.derived++;
@@ -680,13 +680,12 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
     fatal_message_end ();
   }
   add_clause ("derived");
-  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/
 
 void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
   import_clause (c, id, false);
@@ -704,12 +703,11 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   }
   simplified.clear ();
   unsimplified.clear ();
-  STOP (checking);
 }
 
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   import_clause (c, id, true);
   if (!check (false)) {
     fatal_message_start ();
@@ -721,12 +719,11 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
   }
   add_clause ("assumption");
   assumption_clauses.push_back (id);
-  STOP (checking);
 }
 
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   import_clause (c, id, true);
   if (!check (true)) {
     fatal_message_start ();
@@ -738,7 +735,6 @@ void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
   }
   add_clause ("derived constraint");
   assumption_clauses.push_back (id);
-  STOP (checking);
 }
 
 // TODO: Semantics of these three?
@@ -753,15 +749,14 @@ void Checker::solve_query () { solving = true; }
 // TODO: import constraint as temporary clause which is only propagated
 // for add_assumption_clause checks.
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   import_clause (c, id, true);
   add_clause ("original constraint");
   assumption_clauses.push_back (id);
-  STOP (checking);
 }
 
 void Checker::add_assumption (int a) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   assert (a);
   assert (a != INT_MIN);
   int idx = abs (a);
@@ -771,11 +766,10 @@ void Checker::add_assumption (int a) {
     return;
   assumed[a] = true;
   assumptions.push_back (a);
-  STOP (checking);
 }
 
 void Checker::reset_assumptions () {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (solving)
     fatal ("can not 'reset_assumptions' before 'conclude'");
   for (auto &id : assumption_clauses) {
@@ -797,14 +791,13 @@ void Checker::reset_assumptions () {
     assumed[a] = 0;
   }
   assumptions.clear ();
-  STOP (checking);
 }
 
 // TODO: check that conclusion clauses exist and last one is directly
 // falsified by query assumptions
 void Checker::conclude_unsat (ConclusionType,
                               const std::vector<int64_t> &ids) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (!solving)
     fatal ("can not 'conclude_unsat' before 'solve_query'");
   solving = false;
@@ -848,30 +841,27 @@ void Checker::conclude_unsat (ConclusionType,
       fprintf (stderr, "%d, ", lit);
     fatal_message_end ();
   }
-  STOP (checking);
 }
 
 // TODO: check that model satisfies formula
 void Checker::conclude_sat (const std::vector<int> &) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (!solving)
     fatal ("can not 'conclude_sat' before 'solve_query'");
   solving = false;
-  STOP (checking);
 }
 
 // TODO: check that query assumptions -> trail
 void Checker::conclude_unknown (const std::vector<int> &) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (!solving)
     fatal ("can not 'conclude_unknown' before 'solve_query'");
   solving = false;
-  STOP (checking);
 }
 
 // check both sides of the equivalence but do not add to the clause set.
 void Checker::notify_equivalence (int a, int b) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   vector<int> c;
   c.push_back (-a);
   c.push_back (b);
@@ -894,36 +884,16 @@ void Checker::notify_equivalence (int a, int b) {
   }
   simplified.clear ();
   unsimplified.clear ();
-  STOP (checking);
 }
 
 void Checker::finalize_clause (int64_t id, const vector<int> &c) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER checking finalize of clause[%" PRId64 "]", id);
   stats.finalized++;
   num_finalized++;
   import_clause (c, id, false);
   CheckerClause **p = find (id, true), *d = *p;
-  if (d) {
-    /*
-    for (const auto &lit : simplified)
-      mark (lit) = true;
-    const int *dp = d->literals;
-    for (unsigned i = 0; i < d->size; i++) {
-      int lit = *(dp + i);
-      if (!mark (lit)) {        // should never happen since ids
-        fatal_message_start (); // are unique.
-        fputs ("finalized clause not in proof:\n", stderr);
-        for (const auto &lit : simplified)
-          fprintf (stderr, "%d ", lit);
-        fputc ('0', stderr);
-        fatal_message_end ();
-      }
-    }
-    for (const auto &lit : simplified)
-      mark (lit) = false;
-*/
-  } else {
+  if (!d) {
     fatal_message_start ();
     fputs ("finalized clause not in proof:\n", stderr);
     for (const auto &lit : simplified)
@@ -933,12 +903,11 @@ void Checker::finalize_clause (int64_t id, const vector<int> &c) {
   }
   unsimplified.clear ();
   simplified.clear ();
-  STOP (checking);
 }
 
 // check if all clauses have been deleted
 void Checker::report_status (int, int64_t) {
-  START (checking);
+  PROFILE_SCOPE (checking);
   if (num_finalized == num_permanent) {
     num_finalized = 0;
     LOG ("CHECKER successful finalize check, all clauses have been "
@@ -950,7 +919,6 @@ void Checker::report_status (int, int64_t) {
     fputs (" are not finalized", stderr);
     fatal_message_end ();
   }
-  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/

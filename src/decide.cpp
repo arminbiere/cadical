@@ -262,7 +262,7 @@ bool Internal::is_constraint_level (size_t level) {
 
 int Internal::decide () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   // during interaction with the user propagator, new variables can be added
   // (for example by observed).
   if (!imports.empty ())
@@ -403,9 +403,7 @@ int Internal::decide () {
     if (is_constraint_level (level)) {
       // Forced backtrack below pseudo decision levels.
       // So one of the two branches above will handle it.
-      STOP (decide);
-      return decide (); // STARTS and STOPS profiling
-      // START (decide);
+      return decide ();
     }
     stats.decisions++;
     if (!decision) {
@@ -418,7 +416,6 @@ int Internal::decide () {
   }
   if (res)
     marked_failed = false;
-  STOP (decide);
   check_var_stats ();
   return res;
 }

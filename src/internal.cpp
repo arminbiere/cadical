@@ -59,14 +59,6 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-  // If a memory exception ocurred a profile might still be active.
-#ifndef QUIET
-#define PROFILE(NAME, LEVEL) \
-  if (PROFILE_ACTIVE (NAME)) \
-    STOP (NAME);
-  PROFILES
-#undef PROFILE
-#endif
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
@@ -302,13 +294,11 @@ int Internal::cdcl_loop_with_inprocessing () {
 
   int res = 0;
 
-  START (search);
+  PROFILE_SCOPE_SEARCH (search, stable);
 
   if (stable) {
-    START (stable);
     report ('[');
   } else {
-    START (unstable);
     report ('{');
   }
 
@@ -359,14 +349,10 @@ int Internal::cdcl_loop_with_inprocessing () {
   }
 
   if (stable) {
-    STOP (stable);
     report (']');
   } else {
-    STOP (unstable);
     report ('}');
   }
-
-  STOP (search);
 
   return res;
 }
@@ -732,7 +718,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return false;
   if (terminated_asynchronously ())
     return false;
-  START (preprocess);
+  PROFILE_SCOPE (preprocess);
   if (!triggered)
     report ('('), triggered = true;
   struct {
@@ -763,7 +749,6 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          "finished round %d with %" PRId64 " variables and %" PRId64
          " clauses",
          round, after.vars, after.clauses);
-  STOP (preprocess);
   report ('P');
   if (unsat)
     return false;
@@ -788,7 +773,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     return;
   if (!always && stats.searches > 1)
     return;
-  START (preprocess);
+  PROFILE_SCOPE (preprocess);
 #ifndef QUIET
   struct {
     int64_t vars, clauses;
@@ -828,7 +813,6 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   PHASE ("preprocessing", stats.preprocessings,
          "finished with %" PRId64 " variables and %" PRId64 " clauses",
          after.vars, after.clauses);
-  STOP (preprocess);
   report ('P');
 }
 
@@ -929,7 +913,8 @@ int Internal::local_search_round (int round) {
   if (terminated_asynchronously ())
     return false;
 
-  START_OUTER_WALK ();
+  MODE_SCOPE_WALK (WALK);
+  PROFILE_SCOPE_WALK (walk);
   assert (!localsearching);
   localsearching = true;
 
@@ -952,8 +937,6 @@ int Internal::local_search_round (int round) {
 
   assert (localsearching);
   localsearching = false;
-  STOP_OUTER_WALK ();
-
   report ('L');
 
   return res;
@@ -999,7 +982,7 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   stats.searches++;
-  START (solve);
+  PROFILE_SCOPE (solve);
   activating_all_new_imported_literals ();
   if (proof)
     proof->solve_query ();
@@ -1059,7 +1042,6 @@ int Internal::solve (bool preprocess_only) {
   finalize (res);
   reset_solving ();
   report_solving (res);
-  STOP (solve);
   return res;
 }
 
@@ -1128,7 +1110,7 @@ int Internal::restore_clauses () {
 
 int Internal::lookahead () {
   assert (clause.empty ());
-  START (lookahead);
+  PROFILE_SCOPE (lookahead);
   assert (!lookingahead);
   lookingahead = true;
   activating_all_new_imported_literals ();
@@ -1153,7 +1135,7 @@ int Internal::lookahead () {
   report_solving (tmp);
   assert (lookingahead);
   lookingahead = false;
-  STOP (lookahead);
+  PROFILE_SCOPE_EARLY_EXIT (lookahead);
   if (external_prop) {
     private_steps = false;
     LOG ("external notifications are turned back on.");

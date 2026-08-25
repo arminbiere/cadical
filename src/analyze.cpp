@@ -185,7 +185,7 @@ void Internal::bump_variables () {
 
   assert (opts.bump);
 
-  START (bump);
+  PROFILE_SCOPE (bump);
 
   if (!use_scores ()) {
 
@@ -204,8 +204,6 @@ void Internal::bump_variables () {
 
   if (use_scores ())
     bump_variable_score_inc ();
-
-  STOP (bump);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1022,7 +1020,7 @@ void Internal::fix_trail_levels () {
 
 void Internal::analyze () {
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   assert (conflict);
   assert (lrat_chain.empty ());
@@ -1086,7 +1084,6 @@ void Internal::analyze () {
     conflict = 0;
     if (!opts.chrono)
       did_external_prop = true;
-    STOP (analyze);
     return;
   }
 
@@ -1108,7 +1105,6 @@ void Internal::analyze () {
     learn_empty_clause ();
     if (external->learner)
       external->export_learned_empty_clause ();
-    STOP (analyze);
     return;
   }
 
@@ -1207,7 +1203,6 @@ void Internal::analyze () {
         clear_analyzed_literals ();
         clear_analyzed_levels ();
         clause.clear ();
-        STOP (analyze);
         return;
       }
 
@@ -1368,8 +1363,7 @@ void Internal::analyze () {
   conflict = 0;
 
   lrat_chain.clear ();
-  STOP (analyze);
-
+  PROFILE_SCOPE_EARLY_EXIT (analyze);
   if (driving_clause && opts.eagersubsume)
     eagerly_subsume_recently_learned_clauses (driving_clause);
 
@@ -1459,7 +1453,6 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
     conflict = 0;
     clear_unit_analyzed_literals ();
     lrat_chain.clear ();
-    STOP (analyze);
   }
   return exiting;
 }

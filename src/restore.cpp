@@ -85,7 +85,7 @@ void External::restore_clauses () {
 
   assert (internal->opts.restoreall == 2 || !tainted.empty ());
 
-  START (restore);
+  PROFILE_SCOPE (restore);
   internal->stats.restorations++;
 
   struct {
@@ -260,8 +260,6 @@ void External::restore_clauses () {
       assert (p != begin_of_extension);
     }
   }
-
-  STOP (restore);
 }
 
 } // namespace CaDiCaL

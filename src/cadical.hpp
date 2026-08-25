@@ -828,10 +828,11 @@ public:
   int simplify (int rounds = 3);
 
   //------------------------------------------------------------------------
-  // Force termination of 'solve' asynchronously.
+  // Force termination of 'solve' asynchronously (e.g. via a signal handler).
   //
   //  require (SOLVING | READY)
-  //  ensure (INCONCLUSIVE )     // actually not immediately (synchronously)
+  //  // not immediately (synchronously)
+  //  ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   //
   void terminate ();
 

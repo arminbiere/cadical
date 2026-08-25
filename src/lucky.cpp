@@ -38,7 +38,7 @@ int Internal::unlucky (int res) {
 inline void Internal::lucky_search_assign (int lit, Clause *reason) {
   assert (searching_lucky_phases);
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
   assert (!flags (lit).unused ());
 
   const int idx = vidx (lit);
@@ -101,7 +101,7 @@ inline void Internal::lucky_search_assign (int lit, Clause *reason) {
 }
 
 void Internal::lucky_assume_decision (int lit) {
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
   assert (propagated == trail.size ());
   new_trail_level (lit);
   LOG ("lucky decide %d", lit);
@@ -463,7 +463,7 @@ int Internal::random_lucky_assignment (signed char pol) {
 
 int Internal::lucky_phases (bool update_limit) {
   assert (!level);
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
   if (!opts.lucky)
     return 0;
 
@@ -485,8 +485,7 @@ int Internal::lucky_phases (bool update_limit) {
     return 20;
   }
 
-  START (search);
-  START (lucky);
+  PROFILE_SCOPE2 (search, lucky);
   LOG ("starting lucky");
   assert (!searching_lucky_phases);
   searching_lucky_phases = true;
@@ -652,9 +651,6 @@ int Internal::lucky_phases (bool update_limit) {
         3, "lucky-%" PRId64 " scheduled to be next after conflict %" PRId64,
         stats.lucky_tried, lim.lucky);
   }
-
-  STOP (lucky);
-  STOP (search);
 
   return res;
 }

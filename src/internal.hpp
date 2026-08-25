@@ -944,10 +944,7 @@ struct Internal {
 
   bool search_limits_hit ();
 
-  void terminate () {
-    LOG ("forcing asynchronous termination");
-    termination_forced = true;
-  }
+  void terminate () { termination_forced = true; }
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then removing

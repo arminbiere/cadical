@@ -14,7 +14,7 @@ namespace CaDiCaL {
 inline void Internal::warmup_assign (int lit, Clause *reason) {
 
   assert (level); // no need to learn unit clauses here
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
 
   const int idx = vidx (lit);
   assert (reason != external_reason);
@@ -62,7 +62,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
   assert (!unsat);
 
-  START (propagate);
+  PROFILE_SCOPE (propagate);
   assert (!ignore);
 
   int64_t before = propagated;
@@ -204,12 +204,11 @@ void Internal::warmup_propagate_beyond_conflict () {
   assert (propagated == trail.size ());
 
   stats.walk_warmup_propagate += (trail.size () - before);
-  STOP (propagate);
 }
 
 int Internal::warmup_decide_assumptions () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   int res = 0;
   if (is_assumption_level (level)) {
     const int lit = assumptions[level];
@@ -235,13 +234,12 @@ int Internal::warmup_decide_assumptions () {
   }
   if (res)
     marked_failed = false;
-  STOP (decide);
   return res;
 }
 
 void Internal::warmup_decide () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   assert ((size_t) level >= assumptions.size ());
   assert (constraints.empty () || (size_t) level > assumptions.size ());
   const bool target = (stable || opts.target == 2);
@@ -252,7 +250,6 @@ void Internal::warmup_decide () {
   int decision = decide_phase (idx, target);
   new_trail_level (decision);
   warmup_assign (decision, decision_reason);
-  STOP (decide);
 }
 
 int Internal::decide_and_propagate_all_assumptions (
@@ -319,8 +316,8 @@ int Internal::warmup () {
   assert (!level);
   if (!opts.warmup)
     return 0;
-  require_mode (WALK);
-  START (warmup);
+  MODE_REQUIRE (WALK);
+  PROFILE_SCOPE (warmup);
   ++stats.walk_warmup;
   int res = 0;
 
@@ -386,8 +383,6 @@ int Internal::warmup () {
   if (!res)
     backtrack_without_updating_phases ();
   private_steps = false;
-  STOP (warmup);
-  require_mode (WALK);
   return res;
 }
 

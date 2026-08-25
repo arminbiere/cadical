@@ -22,7 +22,8 @@ void Internal::transred () {
   assert (opts.transred);
   assert (!level);
 
-  START_SIMPLIFIER (transred, TRANSRED);
+  MODE_SCOPE_SIMPLIFY (TRANSRED);
+  PROFILE_SCOPE_SIMPLIFY (transred);
   stats.transitive_rounds++;
 
   // Transitive reduction can not be run to completion for larger formulas
@@ -248,7 +249,6 @@ void Internal::transred () {
          "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
          removed, units);
 
-  STOP_SIMPLIFIER (transred, TRANSRED);
   report ('t', !opts.reportall && !(removed + units));
 }
 
