@@ -616,6 +616,7 @@ void Checker::add_clause (const char *type) {
       tmp_inconsistent = last_id;
     else
       inconsistent = last_id;
+    is_taut = true;
   }
   if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause", type);
@@ -623,6 +624,7 @@ void Checker::add_clause (const char *type) {
       inconsistent = -1;
     else if (is_tmp && !tmp_inconsistent)
       tmp_inconsistent = -1;
+    is_taut = true;
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     if (is_tmp) {
@@ -636,6 +638,7 @@ void Checker::add_clause (const char *type) {
           inconsistent = -1;
       }
     }
+    is_taut = true;
   }
   insert ();
   simplified.clear ();
