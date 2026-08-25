@@ -43,13 +43,13 @@ struct CheckerClause {
 };
 
 struct CheckerWatch {
-  bool temporary;
   int blit;
-  unsigned size;
+  unsigned size : 31;
+  bool temporary : 1;
   CheckerClause *clause;
   CheckerWatch () {}
   CheckerWatch (int b, CheckerClause *c)
-      : blit (b), size (c->size), clause (c) {}
+      : blit (b), size (c->size), temporary (c->temporary), clause (c) {}
 };
 
 typedef std::vector<CheckerWatch> CheckerWatcher;
@@ -118,8 +118,8 @@ class Checker : public StatTracer {
   //
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
-  void enlarge_clauses (); // enlarge hash table for clauses
-  void insert ();          // insert clause in hash table
+  void enlarge_clauses ();      // enlarge hash table for clauses
+  void insert (bool satisfied); // insert clause in hash table
   CheckerClause **
   find (bool check_lits = true); // find clause position in hash table
 

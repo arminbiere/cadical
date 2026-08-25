@@ -117,7 +117,11 @@ void Checker::enlarge_clauses () {
   size_clauses = new_size_clauses;
 }
 
-bool Checker::clause_satisfied (CheckerClause *c) {
+inline bool Checker::clause_satisfied (CheckerClause *c) {
+  if (c->garbage)
+    return false;
+  if (c->satisfied)
+    return true;
   for (unsigned i = 0; i < c->size; i++)
     if (val (c->literals[i]) > 0)
       return true;
@@ -137,7 +141,7 @@ void Checker::collect_garbage_clauses () {
   for (size_t i = 0; i < size_clauses; i++) {
     CheckerClause **p = clauses + i, *c;
     while ((c = *p)) {
-      if (clause_satisfied (c) && !c->temporary)
+      if (clause_satisfied (c))
         c->satisfied = true;
       p = &c->next;
     }
@@ -273,8 +277,8 @@ inline void Checker::import_literal (int lit) {
 void Checker::import_clause (const vector<int> &c) {
   assert (simplified.empty ());
   assert (unsimplified.empty ());
-  simplified.clear ();   // Can be non-empty if clause allocation fails.
-  unsimplified.clear (); // Can be non-empty if clause allocation fails.
+  // simplified.clear ();   // Can be non-empty if clause allocation fails.
+  // unsimplified.clear (); // Can be non-empty if clause allocation fails.
   for (const auto &lit : c)
     import_literal (lit);
 }
@@ -358,12 +362,13 @@ CheckerClause **Checker::find (bool check_lits) {
   return res;
 }
 
-void Checker::insert () {
+void Checker::insert (bool satisfied) {
   stats.insertions++;
   if (num_clauses == size_clauses)
     enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (), size_clauses);
   CheckerClause *c = new_clause ();
+  c->satisfied = satisfied;
   c->next = clauses[h];
   clauses[h] = c;
 }
@@ -421,6 +426,9 @@ bool Checker::propagate (bool propagate_temporary) {
     for (; res && i != end; i++) {
       CheckerWatch &w = *j++ = *i;
       const int blit = w.blit;
+      const bool temporary = w.temporary;
+      if (!propagate_temporary && temporary)
+        continue;
       assert (blit != -lit);
       const signed char blit_val = val (blit);
       if (blit_val > 0)
@@ -434,10 +442,10 @@ bool Checker::propagate (bool propagate_temporary) {
       } else {
         assert (size > 2);
         CheckerClause *c = w.clause;
-        if (c->garbage) {
+        if (c->garbage || c->satisfied) {
           j--;
           continue;
-        } // skip garbage clauses
+        } // skip garbage and satisfied clauses
         assert (size == c->size);
         int *lits = c->literals;
         int other = lits[0] ^ lits[1] ^ (-lit);
@@ -480,8 +488,8 @@ bool Checker::check (bool propagate_temporary) {
   unsigned previously_propagated = next_to_propagate;
   if (propagate_temporary) {
     for (const auto &lit : temporary_units) {
-      if (val (lit) > 0)
-        continue;
+      // if (val (lit) > 0) // implicit in 'assume'
+      // continue;
       if (val (lit) < 0) {
         assert (!tmp_inconsistent);
         tmp_inconsistent = -1;
@@ -589,10 +597,11 @@ void Checker::add_clause (bool temporary, const char *type) {
           inconsistent = -1;
       }
     }
-  } else {
-    is_tmp = temporary;
-    insert ();
   }
+  is_tmp = temporary;
+  insert (satisfied);
+  simplified.clear ();
+  unsimplified.clear ();
 }
 
 void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
@@ -604,8 +613,6 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
   import_clause (c);
   last_id = id;
   add_clause (false, "original");
-  simplified.clear ();
-  unsimplified.clear ();
   STOP (checking);
 }
 
@@ -638,8 +645,6 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
     fatal_message_end ();
   }
   add_clause (false, "derived");
-  simplified.clear ();
-  unsimplified.clear ();
   STOP (checking);
 }
 
@@ -692,8 +697,6 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
   }
   add_clause (true, "assumption");
   assumption_clauses.push_back (id);
-  simplified.clear ();
-  unsimplified.clear ();
 }
 
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
@@ -711,8 +714,6 @@ void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
   }
   add_clause (true, "derived constraint");
   assumption_clauses.push_back (id);
-  simplified.clear ();
-  unsimplified.clear ();
 }
 
 // TODO: Semantics of these three?
@@ -731,8 +732,6 @@ void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   last_id = id;
   add_clause (true, "original constraint");
   assumption_clauses.push_back (id);
-  simplified.clear ();
-  unsimplified.clear ();
 }
 
 void Checker::add_assumption (int a) {
@@ -783,6 +782,7 @@ void Checker::conclude_unsat (ConclusionType,
   solving = false;
   bool falsified = false;
   for (auto &id : ids) {
+    /*
     if (inconsistent && id == inconsistent) {
       falsified = true;
       break;
@@ -791,10 +791,10 @@ void Checker::conclude_unsat (ConclusionType,
       falsified = true;
       break;
     }
+    */
     CheckerClause **p = find (false), *d = *p;
-    if (!d) {
+    if (!d)
       fatal ("did not find conclusion clause[%" PRId64 "]", id);
-    }
     if (!d->size)
       falsified = true;
     else if (!falsified) {
