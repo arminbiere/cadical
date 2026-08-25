@@ -3836,6 +3836,9 @@ public:
   }
 
   void execute (FILE *trace_file = nullptr) {
+#ifdef NTRACING
+    (void) trace_file;
+#endif
 #ifdef MOBICAL_MEMORY
     memory_bad_alloc = 0;
     memory_bad_size = 0;
