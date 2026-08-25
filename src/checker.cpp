@@ -521,8 +521,8 @@ bool Checker::check (bool propagate_temporary) {
   unsigned previously_propagated = next_to_propagate;
   if (propagate_temporary) {
     for (const auto &lit : temporary_units) {
-      // if (val (lit) > 0) // implicit in 'assume'
-      // continue;
+      if (val (lit) > 0) // implicit in 'assume'
+        continue;
       if (val (lit) < 0) {
         assert (!tmp_inconsistent);
         tmp_inconsistent = -1;
@@ -532,8 +532,15 @@ bool Checker::check (bool propagate_temporary) {
       assume (lit);
     }
   }
-  for (const auto &lit : simplified)
+  for (const auto &lit : simplified) {
+    if (propagate_temporary && val (lit) > 0) {
+      assert (!tmp_inconsistent);
+      tmp_inconsistent = -1;
+      backtrack (previously_propagated);
+      return true;
+    }
     assume (-lit);
+  }
   bool res = !propagate (propagate_temporary);
   backtrack (previously_propagated);
   return res;
