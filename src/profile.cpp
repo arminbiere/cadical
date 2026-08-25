@@ -1,8 +1,8 @@
-#ifndef QUIET
 
 #include "internal.hpp"
 
 namespace CaDiCaL {
+#ifndef QUIET
 
 // Initialize all profile counters with constant name and profiling level.
 
@@ -219,6 +219,8 @@ void PauseProfile::leaveContext (Internal *internal, double time,
     internal->start_profiling (profile, time, ticks);
 }
 
+#endif // ifndef QUIET
+
 ModeResumeContext::ModeResumeContext (Internal *internal, int mode)
     : internal (internal), mode (mode), entered (false) {
   enterContext ();
@@ -256,5 +258,3 @@ void ModePauseContext::leaveContext () {
 }
 
 } // namespace CaDiCaL
-
-#endif // ifndef QUIET
