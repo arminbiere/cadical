@@ -356,11 +356,11 @@ uint64_t Checker::compute_hash () {
   return last_hash = tmp;
 }
 
-CheckerClause **Checker::find (bool check_lits) {
+CheckerClause **Checker::find (int64_t id, bool check_lits) {
   stats.searches++;
   CheckerClause **res, *c;
   const uint64_t hash = compute_hash ();
-  const int64_t id = last_id;
+  // const int64_t id = last_id;
   const unsigned size = simplified.size ();
   const uint64_t h = reduce_hash (hash, size_clauses);
   for (const auto &lit : simplified)
@@ -673,7 +673,7 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
   import_clause (c, id, false);
-  CheckerClause **p = find (), *d = *p;
+  CheckerClause **p = find (id, true), *d = *p;
   if (d) {
     // Remove from hash table, mark as garbage, connect to garbage list.
     move_to_garbage (p);
@@ -752,7 +752,8 @@ void Checker::reset_assumptions () {
     fatal ("can not 'reset_assumptions' before 'conclude'");
   for (auto &id : assumption_clauses) {
     // find and delete id.
-    CheckerClause **p = find (false), *d = *p;
+    last_id = id;
+    CheckerClause **p = find (id, false), *d = *p;
     if (d) {
       assert (d->temporary);
       // Remove from hash table, mark as garbage, connect to garbage list.
@@ -789,7 +790,8 @@ void Checker::conclude_unsat (ConclusionType,
       break;
     }
     */
-    CheckerClause **p = find (false), *d = *p;
+    last_id = id;
+    CheckerClause **p = find (id, false), *d = *p;
     if (!d)
       fatal ("did not find conclusion clause[%" PRId64 "]", id);
     if (!d->size)
@@ -864,7 +866,7 @@ void Checker::finalize_clause (int64_t id, const vector<int> &c) {
   stats.finalized++;
   num_finalized++;
   import_clause (c, id, false);
-  CheckerClause **p = find (id), *d = *p;
+  CheckerClause **p = find (id, true), *d = *p;
   if (d) {
     /*
     for (const auto &lit : simplified)

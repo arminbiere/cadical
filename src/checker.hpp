@@ -123,10 +123,9 @@ class Checker : public StatTracer {
   //
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
-  void enlarge_clauses (); // enlarge hash table for clauses
-  void insert ();          // insert clause in hash table
-  CheckerClause **
-  find (bool check_lits = true); // find clause position in hash table
+  void enlarge_clauses ();              // enlarge hash table
+  void insert ();                       // insert into hash table
+  CheckerClause **find (int64_t, bool); // find in hash table
 
   void add_clause (const char *type);
 

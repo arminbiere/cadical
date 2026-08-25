@@ -23,7 +23,7 @@ void Internal::init_constraint_cat () {
                                               cat_terminate);
   KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
   KITTEN_NAMESPACE (kitten_keep_assumptions) (constraint_cat);
-  size_t idx = 0;
+  // size_t idx = 0;
   for (auto &other : assumptions)
     KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, other));
 }
