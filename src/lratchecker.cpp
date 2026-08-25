@@ -559,6 +559,7 @@ void LratChecker::add_derived_clause (int64_t id, bool, int witness,
 }
 void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
                                          const vector<int64_t> &chain) {
+  START (checking);
   LOG (c, "LRAT CHECKER adding assumption clause[%" PRId64 "]", id);
   LOG (chain, "LRAT CHECKER with reason chain");
   for (auto &lit : c) {
@@ -615,10 +616,12 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
   imported_clause.clear ();
   is_tmp = false;
   assumption_clauses.push_back (id);
+  STOP (checking);
 }
 
 void LratChecker::add_constraint_clause (int64_t id, const vector<int> &c,
                                          const vector<int64_t> &chain) {
+  START (checking);
   LOG (c, "LRAT CHECKER adding constraint clause[%" PRId64 "]", id);
   LOG (chain, "LRAT CHECKER with reason chain");
   for (auto &lit : c) {
@@ -675,14 +678,18 @@ void LratChecker::add_constraint_clause (int64_t id, const vector<int> &c,
   imported_clause.clear ();
   is_tmp = false;
   assumption_clauses.push_back (id);
+  STOP (checking);
 }
 
 void LratChecker::add_assumption (int a) {
+  START (checking);
   LOG ("LRAT CHECKER adding assumption %d", a);
   assumptions.push_back (a);
+  STOP (checking);
 }
 
 void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
+  START (checking);
   LOG (c, "LRAT CHECKER adding constraint[%" PRId64 "]", id);
   for (auto &lit : c) {
     constraint_vars.insert (abs (lit));
@@ -705,9 +712,11 @@ void LratChecker::add_constraint (int64_t id, const vector<int> &c) {
   imported_clause.clear ();
   is_tmp = false;
   assumption_clauses.push_back (id);
+  STOP (checking);
 }
 
 void LratChecker::reset_assumptions () {
+  START (checking);
   LOG ("LRAT CHECKER reset assumptions");
   assumptions.clear ();
   concluded = false;
@@ -719,10 +728,12 @@ void LratChecker::reset_assumptions () {
   }
   assert (!num_temporary);
   assumption_clauses.clear ();
+  STOP (checking);
 }
 
 void LratChecker::conclude_unsat (ConclusionType conclusion,
                                   const vector<int64_t> &ids) {
+  START (checking);
   LOG ("LRAT CHECKER conclude unsat");
   if (concluded) {
     fatal_message_start ();
@@ -796,6 +807,7 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
       fputs ("\n", stderr);
       fatal_message_end ();
     }
+  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/
@@ -862,6 +874,7 @@ void LratChecker::delete_clause (int64_t id, bool, const vector<int> &c) {
 /*------------------------------------------------------------------------*/
 
 void LratChecker::weaken_minus (int64_t id, const vector<int> &c) {
+  START (checking);
   LOG (c, "LRAT CHECKER saving clause[%" PRId64 "] to restore later", id);
   import_clause (c);
 
@@ -898,9 +911,11 @@ void LratChecker::weaken_minus (int64_t id, const vector<int> &c) {
   vector<int> e = c;
   sort (begin (e), end (e));
   clauses_to_reconstruct[id] = e;
+  STOP (checking);
 }
 
 void LratChecker::restore_clause (int64_t id, const vector<int> &c) {
+  START (checking);
   LOG (c, "LRAT CHECKER check of restoration of clause[%" PRId64 "]", id);
   if (clauses_to_reconstruct.find (id) == end (clauses_to_reconstruct)) {
     fatal_message_start ();
@@ -937,6 +952,7 @@ void LratChecker::restore_clause (int64_t id, const vector<int> &c) {
   }
 
   clauses_to_reconstruct.erase (id);
+  STOP (checking);
 }
 
 void LratChecker::finalize_clause (int64_t id, const vector<int> &c) {
@@ -984,7 +1000,7 @@ void LratChecker::report_status (int, int64_t) {
   if (num_finalized == num_permanent) {
     num_finalized = 0;
     LOG ("LRAT CHECKER successful finalize check, all clauses have been "
-         "deleted");
+         "finalized");
   } else {
     fatal_message_start ();
     fputs ("finalize check failed ", stderr);
