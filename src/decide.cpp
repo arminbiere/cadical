@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "kitten.h"
+#include "profile.hpp"
 
 namespace CaDiCaL {
 
@@ -275,9 +276,9 @@ int Internal::decide () {
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
-      START (constraintssolve);
+      PROFILE_SCOPE (constraintssolve);
       cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
-      STOP (constraintssolve);
+      PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
       if (cat_res == 20)
         stats.constraints_unsat++;
       else if (cat_res == 10)
@@ -326,13 +327,13 @@ int Internal::decide () {
       search_assume_decision (lit);
     }
   } else if (is_constraint_level (level)) {
-    START (constraints);
+    PROFILE_SCOPE (constraints);
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
-      START (constraintssolve);
+      PROFILE_SCOPE (constraintssolve);
       cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
-      STOP (constraintssolve);
+      PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
       if (cat_res == 20)
         stats.constraints_unsat++;
       else if (cat_res == 10)
@@ -396,7 +397,7 @@ int Internal::decide () {
         notify_decision ();
       }
     }
-    STOP (constraints);
+    PROFILE_SCOPE_EARLY_EXIT (constraints);
   } else {
     check_queue ();
     int decision = ask_decision ();

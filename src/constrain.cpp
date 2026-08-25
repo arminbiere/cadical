@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "kitten.h"
+#include "profile.hpp"
 #include <algorithm>
 #include <cstdint>
 
@@ -186,7 +187,7 @@ void Internal::reset_constraint () {
 
 void Internal::analyze_failing_constraint (int failed) {
   stats.constraints_analyzed++;
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   LOG ("analyzing failing constraint %s", LOGLIT (failed));
 
@@ -231,7 +232,7 @@ void Internal::analyze_failing_constraint (int failed) {
     lrat_chain.clear ();
 
     KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, id, -failed));
-    goto DONE;
+    return;
   }
 
   // Fall through to third case (3).
@@ -334,10 +335,6 @@ void Internal::analyze_failing_constraint (int failed) {
     lrat_chain.clear ();
     clause.clear ();
   }
-
-DONE:
-
-  STOP (analyze);
 }
 
 } // namespace CaDiCaL
