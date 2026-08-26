@@ -97,11 +97,17 @@ static void traverse_constraint_core (void *state, unsigned id) {
 
 // extracts relevant learned clauses from kitten for drat proofs
 //
-static void traverse_constraint_drat (void *state, unsigned, bool learned,
-                                      size_t size, const unsigned *lits) {
-  if (!learned)
-    return;
+static void traverse_constraint_drat (void *state, unsigned id,
+                                      bool learned, size_t size,
+                                      const unsigned *lits) {
+#ifndef LOGGING
+  (void) id;
+#endif
   Internal *internal = (Internal *) state;
+  if (!learned) {
+    LOG ("ignore original clause[%d]", id);
+    return;
+  }
   auto &clause = internal->clause;
   assert (clause.empty ());
   assert (internal->proof);
@@ -111,7 +117,7 @@ static void traverse_constraint_drat (void *state, unsigned, bool learned,
     clause.push_back (internal->externalize (lit));
   for (size_t i = 0; i < size; i++)
     clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
-  internal->proof->add_assumption_clause (++internal->clause_id, clause,
+  internal->proof->add_constraint_clause (++internal->clause_id, clause,
                                           internal->lrat_chain);
   internal->conclusion.push_back (internal->clause_id);
   clause.clear ();

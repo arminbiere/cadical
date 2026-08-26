@@ -292,6 +292,38 @@ void Checker::enlarge_vars (int64_t idx) {
   assert (idx < new_size_vars);
 }
 
+struct lit_smaller {
+  bool operator() (int a, int b) const {
+    int c = abs (a), d = abs (b);
+    if (c < d)
+      return true;
+    if (c > d)
+      return false;
+    return a < b;
+  }
+};
+
+bool Checker::tautological () {
+  sort (simplified.begin (), simplified.end (), lit_smaller ());
+  const auto end = simplified.end ();
+  auto j = simplified.begin ();
+  int prev = 0;
+  bool sat = false;
+  for (auto i = j; i != end; i++) {
+    int lit = *i;
+    if (lit == prev)
+      continue; // duplicated literal
+    if (lit == -prev)
+      return true; // tautological clause
+    const signed char tmp = val (lit);
+    if (tmp > 0)
+      sat = true; // satisfied literal and clause
+    *j++ = prev = lit;
+  }
+  simplified.resize (j - simplified.begin ());
+  return sat;
+}
+
 inline void Checker::import_literal (int lit) {
   assert (lit);
   assert (lit != INT_MIN);
@@ -313,37 +345,6 @@ void Checker::import_clause (const vector<int> &c, int64_t id,
   is_taut = tautological ();
   is_tmp = temporary;
   last_id = id;
-}
-
-struct lit_smaller {
-  bool operator() (int a, int b) const {
-    int c = abs (a), d = abs (b);
-    if (c < d)
-      return true;
-    if (c > d)
-      return false;
-    return a < b;
-  }
-};
-
-bool Checker::tautological () {
-  sort (simplified.begin (), simplified.end (), lit_smaller ());
-  const auto end = simplified.end ();
-  auto j = simplified.begin ();
-  int prev = 0;
-  for (auto i = j; i != end; i++) {
-    int lit = *i;
-    if (lit == prev)
-      continue; // duplicated literal
-    if (lit == -prev)
-      return true; // tautological clause
-    const signed char tmp = val (lit);
-    if (tmp > 0)
-      return true; // satisfied literal and clause
-    *j++ = prev = lit;
-  }
-  simplified.resize (j - simplified.begin ());
-  return false;
 }
 
 /*------------------------------------------------------------------------*/
@@ -718,6 +719,7 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   PROFILE_SCOPE (checking);
+  LOG (c, "CHECKER checking addition of assumption clause");
   import_clause (c, id, true);
   if (!check (false)) {
     fatal_message_start ();
@@ -734,6 +736,7 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   PROFILE_SCOPE (checking);
+  LOG (c, "CHECKER checking addition of derived constraint clause");
   import_clause (c, id, true);
   if (!check (true)) {
     fatal_message_start ();
@@ -760,6 +763,7 @@ void Checker::solve_query () { solving = true; }
 // for add_assumption_clause checks.
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   PROFILE_SCOPE (checking);
+  LOG (c, "CHECKER adding constraint");
   import_clause (c, id, true);
   add_clause ("original constraint");
   assumption_clauses.push_back (id);
@@ -767,6 +771,7 @@ void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
 
 void Checker::add_assumption (int a) {
   PROFILE_SCOPE (checking);
+  LOG ("CHECKER adding assumptions %d", a);
   assert (a);
   assert (a != INT_MIN);
   int idx = abs (a);
@@ -780,6 +785,7 @@ void Checker::add_assumption (int a) {
 
 void Checker::reset_assumptions () {
   PROFILE_SCOPE (checking);
+  LOG ("CHECKER resetting assumptions");
   if (solving)
     fatal ("can not 'reset_assumptions' before 'conclude'");
   for (auto &id : assumption_clauses) {
@@ -808,6 +814,7 @@ void Checker::reset_assumptions () {
 void Checker::conclude_unsat (ConclusionType,
                               const std::vector<int64_t> &ids) {
   PROFILE_SCOPE (checking);
+  LOG ("CHECKER checking conclusion");
   if (!solving)
     fatal ("can not 'conclude_unsat' before 'solve_query'");
   solving = false;
@@ -872,6 +879,7 @@ void Checker::conclude_unknown (const std::vector<int> &) {
 // check both sides of the equivalence but do not add to the clause set.
 void Checker::notify_equivalence (int a, int b) {
   PROFILE_SCOPE (checking);
+  LOG ("CHECKER checking equivalence of %d and %d", a, b);
   vector<int> c;
   c.push_back (-a);
   c.push_back (b);
