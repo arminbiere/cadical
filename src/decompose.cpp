@@ -138,8 +138,8 @@ bool Internal::decompose_round () {
 
   assert (!level);
 
-  START_SIMPLIFIER (decompose, DECOMP);
-
+  MODE_SCOPE_SIMPLIFY (DECOMP);
+  PROFILE_SCOPE_SIMPLIFY (decompose);
   stats.decompositions++;
 
   const size_t size_dfs = 2 * (1 + (size_t) max_var);
@@ -172,6 +172,9 @@ bool Internal::decompose_round () {
     if (!active (root_idx))
       continue;
     for (int root_sign = -1; !unsat && root_sign <= 1; root_sign += 2) {
+      if (terminated_asynchronously ()) {
+        return false;
+      }
       int root = root_sign * root_idx;
       if (dfs[vlit (root)].min == TRAVERSED)
         continue; // skip traversed
@@ -758,8 +761,6 @@ bool Internal::decompose_round () {
   report ('d', !opts.reportall && !success);
   if (success)
     new_binary_since_dedup = true;
-
-  STOP_SIMPLIFIER (decompose, DECOMP);
 
   return success;
 }

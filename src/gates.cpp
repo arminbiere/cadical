@@ -21,6 +21,7 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
                                                Clause *c, int first) {
   assert (!c->main.garbage);
   int second = 0;
+  ++eliminator.ticks;
   for (const auto &lit : *c) {
     if (lit == first)
       continue;

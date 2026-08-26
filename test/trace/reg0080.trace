@@ -178,7 +178,7 @@
 177 add 3
 178 add 4
 179 add 0
-180 propagate 0
+180 propagate_assumptions 0
 181 add 3
 182 add 6
 183 add 4

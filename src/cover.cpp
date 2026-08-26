@@ -62,7 +62,7 @@ inline void Internal::cover_push_extension (int lit, Coveror &coveror) {
 // Successful covered literal addition (CLA) step.
 
 inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (level == 1);
   cover_push_extension (lit, coveror);
   for (const auto &other : coveror.intersection) {
@@ -80,7 +80,7 @@ inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
 
 inline void Internal::asymmetric_literal_addition (int lit,
                                                    Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (level == 1);
   LOG ("initial asymmetric literal addition %d", lit);
   assert (!vals[lit]), assert (!vals[-lit]);
@@ -99,7 +99,7 @@ inline void Internal::asymmetric_literal_addition (int lit,
 
 bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
                                            Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   stats.propagations_cover++;
   stats.propagations++;
   assert (val (lit) < 0);
@@ -180,7 +180,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
 // function returns 'true' if the extended clause is blocked on 'lit.'
 
 bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
 
   assert (val (lit) < 0);
   if (frozen (lit)) {
@@ -324,7 +324,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
 
 bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (!c->main.garbage);
 
   LOG (c, "trying covered clauses elimination on");
@@ -668,8 +668,8 @@ bool Internal::cover () {
   if (opts.restoreflush)
     return false;
 
-  START_SIMPLIFIER (cover, COVER);
-
+  MODE_SCOPE_SIMPLIFY (COVER);
+  PROFILE_SCOPE_SIMPLIFY (cover);
   stats.coverings++;
 
   // During variable elimination unit clauses can be generated which need to
@@ -695,10 +695,7 @@ bool Internal::cover () {
   assert (unsat || propagated == trail.size ());
 
   int64_t covered = cover_round ();
-
-  STOP_SIMPLIFIER (cover, COVER);
   report ('K', !opts.reportall && !covered);
-
   return covered;
 }
 

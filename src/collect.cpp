@@ -502,7 +502,7 @@ void Internal::check_clause_stats () {
 void Internal::remove_garbage_binaries () {
   if (unsat)
     return;
-  START (collect);
+  PROFILE_SCOPE (collect);
 
   if (!protected_reasons)
     protect_reasons ();
@@ -544,7 +544,6 @@ void Internal::remove_garbage_binaries () {
   unprotect_reasons ();
   if (backtrack_level - 1 < level)
     backtrack (backtrack_level - 1);
-  STOP (collect);
 }
 
 /*------------------------------------------------------------------------*/
@@ -554,7 +553,7 @@ bool Internal::arenaing () { return opts.arena && (stats.collections > 1); }
 void Internal::garbage_collection () {
   if (unsat)
     return;
-  START (collect);
+  PROFILE_SCOPE (collect);
   report ('G', 1);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
@@ -568,7 +567,6 @@ void Internal::garbage_collection () {
   check_var_stats ();
   unprotect_reasons ();
   report ('C', 1);
-  STOP (collect);
 }
 
 } // namespace CaDiCaL

@@ -377,7 +377,8 @@ bool Internal::subsume_round () {
       !stats.clauses_now_irr)
     return false;
 
-  START_SIMPLIFIER (subsume, SUBSUME);
+  MODE_SCOPE_SIMPLIFY (SUBSUME);
+  PROFILE_SCOPE_SIMPLIFY (subsume);
   stats.subsume_rounds++;
 
   int64_t check_limit;
@@ -414,7 +415,8 @@ bool Internal::subsume_round () {
   int64_t left_over_from_last_subsumption_round = 0;
 
   for (auto c : clauses) {
-
+    if (terminated_asynchronously ())
+      break;
     if (c->main.garbage)
       continue;
     if (c->size () > opts.subsumeclslim)
@@ -631,8 +633,6 @@ bool Internal::subsume_round () {
   erase_vector (shrunken);
 
   report ('s', !opts.reportall && !(subsumed + strengthened));
-
-  STOP_SIMPLIFIER (subsume, SUBSUME);
 
   return old_marked_candidate_variables_for_elimination < stats.mark_elim;
 }

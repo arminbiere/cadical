@@ -1,3 +1,4 @@
+#include "contract.hpp"
 #include "internal.hpp"
 
 #include <algorithm>
@@ -9,14 +10,6 @@ namespace CaDiCaL {
 #define LOG_INTERACTION_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d START", VAL, level)
 
-static void trace_api_call (FILE *trace_api_file, Internal *internal,
-                            const char *s0) {
-  assert (trace_api_file);
-  LOG ("TRACE %s", s0);
-  (void) internal;
-  fprintf (trace_api_file, "%s\n", s0);
-  fflush (trace_api_file);
-}
 static void trace_api_call (FILE *trace_api_file, Internal *internal,
                             const char *s0, int i1) {
   assert (trace_api_file);
@@ -43,6 +36,15 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
   } while (0)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  do { \
+    LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level); \
+    if (!opts.exttracecalls) \
+      break; \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, RET1, RET2); \
+  } while (0)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   do { \
     LOG (#NAME "(%d) on level %d END", VAL, level); \
@@ -52,18 +54,9 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \
   } while (0)
-#define LOG_INTERACTION_END(NAME) \
-  do { \
-    LOG (#NAME " on level %d END", level); \
-    if (!opts.exttracecalls) \
-      break; \
-    if (!external->trace_api_file) \
-      break; \
-    trace_api_call (external->trace_api_file, this, #NAME); \
-  } while (0)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   do { \
-    LOG (#NAME "returns %d on level %d END", VAL, level); \
+    LOG (#NAME " returns %d on level %d END", VAL, level); \
     if (!opts.exttracecalls) \
       break; \
     if (!external->trace_api_file) \
@@ -75,9 +68,10 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d START", VAL, level)
 
-#define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
-  LOG (#NAME "returns %d on level %d END", VAL, level)
+  LOG (#NAME " returns %d on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_TWO(NAME, RET1, RET2) \
+  LOG (#NAME " returns %d (%d) on level %d END", RET1, RET2, level)
 #define LOG_INTERACTION_END_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d END", VAL, level)
 #define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
@@ -105,8 +99,8 @@ void Internal::add_observed_var (int ilit) {
   // backtrack and re-play again every levels' notification to the
   // propagator
   if (val (ilit) && level && !fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    REQUIRE (!force_no_backtrack,
+             "can not observe assigned variable during conflict analysis");
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
     // To not break the stack-like view of the trail, we simply backtrack to
@@ -114,8 +108,8 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    REQUIRE (!force_no_backtrack,
+             "can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }
   activating_all_new_imported_literals ();
@@ -130,6 +124,9 @@ void Internal::add_observed_var (int ilit) {
 //
 void Internal::remove_observed_var (int ilit) {
   if (!fixed (ilit) && level && val (ilit)) {
+    REQUIRE (!force_no_backtrack,
+             "can not remove observed assigned variable during conflict "
+             "analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   }
@@ -225,15 +222,16 @@ void Internal::renotify_full_trail_between_trail_pos (
 #endif
   if (start_new_level) {
     if (assigned.size ()) {
-      LOG_INTERACTION_START (notify_assignment);
+      LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
       external->propagator->notify_assignment (assigned);
-      LOG_INTERACTION_END (notify_assignment);
+      LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                               (int) assigned.size ());
     }
     assigned.clear ();
     notified_level++;
-    LOG_INTERACTION_START (notify_new_decision_level);
+    LOG_INTERACTION_FOR (notify_new_decision_level, notified_level);
     external->propagator->notify_new_decision_level ();
-    LOG_INTERACTION_END (notify_new_decision_level);
+    LOG_INTERACTION_END_FOR (notify_new_decision_level, notified_level);
   }
   for (; j < end_level; ++j) {
     int ilit = trail[j];
@@ -258,9 +256,10 @@ void Internal::renotify_full_trail_between_trail_pos (
   }
 
   if (assigned.size ()) {
-    LOG_INTERACTION_START (notify_assignment);
+    LOG_INTERACTION_FOR (notify_assignment_batch, (int) assigned.size ());
     external->propagator->notify_assignment (assigned);
-    LOG_INTERACTION_END (notify_assignment);
+    LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                             (int) assigned.size ());
   }
   assigned.clear ();
 }
@@ -359,7 +358,7 @@ void Internal::force_backtrack (int new_level) {
 //
 bool Internal::external_propagate () {
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
   assert (!unsat);
 
   size_t before = num_assigned;
@@ -380,9 +379,9 @@ bool Internal::external_propagate () {
     int elit = external->propagator->cb_propagate ();
     LOG_INTERACTION_RETURN (cb_propagate, elit);
 
-    if (elit && !external->observed (elit))
-      FATAL ("external propagations are only allowed over observed "
-             "variables.");
+    CB_REQUIRE (!elit || external->observed (elit), "cb_propagate", elit,
+                "external propagations are only allowed over observed "
+                "variables.");
 
     stats.up_cb++;
     stats.up_cb_prop++;
@@ -528,7 +527,8 @@ bool Internal::ask_external_clause () {
   LOG_INTERACTION_START (cb_has_external_clause);
   bool res =
       external->propagator->cb_has_external_clause (ext_clause_forgettable);
-  LOG_INTERACTION_RETURN (cb_has_external_clause, res);
+  LOG_INTERACTION_RETURN_TWO (cb_has_external_clause, res,
+                              ext_clause_forgettable);
 
   return res;
 }
@@ -631,7 +631,9 @@ void Internal::add_external_clause (int propagated_elit,
   from_propagator = true;
 
   int elit = 0;
+#ifndef NCONTRACTS
   bool propagated_lit_found = false;
+#endif
 
   assert (tmp_elits.empty ());
 
@@ -642,10 +644,16 @@ void Internal::add_external_clause (int propagated_elit,
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
       LOG_INTERACTION_RETURN_FOR (cb_add_reason_clause_lit, propagated_elit,
                                   elit);
+      CB_REQUIRE (!elit || external->observed (elit),
+                  "cb_add_reason_clause_lit", elit,
+                  "reason clause must contain only observed variables.");
     } else {
       LOG_INTERACTION_START (cb_add_external_clause_lit);
       elit = external->propagator->cb_add_external_clause_lit ();
       LOG_INTERACTION_RETURN (cb_add_external_clause_lit, elit);
+      CB_REQUIRE (!elit || external->observed (elit),
+                  "cb_add_external_clause_lit", elit,
+                  "external clause must contain only observed variables.");
     }
     LOG ("cb_add %d", elit);
 
@@ -654,17 +662,29 @@ void Internal::add_external_clause (int propagated_elit,
     if (!elit)
       break;
 
+#ifndef NCONTRACTS
     if (elit == propagated_elit)
       propagated_lit_found = true;
+#endif
 
-    if (!external->observed (elit))
-      FATAL ("external clause must contain only observed variables.");
-    if (propagated_elit && elit != propagated_elit &&
-        external->current_val (elit) >= 0)
-      FATAL ("external reason clause must only contain falsified literals");
+    CB_REQUIRE (
+        !propagated_elit || elit == propagated_elit ||
+            external->current_val (elit) < 0,
+        "cb_add_reason_clause_lit", elit,
+        "external reason clause must only contain falsified literals");
+
+    CB_REQUIRE (!propagated_elit || elit == propagated_elit ||
+                    external->current_val (propagated_elit) < 0 || !level ||
+                    var (external->internalize (elit)).trail <
+                        var (external->internalize (propagated_elit)).trail,
+                "cb_add_reason_clause_lit", elit,
+                "external reason clause must respect the trail order (%d "
+                "was assigned after %d)",
+                elit, propagated_elit);
   }
-  if (propagated_elit && !propagated_lit_found)
-    FATAL ("external reason clause must contain the propagated literal.");
+  CB_REQUIRE (
+      !propagated_elit || propagated_lit_found, "cb_add_reason_clause_lit",
+      elit, "external reason clause must contain the propagated literal.");
 
   // copy the state from adding clauses to enable adding external clauses
   // everywhere.
@@ -1242,7 +1262,6 @@ void Internal::notify_assignments () {
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
 
-  const int level_now = level;
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
     if (!observed (ilit))
@@ -1261,17 +1280,8 @@ void Internal::notify_assignments () {
     if (!external->observed (elit))
       continue;
     notification_trail.push_back (elit);
-    if (opts.extnassign) {
-      LOG_INTERACTION_FOR (notify_assignment, notification_trail[0]);
-      external->propagator->notify_assignment (notification_trail);
-      LOG_INTERACTION_END_FOR (notify_assignment, notification_trail[0]);
-      notification_trail.clear ();
-      // stop notifying
-      if (level_now != level)
-        return;
-    }
   }
-  if (notification_trail.size ()) {
+  if (!notification_trail.empty ()) {
     LOG_INTERACTION_FOR (notify_assignment_batch,
                          (int) notification_trail.size ());
     external->propagator->notify_assignment (notification_trail);
@@ -1310,18 +1320,11 @@ void Internal::notify_decision () {
 void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
-  size_t level_now = notified_level;
   assert ((size_t) notified_level > new_level);
-  if (!opts.extnbacktrack)
-    level_now = new_level + 1;
-  while (level_now > new_level) {
-    level_now--;
-    LOG_INTERACTION_FOR (notify_backtrack, (int) level_now);
-    external->propagator->notify_backtrack (level_now);
-    LOG_INTERACTION_END_FOR (notify_backtrack, (int) level_now);
-  }
+  LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
+  external->propagator->notify_backtrack (new_level);
+  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
   notified_level = new_level;
-  assert (level_now == new_level);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1369,8 +1372,11 @@ int Internal::ask_decision () {
     return 0;
   LOG ("external propagator proposes decision: %d", elit);
 
-  if (elit && !external->observed (elit))
-    FATAL ("external decisions are only allowed over observed variables.");
+  CB_REQUIRE (
+      (size_t) abs (elit) < external->is_observed.size () &&
+          external->is_observed[abs (elit)],
+      "cb_decide", elit,
+      "external decisions are only allowed over observed variables.");
 
   assert (external->is_observed[abs (elit)]);
 
@@ -1384,9 +1390,9 @@ int Internal::ask_decision () {
        "%d, fixed: %d, val: %d)",
        elit, ilit, fixed (ilit), val (ilit));
 
-  if (fixed (ilit) || val (ilit))
-    FATAL (
-        "external decisions are only allowed over unassigned variables.");
+  CB_REQUIRE (
+      !fixed (ilit) && !val (ilit), "cb_decide", elit,
+      "external decisions are only allowed over unassigned variables.");
 
   return ilit;
 }

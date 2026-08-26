@@ -161,7 +161,7 @@ static signed char *ignore_clang_analyze_memory_leak_warning;
 
 void Internal::compact () {
 
-  START (compact);
+  PROFILE_SCOPE (compact);
 
   assert (active () < max_var);
 
@@ -540,8 +540,6 @@ void Internal::compact () {
   PHASE ("compact", stats.compacts,
          "new compact limit %" PRId64 " after %" PRId64 " conflicts",
          lim.compact, delta);
-
-  STOP (compact);
 }
 
 } // namespace CaDiCaL

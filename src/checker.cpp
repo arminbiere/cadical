@@ -552,7 +552,7 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
                                    bool) {
   if (inconsistent)
     return;
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER addition of original clause");
   stats.added++;
   stats.original++;
@@ -564,7 +564,6 @@ void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
     add_clause ("original");
   simplified.clear ();
   unsimplified.clear ();
-  STOP (checking);
 }
 
 void Checker::add_derived_clause (int64_t id, bool, int,
@@ -572,7 +571,7 @@ void Checker::add_derived_clause (int64_t id, bool, int,
                                   const vector<int64_t> &) {
   if (inconsistent)
     return;
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER addition of derived clause");
   stats.added++;
   stats.derived++;
@@ -591,7 +590,6 @@ void Checker::add_derived_clause (int64_t id, bool, int,
     add_clause ("derived");
   simplified.clear ();
   unsimplified.clear ();
-  STOP (checking);
 }
 
 /*------------------------------------------------------------------------*/
@@ -599,7 +597,7 @@ void Checker::add_derived_clause (int64_t id, bool, int,
 void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   if (inconsistent)
     return;
-  START (checking);
+  PROFILE_SCOPE (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
   simplified.clear ();   // Can be non-empty if clause allocation fails.
@@ -629,7 +627,6 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   }
   simplified.clear ();
   unsimplified.clear ();
-  STOP (checking);
 }
 
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,

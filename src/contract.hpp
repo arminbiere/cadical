@@ -23,6 +23,17 @@
     abort (); \
   } while (0)
 
+#define CALLBACK_VIOLATED(NAME, VALUE, ...) \
+  do { \
+    fatal_message_start (); \
+    fprintf (stderr, "invalid return value %d to callback '%s': ", VALUE, \
+             NAME); \
+    fprintf (stderr, __VA_ARGS__); \
+    fputc ('\n', stderr); \
+    fflush (stderr); \
+    abort (); \
+  } while (0)
+
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -54,6 +65,13 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
 /*------------------------------------------------------------------------*/
 
 // These are common shortcuts for 'Solver' API contracts (requirements).
+
+#define CB_REQUIRE(COND, NAME, VALUE, ...) \
+  do { \
+    if ((COND)) \
+      break; \
+    CALLBACK_VIOLATED (NAME, VALUE, __VA_ARGS__); \
+  } while (0)
 
 #define REQUIRE(COND, ...) \
   do { \
@@ -129,6 +147,9 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
   do { \
   } while (0)
 #define REQUIRE_STEADY_STATE() \
+  do { \
+  } while (0)
+#define CB_REQUIRE(...) \
   do { \
   } while (0)
 

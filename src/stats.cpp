@@ -36,15 +36,18 @@ Stats::Stats () {
 #define SYMBOL_OFFSET "3"
 #define PRINT_OFFSET "21"
 
+#define RELPROFW(FIRST, IGNORE) \
+  relative (1e-6 * FIRST, internal->profiles.walk.value)
 #define SECONDS(FIRST, IGNORE) relative (FIRST, t)
-#define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
+#define MSECONDS(FIRST, IGNORE) relative (1e-6 * FIRST, t)
+#define INTERVAL(FIRST, IGNORE) relative (conflicts, FIRST)
 #define NOTHING(FIRST, IGNORE) 0
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
-    if (VERBOSE > 1 && VERBOSE > verbose) \
+    if (VERBOSE > verbose) \
       break; \
-    if (verbose == 1 && VERBOSE == 1 && !NUM && VERBOSE > verbose) \
+    if (!NUM && VERBOSE == verbose) \
       break; \
     const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
@@ -61,22 +64,21 @@ void Stats::print_internal_stats (Internal *internal) {
 
   Stats stats = internal->stats;
   int verbose = internal->opts.verbose;
+  verbose += internal->opts.stats;
 
-  // TODO: verbosity is always 3 like this.
-  if (internal->opts.stats >= 2)
-    verbose = 2;
 #ifdef LOGGING
   if (internal->opts.log)
-    verbose = 3;
+    verbose = 4;
 #endif // ifdef LOGGING
 
   double t = internal->solve_time ();
 
 #define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
-  PRINT_STATER (#NAME, (int64_t)stats.NAME, VERBOSE, \
-                COMMAND ((int64_t)stats.NAME, (int64_t)stats.OTHER), SYMBOL, #OTHER);
+  PRINT_STATER (#NAME, (int64_t) stats.NAME, VERBOSE, \
+                COMMAND (NAME, OTHER), SYMBOL, #OTHER);
 #ifndef NMETRICS
-#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
+#define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
+  STATISTIC (NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
 #else
 #define METRIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER)
 #endif
@@ -84,15 +86,6 @@ void Stats::print_internal_stats (Internal *internal) {
 
 #undef STATISTIC
 #undef METRIC
-
-#ifndef QUIET
-  int all = internal->opts.verbose > 0 || internal->opts.stats;
-  if (internal->profiles.walk.value > 0)
-    PRT ("walk_flips_per_s:       %15" PRId64 " %10.2f M  per second",
-      stats.walk_flips,
-      relative (1e-6 * stats.walk_flips,
-        internal->profiles.walk.value));
-#endif
 }
 #endif
 
@@ -105,15 +98,21 @@ void Stats::print (Internal *internal) {
   if (internal->opts.profile)
     internal->print_profile ();
 
+  int verbosity = internal->opts.verbose + internal->opts.stats;
+  if (verbosity < 0)
+    return;
+
   SECTION ("statistics");
 
   print_internal_stats (internal);
-
 
   LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",
        tout.magenta_code (), internal->opts.realtime ? "real" : "process",
        tout.normal_code ());
+
+  if (verbosity <= 0)
+    return;
 
   SECTION ("glue usage");
 

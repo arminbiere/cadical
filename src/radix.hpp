@@ -70,6 +70,7 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
   R upper = 0, lower = ~upper;
   R shifted = mask;
   bool bounded = false;
+  bool using_v = false;
 
   R masked_lower = 0, masked_upper = mask;
 
@@ -125,7 +126,8 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
       initialized = true;
     }
 
-    I d = (&*c == &*a) ? b : a; // MS VC++
+    using_v = (&*c == &*a);
+    I d = using_v ? b : a; // MS VC++
 
     for (I p = c; p != end; p++) {
       const auto r = rank (*p);
@@ -136,7 +138,9 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
     c = d;
   }
 
-  if (c == b) {
+  if (using_v) {
+    // we are currently using v, copying back
+    // assert (c == b) has the same effect, but is not valid C++
     for (size_t i = 0; i < n; i++)
       a[i] = b[i];
   }

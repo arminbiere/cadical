@@ -153,7 +153,7 @@ inline void Internal::demote_clause (Clause *c) {
 // (large) clauses which are currently vivified.
 
 inline void Internal::vivify_assign (int lit, Clause *reason) {
-  require_mode (VIVIFY);
+  MODE_REQUIRE (VIVIFY);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -177,7 +177,7 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
 // Assume negated literals in candidate clause.
 
 void Internal::vivify_assume (int lit) {
-  require_mode (VIVIFY);
+  MODE_REQUIRE (VIVIFY);
   level++;
   control.emplace_back (lit, get_trail_size ());
   LOG ("vivify decide %d", lit);
@@ -191,9 +191,9 @@ void Internal::vivify_assume (int lit) {
 // to that code for more explanation on how propagation is implemented.
 
 bool Internal::vivify_propagate (int64_t &ticks) {
-  require_mode (VIVIFY);
+  MODE_REQUIRE (VIVIFY);
   assert (!unsat);
-  START (propagate);
+  PROFILE_SCOPE (propagate);
   const size_t before = propagated2 = propagated;
   for (;;) {
     if (propagated2 != trail.size ()) {
@@ -303,7 +303,6 @@ bool Internal::vivify_propagate (int64_t &ticks) {
   stats.propagations += static_cast<int64_t> (delta);
   if (conflict)
     LOG (conflict, "conflict");
-  STOP (propagate);
   return !conflict;
 }
 
@@ -1769,7 +1768,8 @@ bool Internal::vivify () {
 
   private_steps = true;
 
-  START_SIMPLIFIER (vivify, VIVIFY);
+  MODE_SCOPE_SIMPLIFY (VIVIFY);
+  PROFILE_SCOPE_SIMPLIFY (vivify);
   stats.vivifications++;
 
   // the effort is normalized by dividing by sumeffort below, hence no need
@@ -1907,7 +1907,6 @@ bool Internal::vivify () {
   }
 
   reset_noccs ();
-  STOP_SIMPLIFIER (vivify, VIVIFY);
 
   private_steps = false;
   assert (!ignore);

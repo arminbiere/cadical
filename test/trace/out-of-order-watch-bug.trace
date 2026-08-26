@@ -1,7 +1,7 @@
 0 init
 1 set ilb 1
 2 assume 2
-3 propagate 0
+3 propagate_assumptions 0
 4 assume 2
 5 assume -1
 6 solve 0

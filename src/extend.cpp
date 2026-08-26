@@ -122,7 +122,7 @@ void External::push_external_clause_and_witness_on_extension_stack (
 void External::extend () {
 
   assert (!extended);
-  START (extend);
+  PROFILE_SCOPE (extend);
   internal->stats.extensions++;
 
   PHASE ("extend", internal->stats.extensions,
@@ -201,7 +201,6 @@ void External::extend () {
          "flipped %" PRId64 " literals during extension", flipped);
   extended = true;
   LOG ("extended");
-  STOP (extend);
 }
 
 /*------------------------------------------------------------------------*/

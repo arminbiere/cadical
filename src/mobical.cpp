@@ -11,6 +11,8 @@
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <cstdio>
+
 namespace CaDiCaL {
 
 // clang-format off
@@ -79,6 +81,16 @@ static const char *USAGE =
 "\n"
 "  --do-not-enforce-contracts\n"
 "\n"
+"Replay and record traces more faithfully with the following options\n"
+"\n"
+"  --replay                  '--do-not-mock-propagator', '--do-not-extend-map', \n"
+"                            and '--do-not-enforce-contracts' (no shrinking)\n"
+"  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
+"  --do-not-extend-map       trust variable names in trace\n"
+#ifndef NTRACING
+"  --trace                   trace calls to <output> instead of copying\n"
+#endif
+"\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
 "\n"
@@ -102,8 +114,7 @@ static const char *USAGE =
 "through delta-debugging to produce a smaller trace.  The shrunken failing\n"
 "trace is written as 'red-<seed>.trace' to the current working directory.\n"
 "\n"
-"The following options disable certain parts of the shrinking "
-"algorithm:\n"
+"The following options disable certain parts of the shrinking algorithm:\n"
 "\n"
 "  --do-not-shrink[-at-all]\n"
 "  --do-not-add-options[-before-shrinking]\n"
@@ -116,6 +127,29 @@ static const char *USAGE =
 "  --do-not-shrink-variables\n"
 "  --do-not-shrink-options\n"
 "  --do-not-shrink-propagator\n"
+"\n"
+"The following options change certain parts of trace generation,\n"
+"with '<r>' between 0-1000 the probability to generate these.\n"
+"Prefixes 'always' and 'never' are shortcuts for '<r>' = 1000\n"
+"and '<r>' = 0 respectively. The last bracket is the default.\n"
+"\n"
+"  --[always-,never-]generate-options[]<r> [900]\n"
+"  --[always-,never-]generate-resize[]<r> [10]\n"
+"  --[always-,never-]generate-declare_one_more_variable[]<r> [10]\n"
+"  --[always-,never-]generate-declare_more_variables[]<r> [10]\n"
+"  --[always-,never-]generate-constraint[]<r> [50]\n"
+"  --[always-,never-]generate-assume[]<r> [850]\n"
+"  --[always-,never-]generate-values[]<r> [900]\n"
+"  --[always-,never-]generate-flipped[]<r> [500]\n"
+"  --[always-,never-]generate-frozen[]<r> [500]\n"
+"  --[always-,never-]generate-failed[]<r> [950]\n"
+"  --[always-,never-]generate-phase[]<r> [950]\n"
+"  --[always-,never-]generate-conclude[]<r> [50]\n"
+"  --[always-,never-]generate-freeze[]<r> [500]\n"
+"  --[always-,never-]generate-melt[]<r> [950]\n"
+"  --[always-,never-]generate-propagator[]<r> [100]\n"
+"  --[always-,never-]generate-forces[]<r> [900]\n"
+"  --[always-,never-]generate-implied[]<r> [500]\n"
 "\n"
 "The standard mode of using the model based tester is to start it in\n"
 "random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
@@ -147,7 +181,6 @@ static const char *USAGE =
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -161,16 +194,21 @@ static const char *USAGE =
 
 extern "C" {
 #ifdef MOBICAL_MEMORY
+#define MOBICAL_PRINT_TRACE
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
 #endif
 #ifdef MOBICAL_TERMINATE
+#define MOBICAL_PRINT_TRACE
 #include <cxxabi.h>
 #include <execinfo.h>
 #endif
 #include <unistd.h>
 }
+#ifdef MOBICAL_PRINT_TRACE
+#include <regex>
+#endif
 
 #ifdef MOBICAL_MEMORY
 typedef void *(*malloc_t) (size_t);
@@ -199,8 +237,12 @@ void initialize_allocators () {
   libc_realloc = reinterpret_cast<realloc_t> (dlsym (RTLD_NEXT, "realloc"));
   libc_free = reinterpret_cast<free_t> (dlsym (RTLD_NEXT, "free"));
 }
-__attribute__ ((section (".preinit_array"))) void (*init_allocators_ptr) (
-    void) = initialize_allocators;
+#ifdef __APPLE__
+__attribute__ ((section ("__DATA,__mod_init_func")))
+#else
+__attribute__ ((section (".preinit_array")))
+#endif
+void (*init_allocators_ptr) (void) = initialize_allocators;
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -247,8 +289,31 @@ struct DoNot {
   bool fork = false;         // do not fork sub-process
   bool enforce = false;      // do not enforce contracts on read trace
   bool seeds = false;
-  bool summary = false;
+  bool extend_map = false;      // do not map variables
+  bool mock_propagator = false; // do not use mock propagator
   bool ignore_resource_limits = false;
+};
+
+/*------------------------------------------------------------------------*/
+
+struct TraceGen {
+  int generate_options = 900;
+  int generate_resize = 10;
+  int generate_declare_one_more_variable = 10;
+  int generate_declare_more_variables = 10;
+  int generate_constraint = 50;
+  int generate_assume = 850;
+  int generate_values = 900;
+  int generate_flipped = 500;
+  int generate_frozen = 500;
+  int generate_failed = 950;
+  int generate_phase = 950;
+  int generate_conclude = 50;
+  int generate_freeze = 500;
+  int generate_melt = 950;
+  int generate_propagator = 100;
+  int generate_forces = 900;
+  int generate_implied = 500;
 };
 
 /*------------------------------------------------------------------------*/
@@ -547,152 +612,7 @@ struct ExtendMap {
   }
 };
 
-/*------------------------------------------------------------------------*/
-
-enum MockForceType {
-  NOTIFY_ASSIGNMENT,
-  NOTIFY_NEW_DECISION_LEVEL,
-  NOTIFY_BACKTRACK,
-  CB_DECIDE,
-  CB_ADD_REASON_CLAUSE_LIT,
-  CB_PROPAGATE,
-  CB_CHECK_FOUND_MODEL,
-  CB_HAS_EXTERNAL_CLAUSE,
-  CB_ADD_EXTERNAL_CLAUSE_LIT,
-  LAST_MOCK_FORCE_TYPE,
-};
-
-enum LemmaType {
-  LAZY,
-  PROPAGATING,
-  OBSERVING,
-  EAGER,
-  LAST_LEMMA_TYPE,
-};
-
-class MockPropagator : public ExternalPropagator,
-                       public FixedAssignmentListener {
-private:
-  Solver *s = 0;
-  ExtendMap *extendmap = 0;
-
-  // MockPropagator parameters
-  size_t lemma_per_cb = 2;
-  bool logging = false;
-  size_t level;
-
-  struct Decisions {
-    int lit;
-    size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d) {};
-  };
-
-  struct MockForce {
-    int lit;
-    size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d) {};
-  };
-
-  struct ExternalLemma {
-    size_t id;
-    size_t add_count;
-    size_t size;
-    size_t next;
-
-    int delay;
-
-    LemmaType type;
-    bool forgettable;
-    bool tainting;
-    bool propagation_reason;
-
-    // Flexible array members are a C99 feature and not in C++11!
-    // Thus pedantic compilation fails for 'int literals[]'.  We could do
-    // the same conditional compilation as with the flexible array member
-    // in 'Clause', but here there is no need for making it fast as we are
-    // in testing mode anyhow.
-    //
-    int *literals;
-
-    int *begin () { return literals; }
-    int *end () { return literals + size; }
-
-    int next_lit () {
-      if (next < size)
-        return literals[next++];
-      else {
-        next = 0;
-        return 0;
-      }
-    }
-  };
-
-  // The list of all external lemmas (including reason clauses)
-  std::vector<ExternalLemma *> external_lemmas;
-  std::vector<Decisions> external_decide;
-  std::unordered_map<MockForceType, std::vector<MockForce>> external_forces;
-
-  // The reasons of present external propagations
-  std::map<int, size_t> reason_map;
-  std::map<int, size_t> level_map;
-
-  // The external propagations that are currently unassigned
-  std::set<int> unassigned_reasons;
-
-  // Next lemma to add
-  size_t add_lemma_idx = 0;
-
-  // Forced lemme addition (falsified lemma in model)
-  bool must_add_clause = false;
-  size_t must_add_idx;
-
-  // Observed variables and their current assignments
-  std::deque<std::vector<int>> observed_trail;
-
-  // Helpers
-  size_t added_lemma_count = 0;
-  size_t nof_clauses = 0;
-  size_t nof_decide = 0;
-  std::vector<int> clause;
-
-  size_t add_new_lemma (bool forgettable, LemmaType type, int delay) {
-    assert (clause.size () <= (size_t) INT_MAX);
-    assert (external_lemmas.size () <= (size_t) INT_MAX);
-
-    size_t size = clause.size ();
-    ExternalLemma *lemma = new ExternalLemma;
-    DeferDeletePtr<ExternalLemma> delete_lemma (lemma);
-    lemma->literals = new int[size];
-    DeferDeleteArray<int> delete_literals (lemma->literals);
-
-    lemma->id = external_lemmas.size ();
-    lemma->add_count = 0;
-    lemma->size = size;
-    lemma->next = 0;
-    lemma->type = type;
-    lemma->delay = delay;
-    lemma->forgettable = forgettable;
-    lemma->tainting = true;
-    lemma->propagation_reason = false;
-
-    int *q = lemma->literals;
-    for (const auto &lit : clause)
-      *q++ = lit;
-
-    external_lemmas.push_back (lemma);
-    delete_literals.release ();
-    delete_lemma.release ();
-
-    return lemma->id;
-  }
-
-  void extend_map (int arg) { extendmap->extend_map_to (arg); }
-
-  int map_arg (int arg, bool declare_new_var = true) {
-    return extendmap->map_arg (s, arg, declare_new_var);
-  }
-
-  // Helper to print very verbose log during debugging
+// Helper to print very verbose log during debugging
 
 #ifdef LOGGING
 #define MLOG(str) \
@@ -700,545 +620,64 @@ private:
     if (logging) \
       std::cout << "c [mock-propagator] " << str; \
   } while (false)
-#define MLOGC(str) \
+#define CLOG(str) \
   do { \
     if (logging) \
       std::cout << str; \
   } while (false)
+#define RLOG(str) \
+  do { \
+    if (logging) \
+      std::cout << "c [replay-propagator] " << str; \
+  } while (false)
+#define ILOG(...) \
+  do { \
+    Internal *internal = s->internal; \
+    LOG (__VA_ARGS__); \
+  } while (0)
+#define MLOGS(str) MLOG ("'" << str << "' started" << std::endl)
+#define RLOGS(str) RLOG ("'" << str << "' started" << std::endl)
+#define MLOGE(str, other) \
+  do { \
+    MLOG ("'" << str << "' returns"); \
+    CLOG (other << std::endl); \
+  } while (0)
+#define RLOGE(str, other) \
+  do { \
+    RLOG ("'" << str << "' returns"); \
+    CLOG (other << std::endl); \
+  } while (0)
 #else
+#define RLOG(str) \
+  do { \
+  } while (false)
 #define MLOG(str) \
   do { \
   } while (false)
-#define MLOGC(str) \
+#define CLOG(str) \
+  do { \
+  } while (false)
+#define ILOG(...) \
+  do { \
+  } while (false)
+#define MLOGS(str) \
+  do { \
+  } while (false)
+#define RLOGS(str) \
+  do { \
+  } while (false)
+#define RLOGE(str, other) \
+  do { \
+  } while (false)
+#define MLOGE(str, other) \
   do { \
   } while (false)
 #endif
 
-public:
-  // It is public, so it can be shared easily between different propagators
-  std::vector<int> observed_fixed;
+class MockPropagator;
+class ReplayPropagator;
 
-  MockPropagator (Solver *solver, ExtendMap *map,
-                  bool with_logging = false) {
-    observed_trail.push_back (std::vector<int> ());
-    level = 0;
-    s = solver;
-    extendmap = map;
-    logging = logging || with_logging;
-  }
-
-  ~MockPropagator () {
-    for (auto l : external_lemmas)
-      delete[] l->literals, delete l;
-
-    reason_map.clear ();
-    level_map.clear ();
-
-    unassigned_reasons.clear ();
-
-    observed_trail.clear ();
-
-    observed_fixed.clear ();
-  }
-
-  /*-----------------functions for mobical -----------------------------*/
-  void push_decide_lit (int lit, int delay) {
-
-    assert (lit != INT_MIN);
-    nof_decide++;
-
-    MLOG ("push decide to position " << external_decide.size ());
-    MLOGC (std::endl);
-
-    external_decide.push_back (Decisions (lit, delay));
-  }
-
-  void push_force (int lit, MockForceType type, int delay) {
-    external_forces[type].push_back (MockForce (lit, delay));
-  }
-
-  bool get_force (MockForceType type) {
-    int lit = 0;
-    if (external_forces[type].empty ())
-      return false;
-    if (external_forces[type].back ().delay--)
-      return false;
-    lit = external_forces[type].back ().lit;
-    external_forces[type].pop_back ();
-    // clang-format off
-    MLOG ("activate force "
-          << (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
-           : (type == NOTIFY_NEW_DECISION_LEVEL ? "NOTIFY_NEW_DECISION_LEVEL"
-           : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
-           : (type == CB_DECIDE ? "CB_DECIDE"
-           : (type == CB_ADD_REASON_CLAUSE_LIT ? "CB_ADD_REASON_CLAUSE_LIT"
-           : (type == CB_PROPAGATE ? "CB_PROPAGATE"
-           : (type == CB_CHECK_FOUND_MODEL ? "CB_CHECK_FOUND_MODEL"
-           : (type == CB_HAS_EXTERNAL_CLAUSE ? "CB_HAS_EXTERNAL_CLAUSE"
-           : (type == CB_ADD_EXTERNAL_CLAUSE_LIT ? "CB_ADD_EXTERNAL_CLAUSE_LIT"
-           : "LAST_MOCK_FORCE_TYPE")))))))))
-          << " on " << lit << std::endl);
-    // clang-format on
-    if (!s->observed (lit))
-      s->add_observed_var (lit);
-    if (s->current_value (lit))
-      s->force_unassign (lit);
-    return true;
-  }
-
-  void push_lemma_lit (int lit, LemmaType type, int delay) {
-
-    if (lit)
-      clause.push_back (lit);
-    else {
-      nof_clauses++;
-
-      MLOG ("push lemma to position " << external_lemmas.size () << ": ");
-      for (auto const &l : clause) {
-        (void) l;
-        MLOGC (l << " ");
-      }
-      MLOGC ("0" << std::endl);
-
-      add_new_lemma (true, type, delay);
-      clause.clear ();
-    }
-  }
-
-  /*-----------------functions for mobical ends ------------------------*/
-
-  /*------------ FixedAssignmentListener functions ---------------------*/
-  void notify_fixed_assignment (int lit) override {
-    MLOG ("notify_fixed_assignment: "
-          << lit << " (current level: " << observed_trail.size () - 1
-          << ", current fixed count: " << observed_fixed.size () << ")"
-          << std::endl);
-
-    assert (std::find (observed_fixed.begin (), observed_fixed.end (),
-                       lit) == observed_fixed.end ());
-    observed_fixed.push_back (lit);
-    level_map[abs (lit)] = 0;
-  };
-
-  void add_prev_fixed (const std::vector<int> &fixed_assignments) {
-    for (auto const &lit : fixed_assignments)
-      notify_fixed_assignment (lit);
-  }
-
-  void collect_prev_fixed () {
-#ifndef NDEBUG
-    MLOG ("collecting previously fixed assignments for the new "
-          "FixedAssignmentListener: ");
-
-    std::vector<int> fixed_lits = {};
-    s->internal->get_all_fixed_literals (fixed_lits);
-    MLOGC ("found: " << fixed_lits.size () << " fixed literals"
-                     << std::endl);
-    add_prev_fixed (fixed_lits);
-    fixed_lits.clear ();
-#endif
-  }
-
-  /* ----------- FixedAssignmentListener functions end -----------------*/
-
-  /* -------------------- ExternalPropagator functions -----------------*/
-
-  bool cb_check_found_model (const std::vector<int> &model) override {
-    MLOG ("cb_check_found_model (" << model.size () << ") started" << endl);
-#ifndef NDEBUG
-    // size_t assigned = model.size ();
-    for (auto &level : observed_trail) {
-      for (auto &lit : level) {
-        // TODO: known bug that level 0 assigned literals can be
-        // notified multiple times
-        // assert (assigned--);
-        // unobserve calls can lead to unobserved variables in
-        // observed_trail
-        if (!s->observed (lit)) {
-          assert (s->external->ival (abs (lit)) == lit);
-          continue;
-        }
-        assert (s->current_value (lit) > 0);
-      }
-    }
-#endif
-    (void) model;
-
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_CHECK_FOUND_MODEL);
-
-    for (const auto lemma : external_lemmas) {
-      bool satisfied = false;
-      int unobserved = 0;
-      size_t level = 0;
-
-      for (const auto lit : *lemma) {
-        if (!lit)
-          continue; // eoc
-        if (!s->observed (lit)) {
-          unobserved = lit;
-          continue;
-        }
-        const signed char tmp = s->current_value (lit);
-        if (tmp > 0) {
-          satisfied = true;
-          break;
-        }
-        if (level_map[lit] > level)
-          level = level_map[lit];
-        assert (tmp < 0);
-      }
-      if (unobserved && lemma->type == OBSERVING) {
-        // this might trigger a bt
-        s->add_observed_var (unobserved);
-        return false;
-      }
-
-      if (unobserved)
-        continue;
-
-      if (!satisfied && lemma->type == PROPAGATING && level) {
-        s->force_backtrack (level - 1);
-        return false;
-      }
-
-      if (!satisfied) {
-        assert (lemma->add_count == 0 || lemma->forgettable);
-
-        must_add_clause = true;
-        must_add_idx = lemma->id;
-
-        MLOG ("false (external clause  "
-              << lemma->id << "/" << external_lemmas.size ()
-              << " is not satisfied: (forgettable: " << lemma->forgettable
-              << ", size: " << lemma->size << "): ");
-        for (auto const &l : *lemma) {
-          MLOGC (l << " ");
-          (void) l;
-        }
-        MLOGC (std::endl);
-
-        MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
-        MLOGC ("false" << std::endl);
-        return false;
-      }
-    }
-
-    MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
-    MLOGC ("true" << std::endl);
-
-    return true;
-  }
-
-  // Before finalizing the new ipasir-up
-  bool cb_has_external_clause () {
-    bool forgettable = true;
-    return cb_has_external_clause (forgettable);
-  }
-
-  bool cb_has_external_clause (bool &forgettable) override {
-    MLOG ("cb_has_external_clause returns: ");
-
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_HAS_EXTERNAL_CLAUSE);
-
-    forgettable = false;
-
-    if (external_lemmas.empty ()) {
-      MLOGC ("false (there are no external lemmas)." << std::endl);
-      return false;
-    }
-
-    if (must_add_clause) {
-      must_add_clause = false;
-      add_lemma_idx = must_add_idx;
-
-      forgettable = external_lemmas[must_add_idx]->forgettable;
-
-      MLOGC ("true (forced clause addition, "
-             << "forgettable: " << forgettable << " id: " << add_lemma_idx
-             << ")." << std::endl);
-
-      added_lemma_count++;
-      return true;
-    }
-
-    if (added_lemma_count > lemma_per_cb) {
-      added_lemma_count = 0;
-      MLOGC ("false (lemma per CB treshold reached)." << std::endl);
-      return false;
-    }
-
-    // Final model check will force to jump over some lemmas without
-    // adding them. But if any of them is unsatisfied, it will force also
-    // to set back the add_lemma_idx to them. So we do not need to start
-    // the search here from 0.
-
-    while (add_lemma_idx < external_lemmas.size ()) {
-
-      auto lemma = external_lemmas[add_lemma_idx];
-      if (!lemma->add_count && !lemma->propagation_reason &&
-          lemma->type != PROPAGATING && lemma->type != LAZY &&
-          !lemma->delay--) {
-
-        external_lemmas[add_lemma_idx]->delay = 0;
-        forgettable = external_lemmas[add_lemma_idx]->forgettable;
-
-        MLOGC ("true (new lemma was found, "
-               << "forgettable: " << forgettable << " id: " << add_lemma_idx
-               << ")." << std::endl);
-
-        added_lemma_count++;
-        return true;
-      }
-
-      // Forgettable lemmas are added repeatedly to the solver only when
-      // the final model falsifies it (recognized in cb_check_final_model).
-
-      add_lemma_idx++;
-    }
-    if (add_lemma_idx >= external_lemmas.size ())
-      add_lemma_idx = 0;
-    MLOGC ("false." << std::endl);
-
-    return false;
-  }
-
-  int cb_add_external_clause_lit () override {
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
-
-    auto lemma = external_lemmas[add_lemma_idx];
-    int lit = lemma->next_lit ();
-
-    if (lemma->type == OBSERVING && lit && !s->observed (lit))
-      s->add_observed_var (lit);
-    while (lit && !s->observed (lit)) {
-      MLOG ("cb_add_external_clause_lit "
-            << lit << " (lemma " << add_lemma_idx << "/"
-            << external_lemmas.size () << ") ignored as it is not observed"
-            << std::endl);
-      lit = lemma->next_lit ();
-    }
-    MLOG ("cb_add_external_clause_lit "
-          << lit << " (lemma " << add_lemma_idx << "/"
-          << external_lemmas.size () << ")" << std::endl);
-
-    if (!lit)
-      lemma->add_count++;
-
-    return lit;
-  }
-
-  int cb_decide () override {
-    MLOG ("cb_decide starts." << std::endl);
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_DECIDE);
-
-    if (!unassigned_reasons.empty ()) {
-#ifdef LOGGING
-      MLOG ("clean up backtracked external propagation reasons: ");
-      size_t del_count = 0;
-#endif
-      for (const auto &lit : unassigned_reasons) {
-        size_t reason_id = reason_map[lit];
-        assert (reason_id < external_lemmas.size ());
-        external_lemmas[reason_id]->propagation_reason = false;
-        external_lemmas[reason_id]->forgettable = true;
-        reason_map.erase (lit);
-#ifdef LOGGING
-        MLOGC (lit << " ");
-        del_count++;
-#endif
-      }
-      MLOGC ("(" << del_count << " clauses)" << std::endl);
-      unassigned_reasons.clear ();
-    }
-
-    if (external_decide.empty ()) {
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
-
-    auto &next_decision = external_decide.back ();
-    if (next_decision.delay--) {
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
-    const int lit = next_decision.lit;
-    external_decide.pop_back ();
-
-    if (!lit) {
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
-
-    if (!s->observed (lit)) {
-      // do we want to observe?
-      s->add_observed_var (lit);
-      if (s->current_value (lit)) {
-        MLOG ("cb_decide returns 0" << std::endl);
-        return 0;
-      }
-      MLOG ("cb_decide returns " << lit << std::endl);
-      return lit;
-    }
-
-    if (s->current_value (lit) < 0) {
-      MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      if (s->force_unassign (lit)) {
-        // this decision is ignored, but we are asked again.
-        MLOG ("cb_decide returns " << lit << std::endl);
-        return lit;
-      }
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
-    assert (s->current_value (lit) >= 0);
-    if (s->current_value (lit) > 0) {
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
-    assert (!s->internal->val (s->external->internalize (lit)));
-    MLOG ("cb_decide returns " << lit << std::endl);
-    return lit;
-  }
-
-  int cb_propagate () override {
-    MLOG ("cb_propagate starts" << std::endl);
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_PROPAGATE);
-
-    if (external_lemmas.empty ())
-      return 0;
-
-    for (auto &lemma : external_lemmas) {
-      if (lemma->type != PROPAGATING)
-        continue;
-      if (lemma->propagation_reason)
-        continue;
-      int propagate = 0;
-      int max = 0;
-      for (auto &lit : *lemma) {
-        const bool obs = s->observed (lit);
-        if (!obs) {
-          propagate = INT_MIN;
-          break;
-        }
-        const signed char tmp = s->current_value (lit);
-        if (tmp > 0) {
-          propagate = INT_MIN;
-          break;
-        } else if (tmp < 0) {
-          if (!max || level_map[abs (lit)] > level_map[abs (max)])
-            max = lit;
-          continue;
-        } else if (propagate) {
-          propagate = INT_MIN;
-          break;
-        }
-        propagate = lit;
-      }
-      if (propagate == INT_MIN)
-        continue;
-      if (!propagate)
-        propagate = max;
-      if (lemma->delay) {
-        lemma->delay--;
-        continue;
-      }
-      lemma->propagation_reason = true;
-      reason_map[propagate] = lemma->id;
-      MLOG ("cb_propagate returns " << propagate << std::endl);
-      return propagate;
-    }
-
-    MLOG ("cb_propagate returns 0" << std::endl);
-    return 0;
-  }
-
-  int cb_add_reason_clause_lit (int plit) override {
-
-    // Calls to solver that might force it to backtrack.
-    get_force (CB_ADD_REASON_CLAUSE_LIT);
-
-    // At that point there is no need to assume that the trails are in
-    // synchron.
-    assert (reason_map.find (plit) != reason_map.end ());
-
-    size_t reason_id = reason_map[plit];
-
-    auto lemma = external_lemmas[reason_id];
-    assert (lemma->type == PROPAGATING);
-    int lit = lemma->next_lit ();
-
-    if (!lit) {
-      lemma->add_count++;
-      MLOG ("reason clause for " << plit << " (id: " << reason_id
-                                 << ") is added." << std::endl);
-    }
-
-    return lit;
-  }
-
-  void notify_assignment (const std::vector<int> &lits) override {
-    MLOG ("notified " << lits.size () << " new assignments on level "
-                      << observed_trail.size () - 1 << std::endl);
-    for (const auto &lit : lits) {
-      observed_trail.back ().push_back (lit);
-      level_map[abs (lit)] = level;
-      assert (s->current_value (lit) > 0);
-      unassigned_reasons.erase (lit);
-    }
-    // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_ASSIGNMENT);
-  }
-
-  void notify_new_decision_level () override {
-    MLOG ("notify new decision level " << observed_trail.size () - 1
-                                       << " -> " << observed_trail.size ()
-                                       << std::endl);
-    level++;
-    observed_trail.push_back (std::vector<int> ());
-    assert (level == observed_trail.size () - 1);
-    // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_NEW_DECISION_LEVEL);
-  }
-
-  void notify_backtrack (size_t new_level) override {
-    MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
-                               << new_level << std::endl);
-    assert (observed_trail.size () > 1 || !new_level);
-    assert (observed_trail.size () == 1 ||
-            observed_trail.size () >= new_level + 1);
-    while (observed_trail.size () > new_level + 1) {
-      // We can not remove reason clauses of backtracked assignments
-      // because ILB might re-introduces them to the trail. Here we only
-      // save the potential candidates to delete, and upon next cb_decide
-      // we delete those ones that did not get re-assigned.
-      for (auto lit : observed_trail.back ()) {
-        if (reason_map.find (lit) != reason_map.end ()) {
-          unassigned_reasons.insert (lit);
-        }
-      }
-#ifndef NDEBUG
-      MLOG ("unassign during backtrack from level "
-            << observed_trail.size () - 1 << ": ");
-      for (auto lit : observed_trail.back ()) {
-        (void) lit;
-        MLOGC (lit << " ");
-      }
-      MLOGC (std::endl);
-#endif
-      observed_trail.pop_back ();
-    }
-    level = new_level;
-    // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_BACKTRACK);
-  }
-
-  /* ---------------- ExternalPropagator functions end -------------------*/
-};
+/*------------------------------------------------------------------------*/
 
 // This is the class for the Mobical application.
 
@@ -1246,21 +685,29 @@ class Mobical : public Handler {
 
   /*----------------------------------------------------------------------*/
 
+  friend class Reader;
+  friend class Trace;
+  friend class MockPropagator;
+  friend class ReplayPropagator;
   friend struct Call;
   friend struct InitCall;
   friend struct FailedCall;
   friend struct ConcludeCall;
-  friend class Reader;
-  friend class Trace;
   friend struct ValCall;
+  friend struct VarCall;
+  friend struct DeclareMoreVariablesCall;
+  friend struct DeclareOneMoreVariableCall;
+  friend struct ResizeCall;
   friend struct FlipCall;
   friend struct ImpliedCall;
   friend struct FlippableCall;
   friend struct MeltCall;
-  friend class MockPropagator;
   friend struct ResetCall;
   friend struct ConnectCall;
   friend struct DisconnectCall;
+  friend struct ObserveCall;
+  friend struct UnObserveCall;
+  friend struct ResetObservedCall;
 
   /*----------------------------------------------------------------------*/
 
@@ -1282,6 +729,7 @@ class Mobical : public Handler {
   DoNot donot;
   Force force;
   Mopts mopts;
+  TraceGen tracegen;
 
   bool verbose = false;
   bool quiet = false;
@@ -1295,6 +743,7 @@ class Mobical : public Handler {
 
   bool shrinking = false; // In the middle of shrinking.
   bool running = false;   // In the middle of running.
+  int summary = -1;
 
   int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
   int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
@@ -1305,7 +754,6 @@ class Mobical : public Handler {
 #ifdef MOBICAL_TERMINATE
   bool terminator = true;
 #endif
-
   Terminal &terminal = terr;
 
   void header (); // Print right part of header.
@@ -1373,8 +821,9 @@ class Mobical : public Handler {
 protected:
   /*----------------------------------------------------------------------*/
 
-  MockPropagator
-      *mock_pointer; // to be able to clean up withouth disconnect
+  // to be able to clean up without disconnect
+  MockPropagator *mock_pointer;
+  ReplayPropagator *replay_pointer;
 
 public:
   Mobical ();
@@ -1505,83 +954,101 @@ struct Call {
 
     // clang-format off
 
-    INIT            = shift (  0 ),
-    SET             = shift (  1 ),
-    CONFIGURE       = shift (  2 ),
+    INIT                = shift (  0 ),
+    RESET               = shift (  1 ),
+    SET                 = shift (  2 ),
+    CONFIGURE           = shift (  3 ),
+                        
+    VARS                = shift (  4 ),
+    ACTIVE              = shift (  5 ),
+    REDUNDANT           = shift (  6 ),
+    IRREDUNDANT         = shift (  7 ),
+    RESIZE              = shift (  8 ),
+    DECLARE             = shift (  9 ),
+    DECLARE_VARS        = shift ( 10 ),
+    RESERVE             = shift ( 11 ),
+                        
+    PHASE               = shift ( 12 ),
+    UNPHASE             = shift ( 13 ),
+                        
+    ADD                 = shift ( 14 ),
+    ASSUME              = shift ( 15 ),
+    CONSTRAIN           = shift ( 16 ),
+    RESET_ASSUMPTIONS   = shift ( 17 ),
+                        
+    SOLVE               = shift ( 18 ),
+    SIMPLIFY            = shift ( 19 ),
+    LOOKAHEAD           = shift ( 20 ),
+    CUBING              = shift ( 21 ),
+    PROPAGATE           = shift ( 22 ),
+                        
+    VAL                 = shift ( 24 ),
+    FLIP                = shift ( 25 ),
+    FLIPPABLE           = shift ( 26 ),
+    FAILED              = shift ( 27 ),
+    FIXED               = shift ( 28 ),
+    IMPLIED             = shift ( 29 ),
+                        
+    FREEZE              = shift ( 30 ),
+    FROZEN              = shift ( 31 ),
+    MELT                = shift ( 32 ),
+                        
+    LIMIT               = shift ( 33 ),
+    OPTIMIZE            = shift ( 34 ),
+                        
+    DUMP                = shift ( 35 ),
+    STATS               = shift ( 36 ),
+                        
+    CONNECT             = shift ( 37 ),
+    OBSERVE             = shift ( 38 ),
+    UNOBSERVE           = shift ( 39 ),
+    RESET_OBSERVED      = shift ( 40 ),
+    IS_DECISION         = shift ( 41 ),
+    IS_WITNESS          = shift ( 42 ),
+    OBSERVED            = shift ( 43 ),
+    
+    LEMMA               = shift ( 44 ),
+    DECIDE              = shift ( 45 ),
+    FORCE               = shift ( 46 ),
+    
+    CB_DECIDE           = shift ( 47 ),
+    CB_PROPAGATE        = shift ( 48 ),
+    CB_HAS_CLAUSE       = shift ( 49 ),
+    CB_ADD_CLAUSE       = shift ( 50 ),
+    CB_ADD_REASON       = shift ( 51 ),
+    CB_CHECK_MODEL      = shift ( 52 ),
+    NOTIFY_ASSIGNMENT   = shift ( 53 ),
+    NOTIFY_BACKTRACK    = shift ( 54 ),
+    NOTIFY_LEVEL        = shift ( 55 ),
 
-    VARS            = shift (  3 ),
-    ACTIVE          = shift (  4 ),
-    REDUNDANT       = shift (  5 ),
-    IRREDUNDANT     = shift (  6 ),
-    RESIZE          = shift (  7 ),
-
-    PHASE           = shift (  8 ),
-    UNPHASE         = shift (  9 ),
-
-    ADD             = shift ( 10 ),
-    ASSUME          = shift ( 11 ),
-
-    SOLVE           = shift ( 12 ),
-    SIMPLIFY        = shift ( 13 ),
-    LOOKAHEAD       = shift ( 14 ),
-    CUBING          = shift ( 15 ),
-    PROPAGATE       = shift ( 16 ),
-
-    VAL             = shift ( 17 ),
-    FLIP            = shift ( 18 ),
-    FLIPPABLE       = shift ( 19 ),
-    FAILED          = shift ( 20 ),
-    FIXED           = shift ( 21 ),
-
-    FREEZE          = shift ( 22 ),
-    FROZEN          = shift ( 23 ),
-    MELT            = shift ( 24 ),
-
-    LIMIT           = shift ( 25 ),
-    OPTIMIZE        = shift ( 26 ),
-
-    DUMP            = shift ( 27 ),
-    STATS           = shift ( 28 ),
-
-    RESET           = shift ( 29 ),
-
-    CONSTRAIN       = shift ( 30 ),
-
-    CONNECT         = shift ( 31 ),
-    OBSERVE         = shift ( 32 ),
-    UNOBSERVE       = shift ( 33 ),
-    LEMMA           = shift ( 34 ),
-    DECIDE          = shift ( 35 ),
-    FORCE           = shift ( 36 ),
-
-    CONCLUDE        = shift ( 37 ),
-    DISCONNECT      = shift ( 38 ),
-
-    TRACEPROOF      = shift ( 39 ),
-    FLUSHPROOFTRACE = shift ( 40 ),
-    CLOSEPROOFTRACE = shift ( 41 ),
+    CONCLUDE            = shift ( 56 ),
+    DISCONNECT          = shift ( 57 ),
+                        
+    TRACEPROOF          = shift ( 58 ),
+    FLUSHPROOFTRACE     = shift ( 59 ),
+    CLOSEPROOFTRACE     = shift ( 60 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 42 ),
-    LEAKALLOC       = shift ( 43 ),
+    MAXALLOC            = shift ( 61 ),
+    LEAKALLOC           = shift ( 62 ),
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE       = shift ( 44 ),
+    TERMINATE           = shift ( 63 ),
 #endif
-
-    PROPAGATE_ASSUMPTIONS = shift ( 45 ),
-    IMPLIED_LITERALS = shift ( 46 ),
-    RESET_ASSUMPTIONS = shift ( 47 ),
-    RESET_OBSERVED = shift ( 48 ),
-
-    RESERVE = shift ( 49 ),
 
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE |
-             RESET_OBSERVED
+             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE | OBSERVED |
+             IS_WITNESS | RESET_OBSERVED | IS_DECISION | DECLARE |
+             DECLARE_VARS,
+    MOCK = LEMMA | DECIDE | FORCE,
+    REPLAY = CB_DECIDE | CB_PROPAGATE | CB_HAS_CLAUSE | CB_ADD_CLAUSE |
+             CB_ADD_REASON | CB_CHECK_MODEL | NOTIFY_ASSIGNMENT |
+             NOTIFY_BACKTRACK | NOTIFY_LEVEL,
+
+    CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1589,20 +1056,37 @@ struct Call {
              | TERMINATE
 #endif
     ,
-    CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
+    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS | IMPLIED |
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA | DECIDE | FORCE,
-    CONNECTING = CONNECT | DISCONNECT,
-    PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE |
-                 FORCE | DISCONNECT | CONNECT,
+    DURING = MOCK | REPLAY,
+
+    // This is used for executing traces
+    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
+
+    // These are used for shrinking traces
+    CLAUSAL = LEMMA | CONSTRAIN | ADD,
+    MATCHING = CONNECT | DISCONNECT,
+    PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | MOCK | REPLAY,
     LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
               FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
               UNOBSERVE | OBSERVE | LEMMA | DECIDE | FORCE,
-    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
-    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
+    BASIC =
+#ifdef MOBICAL_TERMINATE
+        TERMINATE |
+#endif
+#ifdef MOBICAL_MEMORY
+        LEAKALLOC | MAXALLOC |
+#endif
+        ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | VARS |
+        ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE | RESERVE | DECLARE |
+        DECLARE_VARS | VAL | FLIP | FLIPPABLE | FIXED | FAILED | FROZEN |
+        CONCLUDE | FREEZE | MELT | PHASE | UNPHASE | LIMIT | OPTIMIZE |
+        RESET_OBSERVED | IS_WITNESS | DECIDE | FORCE | RESET_ASSUMPTIONS |
+        OBSERVE | OBSERVED | UNOBSERVE | IS_DECISION | IMPLIED,
+
   };
 
   Type type; // Explicit typing.
@@ -1611,9 +1095,11 @@ struct Call {
   char *name = nullptr; // Option name for 'set' and 'config'
   int arg;              // Argument if necessary.
   int val;              // Option value for 'set'.
+  bool executed;
 
   Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0)
-      : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v) {}
+      : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v),
+        executed (0) {}
 
   virtual ~Call () {
     if (name)
@@ -1626,24 +1112,59 @@ struct Call {
   virtual bool extendmap_type () {
     return (((int) type & (int) Call::EXTENDMAP)) != 0;
   }
+  virtual bool is_basic () {
+    return (((uint64_t) type & (uint64_t) Call::BASIC)) != 0;
+  }
+  virtual bool is_clause_type () {
+    return (((uint64_t) type & (uint64_t) Call::CLAUSAL)) != 0;
+  }
+  virtual bool config_type () {
+    return (((uint64_t) type & (uint64_t) Call::CONFIG)) != 0;
+  }
+  virtual bool propagator_type () {
+    return (((uint64_t) type & (uint64_t) Call::PROPAGATOR)) != 0;
+  }
+  virtual bool matching_type () {
+    return (((uint64_t) type & (uint64_t) Call::MATCHING)) != 0;
+  }
+  virtual bool before_type () {
+    return (((uint64_t) type & (uint64_t) Call::BEFORE)) != 0;
+  }
+  virtual bool during_type () {
+    return (((uint64_t) type & (uint64_t) Call::DURING)) != 0;
+  }
+  virtual bool always_type () {
+    return (((uint64_t) type & (uint64_t) Call::ALWAYS)) != 0;
+  }
+  virtual bool process_type () {
+    return (((uint64_t) type & (uint64_t) Call::PROCESS)) != 0;
+  }
+  virtual bool after_type () {
+    return (((uint64_t) type & (uint64_t) Call::AFTER)) != 0;
+  }
 
   // extend the size of `extendmap` by `arg` new variables.
   virtual void extend_map_by (Solver *&s, ExtendMap *&extendmap, int arg) {
-    extendmap->extend_map_by (s, arg);
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_by (s, arg);
   }
 
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap) {
-    extend_map_to (s, extendmap, arg);
+    if (!mobical.donot.extend_map)
+      extend_map_to (s, extendmap, arg);
   }
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap, int arg) {
-    extendmap->extend_map_to (arg);
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_to (arg);
     (void) s;
   }
 
   virtual int map_arg (Solver *&s, ExtendMap *&extendmap,
                        bool declare_new_var = true) {
+    if (mobical.donot.extend_map)
+      return arg;
     if (!lit_type ())
       return arg;
     if (extendmap_type ())
@@ -1651,12 +1172,17 @@ struct Call {
     return extendmap->map_arg (s, arg, declare_new_var);
   }
 
-  virtual void execute (Solver *&, ExtendMap *&) {
+  virtual void execute (Solver *&, ExtendMap *&, bool delay = false) {
     if (mobical.verbose) {
-      std::cout << "c [mobical] executing call '";
+      if (delay)
+        std::cout << "c [mobical] delaying call '";
+      else
+        std::cout << "c [mobical] executing call '";
       print (std::cout);
       std::cout << "'" << std::endl;
     }
+    assert (!executed);
+    executed = !delay;
   }
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
@@ -1665,36 +1191,1181 @@ struct Call {
 
 /*------------------------------------------------------------------------*/
 
-static bool config_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::CONFIG)) != 0;
-}
+enum MockForceType {
+  NOTIFY_ASSIGNMENT,
+  NOTIFY_NEW_DECISION_LEVEL,
+  NOTIFY_BACKTRACK,
+  CB_DECIDE,
+  CB_PROPAGATE,
+  CB_CHECK_FOUND_MODEL,
+  CB_HAS_EXTERNAL_CLAUSE,
+  CB_ADD_EXTERNAL_CLAUSE_LIT,
+  CB_ADD_REASON_CLAUSE_LIT,
+  LAST_MOCK_FORCE_TYPE,
+};
 
-static bool propagator_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::PROPAGATOR)) != 0;
+/*
+static const char *ct_to_str (Call::Type type) {
+  // clang-format off
+  return (type == Call::CB_DECIDE ? "cb_decide"
+       : (type == Call::CB_PROPAGATE ? "cb_propagate"
+       : (type == Call::CB_CHECK_MODEL ? "cb_check_found_model"
+       : (type == Call::CB_ADD_CLAUSE ? "cb_add_external_clause_lit"
+       : (type == Call::CB_ADD_REASON ? "cb_add_reason_clause_lit"
+       : (type == Call::CB_HAS_CLAUSE ? "cb_has_external_clause"
+       : (type == Call::NOTIFY_ASSIGNMENT ? "notify_assignment"
+       : (type == Call::NOTIFY_BACKTRACK ? "notify_backtrack"
+       : (type == Call::NOTIFY_LEVEL ? "notify_level"
+       : ((type & Call::ALWAYS) != 0 ? "ALWAYS"
+       : (type == Call::CONNECT ? "connect"
+       : (type == Call::DISCONNECT ? "disconnect"
+       : "UNDEFINED"))))))))))));
+  // clang-format on
 }
+*/
 
-static bool connecting_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::CONNECTING)) != 0;
+#ifdef LOGGING
+static const char *mft_to_str (MockForceType type) {
+  // clang-format off
+  return (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
+       : (type == NOTIFY_NEW_DECISION_LEVEL ? "NOTIFY_NEW_DECISION_LEVEL"
+       : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
+       : (type == CB_DECIDE ? "CB_DECIDE"
+       : (type == CB_PROPAGATE ? "CB_PROPAGATE"
+       : (type == CB_CHECK_FOUND_MODEL ? "CB_CHECK_FOUND_MODEL"
+       : (type == CB_HAS_EXTERNAL_CLAUSE ? "CB_HAS_EXTERNAL_CLAUSE"
+       : (type == CB_ADD_EXTERNAL_CLAUSE_LIT ? "CB_ADD_EXTERNAL_CLAUSE_LIT"
+       : (type == CB_ADD_REASON_CLAUSE_LIT ? "CB_ADD_REASON_CLAUSE_LIT"
+       : "LAST_MOCK_FORCE_TYPE")))))))));
+  // clang-format on
 }
+#endif //
 
-static bool before_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::BEFORE)) != 0;
-}
+class ReplayPropagator : public ExternalPropagator {
+private:
+  Solver *solver = 0;
+  ExtendMap *extendmap = 0;
 
-static bool during_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::DURING)) != 0;
-}
+  // ReplayPropagator parameters
+  bool logging = false;
+  size_t current_action = 0;
 
-static bool process_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::PROCESS)) != 0;
-}
+  std::vector<Call *> cb_actions;
 
-static bool after_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::AFTER)) != 0;
-}
+public:
+  ReplayPropagator (Solver *s, ExtendMap *e, bool l)
+      : solver (s), extendmap (e), logging (l) {}
+
+  ~ReplayPropagator () {
+    /* Not copied anymore, so they are deleted when the trace is deleted
+    for (auto &call : cb_actions) {
+      delete call;
+    }
+    */
+  }
+  void push_action (Call *c) { cb_actions.push_back (c); }
+
+  void notify_assignment (const std::vector<int> &lits) override {
+    RLOGS ("notify_assignments(" << lits.size () << ")");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'notify_assignment'", current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_assignments(" << lits.size () << ")",
+             " (out of actions)");
+      return;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::NOTIFY_ASSIGNMENT) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'notify_assignment'", current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    if (c->arg) {
+      assert (c->val == 0);
+      if (lits.size () != 1)
+        fatal ("expected single assignment, not %zd", lits.size ());
+      if (lits[0] != c->arg)
+        fatal ("expected %d does not match assignment %d", c->val, lits[0]);
+    } else if ((size_t) c->val != lits.size ())
+      fatal ("expected %d assignments, not %zd", c->val, lits.size ());
+    RLOGE ("notify_assignments(" << lits.size () << ")",
+           " " << lits.size () << " new assignments");
+  }
+
+  void notify_new_decision_level () override {
+    RLOGS ("notify_new_decision_level");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'notify_new_decision_level'",
+             current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_new_decision_level", " (out of actions)");
+      return;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::NOTIFY_LEVEL) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'notify_new_decision_level'",
+               current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE ("notify_new_decision_level",
+           " " << c->val - 1 << " -> " << c->val);
+  }
+
+  void notify_backtrack (size_t new_level) override {
+    RLOGS ("notify_backtrack(" << new_level << ")");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'notify_backtrack'", current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("notify_backtrack(" << new_level << ")", " (out of actions)");
+      return;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::NOTIFY_BACKTRACK) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'notify_backtrack'", current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    if (new_level != (size_t) c->val)
+      fatal ("expected backtrack level %d does not match %zd", c->val,
+             new_level);
+    RLOGE ("notify_backtrack(" << new_level << ")", "");
+  }
+
+  bool cb_check_found_model (const std::vector<int> &model) override {
+    RLOGS ("cb_check_found_model(" << model.size () << ")");
+    (void) model;
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_check_found_model'",
+             current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_check_found_model(" << model.size () << ")",
+             " false (out of actions)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_CHECK_MODEL) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_check_found_model'",
+               current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE ("cb_check_found_model(" << model.size () << ")",
+           " " << (c->res ? "true" : "false"));
+    return c->res;
+  }
+
+  int cb_decide () override {
+    RLOGS ("cb_decide");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_decide'", current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_decide", " 0 (out of actions)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_DECIDE) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_decide'", current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE ("cb_decide", " " << c->arg);
+    return c->arg;
+  }
+
+  int cb_propagate () override {
+    RLOGS ("cb_propagate");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_propagate'", current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_propagate", " 0 (out of actions)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_PROPAGATE) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_propagate'", current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE ("cb_propagate", " " << c->arg);
+    return c->arg;
+  }
+
+  int cb_add_reason_clause_lit (int propagated_lit) override {
+    RLOGS ("cb_add_reason_clause_lit(" << propagated_lit << ")");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_add_reason_clause_lit'",
+             current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
+             " 0 (out of actions)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_ADD_REASON) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_add_reason_clause_lit'",
+               current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    if (c->arg != propagated_lit)
+      fatal ("expected argument '%d' does not match "
+             "'cb_add_reason_clause_lit %d'",
+             c->arg, propagated_lit);
+    RLOGE ("cb_add_reason_clause_lit(" << propagated_lit << ")",
+           " " << c->val);
+    return c->val;
+  }
+
+  bool cb_has_external_clause (bool &is_forgettable) override {
+    RLOGS ("cb_has_external_clause");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_has_external_clause'",
+             current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_has_external_clause", " false (out of action)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_HAS_CLAUSE) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_has_external_clause'",
+               current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE (
+        "cb_has_external_clause",
+        " " << (c->res ? (c->val ? "redundant" : "irredundant") : "false"));
+    is_forgettable = c->val;
+    return c->res;
+  }
+
+  int cb_add_external_clause_lit () override {
+    RLOGS ("cb_add_external_clause");
+    if (cb_actions.size () <= current_action)
+      fatal ("out of actions %zd in 'cb_add_external_clause_lit'",
+             current_action);
+    else if (cb_actions.size () <= current_action) {
+      RLOGE ("cb_add_external_clause", " 0 (out of actions)");
+      return 0;
+    }
+    assert (cb_actions.size () > current_action);
+    Call *c = cb_actions[current_action++];
+    while (c->type != Call::CB_ADD_CLAUSE) {
+      if (!c->executed)
+        c->execute (solver, extendmap);
+      if (cb_actions.size () <= current_action)
+        fatal ("out of actions %zd in 'cb_add_external_clause_lit'",
+               current_action);
+      assert (cb_actions.size () > current_action);
+      c = cb_actions[current_action++];
+    }
+    assert (!c->executed);
+    c->executed = true;
+    RLOGE ("cb_add_external_clause", " " << c->arg);
+    return c->arg;
+  }
+};
+
+enum LemmaType {
+  LAZY,
+  PROPAGATING,
+  OBSERVING,
+  EAGER,
+  LAST_LEMMA_TYPE,
+};
+
+class MockPropagator : public ExternalPropagator,
+                       public FixedAssignmentListener {
+private:
+  Solver *s = 0;
+  ExtendMap *extendmap = 0;
+
+  // MockPropagator parameters
+  size_t lemma_per_cb = 2;
+  bool logging = false;
+  size_t level;
+
+  struct Decisions {
+    int lit;
+    size_t delay;
+    Decisions (int l, int d) : lit (l), delay (d) {};
+  };
+
+  struct MockForce {
+    int lit;
+    size_t delay;
+    MockForce (int l, int d) : lit (l), delay (d) {};
+  };
+
+  struct ExternalLemma {
+    size_t id;
+    size_t add_count;
+    size_t size;
+    size_t next;
+
+    int delay;
+
+    LemmaType type;
+    bool forgettable;
+    bool tainting;
+    bool propagation_reason;
+
+    // Flexible array members are a C99 feature and not in C++11!
+    // Thus pedantic compilation fails for 'int literals[]'.  We could do
+    // the same conditional compilation as with the flexible array member
+    // in 'Clause', but here there is no need for making it fast as we are
+    // in testing mode anyhow.
+    //
+    int *literals;
+
+    int *begin () { return literals; }
+    int *end () { return literals + size; }
+
+    int next_lit () {
+      if (next < size)
+        return literals[next++];
+      else {
+        next = 0;
+        return 0;
+      }
+    }
+  };
+
+  // The list of all external lemmas (including reason clauses)
+  std::vector<ExternalLemma *> external_lemmas;
+  std::vector<Decisions> external_decide;
+  std::unordered_map<MockForceType, std::vector<MockForce>> external_forces;
+
+  // The reasons of present external propagations
+  std::map<int, size_t> reason_map;
+  std::map<int, size_t> level_map;
+  std::map<int, bool> observed_map;
+  std::map<int, signed char> value_map;
+  std::vector<int> unnotified_propagations;
+
+  // The external propagations that are currently unassigned
+  std::set<int> unassigned_reasons;
+
+  // Next lemma to add
+  size_t add_lemma_idx = 1;
+  size_t propagate_idx = 0;
+  size_t external_decide_idx = 0;
+
+  // Forced lemme addition (falsified lemma in model)
+  bool must_add_clause = false;
+  size_t must_add_idx;
+
+  // Observed variables and their current assignments
+  std::deque<std::vector<int>> observed_trail;
+
+  // Helpers
+  size_t added_lemma_count = 0;
+  size_t nof_clauses = 0;
+  size_t nof_decide = 0;
+  std::vector<int> clause;
+
+  size_t add_new_lemma (bool forgettable, LemmaType type, int delay) {
+    assert (clause.size () <= (size_t) INT_MAX);
+    assert (external_lemmas.size () <= (size_t) INT_MAX);
+
+    size_t size = clause.size ();
+    ExternalLemma *lemma = new ExternalLemma;
+    DeferDeletePtr<ExternalLemma> delete_lemma (lemma);
+    lemma->literals = new int[size];
+    DeferDeleteArray<int> delete_literals (lemma->literals);
+
+    lemma->id = external_lemmas.size ();
+    lemma->add_count = 0;
+    lemma->size = size;
+    lemma->next = 0;
+    lemma->type = type;
+    lemma->delay = delay;
+    lemma->forgettable = forgettable;
+    lemma->tainting = true;
+    lemma->propagation_reason = false;
+
+    int *q = lemma->literals;
+    for (const auto &lit : clause)
+      *q++ = lit;
+
+    external_lemmas.push_back (lemma);
+    delete_literals.release ();
+    delete_lemma.release ();
+
+    return lemma->id;
+  }
+
+  void extend_map (int arg) {
+    if (!mobical.donot.extend_map)
+      extendmap->extend_map_to (arg);
+  }
+
+  int map_arg (int arg, bool declare_new_var = true) {
+    if (mobical.donot.extend_map)
+      return arg;
+    return extendmap->map_arg (s, arg, declare_new_var);
+  }
+
+public:
+  // It is public, so it can be shared easily between different propagators
+  std::vector<int> observed_fixed;
+
+  MockPropagator (Solver *solver, ExtendMap *map,
+                  bool with_logging = false) {
+    observed_trail.push_back (std::vector<int> ());
+    level = 0;
+    s = solver;
+    extendmap = map;
+    logging = logging || with_logging;
+    external_lemmas.push_back (nullptr);
+  }
+
+  ~MockPropagator () {
+    for (auto l : external_lemmas)
+      if (l)
+        delete[] l->literals, delete l;
+  }
+
+  /*-----------------functions for mobical -----------------------------*/
+  void push_decide_lit (int lit, int delay) {
+
+    assert (lit != INT_MIN);
+    nof_decide++;
+
+    MLOG ("push decide to position " << external_decide.size ()
+                                     << std::endl);
+
+    external_decide.push_back (Decisions (lit, delay));
+  }
+
+  void push_force (int lit, MockForceType type, int delay) {
+    external_forces[type].push_back (MockForce (lit, delay));
+  }
+
+  bool get_force (MockForceType type) {
+    if (external_forces[type].empty ())
+      return false;
+    if (external_forces[type].back ().delay--)
+      return false;
+    const int lit = external_forces[type].back ().lit;
+    external_forces[type].pop_back ();
+    MLOG ("activate force " << mft_to_str (type) << " on " << lit
+                            << std::endl);
+    if (type == CB_ADD_REASON_CLAUSE_LIT || type == NOTIFY_ASSIGNMENT ||
+        type == NOTIFY_BACKTRACK || type == NOTIFY_NEW_DECISION_LEVEL) {
+      MLOG ("no effect for " << mft_to_str (type) << std::endl);
+      return false;
+    }
+    if (!s->observed (lit))
+      if (s->is_witness (lit))
+        return false;
+    if (!add_observed (lit)) {
+      MLOG ("observing " << lit << " for " << mft_to_str (type) << " failed"
+                         << std::endl);
+      return false;
+    }
+    if (type != CB_DECIDE && type != CB_CHECK_FOUND_MODEL) {
+      MLOG ("observed " << lit << " for " << mft_to_str (type)
+                        << "(but no backtrack)" << std::endl);
+      return true;
+    }
+    if (type == CB_ADD_REASON_CLAUSE_LIT)
+      return false;
+    if (s->external->current_val (lit))
+      s->force_unassign (lit);
+    MLOG ("force_unassign " << lit << " for " << mft_to_str (type)
+                            << std::endl);
+    return true;
+  }
+
+  void push_lemma_lit (int lit, LemmaType type, int delay) {
+
+    if (lit)
+      clause.push_back (lit);
+    else {
+      nof_clauses++;
+
+      MLOG ("push lemma to position " << external_lemmas.size () << ": ");
+      for (auto const &l : clause) {
+        (void) l;
+        CLOG (l << " ");
+      }
+      CLOG ("0" << std::endl);
+
+      add_new_lemma (true, type, delay);
+      clause.clear ();
+    }
+  }
+
+  bool add_observed (int lit) {
+    if (observed_map[abs (lit)]) {
+      MLOG ("ignore already observed " << lit << std::endl);
+      return false;
+    }
+    if (s->is_witness (lit)) {
+      MLOG ("ignore tainted " << lit << std::endl);
+      return false;
+    }
+    assert (!value_map[lit]);
+    assert (!s->external->observed (lit));
+    observed_map[abs (lit)] = true;
+    MLOG ("adding observed " << lit << std::endl);
+    s->add_observed_var (lit);
+    return true;
+  }
+
+  void remove_observed (int lit) {
+    if (!observed_map[abs (lit)]) {
+      MLOG ("ignore unobserved " << lit << std::endl);
+      return;
+    }
+    observed_map.erase (abs (lit));
+    assert (s->external->observed (lit));
+    auto it =
+        std::find (observed_fixed.begin (), observed_fixed.end (), lit);
+    if (it != observed_fixed.end ())
+      observed_fixed.erase (it);
+    if (value_map[lit]) {
+      const int unit = lit * value_map[lit];
+      // We are not necessarily at a synchonized point
+      // assert (s->external->current_val (unit) > 0);
+      auto level = level_map[lit];
+      assert (observed_trail.size () > level);
+      auto it = std::find (observed_trail[level].begin (),
+                           observed_trail[level].end (), unit);
+      assert (it != observed_trail[level].end ());
+      observed_trail[level].erase (it);
+      value_map[lit] = value_map[-lit] = 0;
+      remove_reason (lit);
+    }
+    MLOG ("removing observed " << lit << std::endl);
+    s->remove_observed_var (lit);
+  }
+
+  void reset_observed () {
+    // there is a data race where reset_observed can
+    // trigger a bt in cadical which re-notifies
+    // literals that should no longer be observed
+    // (or are unobserved immediatly afterwords)
+    MLOG ("reset observed (solver)" << std::endl);
+    s->reset_observed_vars ();
+    MLOG ("reset observed (propagator)" << std::endl);
+    for (auto &kvp : observed_map) {
+      if (!kvp.second)
+        continue;
+      const int lit = kvp.first;
+      // This assertion no longer holds if we
+      // reset observed in the solver first
+      // assert (s->external->observed (lit));
+      value_map[lit] = value_map[-lit] = 0;
+      remove_reason (lit);
+    }
+    observed_map.clear ();
+    for (auto &t : observed_trail) {
+      t.clear ();
+    }
+    observed_fixed.clear ();
+  }
+
+  void check_trail () {
+    MLOG ("check consistency of mobical and solver assignments"
+          << std::endl);
+#ifndef NDEBUG
+    for (auto &kvp : observed_map) {
+      if (!kvp.second)
+        continue;
+      const int lit = kvp.first;
+      assert (value_map[lit] == s->external->current_val (lit));
+      assert (value_map[-lit] == s->external->current_val (-lit));
+    }
+#endif
+  }
+
+  void add_reason (int lit, ExternalLemma *lemma) {
+    MLOG ("add reason(" << lit << ") lemma[" << lemma->id << "]"
+                        << std::endl);
+    if (reason_map[lit])
+      remove_reason (lit);
+    assert (!reason_map[lit]);
+    lemma->propagation_reason = true;
+    reason_map[lit] = lemma->id;
+    unnotified_propagations.push_back (lit);
+  }
+
+  void remove_reason (int lit) {
+    if (!reason_map[lit])
+      return;
+    size_t reason_id = reason_map[lit];
+    MLOG ("remove reason(" << lit << ") lemma[" << reason_id << "]"
+                           << std::endl);
+    assert (reason_id < external_lemmas.size ());
+    external_lemmas[reason_id]->propagation_reason = false;
+    external_lemmas[reason_id]->forgettable = true;
+    reason_map[lit] = 0;
+  }
+
+  /*-----------------functions for mobical ends ------------------------*/
+
+  /*------------ FixedAssignmentListener functions ---------------------*/
+  void notify_fixed_assignment (int lit) override {
+    MLOGS ("notify_fixed_assignment(" << lit << ")");
+
+    assert (std::find (observed_fixed.begin (), observed_fixed.end (),
+                       lit) == observed_fixed.end ());
+    observed_fixed.push_back (lit);
+    // level_map[abs (lit)] = 0;
+  };
+
+  void add_prev_fixed (const std::vector<int> &fixed_assignments) {
+    for (auto const &lit : fixed_assignments)
+      notify_fixed_assignment (lit);
+  }
+
+  void collect_prev_fixed () {
+#ifndef NDEBUG
+    MLOG ("collecting previously fixed assignments for the new "
+          "FixedAssignmentListener: ");
+
+    std::vector<int> fixed_lits = {};
+    s->internal->get_all_fixed_literals (fixed_lits);
+    CLOG ("found: " << fixed_lits.size () << " fixed literals"
+                    << std::endl);
+    add_prev_fixed (fixed_lits);
+    fixed_lits.clear ();
+#endif
+  }
+
+  /* ----------- FixedAssignmentListener functions end -----------------*/
+
+  /* -------------------- ExternalPropagator functions -----------------*/
+
+  bool cb_check_found_model (const std::vector<int> &model) override {
+    MLOGS ("cb_check_found_model(" << model.size () << ")");
+    check_trail ();
+#ifndef NDEBUG
+    // size_t assigned = model.size ();
+    for (auto &level : observed_trail) {
+      for (auto &lit : level) {
+        // TODO: known bug that level 0 assigned literals can be
+        // notified multiple times
+        // assert (assigned--);
+        // unobserve calls can lead to unobserved variables in
+        // observed_trail
+        if (!s->observed (lit)) {
+          assert (s->external->ival (abs (lit)) == lit);
+          continue;
+        }
+        assert (s->external->current_val (lit) > 0);
+      }
+    }
+#endif
+    (void) model;
+
+    // Calls to solver that might force it to backtrack.
+    if (get_force (CB_CHECK_FOUND_MODEL)) {
+      MLOGE ("cb_check_found_model(" << model.size () << ")",
+             " false (forced backtrack)");
+      return false;
+    }
+
+    for (const auto lemma : external_lemmas) {
+      if (lemma == nullptr)
+        continue;
+      bool satisfied = false;
+      int unobserved = 0;
+      size_t level = 0;
+
+      for (const auto lit : *lemma) {
+        if (!lit)
+          continue; // eoc
+        if (!s->observed (lit)) {
+          unobserved = lit;
+          continue;
+        }
+        const signed char tmp = s->external->current_val (lit);
+        if (tmp > 0) {
+          satisfied = true;
+          break;
+        }
+        if (level_map[lit] > level)
+          level = level_map[lit];
+        assert (tmp < 0);
+      }
+      if (unobserved && lemma->type == OBSERVING) {
+        // this might trigger a bt
+        if (add_observed (unobserved)) {
+          MLOGE ("cb_check_found_model(" << model.size () << ")",
+                 " false (observe literal)");
+          return false;
+        }
+      }
+
+      if (unobserved)
+        continue;
+
+      if (!satisfied && lemma->type == PROPAGATING && level) {
+        s->force_backtrack (level - 1);
+        MLOGE ("cb_check_found_model(" << model.size () << ")",
+               " false (forced backtrack)");
+        return false;
+      }
+
+      if (!satisfied) {
+        assert (lemma->add_count == 0 || lemma->forgettable);
+
+        must_add_clause = true;
+        must_add_idx = lemma->id;
+
+        MLOG ("false (external clause  "
+              << lemma->id << "/" << external_lemmas.size ()
+              << " is not satisfied: (forgettable: " << lemma->forgettable
+              << ", size: " << lemma->size << "): ");
+        for (auto const &l : *lemma) {
+          CLOG (l << " ");
+          (void) l;
+        }
+        CLOG (std::endl);
+
+        MLOGE ("cb_check_found_model(" << model.size () << ")",
+               " false (adding falsified lemma)");
+        return false;
+      }
+    }
+
+    MLOGE ("cb_check_found_model(" << model.size () << ")", " true");
+
+    return true;
+  }
+
+  // Before finalizing the new ipasir-up
+  bool cb_has_external_clause () {
+    MLOGS ("cb_has_external_clause");
+    bool forgettable = true;
+    bool res = cb_has_external_clause (forgettable);
+    MLOGE ("cb_has_external_clause",
+           " " << (res ? (forgettable ? "redundant" : "irredundant")
+                       : "false"));
+    return res;
+  }
+
+  bool cb_has_external_clause (bool &forgettable) override {
+    MLOGS ("cb_has_external_clause");
+
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_HAS_EXTERNAL_CLAUSE);
+
+    forgettable = false;
+
+    if (external_lemmas.size () == 1) {
+      MLOGE ("cb_has_external_clause", " false");
+      return false;
+    }
+    assert (external_lemmas.size () > 1);
+
+    if (must_add_clause) {
+      must_add_clause = false;
+      add_lemma_idx = must_add_idx;
+
+      forgettable = external_lemmas[must_add_idx]->forgettable;
+
+      CLOG ("true (forced clause addition, "
+            << "forgettable: " << forgettable << " id: " << add_lemma_idx
+            << ")." << std::endl);
+
+      added_lemma_count++;
+      MLOGE ("cb_has_external_clause",
+             " " << (forgettable ? "redundant" : "irredundant"));
+      return true;
+    }
+
+    if (added_lemma_count > lemma_per_cb) {
+      added_lemma_count = 0;
+      MLOGE ("cb_has_external_clause",
+             " false (lemma per CB treshold reached)");
+      return false;
+    }
+
+    // Final model check will force to jump over some lemmas without
+    // adding them. But if any of them is unsatisfied, it will force also
+    // to set back the add_lemma_idx to them. So we do not need to start
+    // the search here from 1.
+
+    while (add_lemma_idx < external_lemmas.size ()) {
+
+      auto lemma = external_lemmas[add_lemma_idx];
+      assert (lemma != nullptr);
+      if (!lemma->add_count && !lemma->propagation_reason &&
+          lemma->type != PROPAGATING && lemma->type != LAZY &&
+          !lemma->delay--) {
+
+        external_lemmas[add_lemma_idx]->delay = 0;
+        forgettable = external_lemmas[add_lemma_idx]->forgettable;
+
+        MLOGE ("cb_has_external_clause",
+               " " << (forgettable ? "redundant" : "irredundant"));
+
+        added_lemma_count++;
+        return true;
+      }
+
+      // Forgettable lemmas are added repeatedly to the solver only when
+      // the final model falsifies it (recognized in cb_check_final_model).
+
+      add_lemma_idx++;
+    }
+    if (add_lemma_idx >= external_lemmas.size ())
+      add_lemma_idx = 1;
+    MLOGE ("cb_has_external_clause", " false (no more lemmas)");
+    return false;
+  }
+
+  int cb_add_external_clause_lit () override {
+    MLOGS ("cb_add_external_clause_lit");
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
+
+    auto lemma = external_lemmas[add_lemma_idx];
+    assert (lemma != nullptr);
+    int lit = lemma->next_lit ();
+
+    while (lit && !s->observed (lit)) {
+      if (lemma->type == OBSERVING && lit && !s->observed (lit)) {
+        if (!add_observed (lit)) {
+          MLOG ("cb_add_external_clause_lit "
+                << lit << " (lemma " << add_lemma_idx << "/"
+                << external_lemmas.size ()
+                << ") ignored as observing failed" << std::endl);
+          lit = lemma->next_lit ();
+        } else
+          assert (s->external->observed (lit));
+      } else {
+        MLOG ("cb_add_external_clause_lit "
+              << lit << " (lemma " << add_lemma_idx << "/"
+              << external_lemmas.size ()
+              << ") ignored as it is not observed" << std::endl);
+        lit = lemma->next_lit ();
+      }
+    }
+    if (!lit)
+      lemma->add_count++;
+
+    MLOGE ("cb_add_external_clause_lit",
+           " " << lit << " (lemma " << add_lemma_idx << "/"
+               << external_lemmas.size () << ")");
+
+    return lit;
+  }
+
+  int cb_decide () override {
+    MLOGS ("cb_decide");
+    check_trail ();
+    // Calls to solver that might force it to backtrack.
+    if (get_force (CB_DECIDE)) {
+      MLOGE ("cb_decide", " 0 (forced backtrack)");
+      return 0;
+    }
+
+    if (!unassigned_reasons.empty ()) {
+#ifdef LOGGING
+      MLOG ("clean up backtracked external propagation reasons: ");
+      size_t del_count = 0;
+#endif
+      for (const auto &lit : unassigned_reasons) {
+        remove_reason (lit);
+#ifdef LOGGING
+        CLOG (lit << " ");
+        del_count++;
+#endif
+      }
+      CLOG ("(" << del_count << " clauses)" << std::endl);
+      unassigned_reasons.clear ();
+    }
+
+    if (external_decide.size () <= external_decide_idx) {
+      MLOGE ("cb_decide", " 0 (no more decisions)");
+      return 0;
+    }
+
+    auto &next_decision = external_decide[external_decide_idx];
+    if (next_decision.delay--) {
+      MLOGE ("cb_decide",
+             " 0 (next decision " << next_decision.lit << " delayed)");
+      return 0;
+    }
+    const int lit = next_decision.lit;
+    external_decide_idx++;
+
+    if (!lit) {
+      MLOGE ("cb_decide", " 0");
+      return 0;
+    }
+
+    if (!s->observed (lit)) {
+      // do we want to observe?
+      if (add_observed (lit)) {
+        assert (!s->external->current_val (lit));
+        MLOGE ("cb_decide", " " << lit << " (fresh observed)");
+        return lit;
+      }
+      MLOGE ("cb_decide", " 0 (" << lit << " not fresh)" << std::endl);
+      return 0;
+    }
+
+    if (s->external->current_val (lit) < 0) {
+      MLOG ("cb_decide force_bt due to " << lit << std::endl);
+      if (s->force_unassign (lit)) {
+        // this decision is ignored, but we are asked again.
+        MLOGE ("cb_decide", " " << lit << " (after forced backtrack)");
+        return lit;
+      }
+      MLOGE ("cb_decide", " 0 (forced backtrack unsuccessful)");
+      return 0;
+    }
+    assert (s->external->current_val (lit) >= 0);
+    if (s->external->current_val (lit) > 0) {
+      MLOGE ("cb_decide", " 0 (decision " << lit << " satisfied)");
+      return 0;
+    }
+    assert (!s->internal->val (s->external->internalize (lit)));
+    MLOGE ("cb_decide", " " << lit);
+    return lit;
+  }
+
+  int cb_propagate () override {
+    MLOGS ("cb_propagate");
+    check_trail ();
+    // Calls to solver that might force it to backtrack.
+    if (get_force (CB_PROPAGATE)) {
+      MLOGE ("cb_propagate", " 0 (forced backtrack)");
+      return 0;
+    }
+
+    if (external_lemmas.size () <= 1) {
+      MLOGE ("cb_propagate", " 0 (no lemmas)");
+      return 0;
+    }
+
+    for (auto &lemma : external_lemmas) {
+      // first lemma is 0 to have positive ids/indizes
+      if (lemma == nullptr)
+        continue;
+      if (lemma->type != PROPAGATING)
+        continue;
+      if (lemma->propagation_reason)
+        continue;
+      int propagate = 0;
+      int max = 0;
+      for (auto &lit : *lemma) {
+        const bool obs = s->observed (lit);
+        if (!obs) {
+          propagate = INT_MIN;
+          break;
+        }
+        const signed char tmp = s->external->current_val (lit);
+        if (tmp > 0) {
+          propagate = INT_MIN;
+          break;
+        } else if (tmp < 0) {
+          if (!max || level_map[abs (lit)] > level_map[abs (max)])
+            max = lit;
+          continue;
+        } else if (propagate) {
+          propagate = INT_MIN;
+          break;
+        }
+        propagate = lit;
+      }
+      if (propagate == INT_MIN)
+        continue;
+      if (!propagate)
+        propagate = max;
+      if (!propagate)
+        continue;
+      if (lemma->delay) {
+        lemma->delay--;
+        continue;
+      }
+      add_reason (propagate, lemma);
+      MLOGE ("cb_propagate",
+             " " << propagate << " (lemma[" << lemma->id << "])");
+      return propagate;
+    }
+
+    MLOGE ("cb_propagate", " 0 (no propagation)");
+    return 0;
+  }
+
+  int cb_add_reason_clause_lit (int plit) override {
+    MLOGS ("cb_add_reason_clause_lit(" << plit << ")");
+
+    // Calls to solver that might force it to backtrack.
+    // Not allowed here! (so always false)
+    if (get_force (CB_ADD_REASON_CLAUSE_LIT))
+      assert (false);
+
+    // At that point there is no need to assume that the trails are in
+    // synchron.
+    assert (reason_map[plit]);
+
+    size_t reason_id = reason_map[plit];
+
+    assert (reason_id);
+    auto lemma = external_lemmas[reason_id];
+    assert (lemma != nullptr);
+    assert (lemma->type == PROPAGATING);
+    int lit = lemma->next_lit ();
+    assert (!lit || s->external->observed (lit));
+
+    if (!lit) {
+      lemma->add_count++;
+      MLOG ("reason clause for " << plit << " (id: " << reason_id
+                                 << ") is added." << std::endl);
+      assert (reason_map[plit]);
+      remove_reason (plit);
+    }
+
+    MLOGE ("cb_add_reason_clause_lit(" << plit << ")", " lit");
+    return lit;
+  }
+
+  void notify_assignment (const std::vector<int> &lits) override {
+    MLOGS ("notify_assignments(" << lits.size () << ")");
+#ifdef LOGGING
+    MLOG ("notified = { ");
+    for (const auto &lit : lits)
+      CLOG (lit << " ");
+    CLOG ("}" << std::endl);
+#endif
+
+    for (const auto &lit : lits) {
+      observed_trail.back ().push_back (lit);
+      level_map[abs (lit)] = level;
+      value_map[lit] = 1;
+      value_map[-lit] = -1;
+      assert (s->external->current_val (lit) > 0);
+      unassigned_reasons.erase (lit);
+    }
+#if 0 // NDEBUG
+    // second check for unassigned_reasons
+    // if this passes, unassigned_reasons can be removed
+    for (auto &lit : unnotified_propagations) {
+      assert (value_map[lit]);
+      assert (level_map[abs (lit)] == level);
+    }
+#endif
+    unnotified_propagations.clear ();
+
+    //  failes due to mixed eager and lazy notification
+    //  check_trail ();
+    // Calls to solver that might force it to backtrack.
+    get_force (NOTIFY_ASSIGNMENT);
+    MLOGE ("notify_assignments(" << lits.size () << ")",
+           " (level " << observed_trail.size () << ")");
+  }
+
+  void notify_new_decision_level () override {
+    MLOGS ("notify_new_decision_level");
+    level++;
+    observed_trail.push_back (std::vector<int> ());
+    assert (level == observed_trail.size () - 1);
+    // fails due to lucky and local search notifications
+    // check_trail ();
+    // Calls to solver that might force it to backtrack.
+    get_force (NOTIFY_NEW_DECISION_LEVEL);
+    MLOGE ("notify_new_decision_level",
+           " (" << observed_trail.size () - 1 << " -> "
+                << observed_trail.size () << ")");
+  }
+
+  void notify_backtrack (size_t new_level) override {
+    MLOGS ("notify_backtrack(" << new_level << ")");
+    const size_t current_level = observed_trail.size () - 1;
+    assert (observed_trail.size () > 1 || !new_level);
+    assert (observed_trail.size () == 1 ||
+            observed_trail.size () >= new_level + 1);
+    while (observed_trail.size () > new_level + 1) {
+      // We can not remove reason clauses of backtracked assignments
+      // because ILB might re-introduces them to the trail. Here we only
+      // save the potential candidates to delete, and upon next cb_decide
+      // we delete those ones that did not get re-assigned.
+      for (auto lit : observed_trail.back ()) {
+        // assert (!reason_map[lit] || s->external->current_val (lit) <= 0);
+        MLOG ("unassign " << lit << " (reason " << reason_map[lit] << "/"
+                          << reason_map[-lit] << ")" << std::endl);
+        value_map[lit] = value_map[-lit] = 0;
+        if (reason_map[lit]) {
+          unassigned_reasons.insert (lit);
+        }
+      }
+      observed_trail.pop_back ();
+    }
+    level = new_level;
+    for (auto &lit : unnotified_propagations) {
+      remove_reason (lit);
+    }
+    unnotified_propagations.clear ();
+
+    // Calls to solver that might force it to backtrack.
+    // not allowed!
+    get_force (NOTIFY_BACKTRACK);
+    MLOGE ("notify_backtrack(" << new_level << ")",
+           " (from level " << current_level << ")");
+    (void) current_level;
+  }
+
+  /* ---------------- ExternalPropagator functions end -------------------*/
+};
 
 /*------------------------------------------------------------------------*/
-
 // The model of valid API sequences is rather implicit.  First it is
 // encoded in the random generator, by for instance adding options with
 // 'set' only right after initialization through 'init', which is also
@@ -1704,8 +2375,9 @@ static bool after_type (Call::Type t) {
 
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     assert (!s);
     assert (!extendmap);
     try {
@@ -1718,7 +2390,7 @@ struct InitCall : public Call {
       throw exception;
     }
   }
-  void print (ostream &o) { o << "init"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
 };
@@ -1726,23 +2398,25 @@ struct InitCall : public Call {
 #ifdef MOBICAL_MEMORY
 struct MaxAllocCall : public Call {
   MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     (void) s;
     (void) extendmap;
   }
-  void print (ostream &o) { o << "max_alloc " << val; }
+  void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new MaxAllocCall (val); }
   const char *keyword () { return "max_alloc"; }
 };
 struct LeakAllocCall : public Call {
   LeakAllocCall () : Call (LEAKALLOC) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     (void) s;
     (void) extendmap;
   }
-  void print (ostream &o) { o << "leak_alloc"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new LeakAllocCall (); }
   const char *keyword () { return "leak_alloc"; }
 };
@@ -1751,12 +2425,13 @@ struct LeakAllocCall : public Call {
 #ifdef MOBICAL_TERMINATE
 struct TerminateCall : public Call {
   TerminateCall (int val) : Call (TERMINATE, 0, 0, 0, val) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     (void) s;
     (void) extendmap;
   }
-  void print (ostream &o) { o << "terminate " << val; }
+  void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new TerminateCall (val); }
   const char *keyword () { return "terminate"; }
 };
@@ -1764,284 +2439,629 @@ struct TerminateCall : public Call {
 
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->vars ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->vars ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "vars"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new VarsCall (); }
   const char *keyword () { return "vars"; }
 };
 
 struct ActiveCall : public Call {
   ActiveCall () : Call (ACTIVE) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->active ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->active ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "active"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ActiveCall (); }
   const char *keyword () { return "active"; }
 };
 
 struct RedundantCall : public Call {
   RedundantCall () : Call (REDUNDANT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->redundant ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->redundant ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "redundant"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new RedundantCall (); }
   const char *keyword () { return "redundant"; }
 };
 
 struct IrredundantCall : public Call {
   IrredundantCall () : Call (IRREDUNDANT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->irredundant ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->irredundant ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "irredundant"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new IrredundantCall (); }
   const char *keyword () { return "irredundant"; }
 };
 
 struct ResizeCall : public Call {
   ResizeCall (int max_var) : Call (RESIZE, max_var) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
 #ifndef NDEBUG
-    bool has_effect = (s->vars () < arg && !arg);
+      bool has_effect = (s->external->max_var < arg && !arg);
 #endif
-    extend_map_to (s, extendmap);
-    s->resize (arg);
+      extend_map_to (s, extendmap);
+      s->resize (arg);
 #ifndef NDEBUG
-    assert (!has_effect || extendmap->map.back () == s->vars ());
+      assert (mobical.donot.extend_map || !has_effect ||
+              extendmap->map.back () == s->external->max_var);
 #endif
+    }
   }
-  void print (ostream &o) { o << "resize " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ResizeCall (arg); }
   const char *keyword () { return "resize"; }
 };
 
 struct DeclareMoreVariablesCall : public Call {
-  DeclareMoreVariablesCall (int max_var) : Call (RESIZE, max_var) {
+  DeclareMoreVariablesCall (int max_var) : Call (DECLARE_VARS, max_var) {
     arg = max_var;
   }
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    extend_map_by (s, extendmap, arg);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      extend_map_by (s, extendmap, arg);
 #ifndef NDEBUG
-    int i =
+      int i =
 #endif
-        s->declare_more_variables (arg);
-    // check that our mapping from trace literals to external literals
-    // matchs the `declare_more_variables` result.
-    assert (!arg || i == s->vars ());
-    assert (!arg || extendmap->map.back () == i);
+          s->declare_more_variables (arg);
+      // check that our mapping from trace literals to external literals
+      // matchs the `declare_more_variables` result.
+      assert (!arg || i == s->external->max_var);
+      assert (!arg || mobical.donot.extend_map ||
+              extendmap->map.back () == i);
+    }
   }
-  void print (ostream &o) { o << "declare_vars " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new DeclareMoreVariablesCall (arg); }
   const char *keyword () { return "declare_vars"; }
 };
 
 struct DeclareOneMoreVariableCall : public Call {
-  DeclareOneMoreVariableCall () : Call (RESIZE) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    extend_map_by (s, extendmap, 1);
+  DeclareOneMoreVariableCall () : Call (DECLARE) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      extend_map_by (s, extendmap, 1);
 #ifndef NDEBUG
-    int i =
+      int i =
 #endif
-        s->declare_one_more_variable ();
-    assert (i == s->vars ());
-    assert (extendmap->map.back () == i);
+          s->declare_one_more_variable ();
+      assert (i == s->external->max_var);
+      assert (mobical.donot.extend_map || extendmap->map.back () == i);
+    }
   }
-  void print (ostream &o) { o << "declare_var"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new DeclareOneMoreVariableCall (); }
   const char *keyword () { return "declare_var"; }
 };
 
 struct UnPhaseCall : public Call {
   UnPhaseCall (int max_var) : Call (UNPHASE, max_var) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    fflush (stdout);
-    s->unphase (map_arg (s, extendmap, false));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->unphase (map_arg (s, extendmap, false));
   }
-  void print (ostream &o) { o << "unphase " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new UnPhaseCall (arg); }
   const char *keyword () { return "unphase"; }
 };
 
 struct PhaseCall : public Call {
   PhaseCall (int max_var) : Call (PHASE, max_var) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    fflush (stdout);
-    s->phase (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->phase (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "phase " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new PhaseCall (arg); }
   const char *keyword () { return "phase"; }
 };
 
 struct SetCall : public Call {
   SetCall (const char *o, int v) : Call (SET, 0, 0, o, v) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->set (name, val);
-    if (!strcmp (name, "factorcheck"))
-      extendmap->factor_check = val;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->set (name, val);
+      if (!strcmp (name, "factorcheck"))
+        extendmap->factor_check = val;
+    }
   }
-  void print (ostream &o) { o << "set " << name << ' ' << val; }
+  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << val; }
   Call *copy () { return new SetCall (name, val); }
   const char *keyword () { return "set"; }
 };
 
 struct ConfigureCall : public Call {
   ConfigureCall (const char *o) : Call (CONFIGURE, 0, 0, o) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->configure (name);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->configure (name);
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "configure " << name; }
+  void print (ostream &o) { o << keyword () << ' ' << name; }
   Call *copy () { return new ConfigureCall (name); }
   const char *keyword () { return "configure"; }
 };
 
 struct LimitCall : public Call {
   LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->limit (name, val);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->limit (name, val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "limit " << name << ' ' << val; }
+  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << val; }
   Call *copy () { return new LimitCall (name, val); }
   const char *keyword () { return "limit"; }
 };
 
 struct OptimizeCall : public Call {
   OptimizeCall (int v) : Call (OPTIMIZE, 0, 0, 0, v) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->optimize (val);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->optimize (val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "optimize " << val; }
+  void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new OptimizeCall (val); }
   const char *keyword () { return "optimize"; }
 };
 
 struct ResetCall : public Call {
   ResetCall () : Call (RESET) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     delete extendmap;
     delete s;
     s = 0;
     extendmap = 0;
-    if (mobical.mock_pointer) {
-      delete mobical.mock_pointer;
-      mobical.mock_pointer = 0;
-    }
+    delete mobical.mock_pointer;
+    mobical.mock_pointer = nullptr;
+    delete mobical.replay_pointer;
+    mobical.replay_pointer = nullptr;
   }
-  void print (ostream &o) { o << "reset"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetCall (); }
   const char *keyword () { return "reset"; }
 };
 
 struct AddCall : public Call {
   AddCall (int l) : Call (ADD, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    fflush (stdout);
-    s->add (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->add (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "add " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new AddCall (arg); }
   const char *keyword () { return "add"; }
 };
 
 struct ConstrainCall : public Call {
   ConstrainCall (int l) : Call (CONSTRAIN, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->constrain (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->constrain (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "constrain " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ConstrainCall (arg); }
   const char *keyword () { return "constrain"; }
 };
 
 struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
     // clean up if there was already one mock propagator
-    assert (!mobical.mock_pointer);
+    if (!mobical.donot.mock_propagator) {
+      assert (!mobical.mock_pointer);
 #ifdef LOGGING
-    mobical.mock_pointer =
-        new MockPropagator (s, extendmap, mobical.add_set_log_to_true);
+      mobical.mock_pointer =
+          new MockPropagator (s, extendmap, mobical.add_set_log_to_true);
 #else
-    mobical.mock_pointer = new MockPropagator (s, extendmap);
+      mobical.mock_pointer = new MockPropagator (s, extendmap);
 #endif
-    s->connect_external_propagator (mobical.mock_pointer);
-    s->connect_fixed_listener (mobical.mock_pointer);
+      s->connect_external_propagator (mobical.mock_pointer);
+      s->connect_fixed_listener (mobical.mock_pointer);
 
-    // FixedAssignmentListener does not replay previous fixed
-    // assignment, collect them here explicitly -- EXPENSIVE In practice
-    // FixedAssignmentListener is there from the beginning if needed, in
-    // mobical we do not want to wire in this.
+      // FixedAssignmentListener does not replay previous fixed
+      // assignment, collect them here explicitly -- EXPENSIVE In practice
+      // FixedAssignmentListener is there from the beginning if needed, in
+      // mobical we do not want to wire in this.
 
-    mobical.mock_pointer->collect_prev_fixed ();
+      mobical.mock_pointer->collect_prev_fixed ();
+    } else {
+      assert (!mobical.replay_pointer);
+#ifdef LOGGING
+      mobical.replay_pointer =
+          new ReplayPropagator (s, extendmap, mobical.add_set_log_to_true);
+#else
+      mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
+#endif
+      s->connect_external_propagator (mobical.replay_pointer);
+    }
   }
-  void print (ostream &o) { o << "connect mock-propagator"; }
+  void print (ostream &o) {
+    o << keyword () << " "
+      << (mobical.donot.mock_propagator ? "replay-propagator"
+                                        : "mock-propagator");
+  }
   Call *copy () { return new ConnectCall (); }
   const char *keyword () { return "connect"; }
 };
 
+struct IsWitnessCall : public Call {
+  IsWitnessCall (int l) : Call (IS_WITNESS, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->is_witness (map_arg (s, extendmap));
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new IsWitnessCall (arg); }
+  const char *keyword () { return "is_witness"; }
+};
+
+struct ObservedCall : public Call {
+  ObservedCall (int l) : Call (OBSERVED, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->observed (map_arg (s, extendmap));
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new ObservedCall (arg); }
+  const char *keyword () { return "observed"; }
+};
+
 struct UnObserveCall : public Call {
   UnObserveCall (int l) : Call (OBSERVE, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->remove_observed_var (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (mobical.donot.mock_propagator) {
+      if (delay) {
+        ReplayPropagator *rp =
+            static_cast<ReplayPropagator *> (s->external->propagator);
+        assert (rp);
+        rp->push_action (this);
+      } else {
+        s->remove_observed_var (map_arg (s, extendmap));
+      }
+    } else {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (s->external->propagator);
+      assert (mp);
+      mp->remove_observed (map_arg (s, extendmap));
+    }
   }
-  void print (ostream &o) { o << "unobserve " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new UnObserveCall (arg); }
   const char *keyword () { return "unobserve"; }
 };
 
 struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->add_observed_var (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (mobical.donot.mock_propagator) {
+      if (delay) {
+        ReplayPropagator *rp =
+            static_cast<ReplayPropagator *> (s->external->propagator);
+        assert (rp);
+        rp->push_action (this);
+      } else {
+        s->add_observed_var (map_arg (s, extendmap));
+      }
+    } else {
+      assert (!delay);
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (s->external->propagator);
+      assert (mp);
+      mp->add_observed (map_arg (s, extendmap));
+    }
   }
-  void print (ostream &o) { o << "observe " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ObserveCall (arg); }
   const char *keyword () { return "observe"; }
 };
 
+struct IsDecisionCall : public Call {
+  IsDecisionCall (int l) : Call (IS_DECISION, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->is_decision (map_arg (s, extendmap));
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new IsDecisionCall (arg); }
+  const char *keyword () { return "is_decision"; }
+};
+
+struct CBHasClauseCall : public Call {
+  CBHasClauseCall (int r, int v) : Call (CB_HAS_CLAUSE, 0, r, 0, v) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << res << " " << val; }
+  Call *copy () { return new CBHasClauseCall (res, val); }
+  const char *keyword () { return "cb_has_external_clause"; }
+};
+
+struct CBAddClauseCall : public Call {
+  CBAddClauseCall (int l) : Call (CB_ADD_CLAUSE, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new CBAddClauseCall (arg); }
+  const char *keyword () { return "cb_add_external_clause_lit"; }
+};
+
+struct CBAddReasonCall : public Call {
+  CBAddReasonCall (int l, int v) : Call (CB_ADD_REASON, l, 0, 0, v) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << arg << " " << val; }
+  Call *copy () { return new CBAddReasonCall (arg, val); }
+  const char *keyword () { return "cb_add_reason_clause_lit"; }
+};
+
+struct CBCheckModelCall : public Call {
+  CBCheckModelCall (int r) : Call (CB_CHECK_MODEL, 0, r) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << res; }
+  Call *copy () { return new CBCheckModelCall (res); }
+  const char *keyword () { return "cb_check_found_model"; }
+};
+
+struct CBPropagateCall : public Call {
+  CBPropagateCall (int l) : Call (CB_PROPAGATE, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new CBPropagateCall (arg); }
+  const char *keyword () { return "cb_propagate"; }
+};
+
+struct CBDecideCall : public Call {
+  CBDecideCall (int l) : Call (CB_DECIDE, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new CBDecideCall (arg); }
+  const char *keyword () { return "cb_decide"; }
+};
+
+struct NotifyAssignmentCall : public Call {
+  NotifyAssignmentCall (int l) : Call (NOTIFY_ASSIGNMENT, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new NotifyAssignmentCall (arg); }
+  const char *keyword () { return "notify_assignment"; }
+};
+
+struct NotifyBatchAssignmentCall : public Call {
+  NotifyBatchAssignmentCall (int v)
+      : Call (NOTIFY_ASSIGNMENT, 0, 0, 0, v) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << val; }
+  Call *copy () { return new NotifyBatchAssignmentCall (val); }
+  const char *keyword () { return "notify_assignment_batch"; }
+};
+
+struct NotifyBacktrackCall : public Call {
+  NotifyBacktrackCall (int v) : Call (NOTIFY_BACKTRACK, 0, 0, 0, v) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << val; }
+  Call *copy () { return new NotifyBacktrackCall (val); }
+  const char *keyword () { return "notify_backtrack"; }
+};
+
+struct NotifyLevelCall : public Call {
+  NotifyLevelCall (int v) : Call (NOTIFY_LEVEL, 0, 0, 0, v) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (delay);
+    Call::execute (s, extendmap, delay);
+    ReplayPropagator *rp =
+        static_cast<ReplayPropagator *> (s->external->propagator);
+    assert (rp);
+    rp->push_action (this);
+  }
+  void print (ostream &o) { o << keyword () << " " << val; }
+  Call *copy () { return new NotifyLevelCall (val); }
+  const char *keyword () { return "notify_new_decision_level"; }
+};
 struct MockForceCall : public Call {
   MockForceType forcetype;
   MockForceCall (int l, MockForceType t, int v)
       : Call (FORCE, l, 0, 0, v), forcetype (t) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
     MockPropagator *mp =
-        static_cast<MockPropagator *> (s->get_propagator ());
+        static_cast<MockPropagator *> (s->external->propagator);
     assert (mp);
     mp->push_force (map_arg (s, extendmap, false), forcetype, val);
   }
   void print (ostream &o) {
-    o << "force " << arg << " " << forcetype << " " << val;
+    o << keyword () << " " << arg << " " << forcetype << " " << val;
   }
   Call *copy () { return new MockForceCall (arg, forcetype, val); }
   const char *keyword () { return "force"; }
@@ -2051,18 +3071,17 @@ struct LemmaCall : public Call {
   LemmaType lemmatype;
   LemmaCall (int l, LemmaType t, int v)
       : Call (LEMMA, l, 0, 0, v), lemmatype (t) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
     MockPropagator *mp =
-        static_cast<MockPropagator *> (s->get_propagator ());
+        static_cast<MockPropagator *> (s->external->propagator);
     assert (mp);
     mp->push_lemma_lit (map_arg (s, extendmap, false), lemmatype, val);
   }
   void print (ostream &o) {
-    if (arg)
-      o << "lemma " << arg;
-    else
-      o << "lemma " << arg << " " << lemmatype << " " << val;
+    o << keyword () << " " << arg;
+    if (!arg)
+      o << " " << lemmatype << " " << val;
   }
   Call *copy () { return new LemmaCall (arg, lemmatype, val); }
   const char *keyword () { return "lemma"; }
@@ -2070,310 +3089,438 @@ struct LemmaCall : public Call {
 
 struct DecideCall : public Call {
   DecideCall (int l, int v) : Call (DECIDE, l, 0, 0, v) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
     MockPropagator *mp =
-        static_cast<MockPropagator *> (s->get_propagator ());
+        static_cast<MockPropagator *> (s->external->propagator);
     assert (mp);
     mp->push_decide_lit (map_arg (s, extendmap, false), val);
   }
-  void print (ostream &o) { o << "decide " << arg << " " << val; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << val; }
   Call *copy () { return new DecideCall (arg, val); }
   const char *keyword () { return "decide"; }
 };
 
 struct DisconnectCall : public Call {
   DisconnectCall () : Call (DISCONNECT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    MockPropagator *mp =
-        static_cast<MockPropagator *> (s->get_propagator ());
-    assert (mp);
-    s->disconnect_fixed_listener ();
-    s->disconnect_external_propagator ();
-    delete mp;
-    mobical.mock_pointer = 0;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    assert (!delay);
+    Call::execute (s, extendmap, delay);
+    if (!mobical.donot.mock_propagator) {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (s->external->propagator);
+      assert (mp);
+      s->disconnect_fixed_listener ();
+      s->disconnect_external_propagator ();
+      delete mp;
+      mobical.mock_pointer = 0;
+    } else {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      s->disconnect_external_propagator ();
+      delete rp;
+      mobical.replay_pointer = 0;
+    }
     assert (!s->external->propagator);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "disconnect mock-propagator"; }
+  void print (ostream &o) {
+    o << keyword () << " "
+      << (mobical.donot.mock_propagator ? "replay-propagator"
+                                        : "mock-propagator");
+  }
   Call *copy () { return new DisconnectCall (); }
   const char *keyword () { return "disconnect"; }
 };
 
 struct AssumeCall : public Call {
   AssumeCall (int l) : Call (ASSUME, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->assume (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->assume (map_arg (s, extendmap));
+    }
   }
-  void print (ostream &o) { o << "assume " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new AssumeCall (arg); }
   const char *keyword () { return "assume"; }
 };
 
 struct SolveCall : public Call {
   SolveCall (int r = 0) : Call (SOLVE, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->solve ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      res = s->solve ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "solve " << res; }
+  void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new SolveCall (res); }
   const char *keyword () { return "solve"; }
 };
 
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->simplify (arg);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      res = s->simplify (arg);
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "simplify " << arg << " " << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
 };
 
 struct PropagateAssumptionsCall : public Call {
-  PropagateAssumptionsCall (int r = 0)
-      : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->propagate ();
+  PropagateAssumptionsCall (int r = 0) : Call (PROPAGATE, 0, r) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->propagate ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) {
-    o << "propagate_assumptions " << arg << " " << res;
-  }
-  Call *copy () { return new PropagateAssumptionsCall (arg); }
+  void print (ostream &o) { o << keyword () << " " << res; }
+  Call *copy () { return new PropagateAssumptionsCall (res); }
   const char *keyword () { return "propagate_assumptions"; }
 };
 
 struct ImpliedCall : public Call {
-  ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    std::vector<int> entrailed;
-    if (mobical.donot.enforce || s->state () == State::SATISFIED ||
-        s->state () == State::INCONCLUSIVE)
-      s->implied (entrailed);
+  ImpliedCall (int r = 0) : Call (IMPLIED, 0, r) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      std::vector<int> entrailed;
+      if (mobical.donot.enforce || s->state () == State::SATISFIED ||
+          s->state () == State::INCONCLUSIVE)
+        s->implied (entrailed);
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "implied"; }
-  Call *copy () { return new ImpliedCall (arg); }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new ImpliedCall (res); }
   const char *keyword () { return "implied"; }
 };
 
 struct ResetAssumptionsCall : public Call {
   ResetAssumptionsCall () : Call (RESET_ASSUMPTIONS) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->reset_assumptions ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->reset_assumptions ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "reset_assumptions"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetAssumptionsCall (); }
   const char *keyword () { return "reset_assumptions"; }
 };
 
 struct ResetObservedCall : public Call {
   ResetObservedCall () : Call (RESET_OBSERVED) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->reset_observed_vars ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (mobical.donot.mock_propagator) {
+      if (delay) {
+        ReplayPropagator *rp =
+            static_cast<ReplayPropagator *> (s->external->propagator);
+        assert (rp);
+        rp->push_action (this);
+      } else {
+        s->reset_observed_vars ();
+      }
+    } else {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (s->external->propagator);
+      assert (mp);
+      mp->reset_observed ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "reset_observed"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetObservedCall (); }
   const char *keyword () { return "reset_observed"; }
 };
 
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->lookahead ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      res = s->lookahead ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "lookahead " << res; }
+  void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new LookaheadCall (res); }
   const char *keyword () { return "lookahead"; }
 };
 
 struct CubingCall : public Call {
   CubingCall (int r = 1) : Call (CUBING, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
     (void) s->generate_cubes (arg);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "cubing " << res; }
+  void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
 };
 
-struct PropagateCall : public Call {
-  PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    (void) extendmap;
-    int res = s->propagate ();
-    if (!res) {
-      std::vector<int> implicants;
-      s->implied (implicants);
-    }
-  }
-  void print (ostream &o) { o << "propagate " << res; }
-  Call *copy () { return new PropagateCall (res); }
-  const char *keyword () { return "propagate"; }
-};
-
 struct ValCall : public Call {
   ValCall (int l, int r = 0) : Call (VAL, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce)
-      res = s->val (map_arg (s, extendmap, false));
-    else if (s->state () == SATISFIED)
-      res = s->val (map_arg (s, extendmap, false));
-    else
-      res = 0;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      if (mobical.donot.enforce)
+        res = s->val (map_arg (s, extendmap, false));
+      else if (s->state () == SATISFIED)
+        res = s->val (map_arg (s, extendmap, false));
+      else
+        res = 0;
+    }
   }
-  void print (ostream &o) { o << "val " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new ValCall (arg, res); }
   const char *keyword () { return "val"; }
 };
 
 struct FlipCall : public Call {
   FlipCall (int l, int r = 0) : Call (FLIP, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce)
-      res = s->flip (map_arg (s, extendmap, false));
-    else if (s->state () == SATISFIED)
-      res = s->flip (map_arg (s, extendmap, false));
-    else
-      res = 0;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      if (mobical.donot.enforce)
+        res = s->flip (map_arg (s, extendmap, false));
+      else if (s->state () == SATISFIED)
+        res = s->flip (map_arg (s, extendmap, false));
+      else
+        res = 0;
+    }
   }
-  void print (ostream &o) { o << "flip " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FlipCall (arg, res); }
   const char *keyword () { return "flip"; }
 };
 
 struct FlippableCall : public Call {
   FlippableCall (int l, int r = 0) : Call (FLIPPABLE, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce)
-      res = s->flippable (map_arg (s, extendmap, false));
-    else if (s->state () == SATISFIED)
-      res = s->flippable (map_arg (s, extendmap, false));
-    else
-      res = 0;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      if (mobical.donot.enforce)
+        res = s->flippable (map_arg (s, extendmap, false));
+      else if (s->state () == SATISFIED)
+        res = s->flippable (map_arg (s, extendmap, false));
+      else
+        res = 0;
+    }
   }
-  void print (ostream &o) { o << "flippable " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FlipCall (arg, res); }
   const char *keyword () { return "flippable"; }
 };
 
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->fixed (map_arg (s, extendmap, false));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->fixed (map_arg (s, extendmap, false));
   }
-  void print (ostream &o) { o << "fixed " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FixedCall (arg, res); }
   const char *keyword () { return "fixed"; }
 };
 
 struct FailedCall : public Call {
   FailedCall (int l, int r = 0) : Call (FAILED, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce)
-      res = s->failed (map_arg (s, extendmap, false));
-    else if (s->state () == UNSATISFIED)
-      res = s->failed (map_arg (s, extendmap, false));
-    else
-      res = 0;
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      if (mobical.donot.enforce)
+        res = s->failed (map_arg (s, extendmap, false));
+      else if (s->state () == UNSATISFIED)
+        res = s->failed (map_arg (s, extendmap, false));
+      else
+        res = 0;
+    }
   }
-  void print (ostream &o) { o << "failed " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FailedCall (arg, res); }
   const char *keyword () { return "failed"; }
 };
 
 struct ConcludeCall : public Call {
   ConcludeCall () : Call (CONCLUDE) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce)
-      s->conclude ();
-    else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
-      s->conclude ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      if (mobical.donot.enforce)
+        s->conclude ();
+      else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
+        s->conclude ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "conclude"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ConcludeCall (); }
   const char *keyword () { return "conclude"; }
 };
 
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->freeze (map_arg (s, extendmap));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->freeze (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "freeze " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new FreezeCall (arg); }
   const char *keyword () { return "freeze"; }
 };
 
 struct MeltCall : public Call {
   MeltCall (int l) : Call (MELT, l) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
       s->melt (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "melt " << arg; }
+  void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new MeltCall (arg); }
   const char *keyword () { return "melt"; }
 };
 
 struct FrozenCall : public Call {
   FrozenCall (int l, int r = 0) : Call (FROZEN, l, r) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    res = s->frozen (map_arg (s, extendmap, false));
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      res = s->frozen (map_arg (s, extendmap, false));
   }
-  void print (ostream &o) { o << "frozen " << arg << ' ' << res; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FrozenCall (arg, res); }
   const char *keyword () { return "frozen"; }
 };
 
 struct DumpCall : public Call {
   DumpCall () : Call (DUMP) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->dump_cnf ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->dump_cnf ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "dump"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new DumpCall (); }
   const char *keyword () { return "dump"; }
 };
 
 struct StatsCall : public Call {
   StatsCall () : Call (STATS) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->statistics ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else
+      s->statistics ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "stats"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
 };
@@ -2381,36 +3528,57 @@ struct StatsCall : public Call {
 struct TraceProofCall : public Call {
   std::string path;
   TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->trace_proof (path.c_str ());
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->trace_proof (path.c_str ());
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "trace_proof" << ' ' << path; }
+  void print (ostream &o) { o << keyword () << ' ' << path; }
   Call *copy () { return new TraceProofCall (path); }
   const char *keyword () { return "trace_proof"; }
 };
 
 struct FlushProofTraceCall : public Call {
   FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->flush_proof_trace ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->flush_proof_trace ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "flush_proof_trace"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new FlushProofTraceCall (); }
   const char *keyword () { return "flush_proof_trace"; }
 };
 
 struct CloseProofTraceCall : public Call {
   CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    Call::execute (s, extendmap);
-    s->close_proof_trace ();
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->close_proof_trace ();
+    }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "close_proof_trace"; }
+  void print (ostream &o) { o << keyword (); }
   Call *copy () { return new CloseProofTraceCall (); }
   const char *keyword () { return "close_proof_trace"; }
 };
@@ -2488,7 +3656,6 @@ public:
   static void reset_child_signal_handlers ();
 
 #ifdef MOBICAL_MEMORY
-#define MOBICAL_PRINT_TRACE
   static void hooks_install (void);
   static void hooks_uninstall (void);
   static void *hook_malloc (size_t);
@@ -2497,10 +3664,10 @@ public:
 #endif
 
 #ifdef MOBICAL_TERMINATE
-#define MOBICAL_PRINT_TRACE
 #endif
 
 #ifdef MOBICAL_PRINT_TRACE
+
   static void print_trace (void **, size_t, ostream &, size_t);
 #endif
 
@@ -2514,7 +3681,7 @@ public:
       calls.pop_back ();
     }
     if (solver) {
-      if (!mobical.donot.summary && mobical.shared) {
+      if (mobical.summary && mobical.shared) {
         mobical.add_statistics (solver);
       }
       delete solver;
@@ -2668,13 +3835,17 @@ public:
 #endif
   }
 
-  void execute () {
+  void execute (FILE *trace_file = nullptr) {
+#ifdef NTRACING
+    (void) trace_file;
+#endif
 #ifdef MOBICAL_MEMORY
     memory_bad_alloc = 0;
     memory_bad_size = 0;
     memory_bad_failed = 0;
     memory_leak_alloc = 0;
     memory_leak_next_free = 0;
+
     std::memset (&mobical.shared->bad_alloc, 0,
                  sizeof (mobical.shared->bad_alloc));
     std::memset (&mobical.shared->leak_alloc, 0,
@@ -2685,11 +3856,12 @@ public:
     limit_terminate = 0;
     limit_terminate_remaining = 0;
 #endif
-
     executed++;
     bool first = true;
     bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
+      if (Signal::interrupted ())
+        break;
       Call *c = calls[i];
       trace_call_index = i + 1;
 
@@ -2703,10 +3875,10 @@ public:
 
       try {
         // They are (ideally) are executed already
-        if (during_type (c->type))
+        if (c->executed) {
+          assert (c->during_type () || c->always_type ());
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+        }
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -2731,27 +3903,21 @@ public:
 
         if (c->type == Call::SET) {
           // ignore fixed options
-          if (mobical.mopts.get_fixed (c->name))
+          if (mobical.mopts.get_fixed (c->name)) {
+            if (mobical.verbose) {
+              std::cout << "c [mobical] skipping '";
+              c->print (std::cout);
+              std::cout << "'" << std::endl;
+            }
             continue;
-        }
-        if (process_type (c->type)) {
-          // Look ahead and collect LemmaCalls to be executed
-          // before solve is executed
-          for (size_t j = i + 1; j < calls.size (); j++) {
-            Call *next_c = calls[j];
-            if (during_type (next_c->type))
-              next_c->execute (solver, extendmap);
-            else
-              break;
           }
         }
-        if (!mobical.donot.summary && mobical.shared &&
-            c->type == Call::RESET) {
+        if (mobical.summary && mobical.shared && c->type == Call::RESET) {
           if (solver)
             mobical.add_statistics (solver);
           mobical.shared->executed++;
         }
-        if (mobical.shared && process_type (c->type)) {
+        if (mobical.shared && c->process_type ()) {
           mobical.shared->solved++;
           if (first)
             first = false;
@@ -2764,6 +3930,21 @@ public:
             mobical.shared->unsat++;
         } else
           c->execute (solver, extendmap);
+#ifndef NTRACING
+        if (c->type == Call::INIT && trace_file != nullptr)
+          solver->trace_api_calls (trace_file);
+#endif
+        if (c->type == Call::CONNECT && mobical.donot.mock_propagator) {
+          for (size_t j = i + 1; j < calls.size (); j++) {
+            Call *next_c = calls[j];
+            if (next_c->type == Call::RESET)
+              break;
+            if (next_c->type == Call::DISCONNECT)
+              break;
+            next_c->execute (solver, extendmap, true);
+          }
+        }
+
         // initialize options after INIT or CONFIGURE
         if (c->type == Call::INIT || c->type == Call::CONFIGURE) {
 #ifdef MOBICAL_TERMINATE
@@ -2773,6 +3954,12 @@ public:
 #endif
           for (auto &o : mobical.mopts) {
             if (o.fix (&mobical.mopts)) {
+              if (mobical.verbose) {
+                std::cout << "c [mobical] forcing option '";
+                std::cout << "set " << o.name << " "
+                          << o.val (&mobical.mopts);
+                std::cout << "'" << std::endl;
+              }
               solver->set (o.name, o.val (&mobical.mopts));
               if (!strcmp (o.name, "factorcheck"))
                 extendmap->factor_check = o.val (&mobical.mopts);
@@ -2798,9 +3985,11 @@ public:
 #ifdef MOBICAL_MEMORY
     // Delete the mock pointer to ignore these memory leaks
     // in case the reset call failed due to a bad memory allocation.
-    if (deallocated && mobical.mock_pointer) {
+    if (deallocated) {
       delete mobical.mock_pointer;
       mobical.mock_pointer = nullptr;
+      delete mobical.replay_pointer;
+      mobical.replay_pointer = nullptr;
     }
     hooks_uninstall ();
     // Note: Do not force-deallocate the solver here as otherwise
@@ -2864,7 +4053,7 @@ public:
           c->type != Call::FLIPPABLE && c->type != Call::FAILED &&
           c->type != Call::FROZEN && c->type != Call::RESET)
         res++, last = false;
-      if (process_type (c->type))
+      if (c->process_type ())
         last = true;
     }
     return res;
@@ -2945,7 +4134,6 @@ private:
   void generate_lemmas (Random &);
   void generate_forces (Random &, int minvars, int maxvars);
 
-  void generate_propagate (Random &);
   void generate_implied (Random &);
 
   void generate_limits (Random &);
@@ -3115,7 +4303,7 @@ void Trace::generate_options (Random &random, Size size) {
 #endif
   // In 10% of the cases do not change any options.
   //
-  if (random.generate_double () < 0.1)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_options)
     return;
 
   // In order to increase throughput we enable 'walk' in 5% tests, which
@@ -3248,7 +4436,7 @@ void Trace::generate_queries (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_resize (Random &random, int max_var) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_resize)
     return;
   int new_max_var = random.pick_int (0, 1.1 * max_var);
   push_back (new ResizeCall (new_max_var));
@@ -3257,14 +4445,16 @@ void Trace::generate_resize (Random &random, int max_var) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_declare_more_variables (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >=
+      mobical.tracegen.generate_declare_more_variables)
     return;
   int new_max_var = random.pick_int (0, 100);
   push_back (new DeclareMoreVariablesCall (new_max_var));
 }
 
 void Trace::generate_declare_one_more_variable (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >=
+      mobical.tracegen.generate_declare_one_more_variable)
     return;
   push_back (new DeclareOneMoreVariableCall ());
 }
@@ -3272,17 +4462,9 @@ void Trace::generate_declare_one_more_variable (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_implied (Random &random) {
-  if (random.generate_double () > 0.01)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_implied)
     return;
   push_back (new ImpliedCall ());
-}
-
-/*------------------------------------------------------------------------*/
-
-void Trace::generate_propagate (Random &random) {
-  if (random.generate_double () > 0.01)
-    return;
-  push_back (new PropagateCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -3362,7 +4544,7 @@ void Trace::generate_clause (Random &random, int minvars, int maxvars,
 
 void Trace::generate_constraint (Random &random, int minvars, int maxvars,
                                  int uniform) {
-  if (random.generate_double () < 0.95)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_constraint)
     return;
   assert (minvars <= maxvars);
   int maxsize = maxvars - minvars + 1;
@@ -3389,9 +4571,9 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 /*------------------------------------------------------------------------*/
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   // No Propagator in 90% of cases.
-  if (!in_connection && random.generate_double () < 0.9) {
+  if (!in_connection &&
+      random.pick_int (0, 999) >= mobical.tracegen.generate_propagator)
     return;
-  }
   if (!in_connection) {
     push_back (new ConnectCall ());
     in_connection = true;
@@ -3446,17 +4628,13 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
 }
 
 void Trace::generate_forces (Random &random, int minvars, int maxvars) {
-  if (!in_connection)
+  if (!in_connection ||
+      random.pick_int (0, 999) >= mobical.tracegen.generate_forces)
     return;
-  return;
 
   assert (minvars <= maxvars);
 
   const int diff = maxvars - minvars;
-
-  // Give a chance to add no forces.
-  if (random.generate_double () < 0.1)
-    return;
 
   // TODO: MockForceType length.
   for (int i = 0; i < LAST_MOCK_FORCE_TYPE; i++) {
@@ -3540,7 +4718,7 @@ void Trace::generate_lemmas (Random &random) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_assume (Random &random, int vars) {
-  if (random.generate_double () < 0.15)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_assume)
     return;
   int count;
   if (random.generate_bool ())
@@ -3571,7 +4749,7 @@ void Trace::generate_assume (Random &random, int vars) {
 }
 
 void Trace::generate_values (Random &random, int vars) {
-  if (random.generate_double () < 0.1)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_values)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -3589,7 +4767,7 @@ void Trace::generate_values (Random &random, int vars) {
 }
 
 void Trace::generate_flipped (Random &random, int vars) {
-  if (random.generate_double () < 0.5)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_flipped)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -3612,7 +4790,7 @@ void Trace::generate_flipped (Random &random, int vars) {
 }
 
 void Trace::generate_failed (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_failed)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -3629,13 +4807,13 @@ void Trace::generate_failed (Random &random, int vars) {
 }
 
 void Trace::generate_conclude (Random &random) {
-  if (random.generate_double () < 0.95)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_conclude)
     return;
   push_back (new ConcludeCall ());
 }
 
 void Trace::generate_frozen (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_frozen)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -3652,7 +4830,7 @@ void Trace::generate_frozen (Random &random, int vars) {
 }
 
 void Trace::generate_phase (Random &random, int vars) {
-  if (random.generate_double () < 0.05)
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_phase)
     return;
   double fraction = random.generate_double ();
   for (int idx = 1; idx <= vars; idx++) {
@@ -3677,7 +4855,7 @@ void Trace::generate_phase (Random &random, int vars) {
 }
 
 void Trace::generate_melt (Random &random) {
-  if (random.generate_bool ())
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_melt)
     return;
   int m = vars ();
   int64_t *frozen = new int64_t[m + 1];
@@ -3711,7 +4889,7 @@ void Trace::generate_melt (Random &random) {
 }
 
 void Trace::generate_freeze (Random &random, int vars) {
-  if (random.generate_bool ())
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_freeze)
     return;
   double fraction = random.generate_double () * 0.5;
   for (int idx = 1; idx <= vars; idx++) {
@@ -3735,8 +4913,8 @@ void Trace::generate_process (Random &random) {
     push_back (new CubingCall (depth));
   } else if (fraction > 0.9) {
     push_back (new LookaheadCall ());
-  } else if (fraction > 0.85) {
-    push_back (new PropagateCall ());
+  } else if (fraction > 0.8) {
+    push_back (new PropagateAssumptionsCall ());
   } else {
     const int rounds = random.pick_int (0, 10);
     push_back (new SimplifyCall (rounds));
@@ -3758,6 +4936,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int leakallocall = random.pick_int (0, 2);
   int terminatecall = random.pick_int (0, 2);
   int terminatecallsize = random.pick_log (1e1, 1e4);
+
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && (mallocall == 0))
     push_back (new MaxAllocCall (mallocallsize));
@@ -3776,6 +4955,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
   (void) terminatecallsize;
 #endif
 
+  /* -------  generate INIT ------------ */
   push_back (new InitCall ());
 
   Size size;
@@ -3796,6 +4976,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     }
   }
 
+  /* -------  generate CONFIG ------------ */
   generate_options (random, size);
 
   if (mobical.add_plain_after_options)
@@ -3862,15 +5043,20 @@ void Trace::generate (uint64_t i, uint64_t s) {
     minvars = random.pick_int (1, maxvars + 1);
     maxvars = minvars + range;
 
+    /* -------  generate ADD ------------ */
+
     for (int j = 0; j < clauses; j++)
       generate_queries (random), generate_resize (random, maxvars),
           generate_declare_more_variables (random),
           generate_declare_one_more_variable (random),
-          generate_implied (random), generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
+    /* -------  generate PROPAGATOR ------------ */
     generate_propagator (random, minvars, maxvars);
+    generate_lemmas (random);
+    generate_forces (random, minvars, maxvars);
 
+    /* -------  generate BEFORE ------------ */
     generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);
     generate_melt (random);
@@ -3878,18 +5064,21 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_limits (random);
     generate_phase (random, maxvars);
 
+    /* -------  generate PROCESS ------------ */
     generate_process (random);
-    generate_lemmas (random);
-    generate_forces (random, minvars, maxvars);
 
+    /* -------  generate AFTER ------------ */
     generate_values (random, maxvars);
+    generate_implied (random);
     if (!in_connection)
       generate_flipped (random, maxvars);
+
     generate_failed (random, maxvars);
     generate_conclude (random);
     generate_frozen (random, maxvars);
   }
 
+  /* -------  generate RESET ------------ */
   push_back (new ResetCall ());
 }
 
@@ -3992,7 +5181,10 @@ void Mobical::print_statistics () {
   if (!quiet)
     hline ();
 
-  if (!mobical.donot.summary && mobical.shared) {
+  const bool summary =
+      mobical.shared &&
+      (mobical.summary == 1 || (mobical.summary == -1 && !Trace::failed));
+  if (summary) {
     section ("summary");
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
@@ -4136,7 +5328,6 @@ void Trace::child_signal_handler (int sig) {
     raise (SIGTSTP);
   }
 #endif
-
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
@@ -4156,6 +5347,7 @@ void Trace::child_signal_handler (int sig) {
     }
   }
   reset_child_signal_handlers ();
+  Signal::reset ();
   raise (sig);
 }
 
@@ -4360,13 +5552,18 @@ int Trace::fork_and_execute () {
     setrlimit64 (RLIMIT_CORE, &limit);
 #endif
 #endif
-
-    int status, other = wait (&status);
+    int status;
+    pid_t other = waitpid (child, &status, WUNTRACED);
     if (other != child)
       res = 0;
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
-    else if (!WIFSIGNALED (status))
+    else if (WIFSTOPPED (status) && WSTOPSIG (status) == SIGTSTP) {
+      kill (child, SIGKILL);       // fork is just suspended. Now kill it,
+      waitpid (child, nullptr, 0); // and reap it
+      // Termination caused signal.
+      res = 5;
+    } else if (!WIFSIGNALED (status))
       res = 0;
     else if (WTERMSIG (status) == SIGABRT)
       res = 1;
@@ -4377,8 +5574,6 @@ int Trace::fork_and_execute () {
       res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
       res = 4; // Leaked allocation caused signal.
-    else if (WTERMSIG (status) == SIGTSTP)
-      res = 5; // Termination caused signal.
     else
       res = 6;
 
@@ -4418,6 +5613,8 @@ int Trace::fork_and_execute () {
     if (mobical.donot.fork) {
       delete mobical.mock_pointer;
       mobical.mock_pointer = nullptr;
+      delete mobical.replay_pointer;
+      mobical.replay_pointer = nullptr;
     }
     reset_child_signal_handlers ();
 
@@ -4466,7 +5663,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           continue;
         Segment &s = segments[i];
         for (size_t j = s.lo; j < s.hi; j++)
-          if (!connecting_type (calls[j]->type))
+          if (!calls[j]->matching_type ())
             ignore[j] = true;
       }
       Trace tmp;
@@ -4487,7 +5684,12 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           tmp_notify = &tmp2;
         }
       }
+      // The attempt should be finished and in a valid state.
+      if (Signal::interrupted ())
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -4500,7 +5702,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         continue;
       Segment &s = segments[i];
       for (size_t j = s.lo; j < s.hi; j++)
-        if (!connecting_type (calls[j]->type))
+        if (!calls[j]->matching_type ())
           ignore[j] = true;
     }
     size_t j = 0;
@@ -4610,27 +5812,28 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('p');
   size_t l;
-  for (l = 1; l < size () && config_type (calls[l]->type); l++)
+  for (l = 1; l < size () && calls[l]->config_type (); l++)
     ;
   Segments segments;
   size_t r;
   for (; l < size (); l = r) {
-    for (r = l; r < size () && before_type (calls[r]->type); r++)
+    for (r = l; r < size () && calls[r]->before_type (); r++)
       ;
-    if (r < size () && process_type (calls[r]->type))
+    if (r < size () && calls[r]->process_type ())
       r++;
-    for (; r < size () && during_type (calls[r]->type); r++)
+    for (; r < size () && calls[r]->during_type (); r++)
       ;
-    for (; r < size () && after_type (calls[r]->type); r++)
+    for (; r < size () && calls[r]->after_type (); r++)
       ;
     if (l < r)
       segments.push_back (Segment (l, r));
     else {
       assert (l == r);
-      if (!config_type (calls[r]->type) &&
-          !connecting_type (calls[r]->type)) {
+      if (!calls[r]->config_type () && !calls[r]->matching_type ()) {
         segments.push_back (Segment (r, r + 1));
       }
       ++r;
@@ -4644,30 +5847,13 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('c');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
     Call *c = calls[l = r - 1];
-    while (l > 0 && (c->type != Call::ADD || c->arg))
-      c = calls[--l];
-    if (!l)
-      break;
-    r = l + 1;
-    while ((c = calls[--l])->type == Call::ADD && c->arg)
-      ;
-    segments.push_back (Segment (++l, r));
-  }
-  return shrink_segments (segments, expected);
-}
-
-bool Trace::shrink_lemmas (int expected) {
-  if (mobical.donot.shrink.lemmas)
-    return false;
-  notify ('u');
-  Segments segments;
-  for (size_t r = size (), l; r > 1; r = l) {
-    Call *c = calls[l = r - 1];
-    while (l > 0 && (c->type != Call::LEMMA || c->arg))
+    while (l > 0 && (!c->is_clause_type () || c->arg))
       c = calls[--l];
     if (!l)
       break;
@@ -4680,76 +5866,21 @@ bool Trace::shrink_lemmas (int expected) {
   return shrink_segments (segments, expected);
 }
 
-static bool is_lit_type (Call *c) {
-  switch ((uint64_t) c->type) {
-  case Call::ADD:
-  case Call::CONSTRAIN:
-  case Call::LEMMA:
-    return true;
-  default:
-    return false;
-  }
-}
-
 // The third level tries to remove individual literals.
 //
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('l');
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (is_lit_type (c) && c->arg)
+    if (c->is_clause_type () && c->arg)
       segments.push_back (Segment (l, l + 1));
   }
   return shrink_segments (segments, expected);
-}
-
-static bool is_basic (Call *c) {
-  switch ((uint64_t) c->type) {
-  case Call::ASSUME:
-  case Call::SOLVE:
-  case Call::SIMPLIFY:
-  case Call::LOOKAHEAD:
-  case Call::CUBING:
-  case Call::PROPAGATE:
-  case Call::VARS:
-  case Call::ACTIVE:
-  case Call::REDUNDANT:
-  case Call::IRREDUNDANT:
-  case Call::RESIZE:
-  case Call::RESERVE:
-  case Call::VAL:
-  case Call::FLIP:
-  case Call::FLIPPABLE:
-  case Call::FIXED:
-  case Call::FAILED:
-  case Call::FROZEN:
-  case Call::CONCLUDE:
-  case Call::FREEZE:
-  case Call::MELT:
-  case Call::PHASE:
-  case Call::UNPHASE:
-  case Call::LIMIT:
-  case Call::OPTIMIZE:
-  case Call::OBSERVE:
-  case Call::UNOBSERVE:
-  case Call::RESET_OBSERVED:
-  case Call::DECIDE:
-  case Call::FORCE:
-  case Call::RESET_ASSUMPTIONS:
-#ifdef MOBICAL_TERMINATE
-  case Call::TERMINATE:
-#endif
-#ifdef MOBICAL_MEMORY
-  case Call::LEAKALLOC:
-  case Call::MAXALLOC:
-#endif
-    return true;
-  default:
-    return false;
-  }
 }
 
 // first remove all propagator_type calls.
@@ -4760,16 +5891,22 @@ static bool is_basic (Call *c) {
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('e');
   Trace simplified;
   size_t connected = 0;
   size_t disconnected = 0;
   for (auto c : calls) {
-    if (c->type == Call::CONNECT)
+    if (c->type == Call::CONNECT) {
       connected++;
-    if (c->type == Call::DISCONNECT)
+      continue;
+    }
+    if (c->type == Call::DISCONNECT) {
       disconnected++;
-    if (propagator_type (c->type))
+      continue;
+    }
+    if (c->propagator_type ())
       continue;
     simplified.push_back (c->copy ());
   }
@@ -4815,7 +5952,10 @@ bool Trace::shrink_propagator (int expected) {
       simplified.clear ();
       reduced = true;
       progress ();
-    }
+    } else
+      simplified.clear ();
+    if (Signal::interrupted ())
+      break;
   }
   while (connected--) {
     bool remove_next_disconnect = false;
@@ -4829,11 +5969,12 @@ bool Trace::shrink_propagator (int expected) {
         remove_next_disconnect = false;
         continue;
       }
-      if (propagator_type (c->type) && remove_next_disconnect) {
+      if (c->propagator_type () && remove_next_disconnect) {
         continue;
       }
       simplified.push_back (c->copy ());
     }
+    assert (num_connect > connected);
     assert (simplified.calls.size () < calls.size ());
     if (simplified.fork_and_execute () == expected) {
       clear ();
@@ -4842,7 +5983,10 @@ bool Trace::shrink_propagator (int expected) {
       reduced = true;
       simplified.clear ();
       progress ();
-    }
+    } else
+      simplified.clear ();
+    if (Signal::interrupted ())
+      break;
   }
   notify ();
   return reduced;
@@ -4851,11 +5995,13 @@ bool Trace::shrink_propagator (int expected) {
 bool Trace::shrink_basic (int expected) {
   if (mobical.donot.shrink.basic)
     return false;
+  if (Signal::interrupted ())
+    return false;
   notify ('b');
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (!is_basic (c))
+    if (!c->is_basic ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -4913,8 +6059,9 @@ void Trace::add_options (int expected) {
 // disable as many boolean options.
 
 bool Trace::shrink_disable (int expected) {
-
   if (mobical.donot.disable)
+    return false;
+  if (Signal::interrupted ())
     return false;
   const int max_var = vars ();
 
@@ -4969,7 +6116,11 @@ bool Trace::shrink_disable (int expected) {
           c->val = saved[j];
         }
       }
+      if (Signal::interrupted ())
+        break;
     }
+    if (Signal::interrupted ())
+      break;
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
@@ -4984,13 +6135,18 @@ bool Trace::reduce_values (int expected) {
 
   if (mobical.donot.reduce)
     return false;
-
+  if (Signal::interrupted ())
+    return false;
   notify ('r');
 
   assert (size ());
 
   bool changed = false, res = false;
   do {
+    if (Signal::interrupted ()) {
+      res = false; // Otherwise we do another round
+      break;
+    }
     if (changed)
       res = true;
     changed = false;
@@ -5044,12 +6200,19 @@ bool Trace::reduce_values (int expected) {
       int old_val = c->val;
       c->val = lo;
       progress ();
-      if (fork_and_execute () == expected) {
+
+      bool success = fork_and_execute () == expected;
+      if (success) {
         assert (c->val != old_val);
         changed = true;
+      } else
+        c->val = old_val;
+
+      if (Signal::interrupted ())
+        break;
+
+      if (success)
         continue;
-      }
-      c->val = old_val;
 
       // Then try to limit to the high value if current value too large.
       //
@@ -5057,13 +6220,17 @@ bool Trace::reduce_values (int expected) {
         int old_val = c->val;
         c->val = hi;
         progress ();
-        if (fork_and_execute () == expected) {
+        success = fork_and_execute () == expected;
+        if (success) {
           assert (c->val != old_val);
           changed = true;
         } else {
           c->val = old_val;
-          continue;
         }
+        if (Signal::interrupted ())
+          break;
+        if (!success)
+          continue;
       }
 
       // Now we do a delta-debugging inspired binary search for the
@@ -5086,6 +6253,8 @@ bool Trace::reduce_values (int expected) {
           changed = true;
         } else
           c->val = old_val;
+        if (Signal::interrupted ())
+          break;
       }
     }
   } while (changed);
@@ -5095,19 +6264,19 @@ bool Trace::reduce_values (int expected) {
   return res;
 }
 
-static bool has_lit_arg_type (Call *c) { return c->type & Call::LITTYPE; }
-
 // Try to map variables to a contiguous initial range.
 
 void Trace::map_variables (int expected) {
   if (mobical.donot.map)
+    return;
+  if (Signal::interrupted ())
     return;
   for (int with_gaps = 0; with_gaps <= 1; with_gaps++) {
     notify ('m');
     vector<int> variables;
     for (size_t i = 0; i < size (); i++) {
       Call *c = calls[i];
-      if (!has_lit_arg_type (c))
+      if (!c->lit_type ())
         continue;
       if (!c->arg)
         continue;
@@ -5137,7 +6306,7 @@ void Trace::map_variables (int expected) {
     Trace mapped;
     for (size_t i = 0; i < size (); i++) {
       Call *c = calls[i];
-      if (!has_lit_arg_type (c))
+      if (!c->lit_type ())
         mapped.push_back (c->copy ());
       else if (!c->arg || c->arg == INT_MIN)
         mapped.push_back (c->copy ());
@@ -5160,16 +6329,18 @@ void Trace::map_variables (int expected) {
       with_gaps = 2;
     }
     notify ();
+    if (Signal::interrupted ())
+      break;
   }
 }
 
 // Finally remove option calls.
 
 void Trace::shrink_options (int expected) {
-
   if (mobical.donot.shrink.options)
     return;
-
+  if (Signal::interrupted ())
+    return;
   notify ('o');
   Segments segments;
   for (size_t i = 0; i < size (); i++) {
@@ -5183,13 +6354,10 @@ void Trace::shrink_options (int expected) {
 }
 
 void Trace::shrink (int expected) {
-
   enum Shrinking {
     NONE = 0,
     PHASES,
     CLAUSES,
-    LEMMAS,
-    UPHASES, // How many times the propagator answers
     LITERALS,
     PROPAGATOR,
     BASIC,
@@ -5213,8 +6381,6 @@ void Trace::shrink (int expected) {
       s = true, l = PROPAGATOR;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != LEMMAS && shrink_lemmas (expected))
-      s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
       s = true, l = LITERALS;
     if (l != BASIC && shrink_basic (expected))
@@ -5228,7 +6394,8 @@ void Trace::shrink (int expected) {
   shrink_options (expected);
   // Execute one last time to get accurate results when memory fuzzing
   // is enabled.
-  fork_and_execute ();
+  if (!Signal::interrupted ())
+    fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
 }
@@ -5505,6 +6672,26 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
+    } else if (!strcmp (keyword, "observed")) {
+      if (!first)
+        error ("argument to 'observed' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'observed'", first);
+      if (enforce && (!lit || lit == INT_MIN))
+        error ("invalid argument '%s' to 'observed'", first);
+      if (second)
+        error ("additional argument '%s' to 'observed'", second);
+      c = new ObservedCall (lit);
+    } else if (!strcmp (keyword, "is_witness")) {
+      if (!first)
+        error ("argument to 'is_witness' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'is_witness'", first);
+      if (enforce && (!lit || lit == INT_MIN))
+        error ("invalid argument '%s' to 'is_witness'", first);
+      if (second)
+        error ("additional argument '%s' to 'is_witness'", second);
+      c = new IsWitnessCall (lit);
     } else if (!strcmp (keyword, "observe")) {
       if (!first)
         error ("argument to 'observe' missing");
@@ -5551,8 +6738,10 @@ void Reader::parse () {
         if (!parse_int_str (third, val))
           error ("invalid argument '%s' to 'lemma'", third);
       }
-      third_argument = true;
+      if (mobical.donot.mock_propagator)
+        error ("cannot execute 'lemma' with '--do-not-mock-propagator'");
       c = new LemmaCall (lit, tmpt, val);
+      third_argument = true;
     } else if (!strcmp (keyword, "force")) {
       if (!first)
         error ("argument to 'force' missing");
@@ -5575,6 +6764,8 @@ void Reader::parse () {
         error ("third argument to 'force %d %s' missing", lit, second);
       if (!parse_int_str (third, val))
         error ("invalid argument '%s' to 'force %d %d'", third, lit, tmp);
+      if (mobical.donot.mock_propagator)
+        error ("cannot execute 'force' with '--do-not-mock-propagator'");
       c = new MockForceCall (lit, tmpt, val);
       third_argument = true;
     } else if (!strcmp (keyword, "decide")) {
@@ -5588,7 +6779,191 @@ void Reader::parse () {
         error ("second argument to 'decide %d' missing", lit);
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'decide'", second);
+      if (mobical.donot.mock_propagator)
+        error ("cannot execute 'force' with '--do-not-mock-propagator'");
       c = new DecideCall (lit, val);
+    } else if (!strcmp (keyword, "notify_assignment")) {
+      if (!first)
+        error ("argument to 'notify_assignment' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'notify_assignment'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'notify_assignment'",
+               lit);
+      if (second)
+        error ("additional argument '%s' to 'notify_assignment %d'", second,
+               lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'notify_assignment' without "
+               "'--do-not-mock-propagator'");
+      c = new NotifyAssignmentCall (lit);
+    } else if (!strcmp (keyword, "notify_assignment_batch")) {
+      if (!first)
+        error ("argument to 'notify_assignment_batch' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid argument '%s' to 'notify_assignment_batch'", first);
+      if (enforce && val <= 0)
+        error (
+            "invalid value '%d' as argument to 'notify_assignment_batch'",
+            val);
+      if (second)
+        error ("additional argument '%s' to 'notify_assignment_batch %d'",
+               second, val);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'notify_assignment_batch' without "
+               "'--do-not-mock-propagator'");
+      c = new NotifyBatchAssignmentCall (val);
+    } else if (!strcmp (keyword, "notify_backtrack")) {
+      if (!first)
+        error ("argument to 'notify_backtrack' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid argument '%s' to 'notify_backtrack'", first);
+      if (enforce && val < 0)
+        error ("invalid level '%d' as argument to 'notify_backtrack'", val);
+      if (second)
+        error ("additional argument '%s' to 'notify_backtrack %d'", second,
+               val);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'notify_backtrack' without "
+               "'--do-not-mock-propagator'");
+
+      c = new NotifyBacktrackCall (val);
+    } else if (!strcmp (keyword, "notify_new_decision_level")) {
+      if (!first)
+        error ("argument to 'notify_new_decision_level' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid argument '%s' to 'notify_new_decision_level'",
+               first);
+      if (enforce && val < 0)
+        error (
+            "invalid level '%d' as argument to 'notify_new_decision_level'",
+            val);
+      if (second)
+        error ("additional argument '%s' to 'notify_new_decision_level %d'",
+               second, val);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'notify_new_decision_level' without "
+               "'--do-not-mock-propagator'");
+      c = new NotifyLevelCall (val);
+    } else if (!strcmp (keyword, "cb_propagate")) {
+      if (!first)
+        error ("argument to 'cb_propagate' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_propagate'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+      if (second)
+        error ("additional argument '%s' to 'cb_propagate %d'", second,
+               lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_propagate' without "
+               "'--do-not-mock-propagator'");
+
+      c = new CBPropagateCall (lit);
+    } else if (!strcmp (keyword, "cb_decide")) {
+      if (!first)
+        error ("argument to 'cb_decide' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_decide'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'cb_decide'", lit);
+      if (second)
+        error ("additional argument '%s' to 'cb_decide %d'", second, lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_decide' without "
+               "'--do-not-mock-propagator'");
+
+      c = new CBDecideCall (lit);
+    } else if (!strcmp (keyword, "is_decision")) {
+      if (!first)
+        error ("argument to 'is_decision' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'is_decision'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'is_decision'", lit);
+      if (second)
+        error ("additional argument '%s' to 'is_decision %d'", second, lit);
+      c = new IsDecisionCall (lit);
+    } else if (!strcmp (keyword, "cb_add_reason_clause_lit")) {
+      if (!first)
+        error ("argument to 'cb_add_reason_clause_lit' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_add_reason_clause_lit'",
+               first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to "
+               "'cb_add_reason_clause_lit'",
+               lit);
+      if (!second)
+        error ("second argument to 'cb_add_reason_clause_lit %d' missing",
+               lit);
+      if (!parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'cb_add_reason_clause_lit'",
+               second);
+      if (enforce && val == INT_MIN)
+        error ("invalid literal '%d' as argument to "
+               "'cb_add_reason_clause_lit %d'",
+               val, lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_add_reason_clause_lit' without "
+               "'--do-not-mock-propagator'");
+      c = new CBAddReasonCall (lit, val);
+    } else if (!strcmp (keyword, "cb_add_external_clause_lit")) {
+      if (!first)
+        error ("argument to 'cb_add_external_clause_lit' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_add_external_clause_lit'",
+               first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to "
+               "'cb_add_external_clause_lit'",
+               lit);
+      if (second)
+        error (
+            "additional argument '%s' to 'cb_add_external_clause_lit %d'",
+            second, lit);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_add_external_clause_lit' without "
+               "'--do-not-mock-propagator'");
+      c = new CBAddClauseCall (lit);
+    } else if (!strcmp (keyword, "cb_has_external_clause")) {
+      if (!first)
+        error ("argument to 'cb_has_external_clause' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cb_has_external_clause'", first);
+      if (enforce && lit != 0 && lit != 1)
+        error ("invalid literal '%d' as argument to "
+               "'cb_has_external_clause'",
+               lit);
+      if (!second)
+        error ("second argument to 'cb_has_external_clause' missing");
+      if (!parse_int_str (second, val))
+        error ("invalid argument '%s' to 'cb_has_external_clause'", second);
+      if (enforce && val != 0 && val != 1)
+        error ("invalid literal '%d' as argument to "
+               "'cb_has_external_clause'",
+               val);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_has_external_clause' without "
+               "'--do-not-mock-propagator'");
+      c = new CBHasClauseCall (lit, val);
+    } else if (!strcmp (keyword, "cb_check_found_model")) {
+      if (!first)
+        error ("argument to 'cb_check_found_model' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid argument '%s' to 'cb_check_found_model'", first);
+      if (enforce && val != 0 && val != 1)
+        error ("invalid literal '%d' as argument to "
+               "'cb_check_found_model'",
+               val);
+      if (second)
+        error ("additional argument '%s' to 'cb_check_found_model %d'",
+               second, val);
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'cb_check_found_model' without "
+               "'--do-not-mock-propagator'");
+
+      c = new CBCheckModelCall (val);
     } else if (!strcmp (keyword, "assume")) {
       if (!first)
         error ("argument to 'assume' missing");
@@ -5641,16 +7016,6 @@ void Reader::parse () {
       assert (!second);
       c = new CubingCall (lit);
       solved++;
-    } else if (!strcmp (keyword, "propagate")) {
-      if (first && !parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'solve'", first);
-      if (first && lit != 0 && lit != 10 && lit != 20)
-        error ("invalid result argument '%d' to 'solve'", lit);
-      assert (!second);
-      if (first)
-        c = new PropagateCall (lit);
-      else
-        c = new PropagateCall ();
     } else if (!strcmp (keyword, "val")) {
       if (!first)
         error ("first argument to 'val' missing");
@@ -5817,9 +7182,17 @@ void Reader::parse () {
       c = new TerminateCall (val);
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
-      if (first)
+      if (!first)
+        lit = 0;
+      if (first && !parse_int_str (first, lit))
+        error ("invalid first argument '%s' to 'propagate_assumptions'",
+               first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'propagate_assumptions",
+               lit);
+      if (second)
         error ("additional argument to 'propagate_assumptions'");
-      c = new PropagateAssumptionsCall ();
+      c = new PropagateAssumptionsCall (lit);
     } else if (!strcmp (keyword, "implied")) {
       if (first)
         error ("additional argument to 'implied'");
@@ -5859,8 +7232,15 @@ void Reader::parse () {
       if (state == Call::RESET)
         error ("'%s' after 'reset'", c->keyword ());
 
+      /*
+      if (state != Call::DURING && c->during_type ())
+        error ("'%s' without 'solve' (or similar)", c->keyword ());
+        */
+
       if (adding && c->type != adding && c->type != Call::RESET &&
-          ((adding == Call::ADD && c->type != Call::RESIZE) ||
+          ((adding == Call::ADD && c->type != Call::RESIZE &&
+            c->type != Call::VARS && c->type != Call::DECLARE_VARS &&
+            c->type != Call::DECLARE) ||
            (adding == Call::CONSTRAIN && c->type != Call::FIXED)))
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
@@ -5900,7 +7280,6 @@ void Reader::parse () {
       case Call::DECIDE:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
-        new_state = Call::DURING;
         break;
 
       case Call::OBSERVE:
@@ -5950,6 +7329,8 @@ void Reader::parse () {
       case Call::LOOKAHEAD:
       case Call::CUBING:
       case Call::PROPAGATE:
+        new_state = Call::DURING;
+        break;
       case Call::RESET:
         new_state = c->type;
         break;
@@ -5968,20 +7349,22 @@ void Reader::parse () {
       trace.push_back (new SetCall ("log", 1));
 #endif
 
-    if (c && mobical.add_dump_before_solve && process_type (c->type))
+    if (c && mobical.add_dump_before_solve && c->process_type ())
       trace.push_back (new DumpCall ());
 
     trace.push_back (c);
 
-    if (c && mobical.add_stats_after_solve && process_type (c->type))
+    if (c && mobical.add_stats_after_solve && c->process_type ())
       trace.push_back (new StatsCall ());
 
     lineno++;
   }
   if (adding) {
-    assert (prev);
-    error ("EOF after '%s %d' without '%s 0'", prev->keyword (), prev->arg,
-           prev->keyword ());
+    if (enforce) {
+      assert (prev);
+      error ("EOF after '%s %d' without '%s 0'", prev->keyword (),
+             prev->arg, prev->keyword ());
+    }
   }
 }
 
@@ -6049,23 +7432,24 @@ Mobical::Mobical () {
 Mobical::~Mobical () {
   if (shared)
     munmap (shared, sizeof *shared);
-  if (mock_pointer)
-    delete mock_pointer;
+  delete mock_pointer;
+  delete replay_pointer;
 }
 
-void Mobical::catch_signal (int) {
-  if ((terminal && (mode & RANDOM)) || shrinking || running)
-    cerr << endl;
-  terminal.reset ();
-  if (Trace::executed && !Trace::failed && !Trace::ok)
-    assert (mode & (INPUT | SEED)), Trace::failed = 1;
-  print_statistics ();
+void Mobical::catch_signal (int sig) {
+  Signal::set_received (sig);
+
+  if (!(mode & RANDOM) && !shrinking) {
+    if (Trace::executed && !Trace::failed && !Trace::ok)
+      assert (mode & (INPUT | SEED)), Trace::failed = 1;
+    Signal::reset ();
+    ::raise (sig);
+  }
 }
 
 /*------------------------------------------------------------------------*/
 
 int Mobical::main (int argc, char **argv) {
-
   // First parse command line options and determine mode.
   //
   const char *seed_str = 0;
@@ -6074,8 +7458,7 @@ int Mobical::main (int argc, char **argv) {
 
   int64_t limit = -1;
   int64_t bug_limit = -1;
-
-  int summary = -1;
+  bool tracing = 0;
 
   // Error message in 'die' also uses colors.
   //
@@ -6089,6 +7472,9 @@ int Mobical::main (int argc, char **argv) {
 
   for (int i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) {
+      printf (USAGE, DEFAULT_TIME_LIMIT, DEFAULT_SPACE_LIMIT);
+      exit (0);
+    } else if (!strcmp (argv[i], "--help")) {
       printf (USAGE, DEFAULT_TIME_LIMIT, DEFAULT_SPACE_LIMIT);
       exit (0);
     } else if (!strcmp (argv[i], "--version"))
@@ -6120,8 +7506,24 @@ int Mobical::main (int argc, char **argv) {
       summary = 0;
     else if (!strcmp (argv[i], "--summary"))
       summary = 1;
-    else if (!strcmp (argv[i], "--do-not-shrink") ||
-             !strcmp (argv[i], "--do-not-shrink-at-all"))
+    else if (!strcmp (argv[i], "--replay")) {
+      donot.enforce = true;
+      donot.extend_map = true;
+      donot.mock_propagator = true;
+      donot.shrink.atall = true;
+    } else if (!strcmp (argv[i], "--trace")) {
+#ifdef NTRACING
+      die ("compile without 'NTRACING'");
+#endif
+      tracing = 1;
+      donot.shrink.atall = true;
+    } else if (!strcmp (argv[i], "--do-not-extend-map"))
+      donot.extend_map = true;
+    else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
+      donot.shrink.atall = true;
+      donot.mock_propagator = true;
+    } else if (!strcmp (argv[i], "--do-not-shrink") ||
+               !strcmp (argv[i], "--do-not-shrink-at-all"))
       donot.shrink.atall = true;
     else if (!strcmp (argv[i], "--do-not-add-options") ||
              !strcmp (argv[i], "--do-not-add-options-before-shrinking"))
@@ -6166,6 +7568,409 @@ int Mobical::main (int argc, char **argv) {
       add_stats_after_solve = true;
     } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
       add_plain_after_options = true;
+    } else if (!strncmp (argv[i], "--always", 8)) {
+      if (!strcmp (argv[i] + 8, "-generate-options"))
+        tracegen.generate_options = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-resize"))
+        tracegen.generate_resize = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-declare-one-more-variable"))
+        tracegen.generate_declare_one_more_variable = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-declare-more-variables"))
+        tracegen.generate_declare_more_variables = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-constraint"))
+        tracegen.generate_constraint = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-assume"))
+        tracegen.generate_assume = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-values"))
+        tracegen.generate_values = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-flipped"))
+        tracegen.generate_flipped = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-frozen"))
+        tracegen.generate_frozen = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-failed"))
+        tracegen.generate_failed = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-phase"))
+        tracegen.generate_phase = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-conclude"))
+        tracegen.generate_conclude = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-freeze"))
+        tracegen.generate_freeze = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-melt"))
+        tracegen.generate_melt = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-propagator"))
+        tracegen.generate_propagator = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-forces"))
+        tracegen.generate_forces = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-implied"))
+        tracegen.generate_implied = 1000;
+      else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
+    } else if (!strncmp (argv[i], "--never", 7)) {
+      if (!strcmp (argv[i] + 7, "-generate-options"))
+        tracegen.generate_options = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-resize"))
+        tracegen.generate_resize = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-declare-one-more-variable"))
+        tracegen.generate_declare_one_more_variable = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-declare-more-variables"))
+        tracegen.generate_declare_more_variables = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-constraint"))
+        tracegen.generate_constraint = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-assume"))
+        tracegen.generate_assume = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-values"))
+        tracegen.generate_values = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-flipped"))
+        tracegen.generate_flipped = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-frozen"))
+        tracegen.generate_frozen = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-failed"))
+        tracegen.generate_failed = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-phase"))
+        tracegen.generate_phase = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-conclude"))
+        tracegen.generate_conclude = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-freeze"))
+        tracegen.generate_freeze = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-melt"))
+        tracegen.generate_melt = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-propagator"))
+        tracegen.generate_propagator = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-forces"))
+        tracegen.generate_forces = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-implied"))
+        tracegen.generate_implied = 0;
+      else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
+    } else if (!strncmp (argv[i], "--generate", 10)) {
+      int gen_val = 0;
+      if (!strncmp (argv[i], "--generate-options", 18)) {
+        if (!strcmp (argv[i], "--generate-options")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-options");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-options");
+        tracegen.generate_options = gen_val;
+      } else if (!strncmp (argv[i], "--generate-resize", 17)) {
+        if (!strcmp (argv[i], "--generate-resize")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-resize");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-resize");
+        tracegen.generate_resize = gen_val;
+      } else if (!strncmp (argv[i], "--generate-declare-one-more-variable",
+                           36)) {
+        if (!strcmp (argv[i], "--generate-declare-one-more-variable")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 36))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 36,
+                 "--generate-declare-one-more-variable");
+          gen_val = atol (argv[i] + 36);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-declare-one-more-variable");
+        tracegen.generate_declare_one_more_variable = gen_val;
+      } else if (!strncmp (argv[i], "--generate-declare-more-variables",
+                           33)) {
+        if (!strcmp (argv[i], "--generate-declare-more-variables")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 33))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 33,
+                 "--generate-declare-more-variables");
+          gen_val = atol (argv[i] + 33);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-declare-more-variables");
+        tracegen.generate_declare_more_variables = gen_val;
+      } else if (!strncmp (argv[i], "--generate-constraint", 21)) {
+        if (!strcmp (argv[i], "--generate-constraint")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 21))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 21,
+                 "--generate-constraint");
+          gen_val = atol (argv[i] + 21);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-constraint");
+        tracegen.generate_constraint = gen_val;
+      } else if (!strncmp (argv[i], "--generate-assume", 17)) {
+        if (!strcmp (argv[i], "--generate-assume")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-assume");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-assume");
+        tracegen.generate_assume = gen_val;
+      } else if (!strncmp (argv[i], "--generate-values", 17)) {
+        if (!strcmp (argv[i], "--generate-values")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-values");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-values");
+        tracegen.generate_values = gen_val;
+      } else if (!strncmp (argv[i], "--generate-flipped", 18)) {
+        if (!strcmp (argv[i], "--generate-flipped")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-flipped");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-flipped");
+        tracegen.generate_flipped = gen_val;
+      } else if (!strncmp (argv[i], "--generate-frozen", 17)) {
+        if (!strcmp (argv[i], "--generate-frozen")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-frozen");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-frozen");
+        tracegen.generate_frozen = gen_val;
+      } else if (!strncmp (argv[i], "--generate-failed", 17)) {
+        if (!strcmp (argv[i], "--generate-failed")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-failed");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-failed");
+        tracegen.generate_failed = gen_val;
+      } else if (!strncmp (argv[i], "--generate-phase", 16)) {
+        if (!strcmp (argv[i], "--generate-phase")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 16))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 16,
+                 "--generate-phase");
+          gen_val = atol (argv[i] + 16);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-phase");
+        tracegen.generate_phase = gen_val;
+      } else if (!strncmp (argv[i], "--generate-conclude", 19)) {
+        if (!strcmp (argv[i], "--generate-conclude")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 19))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 19,
+                 "--generate-conclude");
+          gen_val = atol (argv[i] + 19);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-conclude");
+        tracegen.generate_conclude = gen_val;
+      } else if (!strncmp (argv[i], "--generate-freeze", 17)) {
+        if (!strcmp (argv[i], "--generate-freeze")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-freeze");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-freeze");
+        tracegen.generate_freeze = gen_val;
+      } else if (!strncmp (argv[i], "--generate-melt", 15)) {
+        if (!strcmp (argv[i], "--generate-melt")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 15))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 15,
+                 "--generate-melt");
+          gen_val = atol (argv[i] + 15);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-melt");
+        tracegen.generate_melt = gen_val;
+      } else if (!strncmp (argv[i], "--generate-propagator", 21)) {
+        if (!strcmp (argv[i], "--generate-propagator")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 21))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 21,
+                 "--generate-propagator");
+          gen_val = atol (argv[i] + 21);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-propagator");
+        tracegen.generate_propagator = gen_val;
+      } else if (!strncmp (argv[i], "--generate-forces", 17)) {
+        if (!strcmp (argv[i], "--generate-forces")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 17))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 17,
+                 "--generate-forces");
+          gen_val = atol (argv[i] + 17);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-forces");
+        tracegen.generate_forces = gen_val;
+      } else if (!strncmp (argv[i], "--generate-implied", 18)) {
+        if (!strcmp (argv[i], "--generate-implied")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-implied");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds (expected "
+               "[0-1000])",
+               gen_val, "--generate-implied");
+        tracegen.generate_implied = gen_val;
+      } else
+        die ("invalid argument '%s' (try '-h')", argv[i]);
     } else if (!strcmp (argv[i], "-L")) {
       if (limit >= 0)
         die ("multiple '-L' options (try '-h')");
@@ -6293,8 +8098,20 @@ int Mobical::main (int argc, char **argv) {
   if (output_path && limit >= 0)
     die ("can not combine '-L' and output '%s'", output_path);
 
+  if (input_path && bug_limit >= 0)
+    die ("can not combine '-X' and input '%s'", input_path);
+
+  if (output_path && bug_limit >= 0)
+    die ("can not combine '-X' and output '%s'", output_path);
+
   if (!output_path && donot.execute)
     die ("can not use '--do-no-execute' without '<output>'");
+
+  if (tracing && !output_path)
+    die ("can only use '--tracing' with '<output>'");
+
+  if (tracing && donot.execute)
+    die ("can not combine '--tracing' with '--do-not-execute'");
 
   if (!input_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' without '<input>'");
@@ -6302,6 +8119,12 @@ int Mobical::main (int argc, char **argv) {
   if (output_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' "
          "with both '<input>' and '<output>'");
+
+  if (!input_path && mobical.donot.mock_propagator)
+    die ("can not use '--do-not-mock-propagator' without <input>");
+
+  if (!input_path && mobical.donot.extend_map)
+    die ("can not use '--do-not-extend-map' without <input>");
 
   /*----------------------------------------------------------------------*/
 
@@ -6323,14 +8146,8 @@ int Mobical::main (int argc, char **argv) {
   }
   check_mode_valid ();
 
-  if (summary == 1)
-    donot.summary = false;
-  else if (summary == 0)
-    donot.summary = true;
-  else if (mode & RANDOM)
-    donot.summary = false;
-  else
-    donot.summary = true;
+  if (summary == -1 && !(mode & RANDOM))
+    summary = 0;
 
   /*----------------------------------------------------------------------*/
 
@@ -6456,7 +8273,8 @@ int Mobical::main (int argc, char **argv) {
   if (mode & OUTPUT) {
     assert (output_path);
     prefix ();
-    cerr << "writing " << (donot.shrink.atall ? "original" : "shrunken")
+    cerr << (tracing ? "tracing " : "writing ")
+         << (donot.shrink.atall ? "original" : "shrunken")
          << " trace to output '" << output_path << '\'' << endl;
   }
   cerr << flush;
@@ -6522,7 +8340,16 @@ END_OF_BANNER_AND_OPTIONS:
       cerr << endl << flush;
     }
 
-    if (output_path) {
+    if (tracing) {
+      FILE *output_file = nullptr;
+      output_file = fopen (output_path, "w");
+      if (output_file == NULL)
+        die ("could not open '%s'", output_path);
+      trace.execute (output_file);
+      fclose (output_file);
+      Trace::ok++;
+
+    } else if (output_path) {
 
       if (!donot.execute) {
 
@@ -6574,7 +8401,6 @@ END_OF_BANNER_AND_OPTIONS:
         summarize (trace);
         cerr << endl << flush;
       }
-
     } else {
       trace.execute (); // execute
       Trace::ok++;
@@ -6635,6 +8461,9 @@ END_OF_BANNER_AND_OPTIONS:
 
     for (traces = 1; traces <= limit; traces++) {
       if (Trace::failed >= bug_limit)
+        break;
+
+      if (Signal::interrupted ())
         break;
 
       if (!quiet && !donot.seeds) {
@@ -6730,10 +8559,19 @@ END_OF_BANNER_AND_OPTIONS:
     }
   }
 
+  const int sig = Signal::received ();
+  const bool reraise = Signal::interrupted ();
   Signal::reset ();
+
+  if (reraise)
+    if ((terminal && (mode & RANDOM)) || shrinking || running)
+      cerr << endl;
 
   terminal.reset ();
   print_statistics ();
+
+  if (reraise)
+    raise (sig);
 
   return Trace::failed > 0;
 }

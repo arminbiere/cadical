@@ -326,7 +326,7 @@ inline double WalkerFO::score (unsigned i) {
 /*------------------------------------------------------------------------*/
 
 unsigned WalkerFO::walk_full_occs_pick_clause () {
-  internal->require_mode (internal->WALK);
+  MODE_REQUIRE (WALK);
   assert (!broken.empty ());
   int64_t size = broken.size ();
   if (size > INT_MAX)
@@ -343,10 +343,9 @@ unsigned WalkerFO::walk_full_occs_pick_clause () {
 // is flipped and set to false.  This is called the 'break-count' of 'lit'.
 
 unsigned WalkerFO::walk_full_occs_break_value (int lit) {
-
-  internal->require_mode (internal->WALK);
+  MODE_REQUIRE (WALK);
+  PROFILE_SCOPE (walkbreak);
   assert (internal->val (lit) > 0);
-  START (walkbreak);
 
   const uint64_t old = ticks;
   unsigned res = 0; // The computed break-count of 'lit'.
@@ -360,7 +359,6 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
   }
 
   internal->stats.ticks_walk_break += ticks - old;
-  STOP (walkbreak);
   return res;
 }
 
@@ -378,7 +376,7 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
 // decision level one, while the other variables are assigned at two.
 
 int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
-  START (walkpick);
+  PROFILE_SCOPE (walkpick);
   LOG ("picking literal by break-count");
   assert (scores.empty ());
   const int64_t old = ++ticks;
@@ -427,7 +425,6 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   scores.clear ();
   LOG ("picking literal %d by break-count", res);
   internal->stats.ticks_walk_pick += ticks - old;
-  STOP (walkpick);
   return res;
 }
 
@@ -528,7 +525,7 @@ void WalkerFO::make_clauses_along_unsatisfied (int lit) {
 }
 
 void WalkerFO::make_clauses (int lit) {
-  START (walkflipWL);
+  PROFILE_SCOPE (walkflipWL);
   const int64_t old = ticks;
   // In babywalk this work because there are not counter
   // if (this->occs(lit).size() > broken.size())
@@ -536,11 +533,10 @@ void WalkerFO::make_clauses (int lit) {
   // else
   make_clauses_along_occurrences (lit);
   internal->stats.ticks_walk_flip_wl += ticks - old;
-  STOP (walkflipWL);
 }
 
 void WalkerFO::break_clauses (int lit) {
-  START (walkflipbroken);
+  PROFILE_SCOPE (walkflipbroken);
   const int64_t old = ticks;
   LOG ("breaking clauses on %s", LOGLIT (lit));
   // Finally add all new unsatisfied (broken) clauses.
@@ -570,12 +566,10 @@ void WalkerFO::break_clauses (int lit) {
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
   internal->stats.ticks_walk_flip_broke += ticks - old;
-  STOP (walkflipbroken);
 }
 
 void WalkerFO::walk_full_occs_flip_lit (int lit) {
-
-  internal->require_mode (internal->WALK);
+  MODE_REQUIRE (WALK);
   LOG ("flipping assign %d", lit);
   assert (internal->val (lit) < 0);
   const int64_t old = ticks;
@@ -590,8 +584,10 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
   make_clauses (lit);
   break_clauses (-lit);
 
+#if 0 // disable very expensive check
   if (!broken.empty ())
     check_all ();
+#endif
   internal->stats.ticks_walk_flip += ticks - old;
 }
 
@@ -929,13 +925,13 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 }
 
 void Internal::walk_full_occs () {
-  START_INNER_WALK ();
+  MODE_SCOPE_WALK (WALK);
+  PROFILE_SCOPE_WALK (walk);
 
   backtrack ();
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
     learn_empty_clause ();
-    STOP_INNER_WALK ();
     return;
   }
 
@@ -944,7 +940,6 @@ void Internal::walk_full_occs () {
     res = warmup ();
   if (res) {
     LOG ("stopping walk due to warmup");
-    STOP_INNER_WALK ();
     return;
   }
   const int64_t ticks =
@@ -965,7 +960,6 @@ void Internal::walk_full_occs () {
     limit = 1e3 * opts.walkmaxeff;
   }
   (void) walk_full_occs_round (limit, false);
-  STOP_INNER_WALK ();
 }
 
 } // namespace CaDiCaL

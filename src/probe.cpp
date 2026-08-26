@@ -149,7 +149,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
 // Compute a dominator of two literals in the binary implication tree.
 
 int Internal::probe_dominator (int a, int b) {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   int l = a, k = b;
   Var *u = &var (l), *v = &var (k);
   assert (val (l) > 0), assert (val (k) > 0);
@@ -217,7 +217,7 @@ int Internal::probe_dominator (int a, int b) {
 // clauses anyhow.
 
 inline int Internal::hyper_binary_resolve (Clause *reason) {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   assert (level == 1);
   assert (reason->size () > 2);
   const const_literal_iterator end = reason->end ();
@@ -291,7 +291,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
 // comment on the differences.  More explanations are in 'propagate.cpp'.
 
 inline void Internal::probe_assign (int lit, int parent) {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   int idx = vidx (lit);
   assert (!val (idx));
   assert (!flags (idx).eliminated () || !parent);
@@ -331,7 +331,7 @@ inline void Internal::probe_assign (int lit, int parent) {
 }
 
 void Internal::probe_assign_decision (int lit) {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   assert (!level);
   assert (propagated == trail.size ());
   level++;
@@ -340,7 +340,7 @@ void Internal::probe_assign_decision (int lit) {
 }
 
 void Internal::probe_assign_unit (int lit) {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   assert (!level);
   assert (active (lit));
   probe_assign (lit, 0);
@@ -382,7 +382,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
 // tree instead of a DAG.  Statistics counters are also different.
 
 inline void Internal::probe_propagate2 () {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   int64_t &ticks = stats.ticks_probe;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
@@ -411,9 +411,9 @@ inline void Internal::probe_propagate2 () {
 }
 
 bool Internal::probe_propagate () {
-  require_mode (PROBE);
+  MODE_REQUIRE (PROBE);
   assert (!unsat);
-  START (propagate);
+  PROFILE_SCOPE (propagate);
   const size_t before = propagated2 = propagated;
   int64_t &ticks = stats.ticks_probe;
   while (!conflict) {
@@ -504,7 +504,6 @@ bool Internal::probe_propagate () {
   stats.propagations += delta;
   if (conflict)
     LOG (conflict, "conflict");
-  STOP (propagate);
   return !conflict;
 }
 
@@ -524,7 +523,7 @@ void Internal::failed_literal (int failed) {
   assert (analyzed.empty ());
   assert (lrat_chain.empty ());
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   LOG (conflict, "analyzing failed literal conflict");
 
@@ -587,8 +586,6 @@ void Internal::failed_literal (int failed) {
   }
   work.clear ();
   erase_vector (work);
-
-  STOP (analyze);
 
   assert (unsat || val (failed) < 0);
 }
@@ -796,8 +793,8 @@ bool Internal::probe () {
     return false;
 
   SET_EFFORT_LIMIT (limit, probe, true);
-
-  START_SIMPLIFIER (probe, PROBE);
+  MODE_SCOPE_SIMPLIFY (PROBE);
+  PROFILE_SCOPE_SIMPLIFY (probe);
   stats.probingrounds++;
 
   // Probing is limited in terms of non-probing propagations
@@ -874,8 +871,6 @@ bool Internal::probe () {
     PHASE ("probe-round", stats.probingrounds,
            "found %" PRId64 " hyper binary resolvents", hbrs);
 
-  STOP_SIMPLIFIER (probe, PROBE);
-
   report ('p', !opts.reportall && !(unsat + failed + hbrs));
 
   return !unsat && failed;
@@ -923,6 +918,8 @@ bool Internal::probe () {
 void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   if (unsat)
+    return;
+  if (terminated_asynchronously ())
     return;
   if (level)
     backtrack ();

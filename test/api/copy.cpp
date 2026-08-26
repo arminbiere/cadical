@@ -22,6 +22,7 @@ static CaDiCaL::Solver solver, solver2;
 
 int main () {
   solver.set ("factor", 1);
+  solver.set ("preprocesslight", 1);
   solver.limit ("conflicts", 1000);
   // resize to the highest possible number
   solver.resize (ph (n, n - 1));

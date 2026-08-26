@@ -420,7 +420,6 @@ struct Gate {
     my_dummy_optional neg_lhs_id;
   } *lrat_reasons;
   int lhs;
-  size_t hash;
   Gate_Type tag;
   bool garbage : 1;
   bool indexed : 1;
@@ -563,9 +562,9 @@ struct Rewrite {
 
 /*------------------------------------------------------------------------*/
 // This is a more compact representation of binary clauses. Sadly we have to
-// include the IDs in the clause making it larger than necessary. We also need
-// to include the clause pointer in order to be able to delete the subsumed
-// clause.
+// include the IDs in the clause making it larger than necessary. We also
+// need to include the clause pointer in order to be able to delete the
+// subsumed clause.
 struct CompactBinary {
   Clause *clause;
   LRAT_ID id;
@@ -625,7 +624,7 @@ struct Closure {
   queue<int> schedule;
   vector<bool> scheduled;
 
-  std::vector<Clause *> new_unwatched_binary_clauses;
+  std::vector<Clause *> new_unwatched_binary_clauses; // TODO: unused
   // LRAT proofs
   vector<int> resolvent_analyzed;
   mutable vector<LRAT_ID> lrat_chain; // storing LRAT chain

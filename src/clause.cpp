@@ -150,6 +150,12 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   clauses.push_back (c);
   clause_delete.release ();
+#ifdef LOGGING
+  if (opts.logpointer)
+    LOG (c, "new pointer %p", (void *) c);
+  else
+    LOG (c, "new");
+#endif
 
   if (likely_to_be_kept_clause (c))
     mark_added (c);

@@ -21,7 +21,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-class App : public Handler, public Terminator {
+class App : public Handler {
 
   Solver *solver; // Global solver.
 
@@ -47,9 +47,8 @@ class App : public Handler, public Terminator {
 
   // Internal variables.
   //
-  int max_var;           // Set after parsing.
-  volatile bool timesup; // Asynchronous termination.
-
+  int max_var;                        // Set after parsing.
+  volatile sig_atomic_t signal_value; // Caught signal.
   // Printing.
   //
   void print_usage (bool all = false);
@@ -71,10 +70,6 @@ class App : public Handler, public Terminator {
   // The actual initialization.
   //
   void init ();
-
-  // Terminator interface.
-  //
-  bool terminate () { return timesup; }
 
   // Handler interface.
   //
@@ -277,6 +272,8 @@ void App::print_witness (FILE *file) {
         tmp = elit;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      if (signal_value)
+        break;
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -295,6 +292,8 @@ void App::print_witness (FILE *file) {
         continue;
       else
         tmp = solver->val (elit) < 0 ? -elit : elit;
+      // This only terminates if a signal is raised
+      solver->internal->terminated_asynchronously ();
       char str[32];
       snprintf (str, sizeof str, " %d", tmp);
       int l = strlen (str);
@@ -415,6 +414,25 @@ int App::main (int argc, char **argv) {
     if (!strcmp (argv[i], "-h") || !strcmp (argv[i], "--help") ||
         !strcmp (argv[i], "--build") || !strcmp (argv[i], "--version") ||
         !strcmp (argv[i], "--copyright")) {
+      if (!strcmp (argv[i], "-h")) {
+        print_usage ();
+        return 0;
+      } else if (!strcmp (argv[i], "--help")) {
+        print_usage (true);
+        return 0;
+      } else if (!strcmp (argv[i], "--version")) {
+        printf ("%s\n", CaDiCaL::version ());
+        return 0;
+      } else if (!strcmp (argv[i], "--build")) {
+        tout.disable ();
+        Solver::build (stdout, "");
+        return 0;
+      } else if (!strcmp (argv[i], "--copyright")) {
+        printf ("%s\n", copyright ());
+        printf ("%s\n", authors ());
+        printf ("%s\n", affiliations ());
+        return 0;
+      }
       APPERR ("can only use '%s' as single first option", argv[i]);
     } else if (!strcmp (argv[i], "-")) {
       if (proof_specified)
@@ -676,7 +694,6 @@ int App::main (int argc, char **argv) {
           "setting time limit to %d seconds real time (due to '-t %s')",
           time_limit, time_limit_specified);
       Signal::alarm (time_limit);
-      solver->connect_terminator (this);
     }
 #endif
     if (conflict_limit >= 0) {
@@ -733,10 +750,15 @@ int App::main (int argc, char **argv) {
   if (dimacs_path)
     err = solver->read_dimacs (dimacs_path, max_var, force_strict_parsing,
                                incremental, cube_literals);
-  else
+  else {
+    // Otherwise we may catch a SIGINT and continue to wait for an user
+    // input in getc.
+    Signal::reset ();
     err = solver->read_dimacs (stdin, dimacs_name, max_var,
                                force_strict_parsing, incremental,
                                cube_literals);
+    Signal::set (this);
+  }
   if (err)
     APPERR ("%s", err);
   if (read_solution_path) {
@@ -860,8 +882,6 @@ int App::main (int argc, char **argv) {
         } else {
           assert (!res);
           inconclusive++;
-          if (timesup)
-            break;
         }
         cube.clear ();
       }
@@ -935,7 +955,8 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
-  if (!res && timesup && !get ("quiet")) {
+#ifndef QUIET
+  if (!res && !get ("quiet")) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"
@@ -943,6 +964,7 @@ int App::main (int argc, char **argv) {
            write_result_file);
     fflush (write_result_file);
   }
+#endif
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
@@ -951,6 +973,14 @@ int App::main (int argc, char **argv) {
   if (time_limit > 0)
     alarm (0);
 #endif
+
+  if (signal_value) {
+    CaDiCaL::Signal::reset ();
+#ifndef QUIET
+    signal_message ("raising", signal_value);
+#endif
+    raise (signal_value);
+  }
 
   return res;
 }
@@ -969,7 +999,6 @@ void App::init () {
   force_strict_parsing = 1;
   force_writing = false;
   max_var = 0;
-  timesup = false;
 
 #if !defined(NOPTIONS)
   // Call 'new Solver' only after setting 'reportdefault' and do not
@@ -988,7 +1017,7 @@ void App::init () {
 
 App::App ()
     : solver (0), time_limit (-1), force_strict_parsing (false),
-      force_writing (false), max_var (0), timesup (false) {
+      force_writing (false), max_var (0), signal_value (0) {
 } // Only partially initialize the app.
 
 App::~App () {
@@ -1011,29 +1040,13 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-#ifndef QUIET
-  if (!get ("quiet")) {
-    solver->message ();
-    signal_message ("caught", sig);
-    solver->section ("result");
-    solver->message ("UNKNOWN");
-    solver->statistics ();
-    solver->resources ();
-    solver->message ();
-    signal_message ("raising", sig);
-  }
-#else
-  (void) sig;
-#endif
+  signal_value = sig; // Store copy to re-raise signal in main
+  solver->terminate (); // Immediate asynchronous call into solver.
+  Signal::reset (); // Use the first signal caught only
 }
 
 void App::catch_alarm () {
-  // Both approaches work. We keep them here for illustration purposes.
-#if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
   solver->terminate (); // Immediate asynchronous call into solver.
-#else
-  timesup = true; // Wait for solver to call 'App::terminate ()'.
-#endif
 }
 
 } // namespace CaDiCaL
@@ -1048,6 +1061,14 @@ void App::catch_alarm () {
 
 int main (int argc, char **argv) {
   CaDiCaL::App app;
+
   int res = app.main (argc, argv);
+  const int sig = CaDiCaL::Signal::received ();
+
+  if (sig) {
+    CaDiCaL::Signal::reset (); // Disconnects signal handler
+    raise (sig);
+  }
+
   return res;
 }

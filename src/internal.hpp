@@ -940,8 +940,8 @@ struct Internal {
   void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
   void lucky_assume_decision (int);
-  int trivially_false_satisfiable ();
-  int trivially_true_satisfiable ();
+  int trivially_false_satisfiable (int64_t &);
+  int trivially_true_satisfiable (int64_t &);
   template <class Iterator>
   int lucky_fixed_test (Iterator begin, Iterator end, signed char pol,
                         std::string str);
@@ -957,10 +957,7 @@ struct Internal {
 
   bool search_limits_hit ();
 
-  void terminate () {
-    LOG ("forcing asynchronous termination");
-    termination_forced = true;
-  }
+  void terminate () { termination_forced = true; }
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then removing
@@ -1296,7 +1293,8 @@ struct Internal {
   //
   bool ineliminating ();
   double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+  void
+  mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
@@ -1655,8 +1653,8 @@ struct Internal {
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').
   //
-  void start_profiling (Profile &p, double);
-  void stop_profiling (Profile &p, double);
+  void start_profiling (Profile &p, double, int64_t);
+  void stop_profiling (Profile &p, double, int64_t);
 
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();
@@ -1950,6 +1948,7 @@ inline bool Internal::terminated_asynchronously (int factor) {
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");
+    VERBOSE (2, "termination forced");
     return true;
   }
 

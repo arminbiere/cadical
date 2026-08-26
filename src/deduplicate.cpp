@@ -30,7 +30,8 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
     return;
 #endif
 
-  START_SIMPLIFIER (deduplicate, DEDUP);
+  MODE_SCOPE_SIMPLIFY (DEDUP);
+  PROFILE_SCOPE_SIMPLIFY (deduplicate);
   stats.deduplications++;
 
   assert (!level);
@@ -170,8 +171,6 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   }
   assert (new_binary_since_dedup || !(subsumed + units));
   new_binary_since_dedup = false;
-  STOP_SIMPLIFIER (deduplicate, DEDUP);
-
   report ('2', !opts.reportall && !(subsumed + units));
 }
 
