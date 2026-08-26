@@ -354,7 +354,10 @@ int Internal::decide () {
       for (auto &lit : constraint_vars) {
         const signed char tmp =
             KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
-        assert (tmp);
+        // constraint_vars might include variables that are simplified
+        // before giving to kitten, in which case this assumption may fail:
+        // TODO: actually might be possible to avoid after all
+        assert (!tmp);
         const signed char tmp_lit = val (lit);
         int decision = lit;
         if (tmp < 0)
@@ -365,7 +368,7 @@ int Internal::decide () {
           search_assume_decision (decision);
           all_constraints_assigned = false;
           break;
-        } else if (tmp_lit == tmp) {
+        } else if (!tmp || tmp_lit == tmp) {
           LOG ("constraint literal %d already satisfied", lit);
           continue;
         } else if (is_decision (lit)) {

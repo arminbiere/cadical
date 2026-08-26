@@ -37,16 +37,15 @@ void Internal::constrain (int lit, int64_t ext_id) {
   if (!constraint_cat)
     init_constraint_cat ();
   if (lit) {
+    LOG ("adding %s to internal constraints", LOGLIT (lit));
     constraint_tmp.push_back (lit);
     return;
   }
   assert (!lit);
   stats.constraints_added++;
-  // id of the external constraint
-  // TODO: compact needs to know the previous constraint id
   LOG (constraint_tmp, "shrinking constraint");
   bool satisfied_constraint = false;
-  bool derived_constraint = false;
+  bool derived_constraint = false; // !lrat_chain.empty ();
   const vector<int>::const_iterator end = constraint_tmp.end ();
   vector<int>::iterator i = constraint_tmp.begin ();
   // use analyzed for tracking units with lrat
@@ -67,7 +66,12 @@ void Internal::constrain (int lit, int64_t ext_id) {
         if (lrat) {
           mark (*j);
           analyzed.push_back (*j);
-          lrat_chain.push_back (unit_id (-*j));
+          int elit = externalize (*j);
+          unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+          // the external units are handled somewhere else
+          if (!external->ext_units[eidx]) {
+            lrat_chain.push_back (unit_id (-*j));
+          }
         }
         derived_constraint = true;
         LOG ("removing falsified literal %d from constraint clause", *j);
@@ -122,7 +126,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
     // unsat_constraint already contains the information...
     // marked_failed = false; // allow to trigger failing ()
   } else {
-    for (const auto lit : constraint_tmp) {
+    for (const auto &lit : constraint_tmp) {
       constraints.push_back (lit);
       stats.constraints_lit++;
       Flags &f = flags (lit);

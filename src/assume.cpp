@@ -345,10 +345,39 @@ void Internal::failing () {
     if (proof) {
       if (conclusion.empty ()) {
         assert (failing_assumptions.size () == 2);
-        for (auto &lit : failing_assumptions)
-          clause.push_back (externalize (lit));
-        proof->add_assumption_clause (++clause_id, clause, lrat_chain);
-        conclusion.push_back (clause_id);
+        const int first = failing_assumptions[0];
+        const int second = failing_assumptions[1];
+        int efirst = externalize (first);
+        int esecond = externalize (second);
+        if (val (first) || val (second)) {
+          // find corresponding assumptions
+          for (auto &elit : external->assumptions) {
+            if (external->internalize (elit) == first) {
+              efirst = elit;
+            }
+            if (external->internalize (elit) == second) {
+              esecond = elit;
+            }
+          }
+          if (efirst == -esecond) {
+            clause.push_back (efirst);
+            clause.push_back (esecond);
+            proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+            conclusion.push_back (clause_id);
+          } else if (val (first) < 0) {
+            // failed first
+            assert (false); // TODO
+          } else {
+            // failed second
+            assert (val (second) < 0);
+            assert (false); // TODO
+          }
+        } else {
+          clause.push_back (externalize (first));
+          clause.push_back (externalize (second));
+          proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+          conclusion.push_back (clause_id);
+        }
       } else if (lrat) {
         assert (constraint_refs.empty ());
         KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,

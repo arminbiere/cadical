@@ -327,8 +327,19 @@ int64_t External::constrain (int elit) {
   assert (!elit == !ilit);
   int64_t id = 0;
   if (elit) {
+    if (internal->lrat) {
+      // actually find unit of -elit (flips elit < 0)
+      unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+      assert ((size_t) eidx < ext_units.size ());
+      const int64_t id = ext_units[eidx];
+      bool added = ext_flags[abs (elit)];
+      if (id && !added) {
+        ext_flags[abs (elit)] = true;
+        internal->lrat_chain.push_back (id);
+      }
+    }
     constraint_tmp.push_back (elit);
-    LOG ("adding external %d as internal %d to constraints", elit, ilit);
+    LOG ("adding external %d to constraints", elit);
   } else if (!elit) {
     id = ++internal->clause_id;
     constraint_ids[id] = constraints.size ();
@@ -336,6 +347,9 @@ int64_t External::constrain (int elit) {
       constraints.push_back (lit);
     if (internal->proof)
       internal->proof->add_constraint (id, constraint_tmp);
+    if (internal->lrat)
+      for (const auto &elit : constraint_tmp)
+        ext_flags[abs (elit)] = false;
     constraint_tmp.clear ();
     constraint_indeces[constraints.size ()] = id;
     constraints.push_back (0);

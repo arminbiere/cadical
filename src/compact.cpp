@@ -434,13 +434,36 @@ void Internal::compact () {
       int eidx = abs (elit);
       assert (eidx <= external->max_var);
       int ilit = external->e2i[eidx];
-      assert (!ilit == !elit); // Because frozen!
+      if (lrat && elit) {
+        // actually find unit of -elit (flips elit < 0)
+        unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+        assert ((size_t) eidx < external->ext_units.size ());
+        const int64_t id = external->ext_units[eidx];
+        bool added = external->ext_flags[abs (elit)];
+        if (id && !added) {
+          external->ext_flags[abs (elit)] = true;
+          lrat_chain.push_back (id);
+          external->constraint_tmp.push_back (elit);
+        }
+      }
+      // Not true due to constraints getting simplififed:
+      // assert (!ilit == !elit); // Because frozen!
       if (elit < 0)
         ilit = -ilit;
-      LOG ("re-adding lit external %d internal %d to constraint", elit,
-           ilit);
       int64_t id = external->constraint_indeces[idx++];
-      constrain (ilit, id);
+      if (!ilit == !elit) {
+        LOG ("re-adding lit external %d internal %d to constraint", elit,
+             ilit);
+        constrain (ilit, id);
+      } else
+        LOG ("skipping compacted constraint lit external %d internal %d",
+             elit, ilit);
+      if (!elit) {
+        if (lrat)
+          for (const auto &elit : external->constraint_tmp)
+            external->ext_flags[abs (elit)] = false;
+        external->constraint_tmp.clear ();
+      }
     }
     PHASE ("compact", stats.compacts,
            "added %zd external literals to constraint",
