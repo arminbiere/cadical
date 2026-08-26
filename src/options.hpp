@@ -49,8 +49,8 @@ OPTION( checkassumptions,     1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,      1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,          1,  0,  1,0,0,0, "check failed literals form core") \
 OPTION( checkfrozen,          0,  0,  1,0,0,0, "check all frozen semantics") \
-OPTION( checkidrup,           1,  0,  1,0,0,0, "check (i)drup proofs online") \
-OPTION( checklidrup,          1,  0,  1,0,0,0, "check l(id)rup proofs online") \
+OPTION( checkidrup,           1,  0,  2,0,0,0, "check (I)DRUP proofs online (2=check FRAT-like finalizing)") \
+OPTION( checklidrup,          1,  0,  1,0,0,0, "check L(ID)RUP proofs online") \
 OPTION( checkwitness,         1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,               1,  0,  2,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,         0,  0,  1,0,0,1, "force always chronological") \
@@ -120,16 +120,16 @@ OPTION( emalevel,           1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,            1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,       1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,       1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( exteagerreasons,      0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
-OPTION( exteagerrecalc,       1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
+OPTION( exteagerreasons,      0,  0,  1,0,0,1, "eagerly ask for all reasons (0=only-when-necessary)") \
+OPTION( exteagerrecalc,       1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels") \
 OPTION( exttracecalls,        1,  1,  1,0,0,0, "trace propagator call-backs when tracing API calls") \
 OPTION( factor,               0,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,          1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,      0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
-OPTION( factorbumpheap,       1,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
-OPTION( factorbumpqueue,      1,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
+OPTION( factorbumpheap,       1,  0,  2,0,0,1, "score extension variables in heap (0=low [like kissat], 1=smart, 2=high)") \
+OPTION( factorbumpqueue,      1,  0,  2,0,0,1, "score extension variables in queue (0=low [like kissat], 1=smart, 2=high)") \
 OPTION( factorcandrounds,     2,  0,2e9,0,0,1, "candidates reduction rounds (is skipped with factorxor)") \
-OPTION( factorcheck,          1,  0,  2,0,0,1, "API checks that variables have been declared (1 = only with factor on, 2 = always)") \
+OPTION( factorcheck,          1,  0,  2,0,0,1, "API checks that variables have been declared (1=factor-only, 2=always)") \
 OPTION( factordelay,          4,  0, 12,0,0,1, "delay bounded variable addition between eliminations") \
 OPTION( factoreffort,        75,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factorelim,           1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
@@ -138,9 +138,9 @@ OPTION( factorredundant,      2,  0,  3,0,0,1, "apply factor to redundant clause
 OPTION( factorschedule,       0,  0,  3,0,0,1, "schedule (0=occs, 1=queue, 2=heap, 3=idx)") \
 OPTION( factorsize,          20,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,         7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( factorxor,            1,  0,  2,0,0,1, "factor eliminated xor (and ite) gates (needs factorsize > 2)") \
-OPTION( factorxorite,         1,  0,  2,0,0,1, "factor eliminated ite gates (2 = no xors)") \
-OPTION( factorxorrand,        1,  0,  1,0,0,1, "random tiebreak for factor xorx") \
+OPTION( factorxor,            1,  0,  2,0,0,1, "factor XOR (and ITE) gates (only when factorsize > 2)") \
+OPTION( factorxorite,         1,  0,  2,0,0,1, "factor ITE gates (2 = no XORs)") \
+OPTION( factorxorrand,        1,  0,  1,0,0,1, "random tiebreaker for factorxor") \
 OPTION( factorxorsave,        1,  0,  1,0,0,1, "factor save work by only considering literals once") \
 OPTION( fastelim,             1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,        8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
@@ -152,9 +152,9 @@ OPTION( flush,                0,  0,  1,0,1,1, "flush redundant clauses") \
 OPTION( flushfactor,          3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,           1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,           0,  0,  1,0,0,1, "always use initial phase") \
-OPTION( frat,                 0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
+OPTION( frat,                 0,  0,  2,0,0,1, "1=FRAT(LRAT), 2=FRAT(DRAT)") \
 OPTION( idrup,                0,  0,  1,0,0,1, "incremental proof format") \
-OPTION( ilb,                  0,  0,  2,0,0,1, "ILB (incremental lazy backtrack) (0: no, 1: assumptions only, 2: everything)") \
+OPTION( ilb,                  0,  0,  2,0,0,1, "incremental lazy backtrack (0=off, 1=assumptions-only, 2=everything)") \
 OPTION( incdecay,             1,  0,  4,0,0,1, "decay clauses when doing incremental clauses" ) \
 OPTION( incdecayint,        1e6,  1,2e9,0,0,1, "decay interval when doing incremental clauses" ) \
 OPTION( inprobeint,         100,  1,2e9,0,0,1, "inprobing interval" ) \
@@ -210,7 +210,7 @@ OPTION( reducetier2glue,      6,  1,2e9,0,0,1, "glue of tier two clauses") \
 OPTION( reluctant,            1,  0,  1,0,0,1, "stable reluctant doubling restarts") \
 OPTION( reluctantint,      1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,   1048576,  0,2e9,0,0,1, "maximum reluctant doubling period") \
-OPTION( rephase,              1,  0,  2,0,0,1, "enable resetting phase (0=no,1=always,2=stable-only)") \
+OPTION( rephase,              1,  0,  2,0,0,1, "enable advanced phase heuristic (0=no, 1=always, 2=stable-only)") \
 OPTION( rephaseint,         1e3,  1,2e9,0,0,1, "rephase interval") \
 OPTION( report,   reportdefault,  0,  1,0,0,1, "enable reporting") \
 OPTION( reportall,            0,  0,  1,0,0,1, "report even if not successful") \
@@ -225,7 +225,7 @@ OPTION( restoreflush,         0,  0,  1,0,0,1, "remove satisfied clauses") \
 OPTION( score,                1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,        950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,                 0,  0,2e9,0,0,1, "random seed") \
-OPTION( shrink,               3,  0,  3,0,0,1, "shrink conflict clause (1=binary-only,2=minimize-on-pulling,3=full)") \
+OPTION( shrink,               3,  0,  3,0,0,1, "shrink conflict clause (1=binary-only, 2=minimize-on-pulling, 3=full)") \
 OPTION( shrinkreap,           1,  0,  1,0,0,1, "use a reap for shrinking") \
 OPTION( shuffle,              0,  0,  1,0,0,1, "shuffle variables") \
 OPTION( shufflequeue,         1,  0,  1,0,0,1, "shuffle variable queue") \
@@ -258,7 +258,7 @@ OPTION( sweepmaxvars,      8192,  2,2e9,1,0,1, "maximum environment variables") 
 OPTION( sweeprand,            0,  0,  1,0,0,1, "randomize sweeping environment") \
 OPTION( sweepthresh,          5,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( sweepvars,          256,  0,2e9,1,0,1, "environment variables") \
-OPTION( target,               1,  0,  2,0,0,1, "target phases (1=stable only)") \
+OPTION( target,               1,  0,  2,0,0,1, "target phases (1=stable-only)") \
 OPTION( terminateint,        10,  0,1e4,0,0,1, "termination check interval") \
 OPTION( ternary,              1,  0,  1,0,1,1, "hyper ternary resolution") \
 OPTION( ternaryeffort,        8,  1,1e5,1,0,1, "relative efficiency per mille") \
@@ -279,12 +279,12 @@ OPTION( varkeepname,          0,  0,  1,0,0,1, "attempt to use the same internal
 OPTION( varprioritizefirst,   1,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( varprioritizeswap,    0,  0,  1,0,0,1, "reverse VMTF variable ordering (reverse of varindexorder)") \
 QUTOPT( verbose,              0,  0,  4,0,0,0, "more verbose messages") \
-OPTION( veripb,               0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
+OPTION( veripb,               0,  0,  4,0,0,1, "odd=check-deletions, greater-two=DRAT") \
 OPTION( vivify,               1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,       1,  0,  1,0,0,1, "use tier limits") \
 OPTION( vivifydemote,         0,  0,  1,0,1,1, "demote irredundant or delete directly") \
 OPTION( vivifyeffort,        50,  0,1e5,1,0,1, "overall efficiency per mille") \
-OPTION( vivifyflush,          1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
+OPTION( vivifyflush,          1,  0,  1,1,0,1, "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,           0,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyirred,          1,  0,  1,0,0,1, "vivification of irredundant clauses") \
 OPTION( vivifyirredeff,       3,  1,100,1,0,1, "irredundant efficiency per mille") \
@@ -299,14 +299,14 @@ OPTION( vivifytier2eff,       2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,          1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,       1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,                 1,  0,  1,0,0,1, "enable random walks") \
-OPTION( walkddfwstrat,        4,  0,  4,1,0,1, "ddfw weight strategy [0=yalin-itl,1=yalin=ite,2=yalin-ith,3=ddfw,4=tassat") \
+OPTION( walkddfwstrat,        4,  0,  4,1,0,1, "ddfw weight strategy (0=yalin-itl, 1=yalin=ite, 2=yalin-ith, 3=ddfw, 4=tassat)") \
 OPTION( walkeffort,          80,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkfullocc,          2,  0,  2,1,0,1, "0 = single watched, 1 = Kissat watched, 2 = ddfw") \
+OPTION( walkfullocc,          2,  0,  2,1,0,1, "0=single-watched, 1=full-occs [like kissat], 2=ddfw") \
 OPTION( walkmaxeff,         1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,           0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walkmineffinit,     1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \
 OPTION( walknonstable,        1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
-OPTION( walkredundant,        0,  0,  2,0,0,1, "walk redundant clauses too [0 = none, 1 = binary nonyhyper, 2=all]") \
+OPTION( walkredundant,        0,  0,  2,0,0,1, "walk redundant clauses too (0=none, 1=binary [except hyper], 2=all)") \
 OPTION( warmup,               1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!

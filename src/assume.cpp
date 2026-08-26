@@ -28,8 +28,8 @@ void Internal::assume (int lit) {
     KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, lit));
 }
 
-// for LRAT we actually need to implement recursive DFS
-// for non-lrat use BFS. TODO: maybe derecursify to avoid stack overflow
+// for LRAT we implement recursive DFS, for non-LRAT use BFS.
+// TODO: maybe derecursify to avoid stack overflow
 //
 void Internal::assume_analyze_literal (int lit) {
   assert (lit);
@@ -90,15 +90,7 @@ extern "C" {
 //
 static void traverse_constraint_core (void *state, unsigned id) {
   Internal *internal = (Internal *) state;
-  // TODO: mark failing constraints.
-  /*
-  const unsigned aid = -id - 1;
-  if (aid < internal->assumptions.size ()) { // failing assumption
-    const int lit = internal->assumptions[aid];
-    LOG ("traversing core assumption[%d] = %s", aid, LOGLIT (lit));
-    internal->mark_failing_assumption (lit);
-  } else { // failing constraint
-           // */
+  // mark failing constraints.
   LOG ("traversing core constraint[%d]", id);
   internal->mark_failed_constraint (id);
 }
@@ -154,19 +146,9 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
             internal->constraint_refs.end ());
     const unsigned cid = internal->constraint_refs[kref];
     assert (cid);
-    /*
-    const unsigned aid = -cid - 1;
     // TODO: mapping from intermediary kitten id to cadical id
     // would allow INT_MAX constraints (also see
     // comment in constrain.cpp)
-    if (aid < internal->assumptions.size ()) {
-      const int lit = -internal->assumptions[aid];
-      const int elit = internal->externalize (lit);
-      LOG ("adding negated assumption[%d] = %s external %d", aid,
-           LOGLIT (lit), elit);
-      clause.push_back (elit);
-    } else
-    */
     lrat_chain.push_back (cid);
   }
   for (size_t i = 0; i < size; i++)
@@ -341,7 +323,7 @@ void Internal::failing () {
   } else {
     assert (constraint_cat);
     // unsat_constraint
-    // TODO: analyze failing constraints with kitten
+    // analyze failing constraints with kitten
     uint64_t learned;
     for (auto &lit : assumptions) {
       if (KITTEN_NAMESPACE (kitten_failed_signed) (constraint_cat, lit))
@@ -353,7 +335,13 @@ void Internal::failing () {
                                                  traverse_constraint_core);
     // assert (!conclusion.empty ()); breaks if two assumptions contradict
     if (proof) {
-      if (lrat) {
+      if (conclusion.empty ()) {
+        assert (failing_assumptions.size () == 2);
+        for (auto &lit : failing_assumptions)
+          clause.push_back (externalize (lit));
+        proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+        conclusion.push_back (clause_id);
+      } else if (lrat) {
         assert (constraint_refs.empty ());
         KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,
                                               traverse_constraint_lrat);
@@ -424,7 +412,9 @@ void Internal::failing () {
           f.failed |= bit;
       }
       clear_analyzed_literals ();
-    } else { // TODO: LRAT for unsat_constraint
+    } else {
+      // LRAT for unsat_constraint is already done
+      // TODO: clean up / refactor
     }
     clear_analyzed_literals ();
 
@@ -452,7 +442,8 @@ void Internal::failing () {
         conclusion.push_back (clause_id);
       }
     } else {
-      // TODO: unsat_constraint
+      // TODO: clean up / refactor
+      // unsat_constraint already computed
     }
     lrat_chain.clear ();
     clause.clear ();

@@ -204,13 +204,13 @@ void Checker::collect_garbage_clauses () {
 
 /*------------------------------------------------------------------------*/
 
-Checker::Checker (Internal *i)
-    : internal (i), size_vars (0), vals (0), assumed (0), inconsistent (0),
-      tmp_inconsistent (0), solving (false), num_clauses (0),
-      num_garbage (0), num_finalized (0), num_temporary (0),
-      num_permanent (0), size_clauses (0), clauses (0), garbage (0),
-      next_to_propagate (0), last_hash (0), last_id (0), is_tmp (false),
-      is_taut (false) {
+Checker::Checker (Internal *i, bool frat)
+    : internal (i), check_finalize (frat), size_vars (0), vals (0),
+      assumed (0), inconsistent (0), tmp_inconsistent (0), solving (false),
+      num_clauses (0), num_garbage (0), num_finalized (0),
+      num_temporary (0), num_permanent (0), size_clauses (0), clauses (0),
+      garbage (0), next_to_propagate (0), last_hash (0), last_id (0),
+      is_tmp (false), is_taut (false) {
 
   // Initialize random number table for hash function.
   //
@@ -897,6 +897,8 @@ void Checker::notify_equivalence (int a, int b) {
 }
 
 void Checker::finalize_clause (int64_t id, const vector<int> &c) {
+  if (!check_finalize)
+    return;
   PROFILE_SCOPE (checking);
   LOG (c, "CHECKER checking finalize of clause[%" PRId64 "]", id);
   stats.finalized++;
@@ -917,6 +919,8 @@ void Checker::finalize_clause (int64_t id, const vector<int> &c) {
 
 // check if all clauses have been deleted
 void Checker::report_status (int, int64_t) {
+  if (!check_finalize)
+    return;
   PROFILE_SCOPE (checking);
   if (num_finalized == num_permanent) {
     num_finalized = 0;

@@ -140,11 +140,11 @@ void Internal::trace (File *file) {
     FileTracer *ft = new LratTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
   } else if (opts.idrup) {
-    LOG ("PROOF connecting IDRUP tracer");
+    LOG ("PROOF connecting IDRUPE tracer");
     FileTracer *ft = new IdrupTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
   } else if (opts.lidrup) {
-    LOG ("PROOF connecting LIDRUP tracer");
+    LOG ("PROOF connecting LIDRUPE tracer");
     FileTracer *ft = new LidrupTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
   } else {
@@ -162,7 +162,7 @@ void Internal::check () {
     StatTracer *lratchecker = new LratChecker (this);
     DeferDeletePtr<LratChecker> delete_lratchecker (
         (LratChecker *) lratchecker);
-    LOG ("PROOF connecting LRAT proof checker");
+    LOG ("PROOF connecting LIDRUPE proof checker");
     force_lrat ();
     frat = true;
     resize_unit_clause_idx ();
@@ -171,10 +171,13 @@ void Internal::check () {
     delete_lratchecker.release ();
   }
   if (opts.checkidrup) {
-    StatTracer *checker = new Checker (this);
+    StatTracer *checker = new Checker (this, opts.checkidrup > 1);
     DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
-    LOG ("PROOF connecting proof checker");
-    frat = true;
+    LOG ("PROOF connecting IDRUPE proof checker");
+    if (opts.checkidrup > 1) {
+      frat = true;
+      resize_unit_clause_idx ();
+    }
     proof->connect (checker);
     stat_tracers.push_back (checker);
     delete_checker.release ();

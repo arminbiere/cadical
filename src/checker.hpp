@@ -59,6 +59,7 @@ typedef std::vector<CheckerWatch> CheckerWatcher;
 class Checker : public StatTracer {
 
   Internal *internal;
+  bool check_finalize;
 
   // Capacity of variable values.
   //
@@ -173,7 +174,7 @@ class Checker : public StatTracer {
   } stats;
 
 public:
-  Checker (Internal *);
+  Checker (Internal *, bool);
   virtual ~Checker ();
 
   void connect_internal (Internal *i) override;
