@@ -113,8 +113,10 @@ static void traverse_constraint_drat (void *state, unsigned id,
   assert (internal->proof);
   assert (!internal->lrat);
   assert (internal->lrat_chain.empty ());
+  /* not necessary anymore due to kitten having assumptions
   for (auto &lit : internal->failing_assumptions)
-    clause.push_back (internal->externalize (lit));
+    clause.push_back (internal->externalize (-lit));
+    */
   for (size_t i = 0; i < size; i++)
     clause.push_back (internal->externalize (internal->cat2lit (lits[i])));
   internal->proof->add_constraint_clause (++internal->clause_id, clause,
@@ -465,9 +467,11 @@ bool Internal::failed (int lit) {
 
 void Internal::conclude_unsat () {
   if (concluded) {
+    LOG ("conclude UNSAT already concluded");
     assert (marked_failed);
     return;
   }
+  LOG ("conclude UNSAT");
   concluded = true;
   if (unsat)
     assert (marked_failed && conclusion.size () == 1 &&

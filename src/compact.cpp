@@ -428,6 +428,7 @@ void Internal::compact () {
   if (is_constraint) {
     assert (!level);
     assert (!external->constraints.back ());
+    size_t idx = 0;
     for (auto elit : external->constraints) {
       assert (elit != INT_MIN);
       int eidx = abs (elit);
@@ -436,9 +437,10 @@ void Internal::compact () {
       assert (!ilit == !elit); // Because frozen!
       if (elit < 0)
         ilit = -ilit;
-      LOG ("re adding lit external %d internal %d to constraint", elit,
+      LOG ("re-adding lit external %d internal %d to constraint", elit,
            ilit);
-      constrain (ilit);
+      int64_t id = external->constraint_indeces[idx++];
+      constrain (ilit, id);
     }
     PHASE ("compact", stats.compacts,
            "added %zd external literals to constraint",

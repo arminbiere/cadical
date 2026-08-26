@@ -218,7 +218,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     assert (!lit);
     --i;
     const int64_t id =
-        ((int64_t) * (i - 1) << 32) + static_cast<int64_t> (*i);
+        ((int64_t) *(i - 1) << 32) + static_cast<int64_t> (*i);
     assert (id);
     i -= 2;
     assert (!*i);
@@ -271,8 +271,13 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
 /*------------------------------------------------------------------------*/
 
 void External::conclude_sat () {
-  if (!internal->proof || concluded)
+  if (!internal->proof)
     return;
+  if (concluded) {
+    LOG ("conclude SAT already concluded");
+    return;
+  }
+  LOG ("conclude SAT");
   concluded = true;
   if (!extended)
     extend ();

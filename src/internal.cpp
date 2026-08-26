@@ -1149,7 +1149,7 @@ int Internal::lookahead () {
 void Internal::finalize (int res) {
   if (!proof)
     return;
-  LOG ("finalizing");
+  LOG ("finalizing result %d", res);
   // finalize external units
   if (frat) {
     for (const auto &evar : external->vars) {
@@ -1197,7 +1197,7 @@ void Internal::finalize (int res) {
     external->conclude_sat ();
   else if (res == 20)
     conclude_unsat ();
-  else if (!res)
+  else // if (!res) -> res can be -1 as well
     external->conclude_unknown ();
 }
 

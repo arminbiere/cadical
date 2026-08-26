@@ -29,7 +29,7 @@ void Internal::init_constraint_cat () {
     KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, other));
 }
 
-void Internal::constrain (int lit) {
+void Internal::constrain (int lit, int64_t ext_id) {
   if (unsat)
     return;
   if (level)
@@ -43,7 +43,7 @@ void Internal::constrain (int lit) {
   assert (!lit);
   stats.constraints_added++;
   // id of the external constraint
-  const int64_t ext_id = clause_id;
+  // TODO: compact needs to know the previous constraint id
   LOG (constraint_tmp, "shrinking constraint");
   bool satisfied_constraint = false;
   bool derived_constraint = false;

@@ -447,6 +447,8 @@ void Checker::backtrack (unsigned previously_propagated) {
 
 bool Checker::propagate (bool propagate_temporary) {
   bool res = true;
+  if (propagate_temporary)
+    next_to_propagate = 0;
   while (res && next_to_propagate < trail.size ()) {
     int lit = trail[next_to_propagate++];
     stats.propagations++;

@@ -1527,7 +1527,7 @@ struct Internal {
   // Add temporary clause as constraint.
   //
   void init_constraint_cat ();
-  void constrain (int); // Add literal to constraint.
+  void constrain (int, int64_t); // Add literal to constraint.
   void mark_failed_constraint (int64_t);
   bool failed_constraint (int64_t id);
   void reset_constraint (); // Reset after 'solve' call.

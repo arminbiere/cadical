@@ -330,17 +330,17 @@ int64_t External::constrain (int elit) {
     constraint_tmp.push_back (elit);
     LOG ("adding external %d as internal %d to constraints", elit, ilit);
   } else if (!elit) {
-    const size_t mapped = constraints.size ();
     id = ++internal->clause_id;
-    constraint_ids[id] = mapped;
+    constraint_ids[id] = constraints.size ();
     for (auto &lit : constraint_tmp)
       constraints.push_back (lit);
     if (internal->proof)
       internal->proof->add_constraint (id, constraint_tmp);
     constraint_tmp.clear ();
+    constraint_indeces[constraints.size ()] = id;
     constraints.push_back (0);
   }
-  internal->constrain (ilit);
+  internal->constrain (ilit, id);
   return id;
 }
 
@@ -628,8 +628,13 @@ void External::implied (std::vector<int> &trailed) {
 }
 
 void External::conclude_unknown () {
-  if (!internal->proof || concluded)
+  if (!internal->proof)
     return;
+  if (concluded) {
+    LOG ("conclude UNKOWN already concluded");
+    return;
+  }
+  LOG ("conclude UNKOWN");
   concluded = true;
 
   vector<int> trail;
