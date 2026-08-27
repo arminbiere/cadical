@@ -359,8 +359,7 @@ int64_t External::constrain (int elit) {
 }
 
 bool External::failed_constraint (int64_t id) {
-  if (auto contains = constraint_ids.find (id);
-      contains == constraint_ids.end ())
+  if (constraint_ids.find (id) == constraint_ids.end ())
     return false;
   return internal->failed_constraint (id);
 }
