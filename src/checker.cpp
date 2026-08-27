@@ -658,7 +658,7 @@ void Checker::add_clause (const char *type) {
 void Checker::add_original_clause (int64_t id, bool, const vector<int> &c,
                                    bool) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER addition of original clause");
+  LOG (c, "CHECKER addition of original clause[%" PRId64 "]", id);
   stats.added++;
   stats.original++;
   import_clause (c, id, false);
@@ -669,7 +669,7 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
                                   const vector<int> &c,
                                   const vector<int64_t> &) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER addition of derived clause");
+  LOG (c, "CHECKER addition of derived clause[%" PRId64 "]", id);
   stats.added++;
   stats.derived++;
   stats.derived_redundant += redundant;
@@ -699,7 +699,7 @@ void Checker::add_derived_clause (int64_t id, bool redundant, int witness,
 
 void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER checking deletion of clause");
+  LOG (c, "CHECKER deletion of clause[%" PRId64 "]", id);
   stats.deleted++;
   import_clause (c, id, false);
   CheckerClause **p = find (id, true), *d = *p;
@@ -721,7 +721,8 @@ void Checker::delete_clause (int64_t id, bool, const vector<int> &c) {
 void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER checking addition of assumption clause");
+  LOG (c, "CHECKER checking addition of assumption clause[%" PRId64 "]",
+       id);
   import_clause (c, id, true);
   if (!check (false)) {
     fatal_message_start ();
@@ -738,7 +739,10 @@ void Checker::add_assumption_clause (int64_t id, const vector<int> &c,
 void Checker::add_constraint_clause (int64_t id, const vector<int> &c,
                                      const vector<int64_t> &) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER checking addition of derived constraint clause");
+  LOG (c,
+       "CHECKER checking addition of derived constraint clause[%" PRId64
+       "]",
+       id);
   import_clause (c, id, true);
   if (!check (true)) {
     fatal_message_start ();
@@ -765,7 +769,7 @@ void Checker::solve_query () { solving = true; }
 // for add_assumption_clause checks.
 void Checker::add_constraint (int64_t id, const std::vector<int> &c) {
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER adding constraint");
+  LOG (c, "CHECKER adding constraint[%" PRId64 "]", id);
   import_clause (c, id, true);
   add_clause ("original constraint");
   assumption_clauses.push_back (id);
@@ -910,7 +914,7 @@ void Checker::finalize_clause (int64_t id, const vector<int> &c) {
   if (!check_finalize)
     return;
   PROFILE_SCOPE (checking);
-  LOG (c, "CHECKER checking finalize of clause[%" PRId64 "]", id);
+  LOG (c, "CHECKER finalize clause[%" PRId64 "]", id);
   stats.finalized++;
   num_finalized++;
   import_clause (c, id, false);
@@ -932,6 +936,7 @@ void Checker::report_status (int, int64_t) {
   if (!check_finalize)
     return;
   PROFILE_SCOPE (checking);
+  assert (num_permanent >= num_finalized);
   if (num_finalized == num_permanent) {
     num_finalized = 0;
     LOG ("CHECKER successful finalize check, all clauses have been "
@@ -939,7 +944,7 @@ void Checker::report_status (int, int64_t) {
   } else {
     fatal_message_start ();
     fputs ("finalize check failed ", stderr);
-    fprintf (stderr, "%" PRIu64, num_permanent);
+    fprintf (stderr, "%" PRIu64, num_permanent - num_finalized);
     fputs (" are not finalized", stderr);
     fatal_message_end ();
   }
