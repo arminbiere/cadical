@@ -504,6 +504,8 @@ void Internal::add_new_original_clause (int64_t id) {
         VERBOSE (1, "found falsified original clause");
       unsat = new_id;
       marked_failed = true;
+      // in case the user adds empty constraint before empty clause
+      conclusion.clear ();
       conclusion.push_back (new_id);
     } else if (size == 1) {
       handle_external_clause (0, new_id);

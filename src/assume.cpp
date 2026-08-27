@@ -347,7 +347,8 @@ void Internal::failing () {
         assert (failing_assumptions.size () == 2);
         int first = failing_assumptions[0];
         int second = failing_assumptions[1];
-        if (val (first) || val (second)) {
+        if (val (first) && val (second) && !var (first).level &&
+            !var (second).level) {
           // either first or second one has to be failing
           // so move the failing one first
           if (val (second) < 0) {
@@ -369,14 +370,23 @@ void Internal::failing () {
               efirst = elit;
             }
           }
-
-          unsigned eidx = (efirst > 0) + 2u * (unsigned) abs (efirst);
-          assert ((size_t) eidx < external->ext_units.size ());
-          int64_t first_id = external->ext_units[eidx];
-          if (!first_id) {
-            first_id = unit_clauses (vidx (-first));
+          // This unfortunated does not work without 'lrat' or 'frat' as
+          // unit_ids are not tracked
+          if (lrat) {
+            unsigned eidx = (efirst > 0) + 2u * (unsigned) abs (efirst);
+            assert ((size_t) eidx < external->ext_units.size ());
+            int64_t first_id = external->ext_units[eidx];
+            if (!first_id) {
+              first_id = unit_id (-first);
+            }
+            assert (first_id);
+            lrat_chain.push_back (first_id);
           }
-          conclusion.push_back (first_id);
+          // So instead we need to learn the unit again as assumption
+          // clause in order to know the id.
+          clause.push_back (-efirst);
+          proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+          conclusion.push_back (clause_id);
         } else {
           clause.push_back (externalize (first));
           clause.push_back (externalize (second));

@@ -211,7 +211,7 @@ void Internal::analyze_failing_constraint (int failed) {
   assert (clause.empty ());
 
   if (w.reason == external_reason) {
-    w.reason = learn_external_reason_clause (failed, 0, true);
+    w.reason = learn_external_reason_clause (-failed, 0, true);
     if (!w.reason) {
       // TODO: cover this
       assert (!w.level);
