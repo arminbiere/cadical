@@ -389,6 +389,42 @@ void Internal::compact () {
 
   /*----------------------------------------------------------------------*/
 
+  // Special case for 'val' as for 'val' we trade branch less code for
+  // memory and always allocated an [-maxvar,...,maxvar] array.
+  {
+    signed char *new_vals = new signed char[2 * mapper.new_vsize];
+    ignore_clang_analyze_memory_leak_warning = new_vals;
+    new_vals += mapper.new_vsize;
+    for (auto src : vars)
+      new_vals[-mapper.map_idx (src)] = vals[-src];
+    for (auto src : vars)
+      new_vals[mapper.map_idx (src)] = vals[src];
+    new_vals[0] = 0;
+    vals -= vsize;
+    delete[] vals;
+    vals = new_vals;
+    vsize = mapper.new_vsize;
+  }
+
+  mapper.map_vector (i2e);
+  mapper.map2_vector (ptab);
+  mapper.map_vector (btab);
+  mapper.map_vector (gtab);
+  mapper.map_vector (links);
+  mapper.map_vector (vtab);
+  if (!ntab.empty ())
+    mapper.map2_vector (ntab);
+  if (!wtab.empty ())
+    mapper.map2_vector (wtab);
+  if (!otab.empty ())
+    mapper.map2_vector (otab);
+  if (!rtab.empty ())
+    mapper.map2_vector (rtab);
+  if (!big.empty ())
+    mapper.map2_vector (big);
+
+  // 'assume' uses 'val', so this code has to be after
+  // remapping that
   if (!external->assumptions.empty ()) {
 
     for (const auto &elit : external->assumptions) {
@@ -407,24 +443,8 @@ void Internal::compact () {
            external->assumptions.size ());
   }
 
-  // Special case for 'val' as for 'val' we trade branch less code for
-  // memory and always allocated an [-maxvar,...,maxvar] array.
-  {
-    signed char *new_vals = new signed char[2 * mapper.new_vsize];
-    ignore_clang_analyze_memory_leak_warning = new_vals;
-    new_vals += mapper.new_vsize;
-    for (auto src : vars)
-      new_vals[-mapper.map_idx (src)] = vals[-src];
-    for (auto src : vars)
-      new_vals[mapper.map_idx (src)] = vals[src];
-    new_vals[0] = 0;
-    vals -= vsize;
-    delete[] vals;
-    vals = new_vals;
-    vsize = mapper.new_vsize;
-  }
-
-  // 'constrain' uses 'val', so this code has to be after remapping that
+  // 'constrain' uses 'val' and 'i2e', so this code has to be after
+  // remapping that
   if (is_constraint) {
     assert (!level);
     assert (!external->constraints.back ());
@@ -469,23 +489,6 @@ void Internal::compact () {
            "added %zd external literals to constraint",
            external->constraints.size () - 1);
   }
-
-  mapper.map_vector (i2e);
-  mapper.map2_vector (ptab);
-  mapper.map_vector (btab);
-  mapper.map_vector (gtab);
-  mapper.map_vector (links);
-  mapper.map_vector (vtab);
-  if (!ntab.empty ())
-    mapper.map2_vector (ntab);
-  if (!wtab.empty ())
-    mapper.map2_vector (wtab);
-  if (!otab.empty ())
-    mapper.map2_vector (otab);
-  if (!rtab.empty ())
-    mapper.map2_vector (rtab);
-  if (!big.empty ())
-    mapper.map2_vector (big);
 
   /*======================================================================*/
   // In the fourth part we map the binary heap for scores.

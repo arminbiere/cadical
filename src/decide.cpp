@@ -357,7 +357,7 @@ int Internal::decide () {
         // constraint_vars might include variables that are simplified
         // before giving to kitten, in which case this assumption may fail:
         // TODO: actually might be possible to avoid after all
-        assert (!tmp);
+        assert (tmp);
         const signed char tmp_lit = val (lit);
         int decision = lit;
         if (tmp < 0)

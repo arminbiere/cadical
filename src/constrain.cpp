@@ -106,6 +106,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
         lrat_chain.push_back (ext_id);
       proof->add_constraint_clause (int_id, constraint_tmp, lrat_chain,
                                     false);
+      clause.clear ();
       lrat_chain.clear ();
     }
   }

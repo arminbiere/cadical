@@ -345,33 +345,38 @@ void Internal::failing () {
     if (proof) {
       if (conclusion.empty ()) {
         assert (failing_assumptions.size () == 2);
-        const int first = failing_assumptions[0];
-        const int second = failing_assumptions[1];
-        int efirst = externalize (first);
-        int esecond = externalize (second);
+        int first = failing_assumptions[0];
+        int second = failing_assumptions[1];
         if (val (first) || val (second)) {
-          // find corresponding assumptions
+          // either first or second one has to be failing
+          // so move the failing one first
+          if (val (second) < 0) {
+            std::swap (first, second);
+          }
+          // unmark failed bit for second
+          Flags &f = flags (second);
+          const unsigned bit = bign (second);
+          assert (f.assumed & bit);
+          assert (f.failed & bit);
+          f.failed &= ~bit;
+          failing_assumptions.clear ();
+          failing_assumptions.push_back (first);
+
+          int efirst = externalize (first);
+          // find corresponding assumption
           for (auto &elit : external->assumptions) {
             if (external->internalize (elit) == first) {
               efirst = elit;
             }
-            if (external->internalize (elit) == second) {
-              esecond = elit;
-            }
           }
-          if (efirst == -esecond) {
-            clause.push_back (efirst);
-            clause.push_back (esecond);
-            proof->add_assumption_clause (++clause_id, clause, lrat_chain);
-            conclusion.push_back (clause_id);
-          } else if (val (first) < 0) {
-            // failed first
-            assert (false); // TODO
-          } else {
-            // failed second
-            assert (val (second) < 0);
-            assert (false); // TODO
+
+          unsigned eidx = (efirst > 0) + 2u * (unsigned) abs (efirst);
+          assert ((size_t) eidx < external->ext_units.size ());
+          int64_t first_id = external->ext_units[eidx];
+          if (!first_id) {
+            first_id = unit_clauses (vidx (-first));
           }
+          conclusion.push_back (first_id);
         } else {
           clause.push_back (externalize (first));
           clause.push_back (externalize (second));
