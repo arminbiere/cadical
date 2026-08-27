@@ -3556,7 +3556,7 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     LOG (clause, "xor shrinking clause");
-    /* TODO: these are not deleted from proof
+    // TODO: these are not deleted from proof
     if (!internal->lrat) {
       clause.push_back (pivot);
       check_and_add_to_proof_chain (clause);
@@ -3565,7 +3565,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
       check_and_add_to_proof_chain (clause);
       clause.pop_back ();
     }
-    */
     if (internal->lrat) {
       assert (lrat_chain.empty ());
       lrat_chain.push_back (first[2 * i].clause->id);

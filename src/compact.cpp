@@ -448,12 +448,14 @@ void Internal::compact () {
   if (is_constraint) {
     assert (!level);
     assert (!external->constraints.back ());
-    for (auto &cpair : external->constraint_ids) {
+    for (const auto &cpair : external->constraint_ids) {
       // constraint_ids contains all (and only valid)
       // (id, idx) pairs of external constraints
       const int64_t cid = cpair.first;
       assert (cid);
       size_t idx = cpair.second; // start of constraint
+      LOG ("checking constraint[%" PRId64 "] = constraints[%zd]", cid, idx);
+      assert (external->constraint_tmp.empty ());
       int elit = 0;
       bool skip = false;
       while ((elit = external->constraints[idx++])) {
@@ -461,20 +463,22 @@ void Internal::compact () {
         int eidx = abs (elit);
         assert (eidx <= external->max_var);
         int ilit = external->e2i[eidx];
-        if (!ilit) {
+        if (!ilit)
           skip = true;
-          // but continue for logging
-        }
+        // but continue for logging
+        LOG ("next constraint literal external %d internal %d", elit, ilit);
         external->constraint_tmp.push_back (elit);
       }
+      assert (!elit);
       if (skip) {
         LOG (constraint_tmp,
-             "inactive external literal %d, skipping"
-             "constraint[%" PRId64 "]",
-             elit, cid);
-        constraint_tmp.clear ();
+             "skipping due to inactive external literal "
+             "in constraint[%" PRId64 "]",
+             cid);
+        external->constraint_tmp.clear ();
         continue; // next constraint pair
       }
+      assert (constraint_tmp.empty ());
       for (auto elit : external->constraint_tmp) {
         assert (elit != INT_MIN);
         assert (elit);
