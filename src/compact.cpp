@@ -194,7 +194,7 @@ void Internal::compact () {
   }
 
   // TODO: remap constraint_cat?
-  const bool is_constraint = constraint_vars.size ();
+  const bool is_constraint = constraint_cat; // constraint_vars.size ();
   if (is_constraint) {
     // assert (false);
     assert (!external->constraints.empty ());
@@ -448,42 +448,66 @@ void Internal::compact () {
   if (is_constraint) {
     assert (!level);
     assert (!external->constraints.back ());
-    size_t idx = 0;
-    for (auto elit : external->constraints) {
-      assert (elit != INT_MIN);
-      int eidx = abs (elit);
-      assert (eidx <= external->max_var);
-      int ilit = external->e2i[eidx];
-      if (lrat && elit) {
-        // actually find unit of -elit (flips elit < 0)
-        unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
-        assert ((size_t) eidx < external->ext_units.size ());
-        const int64_t id = external->ext_units[eidx];
-        bool added = external->ext_flags[abs (elit)];
-        if (id && !added) {
-          external->ext_flags[abs (elit)] = true;
-          lrat_chain.push_back (id);
-          external->constraint_tmp.push_back (elit);
+    for (auto &cpair : external->constraint_ids) {
+      // constraint_ids contains all (and only valid)
+      // (id, idx) pairs of external constraints
+      const int64_t cid = cpair.first;
+      assert (cid);
+      size_t idx = cpair.second; // start of constraint
+      int elit = 0;
+      bool skip = false;
+      while ((elit = external->constraints[idx++])) {
+        assert (elit);
+        int eidx = abs (elit);
+        assert (eidx <= external->max_var);
+        int ilit = external->e2i[eidx];
+        if (!ilit) {
+          skip = true;
+          // but continue for logging
         }
+        external->constraint_tmp.push_back (elit);
       }
-      // Not true due to constraints getting simplififed:
-      // assert (!ilit == !elit); // Because frozen!
-      if (elit < 0)
-        ilit = -ilit;
-      int64_t id = external->constraint_indeces[idx++];
-      if (!ilit == !elit) {
+      if (skip) {
+        LOG (constraint_tmp,
+             "inactive external literal %d, skipping"
+             "constraint[%" PRId64 "]",
+             elit, cid);
+        constraint_tmp.clear ();
+        continue; // next constraint pair
+      }
+      for (auto elit : external->constraint_tmp) {
+        assert (elit != INT_MIN);
+        assert (elit);
+        int eidx = abs (elit);
+        assert (eidx <= external->max_var);
+        int ilit = external->e2i[eidx];
+        if (lrat) {
+          // actually find unit of -elit (flips elit < 0)
+          unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+          assert ((size_t) eidx < external->ext_units.size ());
+          const int64_t id = external->ext_units[eidx];
+          bool added = external->ext_flags[abs (elit)];
+          if (id && !added) {
+            external->ext_flags[abs (elit)] = true;
+            lrat_chain.push_back (id);
+            external->eclause.push_back (elit);
+          }
+        }
+        // Not true due to constraints getting simplififed:
+        // assert (!ilit == !elit); // Because frozen!
+        if (elit < 0)
+          ilit = -ilit;
+        assert (ilit);
         LOG ("re-adding lit external %d internal %d to constraint", elit,
              ilit);
-        constrain (ilit, id);
-      } else
-        LOG ("skipping compacted constraint lit external %d internal %d",
-             elit, ilit);
-      if (!elit) {
-        if (lrat)
-          for (const auto &elit : external->constraint_tmp)
-            external->ext_flags[abs (elit)] = false;
-        external->constraint_tmp.clear ();
+        constrain (ilit, cid);
       }
+      constrain (0, cid);
+      if (lrat)
+        for (const auto &elit : external->eclause)
+          external->ext_flags[abs (elit)] = false;
+      external->eclause.clear ();
+      external->constraint_tmp.clear ();
     }
     PHASE ("compact", stats.compacts,
            "added %zd external literals to constraint",

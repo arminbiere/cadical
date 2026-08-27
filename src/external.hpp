@@ -77,10 +77,10 @@ struct External {
   vector<int> assumptions;    // External assumptions.
   vector<int> constraint_tmp; // current constraint.
   vector<int> constraints;    // zero-terminated external constraints.
-  std::unordered_map<int64_t, size_t>
-      constraint_ids; // external-id-to-constraints-vector-indexmapping
-  std::unordered_map<size_t, int64_t>
-      constraint_indeces; // constraints-vector-index-to-external-id mapping
+  // external-id-to-constraints-vector-indexmapping
+  std::unordered_map<int64_t, size_t> constraint_ids;
+  // constraints-vector-index-to-external-id mapping (not necessary)
+  // std::unordered_map<size_t, int64_t> constraint_indeces;
 
   vector<int64_t>
       ext_units; // External units. Needed to compute LRAT for eclause

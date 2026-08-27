@@ -351,7 +351,7 @@ int64_t External::constrain (int elit) {
       for (const auto &elit : constraint_tmp)
         ext_flags[abs (elit)] = false;
     constraint_tmp.clear ();
-    constraint_indeces[constraints.size ()] = id;
+    // constraint_indeces[constraints.size ()] = id;
     constraints.push_back (0);
   }
   internal->constrain (ilit, id);

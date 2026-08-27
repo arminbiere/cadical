@@ -25,8 +25,10 @@ void Internal::init_constraint_cat () {
   KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
   KITTEN_NAMESPACE (kitten_keep_assumptions) (constraint_cat);
   // size_t idx = 0;
-  for (auto &other : assumptions)
+  for (auto &other : assumptions) {
+    LOG ("kitten assume %s", LOGLIT (other));
     KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, other));
+  }
 }
 
 void Internal::constrain (int lit, int64_t ext_id) {

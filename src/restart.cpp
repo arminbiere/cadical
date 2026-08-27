@@ -123,12 +123,9 @@ bool Internal::restarting () {
 
 int Internal::reuse_trail () {
   const int trivial_decisions =
-      assumptions.size ()
-      // Plus 1 if the constraint is satisfied via implications of
-      // assumptions and a pseudo-decision level was introduced.
-      + !control[assumptions.size () + 1].decision;
-  if (!opts.restartreusetrail)
-    return trivial_decisions;
+      assumptions.size () + constraints_without_assumptions;
+  if (!opts.restartreusetrail || is_constraint_level (level))
+    return level;
   int next_decision = next_decision_variable ();
   assert (1 <= next_decision);
   int res = trivial_decisions;
