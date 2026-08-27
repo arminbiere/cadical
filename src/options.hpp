@@ -49,7 +49,7 @@ OPTION( checkassumptions,     1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,      1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,          1,  0,  1,0,0,0, "check failed literals form core") \
 OPTION( checkfrozen,          0,  0,  1,0,0,0, "check all frozen semantics") \
-OPTION( checkidrup,           1,  0,  2,0,0,0, "check (I)DRUP proofs online (2=check FRAT-like finalizing)") \
+OPTION( checkidrup,           1,  0,  1,0,0,0, "check (I)DRUP proofs online (2=check FRAT-like finalizing)") \
 OPTION( checklidrup,          1,  0,  1,0,0,0, "check L(ID)RUP proofs online") \
 OPTION( checkwitness,         1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,               1,  0,  2,0,0,1, "chronological backtracking") \
