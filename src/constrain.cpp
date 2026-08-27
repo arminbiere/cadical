@@ -171,8 +171,9 @@ bool Internal::failed_constraint (int64_t id) {
 }
 
 void Internal::reset_constraint () {
-  if (!constraints.empty ())
-    stats.constraints_reset++;
+  if (!constraint_cat)
+    return;
+  stats.constraints_reset++;
   for (auto lit : constraints) {
     if (lit) {
       melt (lit);
@@ -184,8 +185,7 @@ void Internal::reset_constraint () {
   constraint_vars.clear ();
   constraint_ids.clear ();
   constraint_fail.clear ();
-  if (constraint_cat)
-    KITTEN_NAMESPACE (kitten_release (constraint_cat));
+  KITTEN_NAMESPACE (kitten_release (constraint_cat));
   constraints_without_assumptions = 0;
   constraint_cat = 0;
   unsat_constraint = 0;

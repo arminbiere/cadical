@@ -950,7 +950,7 @@ int Internal::local_search () {
     return 0;
   if (!opts.walk)
     return 0;
-  if (constraints.size ())
+  if (constraint_cat)
     return 0;
   if (!lim.localsearch)
     return 0;
@@ -1244,7 +1244,7 @@ void Internal::dump () {
 /*------------------------------------------------------------------------*/
 
 bool Internal::traverse_constraint (ClauseIterator &it) {
-  if (constraints.empty () && !unsat_constraint)
+  if (constraints.empty ())
     return true;
 
   vector<int> eclause;

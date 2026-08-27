@@ -241,7 +241,7 @@ void Internal::warmup_decide () {
   assert (!satisfied ());
   PROFILE_SCOPE (decide);
   assert ((size_t) level >= assumptions.size ());
-  assert (constraints.empty () || (size_t) level > assumptions.size ());
+  assert (!constraint_cat);
   const bool target = (stable || opts.target == 2);
   stats.walk_warmup_decision++;
   int idx = next_decision_variable ();
@@ -334,7 +334,7 @@ int Internal::warmup () {
   // at all (not even the `backtrack ()` at the end). Also, we cannot not
   // ignore conflicts at all, meaning that we cannot use our special
   // propagation function, even if it could counts ticks.
-  assert (constraints.empty ());
+  assert (!constraint_cat);
   while (!res && !conflict && is_assumption_level (level) &&
          num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);

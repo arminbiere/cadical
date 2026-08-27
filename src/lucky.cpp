@@ -369,7 +369,7 @@ int Internal::backward_true_satisfiable () {
 
 int Internal::lucky_decide_assumptions () {
   assert (!level);
-  assert (!constraints.size ());
+  assert (!constraint_cat);
   int res = 0;
   while ((size_t) level < assumptions.size ()) {
     res = decide ();
@@ -473,7 +473,7 @@ int Internal::lucky_phases (bool update_limit) {
     return 0;
   // TODO: Some of the lucky assignments can also be found if there are
   // constraint.
-  if (!constraints.empty ())
+  if (constraint_cat)
     return 0;
   // External propagator assumes a CDCL loop, so lucky is not tried here.
   if (external_prop)
