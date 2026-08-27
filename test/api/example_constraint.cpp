@@ -45,14 +45,14 @@ int main () {
   // ------------------------------------------------------------------
   // Incrementally solve with constraint.
 
-  solver->constrain (TIE), solver->constrain (-SHIRT),
-      solver->constrain (0);
+  solver->constrain (TIE), solver->constrain (-SHIRT);
+  int64_t id = solver->constrain (0);
 
   res = solver->solve (); // Solve again incrementally.
   assert (res == 20);     // Check it is 'UNSATISFIABLE'.
 
-  res = solver->constraint_failed (); // Check constraint responsible.
-  assert (res);                       // Yes, constraint was used.
+  res = solver->constraint_failed (id); // Check constraint responsible.
+  assert (res);                         // Yes, constraint was used.
 
   // ------------------------------------------------------------------
   // Incrementally solve once more under another assumption.

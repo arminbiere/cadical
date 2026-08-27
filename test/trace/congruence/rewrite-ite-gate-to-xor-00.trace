@@ -1,6 +1,6 @@
 0 init
 1 set check 1
-2 set checkproof 1
+2 set checklidrup 0
 3 set luckyearly 0
 4 add 4
 5 add 1

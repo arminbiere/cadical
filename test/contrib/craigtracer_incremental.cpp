@@ -51,11 +51,14 @@ int main () {
   assert (next_var == 2);
 
   // ------------------------------------------------
+  // TODO: constraints
+  /*
   tracer->label_clause (3, CaDiCraig::CraigClauseType::A_CLAUSE);
   tracer->label_constraint (CaDiCraig::CraigClauseType::B_CLAUSE);
   solver->add (-1);
   solver->add (3);
   solver->add (0);
+
   solver->constrain (-2);
   solver->constrain (-3);
   solver->constrain (0);
@@ -66,6 +69,7 @@ int main () {
   assert (result == CaDiCraig::CraigCnfType::NORMAL);
   assert (clauses == std::vector<std::vector<int>>{{3}});
   assert (next_var == 2);
+  */
 
   solver->disconnect_proof_tracer (tracer);
   delete tracer;

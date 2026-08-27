@@ -50,11 +50,11 @@ int main () {
   File *f2 = File::write (internal, frat_proof_path);
 
   InternalTracer *t1 = new LratChecker (internal);
-  InternalTracer *t2 = new Checker (internal);
+  InternalTracer *t2 = new Checker (internal, false);
   FileTracer *ft1 = new LratTracer (internal, f1, 0);
   FileTracer *ft2 = new FratTracer (internal, f2, 0, 0);
   StatTracer *st1 = new LratChecker (internal);
-  StatTracer *st2 = new Checker (internal);
+  StatTracer *st2 = new Checker (internal, false);
 
   // ------------------------------------------------------------------
 
