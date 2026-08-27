@@ -4564,6 +4564,7 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
     if (random.generate_double () < 0.01)
       push_back (new ResetAssumptionsCall ());
   }
+  //  TODO: record constraints and generate failed_constraint calls
 }
 
 /*------------------------------------------------------------------------*/
