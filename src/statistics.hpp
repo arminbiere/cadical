@@ -125,17 +125,17 @@
   STATISTIC (congruence_units,       2, relative, "per", congruent) \
   STATISTIC (congruence_xors,        2, relative, "per", congruent) \
   STATISTIC (congruent,              1, relative, "per", congruence_rounds) \
-  STATISTIC (constraints_added,      3, relative, "per", searches) \
-  STATISTIC (constraints_analyzed,   3, percent, "%", constraints_sat) \
-  STATISTIC (constraints_decided,    3, percent, "%", constraints_added) \
-  STATISTIC (constraints_failed,     3, percent, "%", constraints_added) \
-  STATISTIC (constraints_flipped,    3, percent, "%", constraints_added) \
-  STATISTIC (constraints_lit,        3, relative, "per", constraints_added) \
-  STATISTIC (constraints_reset,      3, relative, "per", searches) \
-  STATISTIC (constraints_sat,        3, percent, "%", constraints_solved) \
-  STATISTIC (constraints_solved,     3, relative, "per", decisions) \
-  STATISTIC (constraints_unsat,      3, percent, "%", constraints_solved) \
-  STATISTIC (constraints_vars,       3, relative, "per", constraints_added) \
+  STATISTIC (constraints_added,      2, relative, "per", searches) \
+  STATISTIC (constraints_analyzed,   2, percent, "%", constraints_sat) \
+  STATISTIC (constraints_decided,    2, percent, "%", constraints_added) \
+  STATISTIC (constraints_failed,     2, percent, "%", constraints_added) \
+  STATISTIC (constraints_flipped,    2, percent, "%", constraints_added) \
+  STATISTIC (constraints_lit,        2, relative, "per", constraints_added) \
+  STATISTIC (constraints_reset,      2, relative, "per", searches) \
+  STATISTIC (constraints_sat,        2, percent, "%", constraints_solved) \
+  STATISTIC (constraints_solved,     2, relative, "per", decisions) \
+  STATISTIC (constraints_unsat,      2, percent, "%", constraints_solved) \
+  STATISTIC (constraints_vars,       2, relative, "per", constraints_added) \
   STATISTIC (cover_asymmetric,       3, percent, "%",  cover_total) \
   STATISTIC (cover_blocked,          3, percent, "%",  cover_total) \
   STATISTIC (coverings,              3, INTERVAL, "", interval) \
