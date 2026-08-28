@@ -67,8 +67,6 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     if (lit == reason_lit)
       continue;
     assert (val (reason_lit));
-    if (!val (reason_lit))
-      continue;
     const int signed_reason_lit = val (reason_lit) * reason_lit;
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
