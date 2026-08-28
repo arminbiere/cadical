@@ -82,8 +82,8 @@ Clause *Internal::new_clause (bool red, int glue) {
   const int size = (int) clause.size ();
   assert (size >= 2);
 
-  if (glue > size)
-    glue = size;
+  if (glue >= size)
+    glue = size - 1;
 
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
