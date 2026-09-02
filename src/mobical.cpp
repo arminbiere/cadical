@@ -2152,7 +2152,10 @@ public:
     if (!s->observed (lit)) {
       // do we want to observe?
       if (add_observed (lit)) {
-        assert (!s->external->current_val (lit));
+        if (s->external->current_val (lit)) {
+          MLOGE ("cb_decide", " 0 (unit " << lit << " fresh observed)");
+          return 0;
+        }
         MLOGE ("cb_decide", " " << lit << " (fresh observed)");
         return lit;
       }
