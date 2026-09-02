@@ -76,7 +76,7 @@ void Internal::mark_added (Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue) {
+Clause *Internal::new_clause (bool red, int glue, int64_t new_id) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -89,7 +89,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   Clause *c = (Clause *) new char[bytes];
   DeferDeleteArray<char> clause_delete ((char *) c);
 
-  c->id = ++clause_id;
+  c->id = new_id ? new_id : ++clause_id;
 
   c->conditioned = false;
   c->covered = false;
@@ -516,9 +516,7 @@ void Internal::add_new_original_clause (int64_t id) {
       int glue = (int) (learned_levels.size () + unassigned);
       assert (glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
-      Clause *c = new_clause (clause_redundancy, glue);
-      c->id = new_id;
-      clause_id--;
+      Clause *c = new_clause (clause_redundancy, glue, new_id);
       original.clear ();
       handle_external_clause (c); // handle_external_clause uses clause
       watch_clause (c);           // and may change the watched literal
