@@ -721,7 +721,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
+  Clause *new_clause (bool red, int glue = 0, int64_t new_id = 0);
   void promote_clause (Clause *, int new_glue);
   void promote_clause_glue_only (Clause *, int new_glue);
   void make_irredundant (Clause *);
