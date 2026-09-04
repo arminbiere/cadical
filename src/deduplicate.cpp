@@ -212,10 +212,11 @@ struct deduplicate_flush_smaller {
 //
 void Internal::deduplicate_all_clauses () {
   assert (!level);
-  clear_watches ();
 
   mark_satisfied_clauses_as_garbage ();
   garbage_collection ();
+
+  clear_watches ();
 
   // in order to do the inprocessing inplace, we remove the deleted clauses,
   // put the binary deleted clauses first. Then we work on the non-deleted

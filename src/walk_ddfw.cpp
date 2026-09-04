@@ -1165,12 +1165,13 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
     failed = true;
     return res;
   }
-  reset_watches ();
 
   // Remove all fixed variables first (assigned at decision level zero).
   //
   if (last.collect.fixed < stats.vars_all_fixed)
     garbage_collection ();
+
+  reset_watches ();
 
 #ifndef QUIET
   // We want to see more messages during initial local search.

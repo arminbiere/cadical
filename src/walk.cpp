@@ -885,12 +885,13 @@ int Internal::walk_round (int64_t limit, bool prev) {
   if (res) {
     return res;
   }
-  clear_watches ();
 
   // Remove all fixed variables first (assigned at decision level zero).
   //
   if (last.collect.fixed < stats.vars_all_fixed)
     garbage_collection ();
+
+  clear_watches ();
 
 #ifndef QUIET
   // We want to see more messages during initial local search.
