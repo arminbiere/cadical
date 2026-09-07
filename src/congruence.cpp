@@ -1004,9 +1004,9 @@ void Closure::rewrite_clause_to_clause_vector (Clause *c, int except) {
 }
 
 Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
-  assert (internal->lrat);
+  assert (internal->lrat || internal->proof);
   assert (!clause.empty ());
-  assert (!lrat_chain.empty ());
+  assert (!internal->lrat || !lrat_chain.empty ());
   bool clear = false;
 
   LOG (clause, "learn new tmp clause");
@@ -1069,6 +1069,7 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   clause_delete.release ();
 
   assert (internal->lrat_chain.empty ());
+
   return c;
 }
 
@@ -2590,7 +2591,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
 
 void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   assert (g->tag == Gate_Type::XOr_Gate);
-  assert (!internal->unsat && chain.empty ());
+  assert (!internal->unsat);
   LOG (g, "updating");
   bool garbage = true;
   assert (g->arity () == 0 || internal->clause.empty ());
@@ -3528,6 +3529,8 @@ void Closure::check_implied () {
 void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   assert (internal->clause.empty ());
   assert (clause.empty ());
+  assert (unsimplified.empty ());
+  assert (chain.empty ());
   if (!internal->proof)
     return;
   LOG (g, "starting XOR shrinking proof chain");
@@ -3538,7 +3541,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
                                         pivot);
     gate_sort_lrat_reasons (first, pivot, g->lhs);
   }
-
   auto &clause = internal->clause;
 
   const int lhs = g->lhs;
@@ -3556,16 +3558,18 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     LOG (pair.clause, "key %d", pair.current_lit);
   }
 #endif
+  LRAT_ID id1, id2;
+
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     LOG (clause, "xor shrinking clause");
     if (!internal->lrat) {
       clause.push_back (pivot);
-      check_and_add_to_proof_chain (clause);
+      id1 = check_and_add_to_proof_chain (clause);
       clause.pop_back ();
       clause.push_back (-pivot);
-      check_and_add_to_proof_chain (clause);
+      id2 = check_and_add_to_proof_chain (clause);
       clause.pop_back ();
     }
     if (internal->lrat) {
@@ -3579,8 +3583,30 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
         newclauses.push_back (LitClausePair (0, c));
         lrat_chain.clear ();
       } else {
-        check_and_add_to_proof_chain (clause);
+        // we have to keep this clause as it is justifying the XOR
+	// gate (and want to delete it later).
+        new_tmp_clause (clause);
+        if (internal->proof) {
+          clause.push_back (pivot);
+          internal->proof->delete_clause (id1, false, clause);
+          clause.pop_back ();
+          clause.push_back (-pivot);
+          internal->proof->delete_clause (id2, false, clause);
+          clause.pop_back ();
+        }
       }
+    } else if (!internal->lrat) {
+      // push the two clauses to the chain (the unit will be derived
+      // later from those two clauses). Like LRAT, but we do not
+      // allocate all clauses as clauses.
+      assert (internal->proof);
+      assert (clause.size () == 1);
+      clause.push_back (pivot);
+      add_clause_to_chain (clause, id1);
+      clause.pop_back();
+      clause.push_back (-pivot);
+      add_clause_to_chain(clause, id2);
+      clause.pop_back();
     }
     if (clause.size () == 1)
       return;
@@ -3815,6 +3841,7 @@ void Closure::add_ite_turned_and_binary_clauses (Gate *g) {
 void Closure::simplify_unit_xor_lrat_clauses (
     const vector<LitClausePair> &source, int lhs) {
   assert (internal->lrat);
+  assert (lrat_chain.empty ());
   for (auto pair : source) {
     rewrite_clause_to_clause_vector (pair.clause, lhs);
     if (lrat_chain.size ()) {
@@ -4800,6 +4827,9 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   assert (internal->clause.size () <= 1);
   update_xor_gate (g, git);
 
+  if (dst_count > 1)
+    delete_proof_chain ();
+
   if (!g->garbage && !internal->unsat && original_dst_negated &&
       dst_count == 1) {
     connect_goccs (g, dst);
@@ -5043,8 +5073,7 @@ void Closure::reset_closure () {
     Gate::delete_gate (gate);
   garbage.clear ();
 
-  if (internal->lrat) {
-    assert (internal->proof);
+  if (internal->lrat || internal->proof) {
     for (auto c : extra_clauses) {
       assert (!c->garbage);
       internal->proof->delete_clause (c);
