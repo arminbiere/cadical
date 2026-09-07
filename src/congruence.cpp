@@ -2547,6 +2547,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
                                                extra_reasons_ulit);
       if (merge_literals (g, g, g->lhs, g->rhs[0], extra_reasons_lit,
                           extra_reasons_ulit)) {
+	assert (garbage);
         ++internal->stats.congruence_unary;
         ++internal->stats.congruence_unary_and;
       }
@@ -2564,8 +2565,10 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
         produce_lrat_for_and_merge (g, h, extra_reasons_lit2,
                                     extra_reasons_ulit2);
       if (merge_literals (g, h, g->lhs, h->lhs, extra_reasons_lit2,
-                          extra_reasons_ulit2))
+                          extra_reasons_ulit2)) {
+	assert (garbage);
         ++internal->stats.congruence_ands;
+      }
     } else {
       assert (g->indexed);
       assert (it != table.end ());
@@ -2645,7 +2648,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
     }
     assert (clause.empty ());
   } else {
-    Gate *h = find_xor_gate (g);
+    Gate *h = find_xor_gate (g, g);
     if (h) {
       assert (garbage);
       std::vector<LRAT_ID> reasons_implication, reasons_back;
@@ -2656,6 +2659,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
           h->lhs, reasons_implication, reasons_back);
       if (merge_literals (g, h, g->lhs, h->lhs, reasons_implication,
                           reasons_back)) {
+	assert (garbage);
         ++internal->stats.congruence_xors;
       }
       delete_proof_chain ();
@@ -3624,17 +3628,17 @@ void Closure::check_xor_gate_implied (Gate const *const g) {
   clause.clear ();
 }
 
-Gate *Closure::find_xor_lits (const vector<int> &rhs) {
+Gate *Closure::find_xor_lits (const vector<int> &rhs, Gate *except) {
   assert (is_sorted (begin (rhs), end (rhs),
                      sort_literals_by_var_smaller (internal)));
-  return find_gate_lits (rhs, Gate_Type::XOr_Gate);
+  return find_gate_lits (rhs, Gate_Type::XOr_Gate, except);
 }
 
-Gate *Closure::find_xor_gate (const Gate *const g) {
+Gate *Closure::find_xor_gate (const Gate *const g, Gate *except) {
   assert (g->tag == Gate_Type::XOr_Gate);
   assert (is_sorted (begin (*g), end (*g),
                      sort_literals_by_var_smaller (internal)));
-  return find_gate_lits (begin (*g), end (*g), Gate_Type::XOr_Gate);
+  return find_gate_lits (begin (*g), end (*g), Gate_Type::XOr_Gate, except);
 }
 
 void Closure::reset_xor_gate_extraction () { internal->clear_occs (); }
@@ -6055,13 +6059,14 @@ bool Closure::rewrite_ite_gate_to_xor_or_and (Gate *g, Gate_Type new_tag,
       Gate *h;
       if (new_tag == Gate_Type::And_Gate) {
         check_and_gate_implied (g);
-        h = find_and_lits (begin (*g), end (*g));
+        h = find_and_lits (begin (*g), end (*g), g);
       } else {
         assert (new_tag == Gate_Type::XOr_Gate);
         check_xor_gate_implied (g);
-        h = find_xor_gate (g);
+        h = find_xor_gate (g, g);
       }
       if (h) {
+        assert (!h->garbage);
         garbage = true;
         if (new_tag == Gate_Type::XOr_Gate) {
           std::vector<LRAT_ID> reasons_implication, reasons_back;
@@ -6375,8 +6380,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (g->lhs != normalized_lhs)
           normalized_lhs = find_eager_representative (normalized_lhs);
         if (merge_literals (g, h, normalized_lhs, h->lhs, extra_reasons_lit,
-                            extra_reasons_ulit))
+                            extra_reasons_ulit)) {
+	  assert (garbage);
           ++internal->stats.congruence_ites;
+        }
         delete_proof_chain ();
         assert (internal->unsat || chain.empty ());
       } else {
@@ -6808,7 +6815,8 @@ void Closure::simplify_ite_gate (Gate *g) {
       assert (is_sorted (begin (*g), end (*g),
                          sort_literals_by_var_smaller (internal)));
       check_and_gate_implied (g);
-      Gate *h = find_and_lits (begin (*g), end (*g));
+      // g is already an AND gate, so we have to exclude it
+      Gate *h = find_and_lits (begin (*g), end (*g), g);
       if (h) {
         assert (garbage);
         std::vector<LRAT_ID> reasons_lrat, reasons_lrat_back;
@@ -6818,6 +6826,7 @@ void Closure::simplify_ite_gate (Gate *g) {
         }
         if (merge_literals (g, h, g->lhs, h->lhs, reasons_lrat,
                             reasons_lrat_back)) {
+	  assert (garbage);
           ++internal->stats.congruence_ites;
         }
       } else {

@@ -213,6 +213,10 @@ struct deduplicate_flush_smaller {
 void Internal::deduplicate_all_clauses () {
   assert (!level);
 
+  if (!propagate ()) {
+    learn_empty_clause ();
+    return;
+  }
   mark_satisfied_clauses_as_garbage ();
   garbage_collection ();
 
