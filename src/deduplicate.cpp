@@ -212,7 +212,8 @@ struct deduplicate_flush_smaller {
 //
 void Internal::deduplicate_all_clauses () {
   assert (!level);
-
+  if (unsat)
+    return;
   if (!propagate ()) {
     learn_empty_clause ();
     return;

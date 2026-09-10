@@ -3558,7 +3558,8 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     LOG (pair.clause, "key %d", pair.current_lit);
   }
 #endif
-  LRAT_ID id1, id2;
+  LRAT_ID id1 = -1;
+  LRAT_ID id2 = -1;
 
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
