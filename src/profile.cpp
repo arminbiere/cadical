@@ -181,13 +181,13 @@ void ProfileContext<Profiles...>::leaveContext (
 }
 
 // Explicit instantiations as Internal is now available
-template class ProfileContext<ResumeProfile>;
-template class ProfileContext<ResumeProfile, ResumeProfile>;
-template class ProfileContext<ResumeProfile, ResumeProfile, ResumeProfile>;
-template class ProfileContext<ResumeProfile, PauseProfile>;
-template class ProfileContext<ResumeProfile, PauseProfile, PauseProfile>;
-template class ProfileContext<PauseProfile, PauseProfile>;
-template class ProfileContext<ResumeProfile, ResumeProfile, PauseProfile,
+template struct ProfileContext<ResumeProfile>;
+template struct ProfileContext<ResumeProfile, ResumeProfile>;
+template struct ProfileContext<ResumeProfile, ResumeProfile, ResumeProfile>;
+template struct ProfileContext<ResumeProfile, PauseProfile>;
+template struct ProfileContext<ResumeProfile, PauseProfile, PauseProfile>;
+template struct ProfileContext<PauseProfile, PauseProfile>;
+template struct ProfileContext<ResumeProfile, ResumeProfile, PauseProfile,
                               PauseProfile, PauseProfile>;
 
 void ResumeProfile::enterContext (Internal *internal, double time,
