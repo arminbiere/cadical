@@ -1247,14 +1247,24 @@ private:
   ExtendMap *extendmap = 0;
 
   // ReplayPropagator parameters
+#ifdef LOGGING
   bool logging = false;
+#endif
   size_t current_action = 0;
 
   std::vector<Call *> cb_actions;
 
 public:
   ReplayPropagator (Solver *s, ExtendMap *e, bool l)
-      : solver (s), extendmap (e), logging (l) {}
+      : solver (s), extendmap (e)
+#ifdef LOGGING
+        , logging (l)
+#endif
+  {
+#ifndef LOGGING
+    (void) l;
+#endif
+  }
 
   ~ReplayPropagator () {
     /* Not copied anymore, so they are deleted when the trace is deleted
@@ -1597,7 +1607,6 @@ private:
 
   // Next lemma to add
   size_t add_lemma_idx = 1;
-  size_t propagate_idx = 0;
   size_t external_decide_idx = 0;
 
   // Forced lemme addition (falsified lemma in model)
