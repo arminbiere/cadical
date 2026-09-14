@@ -330,6 +330,7 @@ int Internal::decide_constraint () {
   } else if (cat_res == 10) {
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
+    size_t idx = 0;
     for (auto &lit : constraint_vars) {
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
@@ -344,6 +345,8 @@ int Internal::decide_constraint () {
       if (!tmp_lit) {
         stats.decisions++;
         assert (!flags (decision).unused ());
+        if (idx)
+          swap (constraint_vars[0], constraint_vars[idx]);
         search_assume_decision (decision);
         all_constraints_assigned = false;
         break;
@@ -366,11 +369,14 @@ int Internal::decide_constraint () {
         if (tmp_lit > 0)
           failed = -failed;
         analyze_failing_constraint (failed);
+        if (idx)
+          swap (constraint_vars[0], constraint_vars[idx]);
         if (var (lit).level)
           backtrack (var (lit).level - 1);
         all_constraints_assigned = false;
         break;
       }
+      idx++;
     }
     if (all_constraints_assigned) {
       stats.decisions++;
