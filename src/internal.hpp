@@ -1574,7 +1574,9 @@ struct Internal {
   bool better_decision (int lit, int other);
   bool is_assumption_level (size_t);
   bool is_constraint_level (size_t);
-  int decide (); // 0=decision, 20=failed
+  int decide_assumption (); // 0=decision, 20=failed
+  int decide_constraint (); // 0=decision, 20=failed
+  int decide ();            // 0=decision, 20=failed
 
   // Internal functions to enable explicit search limits.
   //

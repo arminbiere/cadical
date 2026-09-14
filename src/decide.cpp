@@ -258,21 +258,10 @@ bool Internal::is_constraint_level (size_t level) {
   return level < assumptions.size () + constraints_without_assumptions;
 }
 
-// Search for the next decision and assign it to the saved phase. Requires
-// that not all variables are assigned.
-
-int Internal::decide () {
-  assert (!satisfied ());
-  PROFILE_SCOPE (decide);
-  // during interaction with the user propagator, new variables can be added
-  // (for example by observed).
-  if (!imports.empty ())
-    activating_all_new_imported_literals ();
-  check_queue ();
-  CHECK_MISSED ();
+int Internal::decide_assumption () {
+  assert (is_assumption_level (level));
   int res = 0;
-  // TODO: refactor this part
-  if (is_assumption_level (level) && constraint_cat) {
+  if (constraint_cat) {
     int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
     if (!cat_res) {
       stats.constraints_solved++;
@@ -293,24 +282,8 @@ int Internal::decide () {
       unsat_constraint = true;
       res = 20;
     }
-    if (cat_res == 10) {
-      const int lit = assumptions[level];
-      assert (assumed (lit));
-      const signed char tmp = val (lit);
-      if (tmp < 0) {
-        LOG ("assumption %d falsified", lit);
-        res = 20;
-      } else if (tmp > 0) {
-        LOG ("assumption %d already satisfied", lit);
-        new_trail_level (0);
-        LOG ("added pseudo decision level");
-        notify_decision ();
-      } else {
-        LOG ("deciding assumption %d", lit);
-        search_assume_decision (lit);
-      }
-    }
-  } else if (is_assumption_level (level)) {
+  }
+  if (!res && !terminated_asynchronously ()) {
     const int lit = assumptions[level];
     assert (assumed (lit));
     const signed char tmp = val (lit);
@@ -326,88 +299,115 @@ int Internal::decide () {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
     }
-  } else if (is_constraint_level (level)) {
-    PROFILE_SCOPE (constraints);
-    int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
-    if (!cat_res) {
-      stats.constraints_solved++;
-      PROFILE_SCOPE (constraintssolve);
-      cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
-      PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
-      if (cat_res == 20)
-        stats.constraints_unsat++;
-      else if (cat_res == 10)
-        stats.constraints_sat++;
-      else {
-        // Kitten was terminated
-        assert (terminated_asynchronously ());
-      }
+  }
+  return res;
+}
+
+int Internal::decide_constraint () {
+  assert (is_constraint_level (level));
+  PROFILE_SCOPE (constraints);
+  int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
+  int res = 0;
+  if (!cat_res) {
+    stats.constraints_solved++;
+    PROFILE_SCOPE (constraintssolve);
+    cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+    PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
+    if (cat_res == 20)
+      stats.constraints_unsat++;
+    else if (cat_res == 10)
+      stats.constraints_sat++;
+    else {
+      // Kitten was terminated
+      assert (terminated_asynchronously ());
     }
-    // assert (cat_res);
-    if (cat_res == 20) { // unsat
-      LOG ("constraints falsified");
-      unsat_constraint = true;
-      res = 20;
-    } else if (cat_res == 10) {
-      LOG ("using kitten model");
-      bool all_constraints_assigned = true;
-      for (auto &lit : constraint_vars) {
-        const signed char tmp =
-            KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
-        // constraint_vars might include variables that are simplified
-        // before giving to kitten, in which case this assumption may fail:
-        // TODO: actually might be possible to avoid after all
-        assert (tmp);
-        const signed char tmp_lit = val (lit);
-        int decision = lit;
-        if (tmp < 0)
-          decision = -decision;
-        if (!tmp_lit) {
-          stats.decisions++;
-          assert (!flags (decision).unused ());
-          search_assume_decision (decision);
-          all_constraints_assigned = false;
-          break;
-        } else if (!tmp || tmp_lit == tmp) {
-          LOG ("constraint literal %d already satisfied", lit);
-          continue;
-        } else if (is_decision (lit)) {
-          // happens if we have to recompute kitten model
-          // assert (false);
-          all_constraints_assigned = false;
-          backtrack (var (lit).level - 1);
-          break;
-        } else if (KITTEN_NAMESPACE (
-                       kitten_flip_signed_literal (constraint_cat, lit))) {
-          stats.constraints_flipped++;
-        } else {
-          assert (tmp_lit == -tmp);
-          LOG ("constraint literal %d falsified", lit);
-          int failed = lit;
-          if (tmp_lit > 0)
-            failed = -failed;
-          analyze_failing_constraint (failed);
-          if (var (lit).level)
-            backtrack (var (lit).level - 1);
-          all_constraints_assigned = false;
-          break;
-        }
-      }
-      if (all_constraints_assigned) {
+  }
+  // assert (cat_res);
+  if (cat_res == 20) { // unsat
+    LOG ("constraints falsified");
+    unsat_constraint = true;
+    res = 20;
+  } else if (cat_res == 10) {
+    LOG ("using kitten model");
+    bool all_constraints_assigned = true;
+    for (auto &lit : constraint_vars) {
+      const signed char tmp =
+          KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
+      // constraint_vars might include variables that are simplified
+      // before giving to kitten, in which case this assumption may fail:
+      // TODO: actually might be possible to avoid after all
+      assert (tmp);
+      const signed char tmp_lit = val (lit);
+      int decision = lit;
+      if (tmp < 0)
+        decision = -decision;
+      if (!tmp_lit) {
         stats.decisions++;
-        LOG ("added pseudo decision level(s) due to constraints");
-        new_trail_level (0);
-        notify_decision ();
+        assert (!flags (decision).unused ());
+        search_assume_decision (decision);
+        all_constraints_assigned = false;
+        break;
+      } else if (!tmp || tmp_lit == tmp) {
+        LOG ("constraint literal %d already satisfied", lit);
+        continue;
+      } else if (is_decision (lit)) {
+        // happens if we have to recompute kitten model
+        // assert (false);
+        all_constraints_assigned = false;
+        backtrack (var (lit).level - 1);
+        break;
+      } else if (KITTEN_NAMESPACE (
+                     kitten_flip_signed_literal (constraint_cat, lit))) {
+        stats.constraints_flipped++;
+      } else {
+        assert (tmp_lit == -tmp);
+        LOG ("constraint literal %d falsified", lit);
+        int failed = lit;
+        if (tmp_lit > 0)
+          failed = -failed;
+        analyze_failing_constraint (failed);
+        if (var (lit).level)
+          backtrack (var (lit).level - 1);
+        all_constraints_assigned = false;
+        break;
       }
     }
-    PROFILE_SCOPE_EARLY_EXIT (constraints);
+    if (all_constraints_assigned) {
+      stats.decisions++;
+      LOG ("added pseudo decision level(s) due to constraints");
+      new_trail_level (0);
+      notify_decision ();
+    }
+  }
+  return res;
+}
+
+// Search for the next decision and assign it to the saved phase. Requires
+// that not all variables are assigned.
+
+int Internal::decide () {
+  assert (!satisfied ());
+  PROFILE_SCOPE (decide);
+  // during interaction with the user propagator, new variables can be added
+  // (for example by observed).
+  if (!imports.empty ())
+    activating_all_new_imported_literals ();
+  check_queue ();
+  CHECK_MISSED ();
+  int res = 0;
+  // TODO: refactor this part
+BEFORE:
+  if (is_assumption_level (level)) {
+    res = decide_assumption ();
+  } else if (is_constraint_level (level)) {
+    res = decide_constraint ();
   } else {
     check_queue ();
     int decision = ask_decision ();
     if (is_constraint_level (level)) {
       // Forced backtrack below pseudo decision levels.
       // So one of the two branches above will handle it.
-      return decide ();
+      goto BEFORE;
     }
     stats.decisions++;
     if (!decision) {
