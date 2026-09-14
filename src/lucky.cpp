@@ -371,7 +371,9 @@ int Internal::lucky_decide_assumptions () {
   assert (!level);
   assert (!constraint_cat);
   int res = 0;
-  while ((size_t) level < assumptions.size ()) {
+  while (is_constraint_level (level)) {
+    if (terminated_asynchronously ())
+      return 0;
     res = decide ();
     if (res == 20) {
       marked_failed = false;

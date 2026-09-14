@@ -323,6 +323,8 @@ int Internal::decide_constraint () {
     }
   }
   // assert (cat_res);
+  if (terminated_asynchronously ())
+    return res;
   if (cat_res == 20) { // unsat
     LOG ("constraints falsified");
     unsat_constraint = true;
@@ -330,8 +332,21 @@ int Internal::decide_constraint () {
   } else if (cat_res == 10) {
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
-    size_t idx = 0;
-    for (auto &lit : constraint_vars) {
+    // re-ordering constraint_vars with 'last_lit' will break
+    // the invariant that the lowest level unsatisfied literal
+    // in constraint_vars is found
+    // TODO: does this invariant even hold without re-ordering?
+    // TODO: sort based on level/falsity to guarantee this. When to sort?
+    // TODO: maybe swap falified literals to the front?
+    int lit = 0; //, last_lit;
+    for (size_t idx = 0; idx < constraint_vars.size (); idx++) {
+      if (terminated_asynchronously ()) {
+        all_constraints_assigned = false;
+        break;
+      }
+      // last_lit = lit;
+      lit = constraint_vars[idx];
+      // constraint_vars[idx] = last_lit;
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
       // constraint_vars might include variables that are simplified
@@ -345,8 +360,6 @@ int Internal::decide_constraint () {
       if (!tmp_lit) {
         stats.decisions++;
         assert (!flags (decision).unused ());
-        if (idx)
-          swap (constraint_vars[0], constraint_vars[idx]);
         search_assume_decision (decision);
         all_constraints_assigned = false;
         break;
@@ -356,6 +369,8 @@ int Internal::decide_constraint () {
       } else if (is_decision (lit)) {
         // happens if we have to recompute kitten model
         // assert (false);
+        // TODO: maybe catch this first, as it really messes with
+        // the rest (breaks invariant)
         all_constraints_assigned = false;
         backtrack (var (lit).level - 1);
         break;
@@ -363,14 +378,15 @@ int Internal::decide_constraint () {
                      kitten_flip_signed_literal (constraint_cat, lit))) {
         stats.constraints_flipped++;
       } else {
+        // TODO: this branch is only good if the trail satisfies
+        // the current kitten model, otherwise 'analyze_failing_constraint'
+        // might generate a useless clause.
         assert (tmp_lit == -tmp);
         LOG ("constraint literal %d falsified", lit);
         int failed = lit;
         if (tmp_lit > 0)
           failed = -failed;
         analyze_failing_constraint (failed);
-        if (idx)
-          swap (constraint_vars[0], constraint_vars[idx]);
         if (var (lit).level)
           backtrack (var (lit).level - 1);
         all_constraints_assigned = false;
@@ -378,6 +394,10 @@ int Internal::decide_constraint () {
       }
       idx++;
     }
+    /*
+    assert (!constraint_vars[0]), assert (lit);
+    constraint_vars[0] = lit;
+    */
     if (all_constraints_assigned) {
       stats.decisions++;
       LOG ("added pseudo decision level(s) due to constraints");
@@ -403,6 +423,8 @@ int Internal::decide () {
   int res = 0;
   // TODO: refactor this part
 BEFORE:
+  if (terminated_asynchronously ())
+    return res;
   if (is_assumption_level (level)) {
     res = decide_assumption ();
   } else if (is_constraint_level (level)) {
