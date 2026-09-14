@@ -1115,6 +1115,40 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
 
 /*------------------------------------------------------------------------*/
 
+bool External::traverse_constraint (ClauseIterator &it) {
+  if (constraints.empty ())
+    return true;
+
+  vector<int> eclause;
+  if (internal->unsat)
+    return it.clause (eclause);
+
+  LOG (constraints, "traversing constraints");
+  bool satisfied = false;
+  for (auto elit : constraints) {
+    const int tmp = fixed (elit);
+    if (tmp > 0) {
+      satisfied = true;
+      break;
+    }
+    if (tmp < 0)
+      continue;
+    // const int elit = externalize (ilit);
+    if (elit)
+      eclause.push_back (elit);
+    else {
+      if (!satisfied && !it.clause (eclause))
+        return false;
+      eclause.clear ();
+      satisfied = false;
+    }
+  }
+
+  return true;
+}
+
+/*------------------------------------------------------------------------*/
+
 void External::copy_flags (External &other) const {
   const vector<Flags> &this_ftab = internal->ftab;
   vector<Flags> &other_ftab = other.internal->ftab;

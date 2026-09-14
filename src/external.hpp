@@ -433,6 +433,10 @@ struct External {
   bool traverse_witnesses_backward (WitnessIterator &);
   bool traverse_witnesses_forward (WitnessIterator &);
 
+  // Export and traverse all constraints.
+  //
+  bool traverse_constraint (ClauseIterator &);
+
   /*----------------------------------------------------------------------*/
 
   // Copy flags for determining preprocessing state, including if a variable

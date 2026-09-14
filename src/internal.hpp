@@ -274,7 +274,7 @@ struct Internal {
   vector<int> trail;        // currently assigned literals
   vector<int> clause;       // simplified in parsing & learning
   vector<int> assumptions;  // assumed literals
-  vector<int> constraints;  // literals of the constraints
+  // vector<int> constraints;  // literals of the constraints
   vector<int> constraint_vars; // variables of the constraints
   vector<int> failing_assumptions;
   size_t constraints_without_assumptions;
@@ -1793,10 +1793,6 @@ struct Internal {
   // Export and traverse all irredundant (non-unit) clauses.
   //
   bool traverse_clauses (ClauseIterator &);
-
-  // Export and traverse all irredundant (non-unit) clauses.
-  //
-  bool traverse_constraint (ClauseIterator &);
 
   /*----------------------------------------------------------------------*/
 

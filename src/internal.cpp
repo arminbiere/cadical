@@ -1018,19 +1018,24 @@ int Internal::solve (bool preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
-  bool run_lucky = (stats.conflicts >= lim.lucky); // cannot be in lucky, because we run it twice
+  bool run_lucky =
+      (stats.conflicts >=
+       lim.lucky); // cannot be in lucky, because we run it twice
   bool update_lucky_limits = !opts.luckylate; // update in the second
   // run if there is any only run lucky late if some preprocessing was
   // done, which corresponds to preprocesslight (only done during the
   // first search), or if the user forced preprocessing, or there are
   // full preprocessing round.
-  bool will_do_any_preprocessing = ((opts.preprocesslight && stats.searches <= 1) || preprocess_only || lim.preprocessing);
+  bool will_do_any_preprocessing =
+      ((opts.preprocesslight && stats.searches <= 1) || preprocess_only ||
+       lim.preprocessing);
   if (!preprocess_only && !res && !level && opts.luckyearly && run_lucky)
     res = lucky_phases (update_lucky_limits);
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level && will_do_any_preprocessing && opts.luckylate && run_lucky)
+    if (!res && !level && will_do_any_preprocessing && opts.luckylate &&
+        run_lucky)
       res = lucky_phases (true);
     if (!res && !level)
       res = local_search ();
@@ -1242,40 +1247,6 @@ void Internal::dump () {
   for (const auto &lit : assumptions)
     printf ("%d 0\n", lit);
   fflush (stdout);
-}
-
-/*------------------------------------------------------------------------*/
-
-bool Internal::traverse_constraint (ClauseIterator &it) {
-  if (constraints.empty ())
-    return true;
-
-  vector<int> eclause;
-  if (unsat)
-    return it.clause (eclause);
-
-  LOG (constraints, "traversing constraints");
-  bool satisfied = false;
-  for (auto ilit : constraints) {
-    const int tmp = fixed (ilit);
-    if (tmp > 0) {
-      satisfied = true;
-      break;
-    }
-    if (tmp < 0)
-      continue;
-    const int elit = externalize (ilit);
-    if (elit)
-      eclause.push_back (elit);
-    else {
-      if (!satisfied && !it.clause (eclause))
-        return false;
-      eclause.clear ();
-      satisfied = false;
-    }
-  }
-
-  return true;
 }
 /*------------------------------------------------------------------------*/
 

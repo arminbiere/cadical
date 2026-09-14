@@ -119,7 +119,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
   assert (int_id < INT_MAX);
   constraint_ids[ext_id] = int_id;
   if (constraint_tmp.empty ()) {
-    constraints.push_back (0);
+    // constraints.push_back (0);
     unsat_constraint = true;
     constraint_fail[int_id] = 1;
     conclusion.push_back (ext_id);
@@ -130,7 +130,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
     // marked_failed = false; // allow to trigger failing ()
   } else {
     for (const auto &lit : constraint_tmp) {
-      constraints.push_back (lit);
+      // constraints.push_back (lit);
       stats.constraints_lit++;
       Flags &f = flags (lit);
       if (!f.constrained) {
@@ -145,7 +145,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
                                            constraint_tmp.size (),
                                            constraint_tmp.data ());
-    constraints.push_back (0);
+    // constraints.push_back (0);
     constraint_tmp.clear ();
   }
 }
@@ -174,14 +174,14 @@ void Internal::reset_constraint () {
   if (!constraint_cat)
     return;
   stats.constraints_reset++;
-  for (auto lit : constraints) {
+  for (auto lit : constraint_vars) {
     if (lit) {
       melt (lit);
       flags (lit).constrained = 0;
     }
   }
-  LOG ("cleared %zd constraint literals", constraints.size ());
-  constraints.clear ();
+  LOG ("cleared %zd constraint literals", constraint_vars.size ());
+  // constraints.clear ();
   constraint_vars.clear ();
   constraint_ids.clear ();
   constraint_fail.clear ();

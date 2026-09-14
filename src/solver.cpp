@@ -1670,7 +1670,7 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
              internal->traverse_clauses (it) &&
-             internal->traverse_constraint (it);
+             external->traverse_constraint (it);
   LOG_API_CALL_RETURNS ("traverse_clauses", res);
   return res;
 }
