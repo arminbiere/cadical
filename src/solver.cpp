@@ -85,22 +85,24 @@ static void log_api_call (Internal *internal, const char *name,
                tout.log_code (), suffix);
 }
 
-static void log_api_call (Internal *internal, const char *name, int arg,
-                          const char *suffix) {
-  Logger::log (internal, "API call %s'%s (%d)'%s %s", tout.api_code (),
-               name, arg, tout.log_code (), suffix);
+static void log_api_call (Internal *internal, const char *name,
+                          intmax_t arg, const char *suffix) {
+  Logger::log (internal, "API call %s'%s (%" PRIdMAX ")'%s %s",
+               tout.api_code (), name, arg, tout.log_code (), suffix);
 }
 
-static void log_api_call (Internal *internal, const char *name, int arg,
-                          int b, const char *suffix) {
-  Logger::log (internal, "API call %s'%s (%d, %d)'%s %s", tout.api_code (),
-               name, arg, b, tout.log_code (), suffix);
+static void log_api_call (Internal *internal, const char *name,
+                          intmax_t arg, intmax_t b, const char *suffix) {
+  Logger::log (internal,
+               "API call %s'%s (%" PRIdMAX ", %" PRIdMAX ")'%s %s",
+               tout.api_code (), name, arg, b, tout.log_code (), suffix);
 }
 
-static void log_api_call (Internal *internal, const char *name, int arg,
-                          int b, int c) {
-  Logger::log (internal, "API call %s'%s (%d, %d)'%s %d", tout.api_code (),
-               name, arg, b, tout.log_code (), c);
+static void log_api_call (Internal *internal, const char *name,
+                          intmax_t arg, intmax_t b, intmax_t c) {
+  Logger::log (internal,
+               "API call %s'%s (%" PRIdMAX ", %" PRIdMAX ")'%s %" PRIdMAX,
+               tout.api_code (), name, arg, b, tout.log_code (), c);
 }
 
 static void log_api_call (Internal *internal, const char *name,
@@ -110,9 +112,29 @@ static void log_api_call (Internal *internal, const char *name,
 }
 
 static void log_api_call (Internal *internal, const char *name,
-                          const char *a1, int a2, const char *s) {
-  Logger::log (internal, "API call %s'%s (\"%s\", %d)'%s %s",
+                          const char *a1, intmax_t a2, const char *s) {
+  Logger::log (internal, "API call %s'%s (\"%s\", %" PRIdMAX ")'%s %s",
                tout.api_code (), name, a1, a2, tout.log_code (), s);
+}
+
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          const char *suffix) {
+  log_api_call (internal, name, (intmax_t) arg, suffix);
+}
+
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, const char *suffix) {
+  log_api_call (internal, name, (intmax_t) arg, (intmax_t) b, suffix);
+}
+
+static void log_api_call (Internal *internal, const char *name, int arg,
+                          int b, int c) {
+  log_api_call (internal, name, (intmax_t) arg, (intmax_t) b, (intmax_t) c);
+}
+
+static void log_api_call (Internal *internal, const char *name,
+                          const char *a1, int a2, const char *s) {
+  log_api_call (internal, name, a1, (intmax_t) a2, s);
 }
 
 /*------------------------------------------------------------------------*/
@@ -125,13 +147,13 @@ static void log_api_call_begin (Internal *internal, const char *name) {
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
-                                int arg) {
+                                intmax_t arg) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, "started");
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
-                                int arg, int b) {
+                                intmax_t arg, intmax_t b) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, b, "started");
 }
@@ -143,9 +165,24 @@ static void log_api_call_begin (Internal *internal, const char *name,
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
-                                const char *arg1, int arg2) {
+                                const char *arg1, intmax_t arg2) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg1, arg2, "started");
+}
+
+static void log_api_call_begin (Internal *internal, const char *name,
+                                int arg) {
+  log_api_call_begin (internal, name, (intmax_t) arg);
+}
+
+static void log_api_call_begin (Internal *internal, const char *name,
+                                int arg, int b) {
+  log_api_call_begin (internal, name, (intmax_t) arg, (intmax_t) b);
+}
+
+static void log_api_call_begin (Internal *internal, const char *name,
+                                const char *arg1, int arg2) {
+  log_api_call_begin (internal, name, arg1, (intmax_t) arg2);
 }
 
 /*------------------------------------------------------------------------*/
@@ -155,7 +192,7 @@ static void log_api_call_end (Internal *internal, const char *name) {
 }
 
 static void log_api_call_end (Internal *internal, const char *name,
-                              int lit) {
+                              intmax_t lit) {
   log_api_call (internal, name, lit, "succeeded");
 }
 
@@ -171,8 +208,18 @@ static void log_api_call_end (Internal *internal, const char *name,
 }
 
 static void log_api_call_end (Internal *internal, const char *name,
-                              const char *arg, int val, bool res) {
+                              const char *arg, intmax_t val, bool res) {
   log_api_call (internal, name, arg, val, res ? "succeeded" : "failed");
+}
+
+static void log_api_call_end (Internal *internal, const char *name,
+                              int lit) {
+  log_api_call_end (internal, name, (intmax_t) lit);
+}
+
+static void log_api_call_end (Internal *internal, const char *name,
+                              const char *arg, int val, bool res) {
+  log_api_call_end (internal, name, arg, (intmax_t) val, res);
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
@@ -181,23 +228,16 @@ static void log_api_call_returns (Internal *internal, const char *name,
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
-                                  int res) {
+                                  intmax_t res) {
   char fmt[32];
-  snprintf (fmt, sizeof fmt, "returns '%d'", res);
+  snprintf (fmt, sizeof fmt, "returns '%" PRIdMAX "'", res);
   log_api_call (internal, name, fmt);
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
-                                  int64_t res) {
+                                  intmax_t lit, intmax_t res) {
   char fmt[32];
-  snprintf (fmt, sizeof fmt, "returns '%" PRId64 "'", res);
-  log_api_call (internal, name, fmt);
-}
-
-static void log_api_call_returns (Internal *internal, const char *name,
-                                  int lit, int res) {
-  char fmt[32];
-  snprintf (fmt, sizeof fmt, "returns '%d'", res);
+  snprintf (fmt, sizeof fmt, "returns '%" PRIdMAX "'", res);
   log_api_call (internal, name, lit, fmt);
 }
 
@@ -208,13 +248,13 @@ static void log_api_call_returns (Internal *internal, const char *name,
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
-                                  int lit, bool res) {
+                                  intmax_t lit, bool res) {
   log_api_call (internal, name, lit,
                 res ? "returns 'true'" : "returns 'false'");
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
-                                  int lit, int b, int res) {
+                                  intmax_t lit, intmax_t b, intmax_t res) {
   log_api_call (internal, name, lit, b, res);
 }
 
@@ -226,11 +266,39 @@ static void log_api_call_returns (Internal *internal, const char *name,
 }
 
 static void log_api_call_returns (Internal *internal, const char *name,
-                                  const char *arg1, int arg2,
+                                  const char *arg1, intmax_t arg2,
                                   const char *res) {
-  Logger::log (internal, "API call %s'%s (\"%s\", %d)'%s returns '%s'",
+  Logger::log (internal,
+               "API call %s'%s (\"%s\", %" PRIdMAX ")'%s returns '%s'",
                tout.api_code (), name, arg1, arg2, tout.log_code (),
                res ? res : "<null>");
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int res) {
+  log_api_call_returns (internal, name, (intmax_t) res);
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, int res) {
+  log_api_call_returns (internal, name, (intmax_t) lit, (intmax_t) res);
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, bool res) {
+  log_api_call_returns (internal, name, (intmax_t) lit, res);
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  int lit, int b, int res) {
+  log_api_call_returns (internal, name, (intmax_t) lit, (intmax_t) b,
+                        (intmax_t) res);
+}
+
+static void log_api_call_returns (Internal *internal, const char *name,
+                                  const char *arg1, int arg2,
+                                  const char *res) {
+  log_api_call_returns (internal, name, arg1, (intmax_t) arg2, res);
 }
 
 /*------------------------------------------------------------------------*/
@@ -303,6 +371,13 @@ void Solver::trace_api_call (const char *s0, int i1) const {
   fflush (trace_api_file);
 }
 
+void Solver::trace_api_call (const char *s0, int64_t i1) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %" PRId64, s0, i1);
+  fprintf (trace_api_file, "%s %" PRId64 "\n", s0, i1);
+  fflush (trace_api_file);
+}
+
 void Solver::trace_api_call (const char *s0, int i1, int b) const {
   assert (trace_api_file);
   LOG ("TRACE %s %d %d", s0, i1, b);
@@ -321,6 +396,14 @@ void Solver::trace_api_call (const char *s0, const char *s1, int i2) const {
   assert (trace_api_file);
   LOG ("TRACE %s %s %d", s0, s1, i2);
   fprintf (trace_api_file, "%s %s %d\n", s0, s1, i2);
+  fflush (trace_api_file);
+}
+
+void Solver::trace_api_call (const char *s0, const char *s1,
+                             int64_t i2) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %s %" PRId64, s0, s1, i2);
+  fprintf (trace_api_file, "%s %s %" PRId64 "\n", s0, s1, i2);
   fflush (trace_api_file);
 }
 
@@ -593,6 +676,14 @@ bool Solver::limit (const char *arg, int val) {
   REQUIRE_VALID_STATE ();
   bool res = internal->limit (arg, val);
   LOG_API_CALL_END ("limit", arg, val, res);
+  return res;
+}
+
+bool Solver::limit64 (const char *arg, int64_t val) {
+  TRACE ("limit64", arg, val);
+  REQUIRE_VALID_STATE ();
+  bool res = internal->limit (arg, val);
+  LOG_API_CALL_END ("limit64", arg, val, res);
   return res;
 }
 

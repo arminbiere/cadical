@@ -1,10 +1,27 @@
+#include "util.hpp"
 #include "internal.hpp"
+#include <cstdint>
+#include <limits>
 
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool parse_int_str (const char *val_str, int &val) {
+bool parse_int_str (const char *str, int &val) {
+  int64_t parsed;
+  if (!parse_int_str (str, parsed))
+    return false;
+
+  if (parsed < INT_MIN)
+    parsed = INT_MIN;
+  else if (parsed > INT_MAX)
+    parsed = INT_MAX;
+
+  val = static_cast<int> (parsed);
+  return true;
+}
+
+bool parse_int_str (const char *val_str, int64_t &val) {
   if (!strcmp (val_str, "true"))
     val = 1;
   else if (!strcmp (val_str, "false"))
@@ -22,8 +39,9 @@ bool parse_int_str (const char *val_str, int &val) {
     if (!isdigit ((ch = *p++)))
       return false;
 
-    const int64_t bound = -(int64_t) INT_MIN;
-    int64_t mantissa = ch - '0';
+    const uint64_t bound =
+        static_cast<uint64_t> (std::numeric_limits<int64_t>::max ()) + 1;
+    uint64_t mantissa = ch - '0';
 
     while (isdigit (ch = *p++)) {
       if (bound / 10 < mantissa)
@@ -47,21 +65,28 @@ bool parse_int_str (const char *val_str, int &val) {
       return false;
 
     assert (exponent <= 10);
-    int64_t val64 = mantissa;
-    for (int i = 0; i < exponent; i++)
-      val64 *= 10;
-
-    if (sign < 0) {
-      val64 = -val64;
-      if (val64 < INT_MIN)
-        val64 = INT_MIN;
-    } else {
-      if (val64 > INT_MAX)
-        val64 = INT_MAX;
+    uint64_t val_u64 = mantissa;
+    for (int i = 0; i < exponent; i++) {
+      if (val_u64 > bound / 10)
+        val_u64 = bound;
+      else
+        val_u64 *= 10;
     }
 
-    assert (INT_MIN <= val64);
-    assert (val64 <= INT_MAX);
+    int64_t val64;
+    if (sign < 0) {
+      if (val_u64 >= bound) {
+        val64 = std::numeric_limits<int64_t>::min ();
+      } else {
+        val64 = -static_cast<int64_t> (val_u64);
+      }
+    } else {
+      if (val_u64 >= bound) {
+        val64 = std::numeric_limits<int64_t>::max ();
+      } else {
+        val64 = val_u64;
+      }
+    }
 
     val = val64;
   }

@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <limits>
 
 namespace CaDiCaL {
 
@@ -38,7 +39,7 @@ void Internal::limit_terminate (int l) {
   }
 }
 
-void Internal::limit_conflicts (int l) {
+void Internal::limit_conflicts (int64_t l) {
   if (l < 0 && inc.conflicts < 0) {
     LOG ("keeping unbounded conflict limit");
   } else if (l < 0) {
@@ -46,11 +47,11 @@ void Internal::limit_conflicts (int l) {
     inc.conflicts = -1;
   } else {
     inc.conflicts = l;
-    LOG ("new conflict limit of %d conflicts", l);
+    LOG ("new conflict limit of %" PRId64 " conflicts", l);
   }
 }
 
-void Internal::limit_decisions (int l) {
+void Internal::limit_decisions (int64_t l) {
   if (l < 0 && inc.decisions < 0) {
     LOG ("keeping unbounded decision limit");
   } else if (l < 0) {
@@ -58,7 +59,7 @@ void Internal::limit_decisions (int l) {
     inc.decisions = -1;
   } else {
     inc.decisions = l;
-    LOG ("new decision limit of %d decisions", l);
+    LOG ("new decision limit of %" PRId64 " decisions", l);
   }
 }
 
@@ -74,27 +75,27 @@ void Internal::limit_ticks (int64_t l) {
   }
 }
 
-void Internal::limit_preprocessing (int l) {
+void Internal::limit_preprocessing (int64_t l) {
   if (l < 0) {
-    LOG ("ignoring invalid preprocessing limit %d", l);
+    LOG ("ignoring invalid preprocessing limit %" PRId64, l);
   } else if (!l) {
     LOG ("reset preprocessing limit to no preprocessing");
     inc.preprocessing = 0;
   } else {
     inc.preprocessing = l;
-    LOG ("new preprocessing limit of %d preprocessing rounds", l);
+    LOG ("new preprocessing limit of %" PRId64 " preprocessing rounds", l);
   }
 }
 
-void Internal::limit_local_search (int l) {
+void Internal::limit_local_search (int64_t l) {
   if (l < 0) {
-    LOG ("ignoring invalid local search limit %d", l);
+    LOG ("ignoring invalid local search limit %" PRId64, l);
   } else if (!l) {
     LOG ("reset local search limit to no local search");
     inc.localsearch = 0;
   } else {
     inc.localsearch = l;
-    LOG ("new local search limit of %d local search rounds", l);
+    LOG ("new local search limit of %" PRId64 " local search rounds", l);
   }
 }
 
@@ -114,10 +115,20 @@ bool Internal::is_valid_limit (const char *name) {
   return false;
 }
 
-bool Internal::limit (const char *name, int l) {
+bool Internal::limit (const char *name, int64_t l) {
   bool res = true;
+  if (!strcmp (name, "terminate")) {
+    const int64_t min = std::numeric_limits<int>::min ();
+    const int64_t max = std::numeric_limits<int>::max ();
+    if (l < min || l > max) {
+      LOG ("terminate limit value %" PRId64
+           " exceeds int numeric limits, clipping to %" PRId64,
+           l, std::max (min, std::min (max, l)));
+      l = std::max (min, std::min (max, l));
+    }
+  }
   if (!strcmp (name, "terminate"))
-    limit_terminate (l);
+    limit_terminate (static_cast<int>(l));
   else if (!strcmp (name, "conflicts"))
     limit_conflicts (l);
   else if (!strcmp (name, "decisions"))

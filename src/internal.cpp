@@ -523,6 +523,13 @@ void Internal::init_preprocessing_limits () {
   }
 }
 
+static int64_t saturating_add (int64_t a, int64_t b) {
+  assert (0 <= a);
+  assert (0 <= b);
+  const int64_t max = std::numeric_limits<int64_t>::max ();
+  return b > max - a ? max : a + b;
+}
+
 void Internal::init_search_limits () {
 
   const bool incremental = lim.initialized;
@@ -619,7 +626,7 @@ void Internal::init_search_limits () {
     lim.conflicts = -1;
     LOG ("no limit on conflicts");
   } else {
-    lim.conflicts = stats.conflicts + inc.conflicts;
+    lim.conflicts = saturating_add (stats.conflicts, inc.conflicts);
     LOG ("conflict limit after %" PRId64 " conflicts at %" PRId64
          " conflicts",
          inc.conflicts, lim.conflicts);
@@ -629,7 +636,7 @@ void Internal::init_search_limits () {
     lim.decisions = -1;
     LOG ("no limit on decisions");
   } else {
-    lim.decisions = stats.decisions + inc.decisions;
+    lim.decisions = saturating_add (stats.decisions, inc.decisions);
     LOG ("decision limit after %" PRId64 " decisions at %" PRId64
          " decisions",
          inc.decisions, lim.decisions);
@@ -639,7 +646,9 @@ void Internal::init_search_limits () {
     lim.ticks = -1;
     LOG ("no limit on ticks");
   } else {
-    lim.ticks = stats.ticks.search[0] + stats.ticks.search[1] + inc.ticks;
+    lim.ticks = saturating_add (
+        saturating_add (stats.ticks.search[0], stats.ticks.search[1]),
+        inc.ticks);
     LOG ("ticks limit after %" PRId64 " ticks at %" PRId64 " ticks",
          inc.ticks, lim.ticks);
   }
@@ -698,7 +707,7 @@ void Internal::init_search_limits () {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::preprocess_round (int round) {
+bool Internal::preprocess_round (int64_t round) {
   (void) round;
   if (unsat)
     return false;
@@ -716,8 +725,8 @@ bool Internal::preprocess_round (int round) {
   assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
-         "starting round %d with %" PRId64 " variables and %" PRId64
-         " clauses",
+         "starting round %" PRId64 " with %" PRId64
+         " variables and %" PRId64 " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   if (opts.inprobing)
@@ -732,8 +741,8 @@ bool Internal::preprocess_round (int round) {
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
-         "finished round %d with %" PRId64 " variables and %" PRId64
-         " clauses",
+         "finished round %" PRId64 " with %" PRId64
+         " variables and %" PRId64 " clauses",
          round, after.vars, after.clauses);
   STOP (preprocess);
   report ('P');
@@ -812,7 +821,7 @@ int Internal::preprocess (bool always) {
     deduplicate_all_clauses ();
 
   preprocess_quickly (always);
-  for (int i = 0; i < lim.preprocessing; i++)
+  for (int64_t i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
   report (')');
@@ -888,7 +897,7 @@ void Internal::produce_failed_assumptions () {
 
 /*------------------------------------------------------------------------*/
 
-int Internal::local_search_round (int round) {
+int Internal::local_search_round (int64_t round) {
 
   assert (round > 0);
 
@@ -904,11 +913,16 @@ int Internal::local_search_round (int round) {
   // Determine propagation limit quadratically scaled with rounds.
   //
   int64_t limit = opts.walkmineff;
-  limit *= round;
-  if (LONG_MAX / round > limit)
+  const int64_t max = std::numeric_limits<int64_t>::max ();
+  if (limit > max / round)
+    limit = max;
+  else {
     limit *= round;
-  else
-    limit = LONG_MAX;
+    if (limit > max / round)
+      limit = max;
+    else
+      limit *= round;
+  }
 
   int res;
   if (opts.walkfullocc)
@@ -938,8 +952,12 @@ int Internal::local_search () {
 
   int res = 0;
 
-  for (int i = 1; !res && i <= lim.localsearch; i++)
+  for (int64_t i = 1; !res && i <= lim.localsearch;) {
     res = local_search_round (i);
+    if (i == lim.localsearch)
+      break;
+    i++;
+  }
 
   if (res == 10) {
     LOG ("local search determined formula to be satisfiable");

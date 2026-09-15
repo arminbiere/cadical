@@ -11,6 +11,8 @@
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <cstdint>
+#include <limits>
 namespace CaDiCaL {
 
 // clang-format off
@@ -1323,6 +1325,7 @@ struct Call {
     MELT            = shift ( 23 ),
 
     LIMIT           = shift ( 24 ),
+    LIMIT64         = shift ( 44 ),
     OPTIMIZE        = shift ( 25 ),
 
     DUMP            = shift ( 26 ),
@@ -1356,8 +1359,8 @@ struct Call {
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
-             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | RESIZE_DIFFERENCE
+             MELT | LIMIT | LIMIT64 | OPTIMIZE | DUMP | STATS | RESIZE |
+             FIXED | PHASE | RESIZE_DIFFERENCE
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1379,9 +1382,9 @@ struct Call {
   int arg;     // Argument if necessary.
   int64_t res; // Compute result if any.
   char *name;  // Option name for 'set' and 'config'
-  int val;     // Option value for 'set'.
+  int64_t val; // Option value for 'set'.
 
-  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0)
+  Call (Type t, int a = 0, int r = 0, const char *o = 0, int64_t v = 0)
       : type (t), arg (a), res (r), name (o ? strdup (o) : 0), val (v) {}
 
   virtual ~Call () {
@@ -1604,7 +1607,7 @@ struct ConfigureCall : public Call {
 };
 
 struct LimitCall : public Call {
-  LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
+  LimitCall (const char *o, int64_t v) : Call (LIMIT, 0, 0, o, v) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
     s->limit (name, val);
     (void) (extendmap);
@@ -1612,6 +1615,17 @@ struct LimitCall : public Call {
   void print (ostream &o) { o << "limit " << name << ' ' << val << endl; }
   Call *copy () { return new LimitCall (name, val); }
   const char *keyword () { return "limit"; }
+};
+
+struct Limit64Call : public Call {
+  Limit64Call (const char *o, int64_t v) : Call (LIMIT64, 0, 0, o, v) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->limit64 (name, val);
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "limit64 " << name << ' ' << val << endl; }
+  Call *copy () { return new Limit64Call (name, val); }
+  const char *keyword () { return "limit64"; }
 };
 
 struct OptimizeCall : public Call {
@@ -2371,7 +2385,7 @@ private:
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
   bool shrink_disable (int expected);
-  bool reduce_values (int expected);
+  bool reduce_values (int64_t expected);
   void map_variables (int expected);
   void shrink_options (int expected);
 
@@ -2406,6 +2420,7 @@ private:
   void generate_implied (Random &);
 
   void generate_limits (Random &);
+  void generate_limit64s (Random &);
 };
 
 /*------------------------------------------------------------------------*/
@@ -2746,6 +2761,27 @@ void Trace::generate_limits (Random &random) {
     push_back (new LimitCall ("localsearch", random.pick_int (0, 1)));
   if (random.generate_double () < 0.02)
     push_back (new OptimizeCall (random.pick_int (0, 31)));
+}
+
+/*------------------------------------------------------------------------*/
+
+void Trace::generate_limit64s (Random &random) {
+  if (random.generate_double () < 0.05)
+    push_back (
+        new Limit64Call ("terminate", random.pick_log_64 (0, 100000)));
+  if (random.generate_double () < 0.05)
+    push_back (
+        new Limit64Call ("conflicts", random.pick_log_64 (0, 10000)));
+  if (random.generate_double () < 0.05)
+    push_back (
+        new Limit64Call ("decisions", random.pick_log_64 (0, 10000)));
+  if (random.generate_double () < 0.05)
+    push_back (
+        new Limit64Call ("ticks", random.pick_log_64 (0, 1000000000000LL)));
+  if (random.generate_double () < 0.1)
+    push_back (new Limit64Call ("preprocessing", random.pick_int (0, 10)));
+  if (random.generate_double () < 0.05)
+    push_back (new Limit64Call ("localsearch", random.pick_int (0, 1)));
 }
 
 /*------------------------------------------------------------------------*/
@@ -3213,6 +3249,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_melt (random);
     generate_freeze (random, maxvars);
     generate_limits (random);
+    generate_limit64s (random);
 
     generate_process (random);
 
@@ -3923,6 +3960,7 @@ static bool is_basic (Call *c) {
   case Call::FREEZE:
   case Call::MELT:
   case Call::LIMIT:
+  case Call::LIMIT64:
   case Call::OPTIMIZE:
   case Call::OBSERVE:
     return true;
@@ -4070,7 +4108,7 @@ bool Trace::shrink_disable (int expected) {
 
 // Try to shrink the option values.
 
-bool Trace::reduce_values (int expected) {
+bool Trace::reduce_values (int64_t expected) {
 
   if (mobical.donot.reduce)
     return false;
@@ -4093,7 +4131,7 @@ bool Trace::reduce_values (int expected) {
     for (size_t i = 0; i < size (); i++) {
       Call *c = calls[i];
 
-      int lo, hi;
+      int64_t lo, hi;
 
       if (c->type == Call::SET) {
         Option *o = Options::has (c->name);
@@ -4107,6 +4145,18 @@ bool Trace::reduce_values (int expected) {
         else if (!strcmp (c->name, "terminate") ||
                  !strcmp (c->name, "preprocessing"))
           lo = 0, hi = INT_MAX;
+        else if (!strcmp (c->name, "localsearch"))
+          lo = 0, hi = c->val; // too costly otherwise
+        else
+          continue;
+      } else if (c->type == Call::LIMIT64) {
+        if (!strcmp (c->name, "conflicts") ||
+            !strcmp (c->name, "decisions"))
+          lo = -1, hi = numeric_limits<int64_t>::max ();
+        else if (!strcmp (c->name, "terminate"))
+          lo = 0, hi = INT_MAX;
+        else if (!strcmp (c->name, "preprocessing"))
+          lo = 0, hi = numeric_limits<int64_t>::max ();
         else if (!strcmp (c->name, "localsearch"))
           lo = 0, hi = c->val; // too costly otherwise
         else
@@ -4127,7 +4177,7 @@ bool Trace::reduce_values (int expected) {
       // First try to reach eagerly the low value
       // (includes the case that current value is too low).
       //
-      int old_val = c->val;
+      int64_t old_val = c->val;
       c->val = lo;
       progress ();
 
@@ -4148,7 +4198,7 @@ bool Trace::reduce_values (int expected) {
       // Then try to limit to the high value if current value too large.
       //
       if (c->val > hi) {
-        int old_val = c->val;
+        int64_t old_val = c->val;
         c->val = hi;
         progress ();
         bool success =
@@ -4170,7 +4220,9 @@ bool Trace::reduce_values (int expected) {
       // kind of assumes monotonicity and if this is not the case might not
       // yield the smallest value, but remains logarithmic.
       //
-      int64_t granularity = ((old_val - (int64_t) lo) + 1l) / 2;
+      const uint64_t distance =
+          static_cast<uint64_t> (old_val) - static_cast<uint64_t> (lo);
+      int64_t granularity = (int64_t) (distance / 2 + distance % 2);
       assert (granularity > 0);
       for (int64_t new_val = c->val - granularity; new_val > lo;
            new_val -= granularity) {
@@ -4417,6 +4469,7 @@ static bool is_valid_char (int ch) {
 void Reader::parse () {
   int ch, lit = 0, val = 0, adding = 0, constraining = 0, lemma_adding = 0,
           solved = 0;
+  int64_t val64 = 0;
   uint64_t state = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
@@ -4459,8 +4512,9 @@ void Reader::parse () {
     const char *keyword = p;
     if ((ch = *p) < 'a' || 'z' < ch)
       error ("expected keyword to start with lower case letter");
-    while (p < line + n && (ch = *++p) &&
-           (('a' <= ch && ch <= 'z') || ch == '_'))
+    while (
+        p < line + n && (ch = *++p) &&
+        (('a' <= ch && ch <= 'z') || ('0' <= ch && ch <= '9') || ch == '_'))
       ;
     const char *first = 0, *second = 0;
     if ((ch = *p) == ' ') {
@@ -4529,6 +4583,14 @@ void Reader::parse () {
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'limit'", second);
       c = new LimitCall (first, val);
+    } else if (!strcmp (keyword, "limit64")) {
+      if (!first)
+        error ("first argument to 'limit64' missing");
+      if (!second)
+        error ("second argument to 'limit64' missing");
+      if (!parse_int_str (second, val64))
+        error ("invalid second argument '%s' to 'limit64'", second);
+      c = new Limit64Call (first, val64);
     } else if (!strcmp (keyword, "optimize")) {
       if (!first)
         error ("argument to 'optimize' missing");

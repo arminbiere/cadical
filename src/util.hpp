@@ -31,12 +31,14 @@ bool has_prefix (const char *str, const char *prefix);
 //   false
 //   [-]<mantissa>[e<exponent>]
 //
-// and in the latter case '<val>' has to be within [-INT_MAX,INT_MAX].
+// and in the latter case '<val>' has to be within [-INT_MAX,INT_MAX] or
+// [INT64_MIN, INT64_MAX]
 //
 // The function returns true if parsing is successful and then also sets
 // the second argument to the parsed value.
 
 bool parse_int_str (const char *str, int &);
+bool parse_int_str (const char *str, int64_t &);
 
 /*------------------------------------------------------------------------*/
 
