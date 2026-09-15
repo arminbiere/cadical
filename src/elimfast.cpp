@@ -109,7 +109,7 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
       assert (!d->redundant);
       if (d->garbage)
         continue;
-      if (resolve_clauses (eliminator, c, pivot, d, true)) {
+      if (resolve_clauses (eliminator, c, pivot, d, true, false)) {
         resolvents++;
         int size = clause.size ();
         clause.clear ();
@@ -144,7 +144,6 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 
 /*------------------------------------------------------------------------*/
 // Add all resolvents on 'pivot' and connect them.
-
 inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
                                                int pivot) {
 
@@ -176,7 +175,10 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
         break;
       if (d->garbage)
         continue;
-      if (!resolve_clauses (eliminator, c, pivot, d, false))
+      // Unlike elim, we need to eagerly propagate, because we might
+      // not have produced the resolvents in
+      // 'try_to_fasteliminate_variable' if we fast-tracked it.
+      if (!resolve_clauses (eliminator, c, pivot, d, true, true))
         continue;
       assert (!lrat || !lrat_chain.empty ());
       Clause *r = new_resolved_irredundant_clause ();
