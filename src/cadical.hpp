@@ -735,6 +735,8 @@ public:
   //
   //   "conflicts",
   //   "decisions",
+  //   "terminate",
+  //   "ticks",
   //   "preprocessing", or
   //   "localsearch".
   //
@@ -752,10 +754,16 @@ public:
   // actually also have an internal "terminate" limit which however should
   // only be used for testing and debugging.
   //
+  // 'limit64' has the same semantics as 'limit', but it accepts an
+  // 'int64_t' value and preserves the full 64-bit range, except for the
+  // case where 'name' is "terminate", in which case it clips to the range
+  // of 'int'.
+  //
   //   require (READY)
   //   ensure (READY)
   //
   bool limit (const char *arg, int val);
+  bool limit64 (const char *arg, int64_t val);
   bool is_valid_limit (const char *arg);
 
   // The number of currently active variables and clauses can be queried by
@@ -1098,9 +1106,11 @@ private:
 
   void trace_api_call (const char *) const;
   void trace_api_call (const char *, int) const;
+  void trace_api_call (const char *, int64_t) const;
   void trace_api_call (const char *, int, int) const;
   void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
+  void trace_api_call (const char *, const char *, int64_t) const;
 #endif
 
   void transition_to_steady_state ();

@@ -91,6 +91,10 @@ void ccadical_limit (CCaDiCaL *wrapper, const char *name, int val) {
   ((Wrapper *) wrapper)->solver->limit (name, val);
 }
 
+void ccadical_limit64 (CCaDiCaL *wrapper, const char *name, int64_t val) {
+  ((Wrapper *) wrapper)->solver->limit64 (name, val);
+}
+
 int ccadical_get_option (CCaDiCaL *wrapper, const char *name) {
   return ((Wrapper *) wrapper)->solver->get (name);
 }
