@@ -31,14 +31,29 @@ static NameVal unsat_config[] = {
     {"walk", 0},
 };
 
+static NameVal competition_config[] = {
+    {"lucky", 1},
+    {"factor", 1},
+    {"preprocesslight", 1},
+};
+
+static NameVal incremental_config[] = {
+    {"walk", 0},
+    {"lucky", 0},
+    {"factor", 0},
+    {"preprocesslight", 0},
+};
+
 /*------------------------------------------------------------------------*/
 
 #define CONFIGS \
 \
   CONFIG (default, "set default advanced internal options") \
   CONFIG (plain, "disable all internal preprocessing options") \
-  CONFIG (sat, "set internal options to target satisfiable instances") \
-  CONFIG (unsat, "set internal options to target unsatisfiable instances")
+  CONFIG (sat, "targets satisfiable instances") \
+  CONFIG (unsat, "targets unsatisfiable instances") \
+  CONFIG (competition, "targets SAT competition instances") \
+  CONFIG (incremental, "targets incremental applications")
 
 static const char *configs[] = {
 #define CONFIG(N, D) #N,

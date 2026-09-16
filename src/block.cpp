@@ -760,8 +760,8 @@ bool Internal::block () {
       return false;
   }
 
-  START_SIMPLIFIER (block, BLOCK);
-
+  MODE_SCOPE_SIMPLIFY (BLOCK);
+  PROFILE_SCOPE_SIMPLIFY (block);
   stats.blockings++;
 
   LOG ("block-%" PRId64 "", stats.blockings);
@@ -803,9 +803,10 @@ bool Internal::block () {
 
   pured = stats.blocked_pure_clauses - pured;
   purelits = stats.blocked_pure_literals - purelits;
+  int64_t ticks = 0; // currently not counted here
 
   if (pured)
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (ticks);
 
   if (purelits)
     PHASE ("block", stats.blockings,
@@ -815,8 +816,6 @@ bool Internal::block () {
     PHASE ("block", stats.blockings, "no pure literals found");
 
   report ('b', !opts.reportall && !blocked);
-
-  STOP_SIMPLIFIER (block, BLOCK);
 
   return blocked;
 }

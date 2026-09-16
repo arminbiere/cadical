@@ -4,6 +4,8 @@
 /*------------------------------------------------------------------------*/
 #ifndef QUIET
 /*------------------------------------------------------------------------*/
+#include <cstdint>
+#include <tuple>
 
 namespace CaDiCaL {
 
@@ -27,8 +29,8 @@ struct Internal;
 // using '--profile=1' for instance should not add any penalty to the
 // run-time, while '--profile=3' and higher levels slow down the solver.
 //
-// To profile say 'foo', just add another line 'PROFILE(foo,LEVEL)' and wrap
-// the code to be profiled within a 'START (foo)' / 'STOP (foo)' block.
+// To profile say 'foo', just add another line 'PROFILE(foo, LEVEL)' and a
+// profile context to the code to be profiled via 'PROFILE_SCOPE (foo)'.
 
 /*------------------------------------------------------------------------*/
 
@@ -116,18 +118,18 @@ struct Internal;
 
 /*------------------------------------------------------------------------*/
 
-// See 'START' and 'STOP' in 'macros.hpp' too.
-
 struct Profile {
 
   bool active;
-  double value;     // accumulated time
-  double started;   // started time if active
-  const char *name; // name of the profiled function (or 'phase')
-  const int level;  // allows to cheaply test if profiling is enabled
+  double value;          // accumulated time
+  int64_t search_ticks;  // accumulated ticks
+  double started;        // started time if active
+  int64_t started_ticks; // accumulated ticks
+  const char *name;      // name of the profiled function (or 'phase')
+  const int level;       // allows to cheaply test if profiling is enabled
 
   Profile (const char *n, int l)
-      : active (false), value (0), name (n), level (l) {}
+      : active (false), value (0), search_ticks (0), name (n), level (l) {}
 };
 
 struct Profiles {
@@ -140,146 +142,179 @@ struct Profiles {
 
 } // namespace CaDiCaL
 
-#define NON_QUIET_PROFILE_CODE(CODE) CODE
+/*------------------------------------------------------------------------*/
 
-#else // !defined(QUIET)
+namespace CaDiCaL {
 
-#define NON_QUIET_PROFILE_CODE(CODE) /**/
+// C++ 11 version of std::index_sequence<N>
+template <std::size_t... Is> struct ProfileIndices {};
 
-#endif
+template <typename... Profiles> struct ProfileContext {
+  Internal *internal;
+  std::tuple<Profiles...> profiles;
+
+  ProfileContext (Internal *internal, Profiles... profiles);
+  ~ProfileContext ();
+
+  void enterContext ();
+  void leaveContext ();
+
+private:
+  template <size_t... Is> void enterContext (ProfileIndices<Is...> indices);
+  template <size_t... Is> void leaveContext (ProfileIndices<Is...> indices);
+};
+
+struct ResumeProfile {
+  Profile &profile;
+  bool condition;
+  bool entered;
+
+  ResumeProfile (Profile &profile, bool condition = true)
+      : profile (profile), condition (condition), entered (false) {}
+
+  void enterContext (Internal *internal, double time, int64_t ticks,
+                     int level);
+  void leaveContext (Internal *internal, double time, int64_t ticks,
+                     int level);
+};
+
+struct PauseProfile {
+  Profile &profile;
+  bool condition;
+  bool entered;
+
+  PauseProfile (Profile &profile, bool condition = true)
+      : profile (profile), condition (condition), entered (false) {}
+
+  void enterContext (Internal *internal, double time, int64_t ticks,
+                     int level);
+  void leaveContext (Internal *internal, double time, int64_t ticks,
+                     int level);
+};
+
+} // namespace CaDiCaL
+
+// Macros for profiling support.
+#define PROFILE_SCOPE(P) \
+  ProfileContext<ResumeProfile> P##Profile{ \
+      internal, \
+      ResumeProfile{internal->profiles.P}, \
+  };
+
+#define PROFILE_SCOPE2(P, P2) \
+  ProfileContext<ResumeProfile, ResumeProfile> P##Profile{ \
+      internal, \
+      ResumeProfile{internal->profiles.P}, \
+      ResumeProfile{internal->profiles.P2}, \
+  };
+
+#define PROFILE_SCOPE_EARLY_EXIT(P) P##Profile.leaveContext ();
+
+#define PROFILE_SCOPE_INTERRUPT_WITH(P, NEW) \
+  ProfileContext<ResumeProfile, PauseProfile> P##ExchangeProfile{ \
+      internal, \
+      ResumeProfile{internal->profiles.NEW}, \
+      PauseProfile{internal->profiles.P}, \
+  };
+
+#define PROFILE_SCOPE_WALK(P) \
+  ProfileContext<ResumeProfile, PauseProfile, PauseProfile> P##Profile{ \
+      internal, \
+      ResumeProfile{internal->profiles.P}, \
+      PauseProfile{internal->profiles.stable}, \
+      PauseProfile{internal->profiles.unstable}, \
+  };
+
+#define PROFILE_SCOPE_SEARCH(P, stable) \
+  ProfileContext<ResumeProfile, ResumeProfile, ResumeProfile> P##Profile{ \
+      internal, \
+      ResumeProfile{internal->profiles.P}, \
+      ResumeProfile{internal->profiles.stable, stable}, \
+      ResumeProfile{internal->profiles.unstable, !stable}, \
+  };
+
+#define PROFILE_SCOPE_SEARCH_STABILIZE() \
+  ProfileContext<PauseProfile, PauseProfile> P##Profile{ \
+      internal, \
+      PauseProfile{internal->profiles.stable}, \
+      PauseProfile{internal->profiles.unstable}, \
+  };
+
+#define PROFILE_SCOPE_SIMPLIFY(P) \
+  ProfileContext<ResumeProfile, ResumeProfile, PauseProfile, PauseProfile, \
+                 PauseProfile> \
+      P##Profile{ \
+          internal, \
+          ResumeProfile{internal->profiles.simplify}, \
+          ResumeProfile{internal->profiles.P}, \
+          PauseProfile{internal->profiles.stable}, \
+          PauseProfile{internal->profiles.unstable}, \
+          PauseProfile{internal->profiles.search}, \
+      };
+
+#else // !QUIET
+
+#define PROFILE_SCOPE(P)
+#define PROFILE_SCOPE2(P, P2)
+#define PROFILE_SCOPE_EARLY_EXIT(P)
+#define PROFILE_SCOPE_INTERRUPT_WITH(P, NEW)
+
+#define PROFILE_SCOPE_WALK(P)
+#define PROFILE_SCOPE_SEARCH(P, stable)
+#define PROFILE_SCOPE_SEARCH_STABILIZE()
+#define PROFILE_SCOPE_SIMPLIFY(P)
+
+#endif // QUIET
 
 /*------------------------------------------------------------------------*/
 
-// Macros for Profiling support and checking and changing the mode.
+namespace CaDiCaL {
 
-#define START(P) \
-  do { \
-    NON_QUIET_PROFILE_CODE ( \
-        if (internal->profiles.P.level <= internal->opts.profile) \
-            internal->start_profiling (internal->profiles.P, \
-                                       internal->time ());) \
-  } while (0)
+struct ModeResumeContext {
+  Internal *internal;
+  int mode;
+  bool entered;
 
-#define STOP(P) \
-  do { \
-    NON_QUIET_PROFILE_CODE ( \
-        if (internal->profiles.P.level <= internal->opts.profile) \
-            internal->stop_profiling (internal->profiles.P, \
-                                      internal->time ());) \
-  } while (0)
+  ModeResumeContext (Internal *internal, int mode);
+  ~ModeResumeContext ();
 
-#define PROFILE_ACTIVE(P) \
-  ((internal->profiles.P.level <= internal->opts.profile) && \
-   (internal->profiles.P.active))
+  void enterContext ();
+  void leaveContext ();
+};
 
-/*------------------------------------------------------------------------*/
+struct ModePauseContext {
+  Internal *internal;
+  int mode;
+  bool entered;
 
-#define START_SIMPLIFIER(S, M) \
-  do { \
-    NON_QUIET_PROFILE_CODE (const double N = time (); \
-                            const int L = internal->opts.profile;) \
-    if (!internal->preprocessing && !internal->lookingahead) { \
-      NON_QUIET_PROFILE_CODE ( \
-          if (internal->stable && internal->profiles.stable.level <= L) \
-              internal->stop_profiling (internal->profiles.stable, N); \
-          if (!internal->stable && internal->profiles.unstable.level <= L) \
-              internal->stop_profiling (internal->profiles.unstable, N); \
-          if (internal->profiles.search.level <= L) \
-              internal->stop_profiling (internal->profiles.search, N);) \
-      reset_mode (SEARCH); \
-    } \
-    NON_QUIET_PROFILE_CODE ( \
-        if (internal->profiles.simplify.level <= L) \
-            internal->start_profiling (internal->profiles.simplify, N); \
-        if (internal->profiles.S.level <= L) \
-            internal->start_profiling (internal->profiles.S, N);) \
-    set_mode (SIMPLIFY); \
-    set_mode (M); \
-  } while (0)
+  ModePauseContext (Internal *internal, int mode);
+  ~ModePauseContext ();
 
-/*------------------------------------------------------------------------*/
+  void enterContext ();
+  void leaveContext ();
+};
 
-#define STOP_SIMPLIFIER(S, M) \
-  do { \
-    NON_QUIET_PROFILE_CODE ( \
-        const double N = internal->time (); \
-        const int L = internal->opts.profile; \
-        if (internal->profiles.S.level <= L) \
-            internal->stop_profiling (internal->profiles.S, N); \
-        if (internal->profiles.simplify.level <= L) \
-            internal->stop_profiling (internal->profiles.simplify, N);) \
-    reset_mode (M); \
-    reset_mode (SIMPLIFY); \
-    if (!internal->preprocessing && !internal->lookingahead) { \
-      NON_QUIET_PROFILE_CODE ( \
-          if (internal->profiles.search.level <= L) \
-              internal->start_profiling (internal->profiles.search, N); \
-          if (internal->stable && internal->profiles.stable.level <= L) \
-              internal->start_profiling (internal->profiles.stable, N); \
-          if (!internal->stable && internal->profiles.unstable.level <= L) \
-              internal->start_profiling (internal->profiles.unstable, N);) \
-      set_mode (SEARCH); \
-    } \
-  } while (0)
+} // namespace CaDiCaL
 
-/*------------------------------------------------------------------------*/
-// Used in 'walk' before calling 'walk_round' within the CDCL loop.
+// Macros for mode support.
+#define MODE_REQUIRE(M) internal->require_mode (Internal::Mode::M);
 
-#define START_INNER_WALK() \
-  do { \
-    require_mode (Mode::SEARCH); \
-    assert (!internal->preprocessing); \
-    NON_QUIET_PROFILE_CODE ( \
-        const double N = internal->time (); \
-        const int L = internal->opts.profile; \
-        if (internal->stable && internal->profiles.stable.level <= L) \
-            internal->stop_profiling (internal->profiles.stable, N); \
-        if (!internal->stable && internal->profiles.unstable.level <= L) \
-            internal->stop_profiling (internal->profiles.unstable, N); \
-        if (internal->profiles.walk.level <= L) \
-            internal->start_profiling (internal->profiles.walk, N);) \
-    set_mode (Mode::WALK); \
-  } while (0)
+#define MODE_SCOPE(M) \
+  ModeResumeContext M##Mode{internal, Internal::Mode::M};
 
-/*------------------------------------------------------------------------*/
-// Used in 'walk' after calling 'walk_round' within the CDCL loop.
+#define MODE_SCOPE_PAUSE(M) \
+  ModePauseContext M##Mode{internal, Internal::Mode::M};
 
-#define STOP_INNER_WALK() \
-  do { \
-    require_mode (Mode::SEARCH); \
-    assert (!internal->preprocessing); \
-    reset_mode (WALK); \
-    NON_QUIET_PROFILE_CODE ( \
-        const double N = time (); const int L = internal->opts.profile; \
-        if (internal->profiles.walk.level <= L) \
-            internal->stop_profiling (internal->profiles.walk, N); \
-        if (internal->stable && internal->profiles.stable.level <= L) \
-            internal->start_profiling (internal->profiles.stable, N); \
-        if (!internal->stable && internal->profiles.unstable.level <= L) \
-            internal->start_profiling (internal->profiles.unstable, N); \
-        internal->profiles.walk.started = (N);) \
-  } while (0)
+#define MODE_SCOPE_EARLY_EXIT(P) P##Mode.leaveContext ();
 
-/*------------------------------------------------------------------------*/
-// Used in 'local_search' before calling 'walk_round'.
+#define MODE_SCOPE_WALK(M) \
+  MODE_REQUIRE (SEARCH); \
+  MODE_SCOPE (M); \
+  assert (!internal->preprocessing);
 
-#define START_OUTER_WALK() \
-  do { \
-    require_mode (Mode::SEARCH); \
-    assert (!internal->preprocessing); \
-    NON_QUIET_PROFILE_CODE (START (walk);) \
-    set_mode (Mode::WALK); \
-  } while (0)
-
-/*------------------------------------------------------------------------*/
-// Used in 'local_search' after calling 'walk_round'.
-
-#define STOP_OUTER_WALK() \
-  do { \
-    require_mode (Mode::SEARCH); \
-    assert (!internal->preprocessing); \
-    reset_mode (WALK); \
-    NON_QUIET_PROFILE_CODE (STOP (walk);) \
-  } while (0)
+#define MODE_SCOPE_SIMPLIFY(M) \
+  MODE_SCOPE_PAUSE (SEARCH); \
+  MODE_SCOPE (M); \
+  MODE_SCOPE (SIMPLIFY);
 
 #endif // ifndef _profiles_h_INCLUDED

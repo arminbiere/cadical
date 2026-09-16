@@ -36,7 +36,7 @@ struct Eliminator {
 
   Eliminator (Internal *i)
       : internal (i), schedule (elim_more (i)), definition_unit (0),
-        gatetype (NO) {}
+        ticks (0), gatetype (NO) {}
   ~Eliminator ();
 
   queue<Clause *> backward;
@@ -46,6 +46,7 @@ struct Eliminator {
 
   vector<Clause *> gates;
   unsigned definition_unit;
+  int64_t ticks;
   vector<proof_clause> proof_clauses;
   vector<int> marked;
   GateType gatetype;

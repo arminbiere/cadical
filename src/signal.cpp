@@ -19,6 +19,7 @@ extern "C" {
 
 namespace CaDiCaL {
 
+static volatile sig_atomic_t signal_value = 0;
 static volatile bool caught_signal = false;
 static Handler *signal_handler;
 
@@ -69,6 +70,7 @@ void Signal::reset () {
   reset_alarm ();
 #endif
   caught_signal = false;
+  signal_value = 0;
 }
 
 const char *Signal::name (int sig) {
@@ -101,14 +103,23 @@ static void catch_signal (int sig) {
     Signal::reset_alarm ();
   } else
 #endif
-  {
+  { 
+    // Reraising should happen in solver control for SIGINT and SIGTERM.
+    // For SIGABRT and SIGSEGV we reraise immediately.
+    switch (sig) {
+    case SIGABRT:
+    case SIGSEGV: 
+      Signal::reset ();
+      ::raise (sig);
+    default:
+      break;
+    }
+
     if (!caught_signal) {
       caught_signal = true;
       if (signal_handler)
         signal_handler->catch_signal (sig);
     }
-    Signal::reset ();
-    ::raise (sig);
   }
 }
 
@@ -132,5 +143,19 @@ void Signal::alarm (int seconds) {
 }
 
 #endif
+
+void Signal::set_received (int sig) {
+  signal_value = sig;
+}
+
+int Signal::received () {
+  return signal_value;
+}
+
+// Signals for which returning control is sensible
+bool Signal::interrupted () {
+  const int sig = received ();
+  return sig == SIGINT || sig == SIGTERM;
+}
 
 } // namespace CaDiCaL

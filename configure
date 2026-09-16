@@ -378,7 +378,7 @@ then
   CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*)
-      CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+      CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS,-D_GLIBCXX_DEBUG"
     ;;
   esac
   case x"$CC" in

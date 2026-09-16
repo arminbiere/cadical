@@ -420,7 +420,6 @@ struct Gate {
     my_dummy_optional neg_lhs_id;
   } *lrat_reasons;
   int lhs;
-  size_t hash;
   Gate_Type tag;
   bool garbage : 1;
   bool indexed : 1;
@@ -515,6 +514,8 @@ typedef vector<Gate_Occurrence> Gate_Occurrences;
 // same way.
 struct GateEqualTo {
   bool operator() (const Gate *const lhs, const Gate *const rhs) const {
+    assert (!lhs->garbage);
+    assert (!rhs->garbage);
     if (lhs->tag != rhs->tag)
       return false;
     if (lhs->arity () != rhs->arity ())
@@ -524,6 +525,12 @@ struct GateEqualTo {
         return false;
     }
     return true;
+  }
+};
+
+struct GateIsGarbage {
+  bool operator() (const Gate *const lhs) const {
+    return lhs->garbage;
   }
 };
 
@@ -548,9 +555,9 @@ struct Rewrite {
 
 /*------------------------------------------------------------------------*/
 // This is a more compact representation of binary clauses. Sadly we have to
-// include the IDs in the clause making it larger than necessary. We also need
-// to include the clause pointer in order to be able to delete the subsumed
-// clause.
+// include the IDs in the clause making it larger than necessary. We also
+// need to include the clause pointer in order to be able to delete the
+// subsumed clause.
 struct CompactBinary {
   Clause *clause;
   LRAT_ID id;
@@ -580,7 +587,7 @@ struct Closure {
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
   std::array<uint64_t, 16> nonces; // for better hashing
-  typedef hash<Gate *, Hash, GateEqualTo, std::equal_to<Gate *>> GatesTable;
+  typedef hash<Gate *, Hash, GateIsGarbage, GateEqualTo, std::equal_to<Gate *>> GatesTable;
 
   vector<signed char> marks; // marking structure
   // remember the ids and the literal. 2 and 4 are
@@ -610,7 +617,7 @@ struct Closure {
   queue<int> schedule;
   vector<bool> scheduled;
 
-  std::vector<Clause *> new_unwatched_binary_clauses;
+  std::vector<Clause *> new_unwatched_binary_clauses; // TODO: unused
   // LRAT proofs
   vector<int> resolvent_analyzed;
   mutable vector<LRAT_ID> lrat_chain; // storing LRAT chain
@@ -865,8 +872,8 @@ struct Closure {
   Gate *find_and_lits (literal_iterator begin, literal_iterator end,
                        Gate *except = nullptr);
 
-  Gate *find_xor_lits (const vector<int> &rhs);
-  Gate *find_xor_gate (const Gate *const);
+  Gate *find_xor_lits (const vector<int> &rhs, Gate *except = nullptr);
+  Gate *find_xor_gate (const Gate *const, Gate *except = nullptr);
 
   // not const to normalize negations, also fixes the order of the LRAT
   // chain

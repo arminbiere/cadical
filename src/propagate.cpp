@@ -67,8 +67,6 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     if (lit == reason_lit)
       continue;
     assert (val (reason_lit));
-    if (!val (reason_lit))
-      continue;
     const int signed_reason_lit = val (reason_lit) * reason_lit;
     int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
@@ -99,7 +97,7 @@ void Internal::build_chain_for_empty () {
 inline void Internal::search_assign (int lit, Clause *reason) {
 
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
 
   assert (!flags (lit).unused ());
   const int idx = vidx (lit);
@@ -180,7 +178,7 @@ void Internal::assign_unit (int lit) {
 // assign it).  This is used below in 'decide'.
 
 void Internal::search_assume_decision (int lit) {
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
   assert (propagated == trail.size ());
   new_trail_level (lit);
   notify_decision ();
@@ -189,13 +187,13 @@ void Internal::search_assume_decision (int lit) {
 }
 
 void Internal::search_assign_driving (int lit, Clause *c) {
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
   search_assign (lit, c);
   notify_assignments ();
 }
 
 void Internal::search_assign_external (int lit) {
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
   search_assign (lit, external_reason);
   notify_assignments ();
 }
@@ -222,7 +220,7 @@ void Internal::search_assign_external (int lit) {
 bool Internal::propagate () {
 
   if (level)
-    require_mode (SEARCH);
+    MODE_REQUIRE (SEARCH);
   assert (!unsat);
   LOG ("starting propagate");
 
@@ -230,7 +228,7 @@ bool Internal::propagate () {
   if (!imports.empty ())
     activating_all_new_imported_literals ();
 
-  START (propagate);
+  PROFILE_SCOPE (propagate);
 
   // Updating statistics counter in the propagation loops is costly so we
   // delay until propagation ran to completion.
@@ -462,6 +460,7 @@ bool Internal::propagate () {
   }
 
   if (searching_lucky_phases) {
+    stats.ticks += ticks;
 
     if (conflict)
       LOG (conflict, "ignoring lucky conflict");
@@ -496,8 +495,8 @@ bool Internal::propagate () {
     if (!--randomized_deciding)
       VERBOSE (3, "last random decision conflict");
   }
-  STOP (propagate);
 
+  assert (ticks >= 0);
   return !conflict;
 }
 

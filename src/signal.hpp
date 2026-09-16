@@ -26,6 +26,10 @@ public:
 #endif
 
   static const char *name (int sig);
+
+  static void set_received (int sig);
+  static int received ();
+  static bool interrupted ();
 };
 
 } // namespace CaDiCaL

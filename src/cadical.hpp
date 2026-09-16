@@ -452,13 +452,6 @@ public:
   //
   bool is_decision (int lit);
 
-  // Get the current value of an observed literal.
-  //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
-  //
-  signed char current_value (int lit);
-
   // Force solve to backtrack to certain decision level. Can be called only
   // during 'cb_decide' and 'cb_check_final_model' of a connected External
   // Propagator. Invoking in any other time will trigger a runtime error.
@@ -469,6 +462,13 @@ public:
   //   ensure (SOLVING)
   //
   void force_backtrack (int new_level);
+
+  // Get the current value of an observed literal.
+  //
+  //   require (VALID_OR_SOLVING)
+  //   ensure (VALID_OR_SOLVING)
+  //
+  // signed char current_value (int lit);
 
   // Force solve to unassign a certain literal by (repeated) backtracking.
   // Has the same contracts as 'force_backtrack' and can only be called
@@ -820,10 +820,11 @@ public:
   int simplify (int rounds = 3);
 
   //------------------------------------------------------------------------
-  // Force termination of 'solve' asynchronously.
+  // Force termination of 'solve' asynchronously (e.g. via a signal handler).
   //
   //  require (SOLVING | READY)
-  //  ensure (INCONCLUSIVE )     // actually not immediately (synchronously)
+  //  // not immediately (synchronously)
+  //  ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   //
   void terminate ();
 
@@ -1230,13 +1231,69 @@ private:
   //
   ExternalPropagator *get_propagator ();
   bool observed (int lit);
+  bool is_witness (int lit);
 
+  friend struct VarsCall;
+  friend struct ActiveCall;
+  friend struct RedundantCall;
+  friend struct IrredundantCall;
+  friend struct FreezeCall;
+  friend struct FrozenCall;
+  friend struct MeltCall;
+  friend struct LimitCall;
+  friend struct OptimizeCall;
+  friend struct StatsCall;
+  friend struct ResizeCall;
+  friend struct DeclareMoreVariablesCall;
+  friend struct DeclareOneMoreVariableCall;
+  friend struct FixedCall;
+  friend struct PhaseCall;
+  friend struct UnPhaseCall;
+  friend struct ReserveCall;
+  friend struct IsDecisionCall;
+  friend struct CurrentValueCall;
   friend struct LemmaCall;
   friend struct DecideCall;
   friend struct MockForceCall;
+  friend struct ObserveCall;
+  friend struct ObservedCall;
+  friend struct IsWitnessCall;
+  friend struct UnObserveCall;
+  friend struct ResetObservedCall;
   friend struct PropagateLemmaCall;
   friend struct DisconnectCall;
+  friend struct CBDecideCall;
+  friend struct CBPropagateCall;
+  friend struct CBHasClauseCall;
+  friend struct CBAddClauseCall;
+  friend struct CBAddReasonCall;
+  friend struct CBCheckModelCall;
+  friend struct NotifyBatchAssignmentCall;
+  friend struct NotifyAssignmentCall;
+  friend struct NotifyBacktrackCall;
+  friend struct NotifyLevelCall;
+  friend struct CloseProofTraceCall;
+  friend struct FlushProofTraceCall;
+  friend struct TraceProofCall;
+  friend struct ConcludeCall;
+  friend struct FailedCall;
+  friend struct FlippableCall;
+  friend struct FlipCall;
+  friend struct ValCall;
+  friend struct LookaheadCall;
+  friend struct ResetAssumptionsCall;
+  friend struct ImpliedCall;
+  friend struct PropagateAssumptionsCall;
+  friend struct SimplifyCall;
+  friend struct SolveCall;
+  friend struct AssumeCall;
+  friend struct ConstrainCall;
+  friend struct AddCall;
+  friend struct ConfigureCall;
+  friend struct SetCall;
   friend class MockPropagator;
+  friend class ReplayPropagator;
+  friend struct ExtendMap;
 };
 
 /*========================================================================*/

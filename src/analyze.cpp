@@ -186,7 +186,7 @@ void Internal::bump_variables () {
 
   assert (opts.bump);
 
-  START (bump);
+  PROFILE_SCOPE (bump);
 
   if (!use_scores ()) {
 
@@ -205,8 +205,6 @@ void Internal::bump_variables () {
 
   if (use_scores ())
     bump_variable_score_inc ();
-
-  STOP (bump);
 }
 
 /*------------------------------------------------------------------------*/
@@ -603,7 +601,7 @@ inline int Internal::find_conflict_level (int &forced) {
     }
   }
 
-  LOG ("%d literals on actual conflict level %d", count, res);
+  LOG (conflict, "%d literals on actual conflict level %d", count, res);
 
   const int size = conflict->size;
   int *lits = conflict->literals;
@@ -613,7 +611,7 @@ inline int Internal::find_conflict_level (int &forced) {
   for (int i = 0; i < 2; i++) {
 
     const int lit = lits[i];
-
+    assert (val (lit) < 0);
     int highest_position = i;
     int highest_literal = lit;
     int highest_level = var (highest_literal).level;
@@ -972,7 +970,7 @@ void Internal::fix_trail_levels () {
   }
   LOG ("fixing all trail levels before backtracking");
   const size_t trix = control[out_of_order_level].trail;
-  assert (trix < trail.size ());
+  assert (trix <= trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
     const int lit = trail[i];
     Clause *reason = var (lit).reason;
@@ -994,12 +992,18 @@ void Internal::fix_trail_levels () {
            var (lit).level, res);
 
     var (lit).level = res;
-    if (lrat && !res) {
-      auto tmp = std::move (lrat_chain);
-      lrat_chain.clear ();
-      build_chain_for_units (lit, reason, false);
-      learn_unit_clause (lit);
-      lrat_chain = std::move (tmp);
+    if (!res) {
+      if (lrat) {
+        auto tmp = std::move (lrat_chain);
+        lrat_chain.clear ();
+        build_chain_for_units (lit, reason, false);
+        learn_unit_clause (lit);
+        lrat_chain = std::move (tmp);
+      } else {
+        learn_unit_clause (lit);
+      }
+      mark_garbage (reason);
+      var (lit).reason = nullptr;
     }
   }
   out_of_order_level = -1;
@@ -1017,7 +1021,7 @@ void Internal::fix_trail_levels () {
 
 void Internal::analyze () {
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   assert (conflict);
   assert (lrat_chain.empty ());
@@ -1081,7 +1085,6 @@ void Internal::analyze () {
     conflict = 0;
     if (!opts.chrono)
       did_external_prop = true;
-    STOP (analyze);
     return;
   }
 
@@ -1103,7 +1106,6 @@ void Internal::analyze () {
     learn_empty_clause ();
     if (external->learner)
       external->export_learned_empty_clause ();
-    STOP (analyze);
     return;
   }
 
@@ -1173,7 +1175,6 @@ void Internal::analyze () {
         clause.clear ();
         break;
       }
-      assert (conflict_size >= 2);
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // here both clauses are part of the CNF, so one subsumes the other
@@ -1203,7 +1204,6 @@ void Internal::analyze () {
         clear_analyzed_literals ();
         clear_analyzed_levels ();
         clause.clear ();
-        STOP (analyze);
         return;
       }
 
@@ -1364,8 +1364,7 @@ void Internal::analyze () {
   conflict = 0;
 
   lrat_chain.clear ();
-  STOP (analyze);
-
+  PROFILE_SCOPE_EARLY_EXIT (analyze);
   if (driving_clause && opts.eagersubsume)
     eagerly_subsume_recently_learned_clauses (driving_clause);
 
@@ -1455,7 +1454,6 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
     conflict = 0;
     clear_unit_analyzed_literals ();
     lrat_chain.clear ();
-    STOP (analyze);
   }
   return exiting;
 }

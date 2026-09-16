@@ -53,8 +53,8 @@
   STATISTIC (api_observe,               3, NOTHING, 0, 0) \
   STATISTIC (api_unobserve,             3, NOTHING, 0, 0) \
   STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
-  STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
+  STATISTIC (api_is_witness,            3, NOTHING, 0, 0) \
   STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
 
 #else
@@ -231,7 +231,7 @@
   STATISTIC (probed,                 1, percent, "%", vars) \
   STATISTIC (probe_failed_literals,  1, relative, "per", probed) \
   STATISTIC (probingrounds,          2, INTERVAL, "", interval) \
-  STATISTIC (propagations,           0, SECONDS, "per", second) \
+  STATISTIC (propagations,           0, MSECONDS, "M", per second) \
   STATISTIC (propagations_backbone,  2, percent, "%", propagations) \
   STATISTIC (propagations_cover,     2, percent, "%", propagations) \
   STATISTIC (propagations_inst,      2, percent, "%", propagations) \
@@ -306,8 +306,10 @@
   STATISTIC (ternary_htrs_binary,    2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_htrs_ternary,   2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_resolutions,    2, relative, "per", ternary) \
-  STATISTIC (ticks,                  0, SECONDS, "per", second) \
+  STATISTIC (ticks,                  0, MSECONDS, "M", per second) \
   STATISTIC (ticks_backbone,         2, percent, "%", ticks) \
+  STATISTIC (ticks_elim,             2, percent, "%", ticks) \
+  STATISTIC (ticks_fastelim,         2, percent, "%", ticks) \
   STATISTIC (ticks_factor,           2, percent, "%", ticks) \
   STATISTIC (ticks_probe,            2, percent, "%", ticks) \
   STATISTIC (ticks_search_stable,    2, percent, "%", ticks) \
@@ -315,7 +317,7 @@
   STATISTIC (ticks_sweep,            2, percent, "%", ticks) \
   STATISTIC (ticks_ternary,          2, percent, "%", ticks) \
   STATISTIC (ticks_vivify,           2, percent, "%", ticks) \
-  STATISTIC (ticks_walk,                2, percent, "%", ticks) \
+  STATISTIC (ticks_walk,             2, percent, "%", ticks) \
   METRIC (ticks_walk_break,          2, percent, "%", ticks_walk) \
   METRIC (ticks_walk_flip,           2, percent, "%", ticks_walk) \
   METRIC (ticks_walk_flip_broke,     2, percent, "%", ticks_walk) \
@@ -325,16 +327,16 @@
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
   STATISTIC (up_cb,                  2, relative, "per", searches) \
-  STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
-  STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
+  STATISTIC (up_cb_add,              2, percent, "%", up_cb) \
+  STATISTIC (up_cb_check_model,      2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decide,           2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decided,          2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_decide_force_bt,  2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_prop,             2, percent, "%", up_cb) \
   METRIC (up_cb_prop_assign,         2, percent, "%", up_cb_prop) \
   METRIC (up_cb_prop_clash,          2, percent, "%", up_cb_prop) \
   METRIC (up_cb_prop_explain,        2, percent, "%", up_cb_prop) \
-  STATISTIC (up_learn,               1, percent, "%", clauses) \
+  STATISTIC (up_learn,               2, percent, "%", clauses) \
   METRIC (up_learn_conflict,         2, percent, "%", up_learn) \
   METRIC (up_learn_elevating,        2, percent, "%", up_learn) \
   METRIC (up_learn_empty,            2, percent, "%", up_learn) \
@@ -343,7 +345,7 @@
   METRIC (up_learn_propagating,      2, percent, "%", up_learn) \
   METRIC (up_learn_satisfied,        2, percent, "%", up_learn) \
   METRIC (up_learn_unit,             2, percent, "%", up_learn) \
-  STATISTIC (variables_extension,       2, percent, "%", vars) \
+  STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \
   STATISTIC (vars_active,            2, percent, "%", vars) \
@@ -370,7 +372,7 @@
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
   METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
   METRIC (vivify_demote,             2, percent, "%", vivify_strength) \
-  METRIC (vivify_flushed,           2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_flushed,            2, percent, "%", vivify_subsumed) \
   METRIC (vivify_implied,            2, percent, "%", vivify_checks) \
   METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
   METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
@@ -386,7 +388,7 @@
   METRIC (vivify_units,              2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   METRIC (walk_broken,               2, relative, "per", walk_flips) \
-  STATISTIC (walk_flips,             2, relative, "per", walk) \
+  STATISTIC (walk_flips,             2, RELPROFW,"M", per second walk) \
   METRIC (walk_flips_reducing,       2, percent, "%", walk_flips) \
   METRIC (walk_flips_sideways,       2, percent, "%", walk_flips) \
   METRIC (walk_flips_transfer,       2, percent, "%", walk_flips) \

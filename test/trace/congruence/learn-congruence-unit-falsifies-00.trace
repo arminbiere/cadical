@@ -51,7 +51,6 @@
 50 add 1
 51 add -5
 52 add 0
-53 propagate 0
 54 assume -1
 55 phase -1
 56 phase 2

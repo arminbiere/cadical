@@ -26,9 +26,9 @@ inline void Internal::backbone_lrat_for_units (int lit, Clause *reason) {
 }
 
 inline bool Internal::backbone_propagate (int64_t &ticks) {
-  require_mode (BACKBONE);
+  MODE_REQUIRE (BACKBONE);
+  PROFILE_SCOPE (propagate);
   assert (!unsat);
-  START (propagate);
   int64_t before = propagated2 = propagated;
   for (;;) {
     if (propagated2 != trail.size ()) {
@@ -134,12 +134,11 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
   stats.propagations += delta;
   if (conflict)
     LOG (conflict, "conflict");
-  STOP (propagate);
   return !conflict;
 }
 
 inline void Internal::backbone_propagate2 (int64_t &ticks) {
-  require_mode (BACKBONE);
+  MODE_REQUIRE(BACKBONE);
   assert (propagated2 <= trail.size ());
   int64_t before = propagated2;
   while (propagated2 != trail.size ()) {
@@ -272,7 +271,7 @@ inline void Internal::backbone_unit_reassign (int lit) {
 
 inline void Internal::backbone_unit_assign (int lit) {
   LOG ("assigning %s to level 0", LOGLIT (lit));
-  require_mode (BACKBONE);
+  MODE_REQUIRE(BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   Var &v = var (idx);
@@ -293,7 +292,7 @@ inline void Internal::backbone_unit_assign (int lit) {
 }
 
 inline void Internal::backbone_assign_any (int lit, Clause *reason) {
-  require_mode (BACKBONE);
+  MODE_REQUIRE(BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -316,7 +315,7 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
 }
 
 inline void Internal::backbone_assign (int lit, Clause *reason) {
-  require_mode (BACKBONE);
+  MODE_REQUIRE(BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -339,7 +338,7 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
 }
 
 void Internal::backbone_decision (int lit) {
-  require_mode (BACKBONE);
+  MODE_REQUIRE(BACKBONE);
   assert (propagated2 == trail.size ());
   new_trail_level (lit);
   notify_decision ();
@@ -527,6 +526,8 @@ void Internal::keep_backbone_candidates (
 
 unsigned Internal::compute_backbone () {
   size_t failed = 0;
+  if (terminated_asynchronously ())
+    return failed; 
 
   int64_t ticks = 0;
   backbone_propagate2 (ticks);
@@ -608,6 +609,8 @@ void Internal::binary_clauses_backbone () {
     return;
   if (!opts.backbone)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (level)
     backtrack_without_updating_phases ();
   propagated = propagated2 = 0; // TODO: why?
@@ -626,13 +629,13 @@ void Internal::binary_clauses_backbone () {
   private_steps = true;
 
   assert (watching ());
-  START_SIMPLIFIER (backbone, BACKBONE);
+  MODE_SCOPE_SIMPLIFY (BACKBONE);
+  PROFILE_SCOPE_SIMPLIFY (backbone);
   int failed = compute_backbone ();
   assert (!level);
   private_steps = false;
 
   report ('k', !failed);
-  STOP_SIMPLIFIER (backbone, BACKBONE);
 }
 
 } // namespace CaDiCaL

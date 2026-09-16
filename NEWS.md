@@ -17,6 +17,11 @@ User Facing Changes:
   only at the beginning of the solve call). Set this option to 0, if you want to
   make sure that lucky is executed in each 
 
+- Lucky is now also limited in its runtime (in number of ticks per clauses). Set
+  `luckylimitpercls` to a higher value if needed. This limit is mostly important
+  for some very large instances (like `baseballcover12with23_and2positions`) where
+  lucky has a prohibitive cost.
+
 - Fixed accidental deactivation of local search initially (off by
   default, activation with `-L`), due to a ticks limit of 0. Only noticeable if
   you run the solver with `-L1`.
