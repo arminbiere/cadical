@@ -1,6 +1,8 @@
 #ifndef _kitten_h_INCLUDED
 #define _kitten_h_INCLUDED
 
+#include "kitten_prefix.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
