@@ -3,12 +3,14 @@
 
 /*------------------------------------------------------------------------*/
 
+#include "exttoint.hpp"
 #include "range.hpp"
 #include "util.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -58,6 +60,8 @@ class Learner;
 class Terminator;
 class WitnessIterator;
 
+#include "exttoint.hpp"
+
 /*------------------------------------------------------------------------*/
 
 /*------------------------------------------------------------------------*/
@@ -72,7 +76,10 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
+
+public:
+  // CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
+  ExtToInt e2i;
 
   vector<int> assumptions;    // External assumptions.
   vector<int> constraint_tmp; // current constraint.
@@ -189,7 +196,7 @@ struct External {
   }
 
   inline int internal_lit (int elit) const {
-    return find_or_default (e2i, elit, 0);
+    return e2i.find_or_default (elit, 0);
   }
   /*----------------------------------------------------------------------*/
 

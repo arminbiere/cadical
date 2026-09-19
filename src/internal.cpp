@@ -1292,7 +1292,7 @@ void Internal::declare_variable (int ilit) {
 
   LOG ("declaring %s", LOGLIT (ilit));
   mark_declared (ilit);
-  imports.push_back (ilit);
+  imports.push_back (vidx (ilit));
 }
 
 // Now we come to the part where we import literals. We either import
@@ -1303,21 +1303,28 @@ void Internal::activating_all_new_imported_literals () {
   LOG (imports, "activating all new variables");
   if (imports.empty ())
     return;
-  if (opts.varindexorder)
+  int new_max_var = 0;
+  if (opts.varindexorder) {
+    // I experimented with MSORT, but this was slower on
+    // lru_10.sanitized (14 vs 16s)
     std::sort (begin (imports), end (imports), [&] (int l, int o) {
-      return i2e[vidx (l)] < i2e[vidx (o)];
-    });
-  if (!opts.varprioritizefirst)
-    std::reverse (begin (imports), end (imports));
-  auto max_it =
-      std::max_element (imports.begin (), imports.end (),
-                        [] (int a, int b) { return abs (a) < abs (b); });
-  assert (max_it != imports.end ());
-  int new_max_var = vidx (*max_it);
+      assert (l > 0 && o > 0);
+      return i2e[vidx (l)] < i2e[vidx (o)];});
+    new_max_var = imports.back ();
+  } else {
+    auto max_it =
+        std::max_element (imports.begin (), imports.end (),
+                          [] (int a, int b) { return (a) < (b); });
+    assert (max_it != imports.end ());
+    new_max_var = *max_it;
+  }
   enlarge (new_max_var);
 
-  for (auto lit : imports) {
-    int idx = vidx (lit);
+  if (!opts.varprioritizefirst)
+    std::reverse (begin (imports), end (imports));
+
+  for (auto idx : imports) {
+    assert (idx > 0);
     auto &f = flags (idx);
     // the user asked for it but did not put the literal in any
     // clause, we still should declare it (for future use by the user)
