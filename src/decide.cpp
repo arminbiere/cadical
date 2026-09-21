@@ -297,10 +297,54 @@ int Internal::decide_assumption () {
       notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
+      assert (!constraint_cat || KITTEN_NAMESPACE (kitten_signed_value (
+                                     constraint_cat, lit)) > 0);
       search_assume_decision (lit);
     }
   }
   return res;
+}
+
+// check for falsified literals with respect to kitten trail
+bool Internal::compute_diverged_constraint () {
+  assert (constraint_unsat.empty ());
+  for (auto &lit : constraint_vars) {
+    const auto tmp_kit =
+        KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
+    assert (tmp_kit);
+    const auto tmp_cad = val (lit);
+    if (!tmp_cad || tmp_kit == tmp_cad)
+      continue;
+    assert (tmp_kit == -tmp_cad);
+    if (KITTEN_NAMESPACE (
+            kitten_flip_signed_literal (constraint_cat, lit))) {
+      stats.constraints_flipped++;
+      continue;
+    }
+    constraint_unsat.push_back (lit);
+  }
+  if (constraint_unsat.empty ())
+    return false;
+  int min = 0;
+  for (auto &lit : constraint_unsat)
+    if (!min || var (lit).level < var (min).level ||
+        (var (lit).level == var (min).level &&
+         var (lit).trail < var (min).trail))
+      min = lit;
+  if (is_decision (min)) {
+    backtrack (var (min).level - 1);
+  } else {
+    int failed = min;
+    if (val (min) > 0)
+      failed = -failed;
+    analyze_failing_constraint (failed);
+    /*
+    if (var (min).level)
+      backtrack (var (min).level - 1);
+      */
+  }
+  constraint_unsat.clear ();
+  return true;
 }
 
 int Internal::decide_constraint () {
@@ -315,16 +359,22 @@ int Internal::decide_constraint () {
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
     if (cat_res == 20)
       stats.constraints_unsat++;
-    else if (cat_res == 10)
+    else if (cat_res == 10) {
       stats.constraints_sat++;
-    else {
+      if (compute_diverged_constraint ()) {
+        stats.constraints_diverged++;
+        return 0;
+      }
+      // TODO: sort constraint_vars according to current decision heuristic
+    } else {
       // Kitten was terminated
       assert (terminated_asynchronously ());
+      return 0;
     }
   }
   // assert (cat_res);
   if (terminated_asynchronously ())
-    return res;
+    return 0;
   if (cat_res == 20) { // unsat
     LOG ("constraints falsified");
     unsat_constraint = true;
@@ -387,8 +437,10 @@ int Internal::decide_constraint () {
         if (tmp_lit > 0)
           failed = -failed;
         analyze_failing_constraint (failed);
+        /*
         if (var (lit).level)
           backtrack (var (lit).level - 1);
+          */
         all_constraints_assigned = false;
         break;
       }

@@ -275,7 +275,8 @@ struct Internal {
   vector<int> clause;       // simplified in parsing & learning
   vector<int> assumptions;  // assumed literals
   // vector<int> constraints;  // literals of the constraints
-  vector<int> constraint_vars; // variables of the constraints
+  vector<int> constraint_vars;  // variables of the constraints
+  vector<int> constraint_unsat; // variables of the constraints
   vector<int> failing_assumptions;
   size_t constraints_without_assumptions;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
@@ -1280,7 +1281,8 @@ struct Internal {
   void
   mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
-  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool propagate, bool keep_chain);
+  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *,
+                        bool propagate, bool keep_chain);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
   bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
@@ -1576,7 +1578,8 @@ struct Internal {
   bool is_constraint_level (size_t);
   int decide_assumption (); // 0=decision, 20=failed
   int decide_constraint (); // 0=decision, 20=failed
-  int decide ();            // 0=decision, 20=failed
+  bool compute_diverged_constraint ();
+  int decide (); // 0=decision, 20=failed
 
   // Internal functions to enable explicit search limits.
   //

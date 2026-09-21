@@ -128,6 +128,7 @@
   STATISTIC (constraints_added,      2, relative, "per", searches) \
   STATISTIC (constraints_analyzed,   2, percent, "%", constraints_sat) \
   STATISTIC (constraints_decided,    2, percent, "%", constraints_added) \
+  STATISTIC (constraints_diverged,   2, percent, "%", constraints_solved) \
   STATISTIC (constraints_failed,     2, percent, "%", constraints_added) \
   STATISTIC (constraints_flipped,    2, percent, "%", constraints_added) \
   STATISTIC (constraints_lit,        2, relative, "per", constraints_added) \

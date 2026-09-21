@@ -117,6 +117,8 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
   ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
   for (const auto &c : clauses) {
     ++ticks;
@@ -175,6 +177,8 @@ int Internal::trivially_true_satisfiable (int64_t &ticks) {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
   ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
   for (const auto &c : clauses) {
     ++ticks;
@@ -267,6 +271,8 @@ int Internal::lucky_fixed_test (Iterator begin, Iterator end,
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
   for (auto it = begin; it != end; ++it) {
     const int idx = *it;
     if (flags (idx).unused ())
@@ -311,6 +317,8 @@ int Internal::backward_false_satisfiable () {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
   for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
     int idx = *it;
     if (flags (idx).unused ())
@@ -343,6 +351,8 @@ int Internal::backward_true_satisfiable () {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
   for (auto it = vars.rbegin (); it != vars.rend (); ++it) {
     int idx = *it;
     if (flags (idx).unused ())
@@ -370,6 +380,7 @@ int Internal::backward_true_satisfiable () {
 int Internal::lucky_decide_assumptions () {
   assert (!level);
   assert (!constraint_cat);
+  LOG ("lucky decide assumptions");
   int res = 0;
   while (is_constraint_level (level)) {
     if (terminated_asynchronously ())
@@ -392,6 +403,8 @@ int Internal::lucky_decide_assumptions () {
     assert (!conflict);
     int res = 0;
     while (!res) {
+      if (terminated_asynchronously ())
+        return 0;
       assert ((size_t) level <= assumptions.size ());
       if (unsat)
         res = 20;
@@ -436,6 +449,8 @@ int Internal::random_lucky_assignment (signed char pol) {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
+  if (terminated_asynchronously ())
+    return -1;
 
   for (int idx : shuffle) {
   START:
