@@ -365,6 +365,8 @@ template struct ProfileContext<ResumeProfile, ResumeProfile, PauseProfile,
 
 namespace CaDiCaL {
 
+struct Internal;
+
 struct ModeResumeContext {
   Internal *internal;
   int mode;

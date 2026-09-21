@@ -47,7 +47,7 @@ void ccadical_constrain (CCaDiCaL *, int lit);
 int ccadical_constraint_failed (CCaDiCaL *);
 void ccadical_set_option (CCaDiCaL *, const char *name, int val);
 struct COption* ccadical_options (CCaDiCaL *wrapper, size_t *len);
-void ccadical_limit (CCaDiCaL *, const char *name, int limit);
+void ccadical_limit (CCaDiCaL *, const char *name, int64_t limit);
 int ccadical_get_option (CCaDiCaL *, const char *name);
 void ccadical_print_statistics (CCaDiCaL *);
 int64_t ccadical_active (CCaDiCaL *);

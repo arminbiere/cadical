@@ -38,7 +38,13 @@ User Facing Changes:
 - The output of the statistics has changed. `stats` now has 3 values, 0 (few
   statistics as previously), 1 (more statistics), 2 (all statistics, similar to
   old default). Related to this, you can now deactivate some metrics with
-  `./configure --no-metrics`. 
+  `./configure --no-metrics`.
+
+- The `limit` and `ccadical_limit` API calls now takes a 64-bit integers as
+  argument instead of int. Only ticks, conflicts, and decisions support integers
+  larger than 32-bits. The options local search and preprocessing do not (by API
+  contract).
+
 
 New and Improved Techniques:
 

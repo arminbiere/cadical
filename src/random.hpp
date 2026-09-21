@@ -82,6 +82,24 @@ public:
     return res;
   }
 
+  int64_t pick_log64 (int64_t l, int64_t r) {
+    assert (l <= r);
+    const uint64_t delta = 1 + r - (unsigned) l;
+    int64_t log_delta = delta ? 0 : 64;
+    while (log_delta < 64 && (1u << log_delta) < delta)
+      log_delta++;
+    const int log_res = pick_int (0, log_delta);
+    unsigned tmp = generate ();
+    if (log_res < 64)
+      tmp &= (1u << log_res) - 1;
+    if (delta)
+      tmp %= delta;
+    const int64_t res = l + tmp;
+    assert (l <= res), assert (res <= r);
+    return res;
+  }
+
+
   // Generate 'double' value in the range '[l,r]'.
   //
   double pick_double (double l, double r) {

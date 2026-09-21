@@ -11,6 +11,7 @@
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <cstdint>
 #include <cstdio>
 
 namespace CaDiCaL {
@@ -1095,10 +1096,11 @@ struct Call {
   char *name = nullptr; // Option name for 'set' and 'config'
   int arg;              // Argument if necessary.
   int val;              // Option value for 'set'.
+  int64_t large_val;    // Option value for 64-bit 'set'.
   bool executed;
 
-  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0)
-      : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v),
+  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0, int64_t w = 0)
+  : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v), large_val (w),
         executed (0) {}
 
   virtual ~Call () {
@@ -2674,7 +2676,7 @@ struct ConfigureCall : public Call {
 };
 
 struct LimitCall : public Call {
-  LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
+  LimitCall (const char *o, int64_t v) : Call (LIMIT, 0, 0, o, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (delay) {
@@ -2683,11 +2685,11 @@ struct LimitCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else
-      s->limit (name, val);
+      s->limit (name, large_val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << val; }
-  Call *copy () { return new LimitCall (name, val); }
+  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << large_val; }
+  Call *copy () { return new LimitCall (name, large_val); }
   const char *keyword () { return "limit"; }
 };
 
@@ -4489,7 +4491,7 @@ void Trace::generate_limits (Random &random) {
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("ticks", random.pick_log (0, 1e9)));
+    push_back (new LimitCall ("ticks", random.pick_log64 (0, ((int64_t)2)*INT32_MAX))); // slightly bigger than 32-bits, but not too much
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
@@ -6473,6 +6475,7 @@ static bool is_valid_char (int ch) {
 void Reader::parse () {
   int ch, lit = 0, val = 0, solved = 0;
   uint64_t state = 0, adding = 0;
+  int64_t large_val = 0;
   Call *prev = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
@@ -6603,9 +6606,9 @@ void Reader::parse () {
         error ("first argument to 'limit' missing");
       if (!second)
         error ("second argument to 'limit' missing");
-      if (!parse_int_str (second, val))
+      if (!parse_int64_str (second, large_val))
         error ("invalid second argument '%s' to 'limit'", second);
-      c = new LimitCall (first, val);
+      c = new LimitCall (first, large_val);
     } else if (!strcmp (keyword, "optimize")) {
       if (!first)
         error ("argument to 'optimize' missing");

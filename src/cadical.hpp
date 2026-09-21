@@ -786,7 +786,7 @@ public:
   //   require (READY)
   //   ensure (READY)
   //
-  bool limit (const char *arg, int val);
+  bool limit (const char *arg, int64_t val);
   bool is_valid_limit (const char *arg);
 
   // The number of currently active variables and clauses can be queried by

@@ -86,8 +86,11 @@ void External::push_external_clause_and_witness_on_extension_stack (
     assert (abs (elit) <= max_var);
     int eidx = abs (elit);
     int ilit = e2i.find_or_default(eidx, 0);
-    if (!ilit)
+    if (!ilit) {
       init (eidx);
+      assert (e2i.find_or_default (eidx, 0));
+      ilit = e2i.find (eidx).second;
+    }
     assert (ilit && ilit != INT_MIN);
     extension.push_back (elit);
     mark (witness, elit);
@@ -103,8 +106,11 @@ void External::push_external_clause_and_witness_on_extension_stack (
     assert (abs (elit) <= max_var);
     int eidx = abs (elit);
     int ilit = e2i.find_or_default(eidx, 0);
-    if (!ilit)
+    if (!ilit) {
       init (eidx);
+      assert (e2i.find_or_default (eidx, 0));
+      ilit = e2i.find (eidx).second;
+    }
     assert (ilit && ilit != INT_MIN);
     extension.push_back (elit);
   }

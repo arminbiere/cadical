@@ -305,7 +305,7 @@ void App::print_witness (FILE *file) {
         c += l;
       }
     } else {
-      for (size_t i = 0; i < solver->external->e2i.vec_e2i.table.size (); ++i) {
+      for (size_t i = 1; i < solver->external->e2i.vec_e2i.table.size (); ++i) {
         auto eilit = std::pair<int, int> (i, solver->external->e2i[i]);
         const int elit = eilit.first;
         if (!c)

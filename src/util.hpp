@@ -40,6 +40,7 @@ bool has_prefix (const char *str, const char *prefix);
 // the second argument to the parsed value.
 
 bool parse_int_str (const char *str, int &);
+bool parse_int64_str (const char *str, int64_t &);
 
 /*------------------------------------------------------------------------*/
 
