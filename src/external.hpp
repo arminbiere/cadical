@@ -10,9 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 /*------------------------------------------------------------------------*/
@@ -78,7 +76,8 @@ struct External {
   vector<bool> vals; // Current external (extended) assignment.
 
 public:
-  // CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> e2i; // External 'idx' to internal 'lit'.
+  // CaDiCaL::hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb,
+  // IntEqualTo> e2i; // External 'idx' to internal 'lit'.
   ExtToInt e2i;
 
   vector<int> assumptions;    // External assumptions.
