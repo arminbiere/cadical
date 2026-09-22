@@ -1310,6 +1310,7 @@ struct Internal {
   int sweep_solve ();
   void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
   bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
+  void get_kitten_statistics (kitten *kitten);
   void init_sweeper (Sweeper &sweeper);
   void release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);

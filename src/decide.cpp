@@ -262,11 +262,11 @@ int Internal::decide_assumption () {
   assert (is_assumption_level (level));
   int res = 0;
   if (constraint_cat) {
-    int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
+    int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
     if (!cat_res) {
       stats.constraints_solved++;
       PROFILE_SCOPE (constraintssolve);
-      cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+      cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
       if (cat_res == 20)
         stats.constraints_unsat++;
@@ -297,8 +297,8 @@ int Internal::decide_assumption () {
       notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
-      assert (!constraint_cat || KITTEN_NAMESPACE (kitten_signed_value (
-                                     constraint_cat, lit)) > 0);
+      assert (!constraint_cat || KITTEN_NAMESPACE (kitten_signed_value) (
+                                     constraint_cat, lit) > 0);
       search_assume_decision (lit);
     }
   }
@@ -310,15 +310,15 @@ bool Internal::compute_diverged_constraint () {
   assert (constraint_unsat.empty ());
   for (auto &lit : constraint_vars) {
     const auto tmp_kit =
-        KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
+        KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
     assert (tmp_kit);
     const auto tmp_cad = val (lit);
     if (!tmp_cad || tmp_kit == tmp_cad)
       continue;
     assert (tmp_kit == -tmp_cad);
     if (opts.constraintflip &&
-        KITTEN_NAMESPACE (
-            kitten_flip_signed_literal (constraint_cat, lit))) {
+        KITTEN_NAMESPACE (kitten_flip_signed_literal) (constraint_cat,
+                                                       lit)) {
       stats.constraints_flipped++;
       continue;
     }
@@ -386,12 +386,12 @@ struct bigger_score {
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
-  int cat_res = KITTEN_NAMESPACE (kitten_status (constraint_cat));
+  int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
   int res = 0;
   if (!cat_res) {
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
-    cat_res = KITTEN_NAMESPACE (kitten_solve (constraint_cat));
+    cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
     if (cat_res == 20)
       stats.constraints_unsat++;
@@ -453,7 +453,7 @@ int Internal::decide_constraint () {
       lit = constraint_vars[idx];
       // constraint_vars[idx] = last_lit;
       const signed char tmp =
-          KITTEN_NAMESPACE (kitten_signed_value (constraint_cat, lit));
+          KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
       // constraint_vars might include variables that are simplified
       // before giving to kitten, in which case this assumption may fail:
       // TODO: actually might be possible to avoid after all
@@ -473,8 +473,8 @@ int Internal::decide_constraint () {
         LOG ("constraint literal %d already satisfied", lit);
         continue;
       } else if (opts.constraintflip &&
-                 KITTEN_NAMESPACE (
-                     kitten_flip_signed_literal (constraint_cat, lit))) {
+                 KITTEN_NAMESPACE (kitten_flip_signed_literal) (
+                     constraint_cat, lit)) {
         stats.constraints_flipped++;
       } else if (is_decision (lit)) {
         // happens if we have to recompute kitten model

@@ -278,8 +278,10 @@ void Internal::release_sweeper (Sweeper &sweeper) {
   for (unsigned i = 0; i < 2; i++)
     erase_vector (sweeper.core[i]);
 
-  if (cat)
+  if (cat) {
+    get_kitten_statistics (cat);
     KITTEN_NAMESPACE (kitten_release) (cat);
+  }
   cat = 0;
   stats.ticks_sweep += sweeper.current_ticks;
   stats.ticks += sweeper.current_ticks;
@@ -473,6 +475,7 @@ static int cat_terminate (void *data) {
 
 void Internal::cat_clear_track_log_terminate () {
   assert (cat);
+  get_kitten_statistics (cat);
   KITTEN_NAMESPACE (kitten_clear) (cat);
   KITTEN_NAMESPACE (kitten_track_antecedents) (cat);
   if (external->terminator)

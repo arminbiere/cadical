@@ -14,7 +14,7 @@ static int cat_terminate (void *data) {
 
 void Internal::init_constraint_cat () {
   assert (!constraint_cat);
-  constraint_cat = KITTEN_NAMESPACE (kitten_init ());
+  constraint_cat = KITTEN_NAMESPACE (kitten_init) ();
 #ifdef LOGGING
   if (opts.log)
     KITTEN_NAMESPACE (kitten_set_logging) (constraint_cat);
@@ -27,7 +27,7 @@ void Internal::init_constraint_cat () {
   // size_t idx = 0;
   for (auto &other : assumptions) {
     LOG ("kitten assume %s", LOGLIT (other));
-    KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, other));
+    KITTEN_NAMESPACE (kitten_assume_signed) (constraint_cat, other);
   }
 }
 
@@ -186,7 +186,8 @@ void Internal::reset_constraint () {
   constraint_vars.clear ();
   constraint_ids.clear ();
   constraint_fail.clear ();
-  KITTEN_NAMESPACE (kitten_release (constraint_cat));
+  get_kitten_statistics (constraint_cat);
+  KITTEN_NAMESPACE (kitten_release) (constraint_cat);
   constraints_without_assumptions = 0;
   constraint_cat = 0;
   unsat_constraint = 0;
@@ -239,7 +240,7 @@ void Internal::analyze_failing_constraint (int failed) {
       proof->add_assumption_clause (id, -failed, lrat_chain, false);
     lrat_chain.clear ();
 
-    KITTEN_NAMESPACE (cat_unit_with_id (constraint_cat, id, -failed));
+    KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, -failed);
     return;
   }
 
@@ -255,8 +256,8 @@ void Internal::analyze_failing_constraint (int failed) {
     g.seen = true;
     analyzed.push_back (-failed);
     clause.push_back (-failed);
-    assert (KITTEN_NAMESPACE (
-                kitten_signed_value (constraint_cat, failed)) > 0);
+    assert (KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat,
+                                                    failed) > 0);
     assert (w.reason);
     assert (w.reason != external_reason);
     for (const auto &other : *w.reason) {
@@ -314,8 +315,8 @@ void Internal::analyze_failing_constraint (int failed) {
       } else {
         assert (assumed (lit) || constrained (lit));
         LOG ("failed assumption %d", lit);
-        assert (KITTEN_NAMESPACE (
-                    kitten_signed_value (constraint_cat, lit)) > 0);
+        assert (KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat,
+                                                        lit) > 0);
         clause.push_back (-lit);
       }
     }

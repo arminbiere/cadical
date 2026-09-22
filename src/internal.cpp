@@ -74,8 +74,24 @@ Internal::~Internal () {
     vals -= vsize;
     delete[] vals;
   }
-  if (constraint_cat)
+  if (constraint_cat) {
+    get_kitten_statistics (constraint_cat);
     KITTEN_NAMESPACE (kitten_release (constraint_cat));
+  }
+}
+
+void Internal::get_kitten_statistics (kitten *kitten) {
+  auto *kitten_stats = KITTEN_NAMESPACE (kitten_get_statistics) (kitten);
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
 }
 
 /*------------------------------------------------------------------------*/

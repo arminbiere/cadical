@@ -102,22 +102,7 @@ struct klause {
   unsigned lits[1];
 };
 
-typedef struct statistics statistics;
-
-struct statistics {
-  uint64_t learned;
-  uint64_t original;
-  uint64_t kitten_flip;
-  uint64_t kitten_flipped;
-  uint64_t kitten_sat;
-  uint64_t kitten_solved;
-  uint64_t kitten_conflicts;
-  uint64_t kitten_decisions;
-  uint64_t kitten_propagations;
-  uint64_t kitten_ticks;
-  uint64_t kitten_unknown;
-  uint64_t kitten_unsat;
-};
+typedef struct KITTEN_NAMESPACE (kitten_statistics) statistics;
 
 typedef struct kimits kimits;
 
@@ -602,6 +587,12 @@ kitten *KITTEN_NAMESPACE (kitten_init) (void) {
   CALLOC (kitten, 1);
   initialize_kitten (kitten);
   return kitten;
+}
+
+statistics *KITTEN_NAMESPACE (kitten_get_statistics) (kitten *kitten) {
+  if (!kitten)
+    return 0;
+  return &kitten->statistics;
 }
 
 #ifdef LOGGING

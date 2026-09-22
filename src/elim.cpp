@@ -273,7 +273,8 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator &eliminator,
 
 bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
                                 int pivot, Clause *d,
-                                const bool propagate_eagerly, const bool keep_chain) {
+                                const bool propagate_eagerly,
+                                const bool keep_chain) {
 
   assert (!c->redundant);
   assert (!d->redundant);
@@ -1048,6 +1049,7 @@ void Internal::init_cat () {
 
 void Internal::reset_cat () {
   if (cat) {
+    get_kitten_statistics (cat);
     KITTEN_NAMESPACE (kitten_release) (cat);
     cat = 0;
   }

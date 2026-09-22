@@ -17,9 +17,26 @@ extern "C" {
 
 typedef struct kitten kitten;
 
+struct KITTEN_NAMESPACE (kitten_statistics) {
+  uint64_t learned;
+  uint64_t original;
+  uint64_t kitten_flip;
+  uint64_t kitten_flipped;
+  uint64_t kitten_sat;
+  uint64_t kitten_solved;
+  uint64_t kitten_conflicts;
+  uint64_t kitten_decisions;
+  uint64_t kitten_propagations;
+  uint64_t kitten_ticks;
+  uint64_t kitten_unknown;
+  uint64_t kitten_unsat;
+};
+
 kitten *KITTEN_NAMESPACE (kitten_init) (void);
 void KITTEN_NAMESPACE (kitten_clear) (kitten *);
 void KITTEN_NAMESPACE (kitten_release) (kitten *);
+struct KITTEN_NAMESPACE (kitten_statistics) *
+    KITTEN_NAMESPACE (kitten_get_statistics) (kitten *);
 
 #ifdef LOGGING
 void KITTEN_NAMESPACE (kitten_set_logging) (kitten *kitten);
