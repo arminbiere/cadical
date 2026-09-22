@@ -75,6 +75,8 @@ OPTION( congruenceite,        1,  0,  1,0,0,1, "extract ITE gates") \
 OPTION( congruencexor,        1,  0,  1,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,   4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,  1,  1,5e6,0,0,1, "XOR gate round") \
+OPTION( constraintflip,       1,  0,  1,0,0,1, "try to flip kitten model to resolve conflicts") \
+OPTION( constraintsort,       1,  0,  1,0,0,1, "sort constraint variables when kitten model is recomputed") \
 OPTION( cover,                0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covereffort,          4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( covermaxclslim,     1e5,  1,2e9,2,0,1, "maximum clause size") \

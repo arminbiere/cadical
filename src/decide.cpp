@@ -316,7 +316,8 @@ bool Internal::compute_diverged_constraint () {
     if (!tmp_cad || tmp_kit == tmp_cad)
       continue;
     assert (tmp_kit == -tmp_cad);
-    if (KITTEN_NAMESPACE (
+    if (opts.constraintflip &&
+        KITTEN_NAMESPACE (
             kitten_flip_signed_literal (constraint_cat, lit))) {
       stats.constraints_flipped++;
       continue;
@@ -347,6 +348,39 @@ bool Internal::compute_diverged_constraint () {
   return true;
 }
 
+struct bigger_queue {
+
+  Internal *internal;
+
+  bigger_queue (Internal *i) : internal (i) {}
+
+  bool operator() (int a, int b) {
+    assert (a > 0), assert (a < internal->btab.size ());
+    assert (b > 0), assert (b < internal->btab.size ());
+    const unsigned s = internal->btab[a];
+    const unsigned t = internal->btab[b];
+    assert (s != t);
+    return s > t;
+  }
+};
+
+struct bigger_score {
+
+  Internal *internal;
+
+  bigger_score (Internal *i) : internal (i) {}
+
+  bool operator() (int a, int b) {
+    assert (a > 0), assert (a < internal->stab.size ());
+    assert (b > 0), assert (b < internal->stab.size ());
+    const unsigned s = internal->stab[a];
+    const unsigned t = internal->stab[b];
+    if (s == t)
+      return a > b;
+    return s > t;
+  }
+};
+
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
@@ -361,11 +395,21 @@ int Internal::decide_constraint () {
       stats.constraints_unsat++;
     else if (cat_res == 10) {
       stats.constraints_sat++;
+      // compute conflicts between current trail and kitten model
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
         return 0;
       }
-      // TODO: sort constraint_vars according to current decision heuristic
+      // sort constraint_vars according to current decision heuristic
+      if (opts.constraintsort) {
+        stats.constraints_sorted++;
+        if (use_scores ())
+          sort (constraint_vars.begin (), constraint_vars.end (),
+                bigger_score (this));
+        else
+          sort (constraint_vars.begin (), constraint_vars.end (),
+                bigger_queue (this));
+      }
     } else {
       // Kitten was terminated
       assert (terminated_asynchronously ());
@@ -416,17 +460,17 @@ int Internal::decide_constraint () {
       } else if (!tmp || tmp_lit == tmp) {
         LOG ("constraint literal %d already satisfied", lit);
         continue;
+      } else if (opts.constraintflip &&
+                 KITTEN_NAMESPACE (
+                     kitten_flip_signed_literal (constraint_cat, lit))) {
+        stats.constraints_flipped++;
       } else if (is_decision (lit)) {
         // happens if we have to recompute kitten model
-        // assert (false);
-        // TODO: maybe catch this first, as it really messes with
-        // the rest (breaks invariant)
+        // TODO: should be caught by 'compute_diverged_constraint'
+        assert (false);
         all_constraints_assigned = false;
         backtrack (var (lit).level - 1);
         break;
-      } else if (KITTEN_NAMESPACE (
-                     kitten_flip_signed_literal (constraint_cat, lit))) {
-        stats.constraints_flipped++;
       } else {
         // TODO: this branch is only good if the trail satisfies
         // the current kitten model, otherwise 'analyze_failing_constraint'
@@ -473,8 +517,7 @@ int Internal::decide () {
   check_queue ();
   CHECK_MISSED ();
   int res = 0;
-  // TODO: refactor this part
-BEFORE:
+BEFORE: // UP force backtrack
   if (terminated_asynchronously ())
     return res;
   if (is_assumption_level (level)) {

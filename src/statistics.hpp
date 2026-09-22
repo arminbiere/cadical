@@ -135,6 +135,7 @@
   STATISTIC (constraints_reset,      2, relative, "per", searches) \
   STATISTIC (constraints_sat,        2, percent, "%", constraints_solved) \
   STATISTIC (constraints_solved,     2, relative, "per", decisions) \
+  STATISTIC (constraints_sorted,     2, percent, "%", constraints_solved) \
   STATISTIC (constraints_unsat,      2, percent, "%", constraints_solved) \
   STATISTIC (constraints_vars,       2, relative, "per", constraints_added) \
   STATISTIC (cover_asymmetric,       3, percent, "%",  cover_total) \
