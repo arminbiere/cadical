@@ -254,6 +254,8 @@ void Internal::analyze_failing_constraint (int failed) {
     g.seen = true;
     analyzed.push_back (-failed);
     clause.push_back (-failed);
+    assert (KITTEN_NAMESPACE (
+                kitten_signed_value (constraint_cat, failed)) > 0);
     assert (w.reason);
     assert (w.reason != external_reason);
     for (const auto &other : *w.reason) {
@@ -311,6 +313,8 @@ void Internal::analyze_failing_constraint (int failed) {
       } else {
         assert (assumed (lit) || constrained (lit));
         LOG ("failed assumption %d", lit);
+        assert (KITTEN_NAMESPACE (
+                    kitten_signed_value (constraint_cat, lit)) > 0);
         clause.push_back (-lit);
       }
     }
