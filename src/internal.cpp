@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "flags.hpp"
 #include "kitten.h"
+#include "statistics.hpp"
 
 namespace CaDiCaL {
 
@@ -82,16 +83,9 @@ Internal::~Internal () {
 
 void Internal::get_kitten_statistics (kitten *kitten) {
   auto *kitten_stats = KITTEN_NAMESPACE (kitten_get_statistics) (kitten);
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
-  stats.kitten_conflicts += kitten_stats->kitten_conflicts;
+#define STATISTIC(NAME, ...) stats.NAME += kitten_stats->NAME;
+  KITTEN_STATISTICS
+#undef STATISTIC
 }
 
 /*------------------------------------------------------------------------*/

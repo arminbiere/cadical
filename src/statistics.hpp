@@ -61,6 +61,18 @@
 #define CADICAL_API_STATISTICS
 #endif
 
+#define KITTEN_STATISTICS \
+  STATISTIC (kitten_flip         ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_flipped      ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_sat          ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_solved       ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_conflicts    ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_decisions    ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_propagations ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_ticks        ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_unknown      ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_unsat        ,   3, NOTHING, 0, 0) 
+
 #define CADICAL_STATISTICS \
   CADICAL_API_STATISTICS \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
@@ -218,16 +230,7 @@
   STATISTIC (instantiate_tried,      2, relative, "per", instantiations) \
   STATISTIC (instantiations,         1, INTERVAL, "", interval) \
   STATISTIC (irredundant_literals,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_flip         ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_flipped      ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_sat          ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_solved       ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_conflicts    ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_decisions    ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_propagations ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_ticks        ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_unknown      ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_unsat        ,   3, NOTHING, 0, 0) \
+  KITTEN_STATISTICS \
   STATISTIC (learned_binaries,       2, percent, "%", learned_clauses) \
   STATISTIC (learned_clauses,        2, percent, "%", clauses) \
   STATISTIC (learned_literals,       2, relative, "per", learned_clauses) \
