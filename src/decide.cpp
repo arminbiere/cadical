@@ -339,6 +339,8 @@ bool Internal::compute_diverged_constraint () {
     if (val (min) > 0)
       failed = -failed;
     analyze_failing_constraint (failed);
+    // Kitten might fix the conflict by changing other parts of the
+    // model so backtracking eagerly is not beneficial
     /*
     if (var (min).level)
       backtrack (var (min).level - 1);
@@ -355,8 +357,8 @@ struct bigger_queue {
   bigger_queue (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (a < internal->btab.size ());
-    assert (b > 0), assert (b < internal->btab.size ());
+    assert (a > 0), assert (abs (a) < internal->btab.size ());
+    assert (b > 0), assert (abs (b) < internal->btab.size ());
     const unsigned s = internal->btab[a];
     const unsigned t = internal->btab[b];
     assert (s != t);
@@ -371,8 +373,8 @@ struct bigger_score {
   bigger_score (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (a < internal->stab.size ());
-    assert (b > 0), assert (b < internal->stab.size ());
+    assert (a > 0), assert (abs (a) < internal->stab.size ());
+    assert (b > 0), assert (abs (b) < internal->stab.size ());
     const unsigned s = internal->stab[a];
     const unsigned t = internal->stab[b];
     if (s == t)
@@ -409,6 +411,7 @@ int Internal::decide_constraint () {
         else
           sort (constraint_vars.begin (), constraint_vars.end (),
                 bigger_queue (this));
+        last_constraint_idx = 0;
       }
     } else {
       // Kitten was terminated
@@ -426,14 +429,22 @@ int Internal::decide_constraint () {
   } else if (cat_res == 10) {
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
-    // re-ordering constraint_vars with 'last_lit' will break
-    // the invariant that the lowest level unsatisfied literal
-    // in constraint_vars is found
-    // TODO: does this invariant even hold without re-ordering?
-    // TODO: sort based on level/falsity to guarantee this. When to sort?
-    // TODO: maybe swap falified literals to the front?
+    // TODO: re-ordering based on decisions?
+    // TODO: keep last constraint_var index to skip part of the loop.
     int lit = 0; //, last_lit;
-    for (size_t idx = 0; idx < constraint_vars.size (); idx++) {
+    size_t idx = 0;
+    assert (last_constraint_idx <= constraint_vars.size ());
+    if (last_constraint_idx == constraint_vars.size ()) {
+      if (control[level].decision == 0)
+        idx = last_constraint_idx;
+    } else {
+      const int last_decision = constraint_vars[last_constraint_idx];
+      // TODO: this is not precise due to fake-decisions
+      if (val (last_decision) && var (last_decision).level == level &&
+          is_decision (last_decision))
+        idx = last_constraint_idx;
+    }
+    for (idx = 0; idx < constraint_vars.size (); idx++) {
       if (terminated_asynchronously ()) {
         all_constraints_assigned = false;
         break;
@@ -452,9 +463,10 @@ int Internal::decide_constraint () {
       if (tmp < 0)
         decision = -decision;
       if (!tmp_lit) {
-        stats.decisions++;
+        stats.constraints_decided++;
         assert (!flags (decision).unused ());
         search_assume_decision (decision);
+        last_constraint_idx = idx;
         all_constraints_assigned = false;
         break;
       } else if (!tmp || tmp_lit == tmp) {
@@ -472,15 +484,17 @@ int Internal::decide_constraint () {
         backtrack (var (lit).level - 1);
         break;
       } else {
-        // TODO: this branch is only good if the trail satisfies
-        // the current kitten model, otherwise 'analyze_failing_constraint'
-        // might generate a useless clause.
+        // this requires that the trail satisfies the current kitten
+        // model, otherwise 'analyze_failing_constraint' might generate a
+        // useless clause, leading to a potential infinite loop.
         assert (tmp_lit == -tmp);
         LOG ("constraint literal %d falsified", lit);
         int failed = lit;
         if (tmp_lit > 0)
           failed = -failed;
         analyze_failing_constraint (failed);
+        // Kitten might fix the conflict by changing other parts of the
+        // model so backtracking eagerly is not beneficial
         /*
         if (var (lit).level)
           backtrack (var (lit).level - 1);
@@ -495,6 +509,7 @@ int Internal::decide_constraint () {
     constraint_vars[0] = lit;
     */
     if (all_constraints_assigned) {
+      last_constraint_idx = constraint_vars.size ();
       stats.decisions++;
       LOG ("added pseudo decision level(s) due to constraints");
       new_trail_level (0);

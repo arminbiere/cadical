@@ -151,6 +151,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
 }
 
 void Internal::mark_failed_constraint (int64_t id) {
+  stats.constraints_failed++;
   constraint_fail[id] = true;
   // TODO: external id?
   conclusion.push_back (id);

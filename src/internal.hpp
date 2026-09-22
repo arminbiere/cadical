@@ -279,6 +279,7 @@ struct Internal {
   vector<int> constraint_unsat; // variables of the constraints
   vector<int> failing_assumptions;
   size_t constraints_without_assumptions;
+  size_t last_constraint_idx;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
   unordered_map<int64_t, int> constraint_ids; // indeces of the constraints
   unordered_map<unsigned, unsigned> constraint_refs; // kitten references
