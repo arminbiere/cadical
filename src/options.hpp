@@ -152,6 +152,7 @@ OPTION( flushfactor,          3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,           1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,           0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,                 0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
+OPTION( glueassumptions,      2,  0,  2,0,0,1, "count assumption levels as glue (0=none, 1=one, 2=all)") \
 OPTION( idrup,                0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,                  0,  0,  2,0,0,1, "ILB (incremental lazy backtrack) (0: no, 1: assumptions only, 2: everything)") \
 OPTION( incdecay,             1,  0,  4,0,0,1, "decay clauses when doing incremental clauses" ) \

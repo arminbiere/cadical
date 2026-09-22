@@ -1273,7 +1273,18 @@ void Internal::analyze () {
   // Update glue and learned (1st UIP literals) statistics.
   //
   int size = (int) clause.size ();
-  const int glue = (int) levels.size () - 1;
+  int glue = (int) levels.size () - 1;
+  assert (glue > 0);
+  if (opts.glueassumptions < 2) {
+    for (auto &l : levels) {
+      if ((size_t) l < assumptions.size () + !!constraint.size ())
+        glue--;
+    }
+    if (opts.glueassumptions)
+      glue++;
+    if (glue < 1)
+      glue = 1;
+  }
   LOG (clause, "1st UIP size %d and glue %d clause", size, glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
