@@ -1099,9 +1099,10 @@ struct Call {
   int64_t large_val;    // Option value for 64-bit 'set'.
   bool executed;
 
-  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0, int64_t w = 0)
-  : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v), large_val (w),
-        executed (0) {}
+  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0,
+        int64_t w = 0)
+      : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v),
+        large_val (w), executed (0) {}
 
   virtual ~Call () {
     if (name)
@@ -1260,7 +1261,8 @@ public:
   ReplayPropagator (Solver *s, ExtendMap *e, bool l)
       : solver (s), extendmap (e)
 #ifdef LOGGING
-        , logging (l)
+        ,
+        logging (l)
 #endif
   {
 #ifndef LOGGING
@@ -2276,8 +2278,18 @@ public:
     auto lemma = external_lemmas[reason_id];
     assert (lemma != nullptr);
     assert (lemma->type == PROPAGATING);
+  NEXT_LEMMA_LIT:
     int lit = lemma->next_lit ();
-    assert (!lit || s->external->observed (lit));
+    // if a fixed literal gets unobserved it can happen that a
+    // propagation still relies on this literal.
+    // There are two ways to fix this,
+    // either ignore it here, or backtrack to level 0 when
+    // unobserving a fixed literal to clear all propagations.
+    assert (!lit || s->external->observed (lit) || s->fixed (lit));
+    if (lit && !s->external->observed (lit)) {
+      assert (s->fixed (lit));
+      goto NEXT_LEMMA_LIT;
+    }
 
     if (!lit) {
       lemma->add_count++;
@@ -2688,7 +2700,9 @@ struct LimitCall : public Call {
       s->limit (name, large_val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << large_val; }
+  void print (ostream &o) {
+    o << keyword () << ' ' << name << ' ' << large_val;
+  }
   Call *copy () { return new LimitCall (name, large_val); }
   const char *keyword () { return "limit"; }
 };
@@ -4491,7 +4505,11 @@ void Trace::generate_limits (Random &random) {
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("ticks", random.pick_log64 (0, ((int64_t)2)*INT32_MAX))); // slightly bigger than 32-bits, but not too much
+    push_back (new LimitCall (
+        "ticks",
+        random.pick_log64 (0, ((int64_t) 2) *
+                                  INT32_MAX))); // slightly bigger than
+                                                // 32-bits, but not too much
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
