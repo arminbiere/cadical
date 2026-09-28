@@ -34,8 +34,11 @@ int main (void) {
   for (int i = 2; i < BIG_NUM; i++) {
     if (__builtin_popcount (i) == 1)
       printf ("iteration %d\n", i);
-    ccadical_add (solver, (i - 1));
-    ccadical_add (solver, -(i));
+    ccadical_add (solver, (i));
+    // ccadical_add (solver, -(i));
+    // ccadical_add (solver, 0);
+    // ccadical_add (solver, -(i - 1));
+    // ccadical_add (solver, (i));
     ccadical_add (solver, 0);
     int res = ccadical_solve (solver);
     assert (res == 10);
