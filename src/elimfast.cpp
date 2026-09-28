@@ -175,10 +175,10 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
         break;
       if (d->garbage)
         continue;
-      // Unlike elim, we need to eagerly propagate, because we might
-      // not have produced the resolvents in
-      // 'try_to_fasteliminate_variable' if we fast-tracked it.
-      if (!resolve_clauses (eliminator, c, pivot, d, true, true))
+      // Similar to elim (see the comment there), we cannot propagate
+      // eagerly. This means that we miss more units than in elim due
+      // to the `product <= bound` path.
+      if (!resolve_clauses (eliminator, c, pivot, d, false, true))
         continue;
       assert (!lrat || !lrat_chain.empty ());
       Clause *r = new_resolved_irredundant_clause ();
