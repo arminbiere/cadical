@@ -7169,6 +7169,11 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'stats'", first);
       c = new StatsCall ();
+    } else if (!strcmp (keyword, "resource")) {
+      if (first)
+        error ("additional argument '%s' to 'resource'", first);
+      // c = new StatsCall ();
+      mobical.warning ("ignoring 'resource' call");
     } else if (!strcmp (keyword, "reset")) {
       if (first)
         error ("additional argument '%s' to 'reset'", first);
