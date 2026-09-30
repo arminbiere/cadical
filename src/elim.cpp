@@ -273,7 +273,8 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator &eliminator,
 
 bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
                                 int pivot, Clause *d,
-                                const bool propagate_eagerly, const bool keep_chain) {
+                                const bool propagate_eagerly,
+                                const bool keep_chain) {
 
   assert (!c->redundant);
   assert (!d->redundant);
@@ -510,6 +511,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
     assert (!c->redundant);
     if (c->garbage)
       continue;
+    if (c->size > opts.elimclslim)
+      return false;
     for (const auto &d : ns) {
       ++eliminator.ticks;
       assert (!d->redundant);
@@ -517,6 +520,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
         continue;
       if (!resolve_gates && substitute && c->gate == d->gate)
         continue;
+      if (d->size > opts.elimclslim)
+        return false;
       stats.eliminate_tried_res++;
       if (resolve_clauses (eliminator, c, pivot, d, true, false)) {
         resolvents++;
