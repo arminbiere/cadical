@@ -341,6 +341,8 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       continue;
     if (c->size < 3)
       continue;
+    if (c->size > opts.elimclslim)
+      goto DONE;
 
     bool all_literals_marked = true;
     unsigned arity = 0;
