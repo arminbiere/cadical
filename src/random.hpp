@@ -99,7 +99,6 @@ public:
     return res;
   }
 
-
   // Generate 'double' value in the range '[l,r]'.
   //
   double pick_double (double l, double r) {

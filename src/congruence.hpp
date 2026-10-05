@@ -529,9 +529,7 @@ struct GateEqualTo {
 };
 
 struct GateIsGarbage {
-  bool operator() (const Gate *const lhs) const {
-    return lhs->garbage;
-  }
+  bool operator() (const Gate *const lhs) const { return lhs->garbage; }
 };
 
 struct Hash {
@@ -587,7 +585,9 @@ struct Closure {
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
   std::array<uint64_t, 16> nonces; // for better hashing
-  typedef hash<Gate *, Hash, GateIsGarbage, GateEqualTo, std::equal_to<Gate *>> GatesTable;
+  typedef hash<Gate *, Hash, GateIsGarbage, GateEqualTo,
+               std::equal_to<Gate *>>
+      GatesTable;
 
   vector<signed char> marks; // marking structure
   // remember the ids and the literal. 2 and 4 are

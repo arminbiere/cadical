@@ -327,7 +327,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0) {};
+  Mopt (const char *n) : name (n), value (0), fixed (0){};
 };
 
 class Mopts {
@@ -1551,13 +1551,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d) {};
+    Decisions (int l, int d) : lit (l), delay (d){};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d) {};
+    MockForce (int l, int d) : lit (l), delay (d){};
   };
 
   struct ExternalLemma {
@@ -5270,8 +5270,8 @@ void Mobical::print_statistics () {
          << flush;
     if (shared->memout || shared->timeout) {
       prefix ();
-      cerr << "out-of-time " << shared->timeout << ", "
-           << "out-of-memory " << shared->memout << endl
+      cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
+           << shared->memout << endl
            << flush;
     }
   }

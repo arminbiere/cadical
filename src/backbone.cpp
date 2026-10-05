@@ -138,7 +138,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
 }
 
 inline void Internal::backbone_propagate2 (int64_t &ticks) {
-  MODE_REQUIRE(BACKBONE);
+  MODE_REQUIRE (BACKBONE);
   assert (propagated2 <= trail.size ());
   int64_t before = propagated2;
   while (propagated2 != trail.size ()) {
@@ -271,7 +271,7 @@ inline void Internal::backbone_unit_reassign (int lit) {
 
 inline void Internal::backbone_unit_assign (int lit) {
   LOG ("assigning %s to level 0", LOGLIT (lit));
-  MODE_REQUIRE(BACKBONE);
+  MODE_REQUIRE (BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   Var &v = var (idx);
@@ -292,7 +292,7 @@ inline void Internal::backbone_unit_assign (int lit) {
 }
 
 inline void Internal::backbone_assign_any (int lit, Clause *reason) {
-  MODE_REQUIRE(BACKBONE);
+  MODE_REQUIRE (BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -315,7 +315,7 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
 }
 
 inline void Internal::backbone_assign (int lit, Clause *reason) {
-  MODE_REQUIRE(BACKBONE);
+  MODE_REQUIRE (BACKBONE);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -338,7 +338,7 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
 }
 
 void Internal::backbone_decision (int lit) {
-  MODE_REQUIRE(BACKBONE);
+  MODE_REQUIRE (BACKBONE);
   assert (propagated2 == trail.size ());
   new_trail_level (lit);
   notify_decision ();
@@ -527,7 +527,7 @@ void Internal::keep_backbone_candidates (
 unsigned Internal::compute_backbone () {
   size_t failed = 0;
   if (terminated_asynchronously ())
-    return failed; 
+    return failed;
 
   int64_t ticks = 0;
   backbone_propagate2 (ticks);

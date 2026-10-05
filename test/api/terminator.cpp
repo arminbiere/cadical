@@ -4,8 +4,8 @@
 #undef NDEBUG
 #endif
 
-#include <cassert>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <thread>
 
@@ -18,7 +18,7 @@ static int ph (int p, int h) {
 }
 
 struct Terminator : public CaDiCaL::Terminator {
-  Terminator (): terminate_requested (false) { }
+  Terminator () : terminate_requested (false) {}
 
   bool terminate () override {
     return terminate_requested.load (std::memory_order_acquire);
@@ -31,6 +31,7 @@ struct Terminator : public CaDiCaL::Terminator {
   void reset_terminate () {
     terminate_requested.store (false, std::memory_order_release);
   }
+
 private:
   std::atomic<bool> terminate_requested;
 };
@@ -56,7 +57,7 @@ int main () {
     solver.add (0);
   }
 
-  std::thread terminator_thread ([]() -> void {
+  std::thread terminator_thread ([] () -> void {
     std::this_thread::sleep_for (std::chrono::milliseconds (100));
     terminator.notify_terminate ();
   });

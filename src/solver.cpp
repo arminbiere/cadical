@@ -617,8 +617,11 @@ void Solver::optimize (int arg) {
 bool Solver::limit (const char *arg, int64_t val) {
   TRACE (limit, "limit", arg, val);
   REQUIRE_VALID_STATE ();
-  REQUIRE (std::string (arg) != "preprocessing" || val <= INT32_MAX, "cannot set preprocessing limit to more than INT32_MAX");
-  REQUIRE (std::string (arg) != "localsearch" || val <= INT32_MAX, "cannot set the number of local search before startup to more than INT32_MAX");
+  REQUIRE (std::string (arg) != "preprocessing" || val <= INT32_MAX,
+           "cannot set preprocessing limit to more than INT32_MAX");
+  REQUIRE (std::string (arg) != "localsearch" || val <= INT32_MAX,
+           "cannot set the number of local search before startup to more "
+           "than INT32_MAX");
   bool res = internal->limit (arg, val);
   LOG_API_CALL_END ("limit", arg, val, res);
   return res;

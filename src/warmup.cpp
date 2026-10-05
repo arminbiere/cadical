@@ -336,7 +336,8 @@ void Internal::warmup_decide () {
   warmup_assign (decision, decision_reason);
 }
 
-int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_literals) {
+int Internal::decide_and_propagate_all_assumptions (
+    std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
   int res = 0;
@@ -355,11 +356,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
       if (!unsat)
         analyze ();
       else
-       break;
+        break;
     } else if (satisfied ()) {
       assert (!res);
       if (external) {
-        LOG ("found satisfied assignment ignoring the external propagator, so probably not valid");
+        LOG ("found satisfied assignment ignoring the external propagator, "
+             "so probably not valid");
       } else {
         res = 10;
       }
@@ -375,12 +377,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
   if (unsat || unsat_constraint)
     res = 20;
 
-
-  set_literals.reserve(trail.size ());
-  for (auto lit: trail)
-    set_literals.push_back(lit);
+  set_literals.reserve (trail.size ());
+  for (auto lit : trail)
+    set_literals.push_back (lit);
   if (!res) {
-    // we need to repropagate now due to out-of-order units and renotify them
+    // we need to repropagate now due to out-of-order units and renotify
+    // them
     backtrack ();
     if (propagated < trail.size () && !propagate ()) {
       LOG ("empty clause after root level propagation");
@@ -405,9 +407,9 @@ int Internal::warmup () {
   int res = 0;
 
 #ifndef QUIET
-  const int64_t warmup_propagated = (int64_t)stats.walk_warmup_propagate;
-  const int64_t decision = (int64_t)stats.walk_warmup_decision;
-  const int64_t dummydecision = (int64_t)stats.walk_warmup_dummy;
+  const int64_t warmup_propagated = (int64_t) stats.walk_warmup_propagate;
+  const int64_t decision = (int64_t) stats.walk_warmup_decision;
+  const int64_t dummydecision = (int64_t) stats.walk_warmup_dummy;
 #endif
   LOG ("starting warmup");
 
@@ -432,8 +434,11 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (level == 0); // if no assumptions or only already satisfied ones, don't notify
-  LOG ("no_backtrack_notification = %d, notified_level= %d", no_backtrack_notification, notified_level);
+  const bool no_backtrack_notification =
+      (level ==
+       0); // if no assumptions or only already satisfied ones, don't notify
+  LOG ("no_backtrack_notification = %d, notified_level= %d",
+       no_backtrack_notification, notified_level);
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
   assert (!private_steps);
@@ -454,9 +459,9 @@ int Internal::warmup () {
   VERBOSE (3,
            "warming-up needed %" PRIu64 " propagations including %" PRIu64
            " decisions (with %" PRIu64 " dummy ones)",
-           (int64_t)stats.walk_warmup_propagate - warmup_propagated,
-           (int64_t)stats.walk_warmup_decision - decision,
-           (int64_t)stats.walk_warmup_dummy - dummydecision);
+           (int64_t) stats.walk_warmup_propagate - warmup_propagated,
+           (int64_t) stats.walk_warmup_decision - decision,
+           (int64_t) stats.walk_warmup_dummy - dummydecision);
 #endif
 
   // now we backtrack, notifying only if there was something to

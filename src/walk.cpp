@@ -32,9 +32,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     unsigned lit1 = internal->vlit (c->literals[0]);
     const unsigned limit =
 #ifndef NDEBUG
-      1u << (internal->opts.walkbinarylimit);
+        1u << (internal->opts.walkbinarylimit);
 #else
-      (1u << 31);
+        (1u << 31);
 #endif
     if (lit1 < limit) {
       // If literals fit, store as TaggedBinary

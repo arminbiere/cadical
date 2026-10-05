@@ -131,7 +131,7 @@ void Internal::factor_mode (bool redundant_only) {
 
   // finally push remaining clause on the occurrence stack
   for (const auto &c : candidates) {
-    if (terminated_asynchronously ()) 
+    if (terminated_asynchronously ())
       return;
     for (const auto &lit : *c)
       occs (lit).push_back (c);
@@ -281,7 +281,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
-  DeferDeletePtr<Quotient> delete_res(res);
+  DeferDeletePtr<Quotient> delete_res (res);
   // these are set to 0 for sanity (but not used).
   res->next = 0;
   res->prev = 0;
@@ -305,7 +305,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
       continue;
     if (ticks > limit)
       break;
-    if (terminated_asynchronously ()) 
+    if (terminated_asynchronously ())
       break;
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
@@ -492,7 +492,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   *reduction_ptr = matches - 4;
   assert (!factoring.quotients.xorites);
   factoring.quotients.xorites = res;
-  delete_res.release();
+  delete_res.release ();
   return res;
 }
 
@@ -1427,7 +1427,8 @@ bool Internal::run_factorization (int64_t limit) {
       VERBOSE (2, "factorization ticks limit hit");
       break;
     }
-    if (terminated_asynchronously ()) // TODO: somehow a ticks update is missed with this
+    if (terminated_asynchronously ()) // TODO: somehow a ticks update is
+                                      // missed with this
       break;
     Flags &f = flags (first_idx);
     const unsigned bit = 1u << (first < 0);
@@ -1580,7 +1581,7 @@ bool Internal::factor () {
   // TODO: redundant mode sometimes?
   factor_mode (!is_preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
-  
+
   reset_factor_mode ();
 
   propagated = 0;

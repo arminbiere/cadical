@@ -288,7 +288,7 @@ void App::print_witness (FILE *file) {
         const int elit = eilit.first;
         if (!c)
           fputc ('v', file), c = 1;
-        if (!elit)// the hash-table can contain stall entries
+        if (!elit) // the hash-table can contain stall entries
           continue;
         assert (elit);
         if (solver->external->ervars[elit])
@@ -305,7 +305,8 @@ void App::print_witness (FILE *file) {
         c += l;
       }
     } else {
-      for (size_t i = 1; i < solver->external->e2i.vec_e2i.table.size (); ++i) {
+      for (size_t i = 1; i < solver->external->e2i.vec_e2i.table.size ();
+           ++i) {
         auto eilit = std::pair<int, int> (i, solver->external->e2i[i]);
         const int elit = eilit.first;
         if (!c)
@@ -1063,9 +1064,9 @@ void App::signal_message (const char *msg, int sig) {
 #endif
 
 void App::catch_signal (int sig) {
-  signal_value = sig; // Store copy to re-raise signal in main
+  signal_value = sig;   // Store copy to re-raise signal in main
   solver->terminate (); // Immediate asynchronous call into solver.
-  Signal::reset (); // Use the first signal caught only
+  Signal::reset ();     // Use the first signal caught only
 }
 
 void App::catch_alarm () {

@@ -28,9 +28,9 @@ void Internal::shuffle_scores () {
     scores.erase ();
     for (int idx = max_var; idx; idx--)
       if (!flags (idx).unused ())
-      shuffle.push_back (idx);
-    Random random (opts.seed); // global seed
-    random += stats.scores_shuffled;  // different every time
+        shuffle.push_back (idx);
+    Random random (opts.seed);       // global seed
+    random += stats.scores_shuffled; // different every time
     const int size_activated = shuffle.size ();
     for (int i = 0; i <= size_activated - 2; i++) {
       const int j = random.pick_int (i, size_activated - 1);

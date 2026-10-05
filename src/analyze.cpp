@@ -1274,11 +1274,11 @@ void Internal::analyze () {
   //
   int size = (int) clause.size ();
   int glue = (int) levels.size () - 1;
-  
+
   size_t last_assumption_level = assumptions.size () + !!constraint.size ();
   if (last_assumption_level > 0 && opts.glueassumptions < 2 && size > 1) {
     assert (glue > 0);
-    
+
     int old_glue = glue;
 
     for (auto &l : levels) {
@@ -1286,12 +1286,14 @@ void Internal::analyze () {
         glue--;
     }
 
-    if (old_glue > glue) { // if had assumption levels counted in original glue
-      if (opts.glueassumptions) // add back one for all assumptions if needed
-        glue++; 
+    if (old_glue >
+        glue) { // if had assumption levels counted in original glue
+      if (opts.glueassumptions) // add back one for all assumptions if
+                                // needed
+        glue++;
 
-      if (glue < 1) //ensure positive glue
-        glue = 1; 
+      if (glue < 1) // ensure positive glue
+        glue = 1;
     }
   }
   LOG (clause, "1st UIP size %d and glue %d clause", size, glue);

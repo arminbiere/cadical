@@ -39,8 +39,7 @@ bool Internal::rephasing () {
 char Internal::rephase_original () {
   stats.rephased_original++;
   signed char val = opts.phase ? 1 : -1; // original = initial
-  PHASE ("rephase", stats.rephased, "switching to original phase %d",
-         val);
+  PHASE ("rephase", stats.rephased, "switching to original phase %d", val);
   for (auto idx : vars)
     phases.saved[idx] = val;
   return 'O';
@@ -62,8 +61,7 @@ char Internal::rephase_inverted () {
 
 char Internal::rephase_flipping () {
   stats.rephased_flipped++;
-  PHASE ("rephase", stats.rephased,
-         "flipping all phases individually");
+  PHASE ("rephase", stats.rephased, "flipping all phases individually");
   for (auto idx : vars)
     phases.saved[idx] *= -1;
   return 'F';
@@ -323,8 +321,7 @@ void Internal::rephase () {
         type = rephase_flipping ();
       else // seems important for BMC due to our unsynchronized rephasing
         type = rephase_original ();
-    }
-    else
+    } else
       switch ((count - 1) % 4) {
       case 0:
         type = rephase_random ();
@@ -381,7 +378,8 @@ void Internal::rephase () {
 
   int64_t delta = opts.rephaseint * (stats.rephased + 1);
   lim.rephase =
-      (opts.rephase == 2 ? stats.stable_conflicts : stats.conflicts) + delta;
+      (opts.rephase == 2 ? stats.stable_conflicts : stats.conflicts) +
+      delta;
 
   PHASE ("rephase", stats.rephased,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",

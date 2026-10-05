@@ -10,7 +10,8 @@ void Internal::reset_subsume_bits () {
 
 void Internal::check_var_stats () {
 #ifndef NDEBUG
-  int64_t fixed = 0, eliminated = 0, substituted = 0, pure = 0, unused = 0, declared = 0;
+  int64_t fixed = 0, eliminated = 0, substituted = 0, pure = 0, unused = 0,
+          declared = 0;
   for (auto idx : vars) {
     Flags &f = flags (idx);
     if (f.active ())
@@ -32,7 +33,8 @@ void Internal::check_var_stats () {
   assert (stats.vars_now_eliminated == eliminated);
   assert (stats.vars_now_substituted == substituted);
   assert (stats.vars_now_pure == pure);
-  int64_t inactive = unused + declared + fixed + eliminated + substituted + pure;
+  int64_t inactive =
+      unused + declared + fixed + eliminated + substituted + pure;
   assert (stats.vars_inactive == inactive);
   assert (max_var == stats.vars_active + stats.vars_inactive);
 #endif

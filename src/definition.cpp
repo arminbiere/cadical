@@ -205,8 +205,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       // representation we instead implement the translation in kitten
       if (!c->garbage) {
         LOG (c, "adding to kitten");
-        KITTEN_NAMESPACE (citten_clause_with_id_and_exception) (
-            citten, exported, c->size, c->literals, except);
+        KITTEN_NAMESPACE (citten_clause_with_id_and_exception)
+        (citten, exported, c->size, c->literals, except);
       }
       exported++;
     }
@@ -249,8 +249,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     stats.eliminate_def_success++;
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
-    KITTEN_NAMESPACE (kitten_traverse_core_ids) (citten, &extractor,
-                                                 traverse_definition_core);
+    KITTEN_NAMESPACE (kitten_traverse_core_ids)
+    (citten, &extractor, traverse_definition_core);
     assert (eliminator.definition_unit);
     int unit = 0;
     if (eliminator.definition_unit == 2) {
@@ -266,12 +266,12 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       if (proof) {
         if (lrat) {
           extractor.unit = unit;
-          KITTEN_NAMESPACE (kitten_trace_core) (
-              citten, &extractor, traverse_one_sided_core_lemma_with_lrat);
+          KITTEN_NAMESPACE (kitten_trace_core)
+          (citten, &extractor, traverse_one_sided_core_lemma_with_lrat);
         } else {
           extractor.unit = unit;
-          KITTEN_NAMESPACE (kitten_traverse_core_clauses) (
-              citten, &extractor, traverse_one_sided_core_lemma);
+          KITTEN_NAMESPACE (kitten_traverse_core_clauses)
+          (citten, &extractor, traverse_one_sided_core_lemma);
         }
       } else
         assign_unit (unit);

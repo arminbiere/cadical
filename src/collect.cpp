@@ -449,7 +449,8 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  int64_t irredundant = 0, redundant = 0, total = 0, irrlits = 0, garbagelits = 0, garbagecls = 0;
+  int64_t irredundant = 0, redundant = 0, total = 0, irrlits = 0,
+          garbagelits = 0, garbagecls = 0;
   for (const auto &c : clauses) {
     if (c->garbage) {
       ++garbagecls;

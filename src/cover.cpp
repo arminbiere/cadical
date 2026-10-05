@@ -595,8 +595,8 @@ int64_t Internal::cover_round () {
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.coverings,
          "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
-         scheduled, percent (scheduled, stats.clauses_now_irr),
-         untried, percent (untried, scheduled));
+         scheduled, percent (scheduled, stats.clauses_now_irr), untried,
+         percent (untried, scheduled));
 #endif
 
   // Heuristically it should be beneficial to intersect with smaller clauses

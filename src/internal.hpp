@@ -1273,7 +1273,8 @@ struct Internal {
   void
   mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
-  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool propagate, bool keep_chain);
+  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *,
+                        bool propagate, bool keep_chain);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
   bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
@@ -1563,8 +1564,8 @@ struct Internal {
   // Internal functions to enable explicit search limits.
   //
   void limit_terminate (int64_t);
-  void limit_decisions (int64_t);     // Force decision limit.
-  void limit_conflicts (int64_t);     // Force conflict limit.
+  void limit_decisions (int64_t); // Force decision limit.
+  void limit_conflicts (int64_t); // Force conflict limit.
   void limit_preprocessing (int); // Enable 'n' preprocessing rounds.
   void limit_local_search (int);  // Enable 'n' local search rounds.
   void limit_ticks (int64_t);     // Force ticks limit.

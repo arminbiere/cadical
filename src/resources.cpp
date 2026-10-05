@@ -124,10 +124,10 @@ uint64_t maximum_resident_set_size () {
 
 #else
 
-// This seems to work on Linux (man page says since Linux 2.6.32). For Apple,
-// the unit of ru_maxrss changed over time (accross macOS version) and is not
-// consistent between iOS and macOS. We follow the current macOS version (macOS
-// 26).
+// This seems to work on Linux (man page says since Linux 2.6.32). For
+// Apple, the unit of ru_maxrss changed over time (accross macOS version)
+// and is not consistent between iOS and macOS. We follow the current macOS
+// version (macOS 26).
 uint64_t maximum_resident_set_size () {
   struct rusage u;
   if (getrusage (RUSAGE_SELF, &u))

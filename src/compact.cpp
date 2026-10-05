@@ -208,7 +208,7 @@ void Internal::compact () {
   // Also fixes external units.
   //
   for (auto eidx : external->vars) {
-    int src = external->e2i.find(eidx).second;
+    int src = external->e2i.find (eidx).second;
     if (!src) {
       continue;
     }
@@ -230,7 +230,6 @@ void Internal::compact () {
          " maps external %d to internal %d from internal %d",
          stats.compacts, eidx, dst, src);
     external->e2i.update (eidx, dst);
-
   }
 
   // Delete garbage units. Needs to occur before resizing unit_clauses
@@ -532,7 +531,8 @@ void Internal::compact () {
 
   stats.vars_unused = 0;
   stats.vars_inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;
-  stats.vars_now_substituted = stats.vars_now_eliminated = stats.vars_now_pure = 0;
+  stats.vars_now_substituted = stats.vars_now_eliminated =
+      stats.vars_now_pure = 0;
 
   check_var_stats ();
 

@@ -3,7 +3,10 @@
 
 namespace CaDiCaL {
 
-Limit::Limit () { memset (this, 0, sizeof *this); assert (!initialized);}
+Limit::Limit () {
+  memset (this, 0, sizeof *this);
+  assert (!initialized);
+}
 
 /*------------------------------------------------------------------------*/
 
