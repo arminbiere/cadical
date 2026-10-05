@@ -79,6 +79,13 @@ New and Improved Techniques:
      of decision is controlled by `varprioritizefirst` (first imported variable
      = first decision).
 
+Developper only:
+
+- We introduced two new options (`elimaggressiveGC` and `walkbinarylimit`) that
+  are debug only. There are just useful to trigger more behaviors from
+  mobical. The effect is debug only, even if the options exists during in
+  release mode for mobical to behave the same.
+
 Version 3.0.0
 -------------
 
