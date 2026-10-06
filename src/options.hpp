@@ -276,9 +276,11 @@ OPTION( transredeffort,     1e2,  1,1e5,1,0,1, "relative efficiency per mille") 
 OPTION( transredmaxeff,     1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,       0,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( varindexorder,        0,  0,  1,0,0,1, "use literals name given as (DIMACS) input") \
+OPTION( varinitswitch,      1e6,  1,2e9,0,0,1, "check if you need to go from a vector from variables to a hash table") \
 OPTION( varkeepname,          0,  0,  1,0,0,1, "attempt to use the same internal and external name (debug purpose only)") \
 OPTION( varprioritizefirst,   1,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( varprioritizeswap,    0,  0,  1,0,0,1, "reverse VMTF variable ordering (reverse of varindexorder)") \
+OPTION( varswitchscale,      20,  1,100,0,0,1, "geometric reason in percent for rechecking switch (see varinitswitch)") \
 QUTOPT( verbose,              0,  0,  4,0,0,0, "more verbose messages") \
 OPTION( veripb,               0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
 OPTION( vivify,               1,  0,  1,0,1,1, "vivification") \

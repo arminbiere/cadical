@@ -14,6 +14,8 @@ External::External (Internal *i)
   assert (internal);
   assert (!internal->external);
   internal->external = this;
+  e2i.limit_to_check = internal->opts.varinitswitch;
+  e2i.incremental_scaling = internal->opts.varswitchscale;
 }
 
 External::~External () {

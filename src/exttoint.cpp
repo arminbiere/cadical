@@ -12,6 +12,7 @@
 namespace CaDiCaL {
 void ExtToInt::compress () {
   assert (!use_hash_map);
+  MYPRINTF ("compressing table with %zd elements", vec_e2i.table.size ());
   for (size_t evar = 0; evar < vec_e2i.table.size (); ++evar) {
     int ilit = vec_e2i[evar];
     if (ilit) {
