@@ -127,8 +127,18 @@ void External::reset_concluded () {
 }
 
 void External::reset_constraint () {
-  constraint.clear ();
-  internal->reset_constraint ();
+  if (constraint.empty ()) {
+    // nothing do to
+  } else if (constraint.back ()) {
+    LOG ("the constraint was not finished");
+    // the constraint was not imported yet and thus not finalized, so
+    // just dropping it
+    constraint.clear ();
+    internal->constraint.clear ();
+  } else {
+    constraint.clear ();
+    internal->reset_constraint ();
+  }
 }
 
 void External::reset_extended () {
