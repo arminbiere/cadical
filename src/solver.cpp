@@ -510,6 +510,7 @@ int Solver::declare_more_variables (int number_of_vars) {
   // removing this triggers an assertion in
   // external but it maybe it is not necessary
   external->reset_extended ();
+  REQUIRE (number_of_vars <= INT32_MAX - external->max_var, "cannot declare more than 32-bit literals");
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
     external->reserve (new_max_var);
