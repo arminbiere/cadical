@@ -475,7 +475,13 @@ void Internal::conclude_unsat () {
 }
 
 void Internal::reset_concluded () {
-  if (proof)
+  // this is preemptive fix: if you reset the constrain without
+  // reseting the assumptions, you should not reset the assumptions in
+  // the proofs.  This is not possible anymore since reset_constrain
+  // () is not part part of the API anymore, but this was possible in
+  // 3.0.1. Therefore, for defensive programming, we decided to
+  // implement the code just in case we ever readd the call.
+  if (proof && external->assumptions.empty ())
     proof->reset_assumptions ();
   if (concluded) {
     LOG ("reset concluded");
