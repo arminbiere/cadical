@@ -52,6 +52,8 @@ void Internal::sweep_check_counts (int except) {
     }
     assert (count == noccs (lit));
   }
+#else
+  (void) except;
 #endif
 }
 void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
@@ -65,7 +67,7 @@ void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
 
 void Internal::sweep_update_noccs (Clause *c) {
   LOG (c, "decreasing occ count");
-  if (!can_sweep_clause(c))
+  if (!can_sweep_clause (c))
     return;
   LOG (c, "decreasing occ count");
   for (const auto &lit : *c) {
@@ -500,7 +502,7 @@ void Internal::citten_clear_track_log_terminate () {
   KITTEN_NAMESPACE (kitten_track_antecedents) (citten);
   if (external->terminator)
     KITTEN_NAMESPACE (kitten_set_terminator)
-    (citten, internal, citten_terminate);
+  (citten, internal, citten_terminate);
 #ifdef LOGGING
   if (opts.log)
     KITTEN_NAMESPACE (kitten_set_logging) (citten);
@@ -620,10 +622,9 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
   KITTEN_NAMESPACE (kitten_compute_clausal_core) (citten, 0);
   if (lrat)
     KITTEN_NAMESPACE (kitten_trace_core)
-    (citten, &sweeper, save_core_clause_with_lrat);
-  else
-    KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id)
-    (citten, &sweeper, save_core_clause);
+  (citten, &sweeper, save_core_clause_with_lrat);
+  else KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
+      citten, &sweeper, save_core_clause);
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
@@ -1201,12 +1202,12 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       if (!repr_already_watched)
         occs (repr).push_back (c);
       if (flushed && c->size == 2 && c->redundant) {
-	LOG(c, "counting new");
+        LOG (c, "counting new");
         for (auto l : *c) {
           noccs (l)++;
         }
       } else if (!repr_already_watched) {
-	if (can_sweep_clause(c)) {
+        if (can_sweep_clause (c)) {
           noccs (repr)++;
           LOG ("incr noccs of %s", LOGLIT (repr));
         }
@@ -1220,7 +1221,6 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
   }
   // holds and useful for debugging, but expansive:
   // sweep_check_counts(lit);
-
 }
 
 // In contrast to kissat we substitute the equivalences explicitely after
@@ -1274,11 +1274,11 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
       } else
         assert (val (lit) > 0);
     }
-      // propagating the values is not required here and we could let
-      // the propagator do it later for us, but this makes counting
-      // more precise (and actually makes the checking for the counts
-      // much easier, since we have to deal with leftovers
-      // otherwise...)
+    // propagating the values is not required here and we could let
+    // the propagator do it later for us, but this makes counting
+    // more precise (and actually makes the checking for the counts
+    // much easier, since we have to deal with leftovers
+    // otherwise...)
     else if (count == 2 && val (lit) > 0 && !val (other)) {
       auto sbo = *(it - 1);
       if (lrat) {
