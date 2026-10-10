@@ -1299,6 +1299,7 @@ struct Internal {
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
+  void sweep_check_counts (int except = 0);
   void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
   bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
   void init_sweeper (Sweeper &sweeper);

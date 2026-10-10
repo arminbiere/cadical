@@ -34,6 +34,26 @@ bool Internal::sweep_flip (int lit) {
   return res;
 }
 
+void Internal::sweep_check_counts (int except) {
+#ifndef NDEBUG
+  for (auto lit : lits) {
+    if (lit == except)
+      continue;
+    if (lit == -except)
+      continue;
+    if (flags (lit).substituted ())
+      continue;
+    if (!active (lit))
+      continue;
+    size_t count = 0;
+    for (auto c : occs (lit)) {
+      if (can_sweep_clause (c))
+        ++count;
+    }
+    assert (count == noccs (lit));
+  }
+#endif
+}
 void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
   uint64_t remaining = 0;
   const uint64_t current = sweeper.current_ticks;
@@ -44,8 +64,10 @@ void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
 }
 
 void Internal::sweep_update_noccs (Clause *c) {
-  if (c->redundant)
+  LOG (c, "decreasing occ count");
+  if (!can_sweep_clause(c))
     return;
+  LOG (c, "decreasing occ count");
   for (const auto &lit : *c) {
     assert (noccs (lit));
     noccs (lit)--;
@@ -151,8 +173,8 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
       if (satisfied) {
         LOG (c, "sweeping propagation of %d finds %d satisfied", lit,
              satisfied);
-        mark_garbage (c);
         sweep_update_noccs (c);
+        mark_garbage (c);
       } else if (!unit) {
         LOG ("empty clause during sweeping propagation of %d", lit);
         // need to set conflict = c for lrat
@@ -181,8 +203,8 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
       // if (c->redundant)  // TODO I assume it does not hurt to mark
       // everything here continue;
       LOG (c, "sweeping propagation of %d produces satisfied", lit);
-      mark_garbage (c);
       sweep_update_noccs (c);
+      mark_garbage (c);
     }
   }
   work.clear ();
@@ -369,8 +391,8 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
   for (const auto &lit : *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) {
-      mark_garbage (c);
       sweep_update_noccs (c);
+      mark_garbage (c);
       sweeper.clause.clear ();
       return;
     }
@@ -1078,7 +1100,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
   assert (active (repr));
 
   uint64_t &ticks = sweeper.current_ticks;
-
+  LOG ("now decr");
   {
     ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
     Occs &ns = occs (lit);
@@ -1088,6 +1110,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
     auto p = q;
     while (p != end) {
       Clause *c = *q++ = *p++;
+      LOG (c, "substituting");
       ticks++;
       if (c->garbage)
         continue;
@@ -1128,8 +1151,8 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       }
       if (satisfied) {
         clause.clear ();
-        mark_garbage (c);
         sweep_update_noccs (c);
+        mark_garbage (c);
         continue;
       }
       assert (found);
@@ -1148,8 +1171,8 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
         clause.clear ();
         assign_unit (unit);
         sweeper.propagate.push_back (unit);
-        mark_garbage (c);
         sweep_update_noccs (c);
+        mark_garbage (c);
         stats.sweep_units++;
         break;
       }
@@ -1175,9 +1198,18 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
       LOG (c, "substituted");
-      if (!repr_already_watched) {
+      if (!repr_already_watched)
         occs (repr).push_back (c);
-        noccs (repr)++;
+      if (flushed && c->size == 2 && c->redundant) {
+	LOG(c, "counting new");
+        for (auto l : *c) {
+          noccs (l)++;
+        }
+      } else if (!repr_already_watched) {
+	if (can_sweep_clause(c)) {
+          noccs (repr)++;
+          LOG ("incr noccs of %s", LOGLIT (repr));
+        }
       }
       clause.clear ();
       q--;
@@ -1186,6 +1218,9 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       *q++ = *p++;
     ns.resize (q - ns.begin ());
   }
+  // holds and useful for debugging, but expansive:
+  // sweep_check_counts(lit);
+
 }
 
 // In contrast to kissat we substitute the equivalences explicitely after
@@ -1198,7 +1233,9 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
   unsigned count = 0;
   assert (lrat_chain.empty ());
 
-  for (const auto &sb : sweeper.binaries) {
+  const auto cend = sweeper.binaries.cend ();
+  for (auto it = sweeper.binaries.cbegin (); it != cend; ++it) {
+    auto sb = *it;
     count++;
     const auto lit = sb.lit;
     const auto other = sb.other;
@@ -1237,9 +1274,33 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
       } else
         assert (val (lit) > 0);
     }
+      // propagating the values is not required here and we could let
+      // the propagator do it later for us, but this makes counting
+      // more precise (and actually makes the checking for the counts
+      // much easier, since we have to deal with leftovers
+      // otherwise...)
+    else if (count == 2 && val (lit) > 0 && !val (other)) {
+      auto sbo = *(it - 1);
+      if (lrat) {
+        const int64_t oid = unit_id (lit);
+        lrat_chain.push_back (oid);
+        lrat_chain.push_back (sbo.id);
+      }
+      assign_unit (-other);
+    } else if (count == 2 && !val (lit) && val (other) > 0) {
+      auto sbo = *(it - 1);
+      if (lrat) {
+        const int64_t oid = unit_id (other);
+        lrat_chain.push_back (oid);
+        lrat_chain.push_back (sbo.id);
+      }
+      assign_unit (-lit);
+    }
     lrat_chain.clear ();
-    delete_sweep_binary (sb);
     if (count == 2) {
+      auto sbo = *(it - 1);
+      delete_sweep_binary (sb);
+      delete_sweep_binary (sbo);
       if (!val (lit) && !val (other)) {
         const auto idx = abs (lit) < abs (other) ? abs (other) : abs (lit);
         if (!flags (idx).fixed ())
@@ -1934,10 +1995,12 @@ bool Internal::sweep () {
     if (idx == 0)
       break;
     flags (idx).sweep = false;
+
 #ifndef QUIET
     const char *res =
 #endif
         sweep_variable (*sweeper, idx);
+    sweep_check_counts ();
     VERBOSE (4, "swept[%" PRIu64 "] external variable %d %s", swept,
              externalize (idx), res);
     if (++swept == limit) {
