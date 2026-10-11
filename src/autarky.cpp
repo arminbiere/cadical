@@ -57,8 +57,6 @@ inline unsigned Internal::autarky_propagate_clause (Clause *c, std::vector<signe
 }
 
 unsigned Internal::autarky_propagate_binary (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work, int lit) {
-  assert (!c->redundant);
-  assert (!c->garbage);
   assert (!level);
   (void) c;
   if (val (lit) > 0)
@@ -84,7 +82,7 @@ unsigned Internal::autarky_propagate_unassigned (std::vector<signed char> &autar
     if (w.clause->redundant)
       continue;
     LOG (w.clause, "autarking working on clause");
-    if (w.binary()){
+    if (w.binary()) {
         unassigned += autarky_propagate_binary (w.clause, autarky_val, work, w.blit);
     }
     else
@@ -98,10 +96,10 @@ unsigned Internal::autarky_propagate_unassigned_binary (std::vector<signed char>
   assert (autarky_val[vlit (lit)] <= 0);
   const Watches &ws = watches (lit);
   for (auto &w : ws) {
-    if (w.clause->garbage)
-      continue;
-    if (w.clause->redundant)
-      continue;
+    // if (w.clause->garbage)
+    //   continue;
+    // if (w.clause->redundant)
+    //   continue;
     LOG (w.clause, "autarking working on clause");
     if (w.binary()){
         unassigned += autarky_propagate_binary (w.clause, autarky_val, work, w.blit);
@@ -124,8 +122,6 @@ unsigned Internal::autarky_propagate (std::vector<signed char> &autarky_val, std
 
 int Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vector<int> &work) {
   unsigned assigned = 0;
-  clear_watches ();
-  connect_binary_watches ();
   const bool target = false && (opts.target > 1 || (stable && opts.target));
   // importing phases
   for (auto idx : vars) {
@@ -180,8 +176,6 @@ int Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vec
     LOG ("preliminary autarky of size %d", assigned);
   } else {
     LOG ("empty autarky");
-    clear_watches();
-    connect_watches ();
     return false;
   }
 
@@ -226,13 +220,11 @@ int Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vec
     LOG ("second stage autarky of size %d", assigned);
   }   else {
     LOG ("empty autarky");
-    clear_watches();
-    connect_watches ();
     return false;
   }
 
   // final pass. This requires a full-watched literal scheme.
-
+  clear_watches ();
   for (auto *c : clauses) {
     if (!assigned)
       break;
@@ -273,15 +265,13 @@ int Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vec
   }
 #endif
 
-  clear_watches();
-
   if (assigned) {
     LOG ("found autarky of size %d", assigned);
   } else {
     LOG ("empty autarky");
-    connect_watches ();
   }
-
+  clear_watches ();
+  connect_watches ();
   return assigned;
 }
 
@@ -336,7 +326,28 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
       ++removed;
     }
   }
-
+  // the clause to ignore are marked garbage, but we need to delete
+  // binary clauses explicitely.
+  for (auto lit : lits) {
+    const signed char v = autarky_val[vlit (lit)];
+    if (v) {
+      watches (lit).clear ();
+      continue;
+    }
+    auto begin = watches (lit).begin ();
+    auto i = begin;
+    auto end = watches (lit).end ();
+    for (auto j = i; j < end;) {
+      assert (i <= j);
+      Watch w = (*i++ = *j++);
+      if (w.binary () && autarky_val[vlit (w.blit)]) {
+        --i;
+      }
+    }
+    if (i != end) {
+      watches (lit).resize (i - begin);
+    }
+  }
   MSG ("autarky applied");
   if (compact) {
     for (auto var : vars) {
@@ -418,7 +429,6 @@ bool Internal::autarky (char c) {
   ++stats.autarkies.successful;
   stats.autarkies.eliminated += autarky_found;
   //mark_redundant_clauses_with_eliminated_variables_as_garbage ();
-  connect_watches();
   report (c);
   STOP (autarky);
   return autarky_found;
