@@ -1,4 +1,5 @@
 #include "exttoint.hpp"
+#include "internal.hpp"
 
 #undef MYPRINTF
 #ifdef MYPRINTFLOGGING
@@ -20,12 +21,14 @@ void ExtToInt::compress () {
       h_e2i.insert (evar, ilit);
     }
   }
+  internal->stats.exttointswitched++;
   use_hash_map = true;
 }
 
 void ExtToInt::maybe_compress (int max_var) {
   if (use_hash_map)
     return;
+  internal->stats.exttointchecked++;
   MYPRINTF ("checking if compress %d max_var\n", max_var);
   int count = 0;
   assert ((size_t) max_var < vec_e2i.table.size ());

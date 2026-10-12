@@ -40,6 +40,8 @@ public:
   bool operator() (int a, int b) { return a == b; }
 };
 
+struct Internal;
+
 // This class encapsulates the mapping from external literals to
 // internal literals.
 //
@@ -53,15 +55,17 @@ public:
 //
 struct ExtToInt {
 
+  Internal *internal;
   // are we using a hash-map or still a vector?
   bool use_hash_map = false;
   // hash-map mapping external 'idx' to internal 'ilit'
   hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> h_e2i;
   // vector mapping external 'idx' to internal 'ilit'
   array_hashmap vec_e2i;
-  int limit_to_check; // limit to check when adding literals to switch
-                            // from vector to hashmap
-  int incremental_scaling; // geometric reason for increasing the limit to check
+  int limit_to_check;      // limit to check when adding literals to switch
+                           // from vector to hashmap
+  int incremental_scaling; // geometric reason for increasing the limit to
+                           // check
 
   // returns the corresponding ilit or the default value.
   Key find_or_default (int key, int default_el) const {
@@ -84,7 +88,7 @@ struct ExtToInt {
   int operator[] (int i) {
     if (use_hash_map)
       return h_e2i[i];
-    assert (i > 0 && (size_t)i < vec_e2i.table.size ());
+    assert (i > 0 && (size_t) i < vec_e2i.table.size ());
     return vec_e2i[i];
   }
 
