@@ -327,7 +327,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0){};
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
 };
 
 class Mopts {
@@ -348,7 +348,7 @@ public:
 #undef OPTION
   {
     size_t i = 0;
-#define OPTION(N, V, L, H, O, P, R, D) table[i] = Mopt (#N);
+#define OPTION(N, V, L, H, O, P, R, D) table[i++] = Mopt (#N);
     OPTIONS
 #undef OPTION
   };
@@ -1551,13 +1551,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d){};
+    Decisions (int l, int d) : lit (l), delay (d) {};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d){};
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {

@@ -1306,12 +1306,13 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
 }
 
 void Internal::declare_variable (int ilit) {
-  reserve_vars (ilit);
-  assert ((size_t) ilit < vsize);
-  if (ilit >= max_var) {
-    stats.vars_unused += (ilit - max_var);
-    stats.vars_inactive += (ilit - max_var);
-    max_var = ilit;
+  int iidx = abs (ilit);
+  reserve_vars (iidx);
+  assert ((size_t) iidx < vsize);
+  if (iidx >= max_var) {
+    stats.vars_unused += (iidx - max_var);
+    stats.vars_inactive += (iidx - max_var);
+    max_var = iidx;
   }
   Flags &f = internal->flags (ilit);
   if (f.declared ())

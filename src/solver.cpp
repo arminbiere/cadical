@@ -510,7 +510,8 @@ int Solver::declare_more_variables (int number_of_vars) {
   // removing this triggers an assertion in
   // external but it maybe it is not necessary
   external->reset_extended ();
-  REQUIRE (number_of_vars <= INT32_MAX - external->max_var, "cannot declare more than 32-bit literals");
+  REQUIRE (number_of_vars <= INT32_MAX - external->max_var,
+           "cannot declare more than 32-bit literals");
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
     external->reserve (new_max_var);
@@ -584,6 +585,12 @@ bool Solver::set (const char *arg, int val) {
         arg, val);
   }
   bool res = internal->opts.set (arg, val);
+  // this options needs to be applied in the first add, so we must
+  // update the value immediatly
+  if (!strcmp (arg, "varinitswitch")) {
+    external->e2i.limit_to_check = val;
+    LOG ("updating varinitswitch");
+  }
   LOG_API_CALL_END ("set", arg, val, res);
 
   return res;

@@ -84,6 +84,7 @@ struct ExtToInt {
   int operator[] (int i) {
     if (use_hash_map)
       return h_e2i[i];
+    assert (i > 0 && (size_t)i < vec_e2i.table.size ());
     return vec_e2i[i];
   }
 
@@ -104,15 +105,16 @@ struct ExtToInt {
       // ensure that we do not test too often
       // when adding literals one-by-one.
       if (limit_to_check <= std::numeric_limits<int>::max () / 100)
-        limit_to_check = (incremental_scaling * limit_to_check) / 100;
+        limit_to_check += (incremental_scaling * limit_to_check) / 100;
       else
         limit_to_check = std::numeric_limits<int>::max ();
+      assert (limit_to_check);
       if (vec_e2i.table.size ()) {
         maybe_compress (vec_e2i.table.size () - 1);
         if (use_hash_map)
           return h_e2i.insert (i, j);
         else
-          return h_e2i.insert (i, j);
+          return vec_e2i.insert (i, j);
       } else {
         use_hash_map = true;
         erase_vector (vec_e2i.table);

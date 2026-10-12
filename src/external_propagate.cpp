@@ -1545,7 +1545,7 @@ bool Internal::get_merged_literals (std::vector<int> &eq_class) {
         }
       }
     } else {
-      for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+      for (size_t i = 1; i < external->e2i.vec_e2i.table.size (); ++i) {
         auto id = std::pair<int, int> (i, external->e2i[i]);
         int o_elit = id.second;
         int o_ilit = id.first;
@@ -1588,7 +1588,7 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
       }
     }
   else
-    for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+    for (size_t i = 1; i < external->e2i.vec_e2i.table.size (); ++i) {
       auto id = std::pair<int, int> (i, external->e2i[i]);
       int ilit = id.second;
       int eidx = id.first;
