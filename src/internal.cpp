@@ -427,8 +427,6 @@ int Internal::propagate_assumptions () {
 
 void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
 
   size_t trail_limit = trail.size ();
   if (level > last_assumption_level)

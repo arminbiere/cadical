@@ -551,8 +551,8 @@ public:
   // the function is not able to determine satisfiability also zero is
   // returned but the state remains steady.
   //
-  //   require (READY)
-  //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
+  //   require (READY & !SATISFIED & !UNSATISFIED)
+  //   ensure (STEADY | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
 
@@ -998,6 +998,7 @@ public:
   //   ensure (VALID)
   //
   bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_constraint (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
 

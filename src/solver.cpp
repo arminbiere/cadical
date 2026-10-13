@@ -783,6 +783,8 @@ void Solver::assume (int lit) {
 int Solver::lookahead () {
   TRACE (lookahead, "lookahead");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
+           "cannot call when the problem is already solved");
   transition_to_steady_state ();
   int lit = external->lookahead ();
   LOG_API_CALL_END ("lookahead", lit);
@@ -792,6 +794,10 @@ int Solver::lookahead () {
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   TRACE (lookahead_cubes, "lookahead_cubes");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
+           "cannot call when the problem is already solved");
+  transition_to_steady_state ();
+
   auto cubes = external->generate_cubes (depth, min_depth);
 
   CubesWithStatus cubes2;
@@ -1674,9 +1680,16 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
   LOG_API_CALL_BEGIN ("traverse_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
-             internal->traverse_clauses (it) &&
-             internal->traverse_constraint (it);
+             internal->traverse_clauses (it);
   LOG_API_CALL_RETURNS ("traverse_clauses", res);
+  return res;
+}
+
+bool Solver::traverse_constraint (ClauseIterator &it) const {
+  LOG_API_CALL_BEGIN ("traverse_constrain");
+  REQUIRE_VALID_STATE ();
+  bool res = internal->traverse_constraint (it);
+  LOG_API_CALL_RETURNS ("traverse_constrain", res);
   return res;
 }
 
@@ -1735,7 +1748,7 @@ public:
 
 const char *Solver::write_dimacs (const char *path, int min_max_var) {
   LOG_API_CALL_BEGIN ("write_dimacs", path, min_max_var);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
 #ifndef QUIET
   const double start = internal->time ();
 #endif
