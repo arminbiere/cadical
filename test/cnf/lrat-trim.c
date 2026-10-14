@@ -883,6 +883,15 @@ static void mark_used_literals (int *literals) {
   }
 }
 
+static void unmark_used_literals (int *literals) {
+  for (int *l = literals, lit; (lit = *l); l++) {
+    size_t *count = &COUNT (lit);
+    assert (*count);
+    if (*count != SIZE_MAX)
+      (*count)--;
+  }
+}
+
 static void check_strict_clause_extension (int id, int *literals,
                                            int *antecedents) {
   assert (strict);
@@ -1588,6 +1597,8 @@ static void delete_antecedent (int other, bool binary, size_t info) {
     if (!relax || other < SIZE (clauses.literals)) {
 
       int **l = &ACCESS (clauses.literals, other);
+      if (status > 0 && !norat && (checking || is_original_clause (other)))
+        unmark_used_literals (*l);
       free (*l);
       *l = 0;
     }
