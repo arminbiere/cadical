@@ -1143,6 +1143,8 @@ private:
   void trace_api_call (const char *, int, int) const;
   void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
+  void trace_api_call_large (const char *, int64_t) const;
+  void trace_api_call_large (const char *, const char *, int64_t) const;
 #endif
 
   void transition_to_steady_state ();
