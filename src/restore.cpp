@@ -142,7 +142,7 @@ void External::restore_clauses () {
     }
 
     // now copy the id of the clause
-    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) * (p + 1);
+    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) *(p + 1);
     LOG ("id is %" PRId64, id);
     *q++ = *p++;
     *q++ = *p++;

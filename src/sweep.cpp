@@ -1536,7 +1536,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
     sweeper.core[1].clear ();
     return false;
   }
-
   LOG ("sweep equivalence %d = %d", lit, other);
 
   // If kitten behaves as expected, the two binaries of the equivalence

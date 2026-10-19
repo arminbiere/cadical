@@ -5,12 +5,10 @@
 
 #include "exttoint.hpp"
 #include "range.hpp"
-#include "util.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <unordered_map>
 #include <vector>
 

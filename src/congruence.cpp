@@ -7900,7 +7900,6 @@ void Closure::extract_gates () {
     assert (mu2_ids.empty ());
     assert (mu4_ids.empty ());
   }
-
   extract_xor_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());

@@ -108,7 +108,7 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    REQUIRE (!force_no_backtrack,
+    REQUIRE (!conflict,
              "can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }

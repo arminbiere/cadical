@@ -27,7 +27,6 @@ void Internal::reset_watches () {
 void Internal::connect_watches (bool irredundant_only) {
   PROFILE_SCOPE (connect);
   assert (watching ());
-
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
 
   // First connect binary clauses.

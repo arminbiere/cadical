@@ -28,7 +28,7 @@ public:
   }
   const char *init (const char *fmt, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
   const char *append (const char *fmt, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
-  operator const char * () const { return count ? buffer : 0; }
+  operator const char *() const { return count ? buffer : 0; }
 };
 
 } // namespace CaDiCaL

@@ -86,12 +86,6 @@ const char *Signal::name (int sig) {
   return "UNKNOWN";
 }
 
-// TODO printing is not reentrant and might lead to deadlock if the signal
-// is raised during another print attempt (and locked IO is used).  To avoid
-// this we have to either run our own low-level printing routine here or in
-// 'Message' or just dump those statistics somewhere else were we have
-// exclusive access to.  All these solutions are painful and not elegant.
-
 static void catch_signal (int sig) {
 #ifndef _WIN32
   if (sig == SIGALRM && absolute_real_time () >= alarm_time) {
@@ -114,7 +108,6 @@ static void catch_signal (int sig) {
     default:
       break;
     }
-
     if (!caught_signal) {
       caught_signal = true;
       if (signal_handler)
