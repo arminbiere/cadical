@@ -1176,6 +1176,21 @@ struct Call {
     return replay_type () || mock_type () || observe_type ();
   }
   virtual bool during_type () { return mock_type () || propagator_type (); }
+  virtual bool init_type () {
+    switch (type) {
+#ifdef MOBICAL_TERMINATE
+    case (Call::TERMINATE):
+#endif
+#ifdef MOBICAL_MEMORY
+    case (Call::LEAKALLOC):
+    case (Call::MAXALLOC):
+#endif
+    case (Call::INIT):
+      return true;
+    default:
+      return false;
+    }
+  }
   virtual bool always_type () {
     switch (type) {
     case (Call::ACTIVE):
@@ -1364,26 +1379,6 @@ enum MockForceType {
   CB_ADD_REASON_CLAUSE_LIT,
   LAST_MOCK_FORCE_TYPE,
 };
-
-/*
-static const char *ct_to_str (Call::Type type) {
-  // clang-format off
-  return (type == Call::CB_DECIDE ? "cb_decide"
-       : (type == Call::CB_PROPAGATE ? "cb_propagate"
-       : (type == Call::CB_CHECK_MODEL ? "cb_check_found_model"
-       : (type == Call::CB_ADD_CLAUSE ? "cb_add_external_clause_lit"
-       : (type == Call::CB_ADD_REASON ? "cb_add_reason_clause_lit"
-       : (type == Call::CB_HAS_CLAUSE ? "cb_has_external_clause"
-       : (type == Call::NOTIFY_ASSIGNMENT ? "notify_assignment"
-       : (type == Call::NOTIFY_BACKTRACK ? "notify_backtrack"
-       : (type == Call::NOTIFY_LEVEL ? "notify_level"
-       : ((type & Call::ALWAYS) != 0 ? "ALWAYS"
-       : (type == Call::CONNECT ? "connect"
-       : (type == Call::DISCONNECT ? "disconnect"
-       : "UNDEFINED"))))))))))));
-  // clang-format on
-}
-*/
 
 #ifdef LOGGING
 static const char *mft_to_str (MockForceType type) {
@@ -7430,15 +7425,7 @@ void Reader::parse () {
     // This checks the legal structure of traces described above.
     //
     if (enforce) {
-      if (state == Call_State::INIT &&
-          !(c->type & (Call::INIT
-#ifdef MOBICAL_MEMORY
-                       | Call::MAXALLOC | Call::LEAKALLOC
-#endif
-#ifdef MOBICAL_TERMINATE
-                       | Call::TERMINATE
-#endif
-                       )))
+      if (state == Call_State::INIT && !c->init_type ())
         error ("first call has to be an 'init', 'max_alloc', 'leak_alloc'"
                " or 'terminate' call");
 
