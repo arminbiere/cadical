@@ -255,6 +255,10 @@ bool Internal::is_assumption_level (size_t level) {
 }
 bool Internal::is_constraint_level (size_t level) {
   assert (constraints_without_assumptions <= constraint_vars.size ());
+  if (constraint_cat &&
+      KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11)
+    return level <
+           KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat);
   return level < assumptions.size () + constraints_without_assumptions;
 }
 
@@ -317,6 +321,7 @@ bool Internal::compute_diverged_constraint () {
       continue;
     assert (tmp_kit == -tmp_cad);
     if (opts.constraintflip &&
+        KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 10 &&
         KITTEN_NAMESPACE (kitten_flip_signed_literal) (constraint_cat,
                                                        lit)) {
       stats.constraints_flipped++;
@@ -413,6 +418,8 @@ int Internal::decide_constraint () {
                 bigger_queue (this));
         last_constraint_idx = 0;
       }
+      if (opts.constraintprime)
+        KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
     } else {
       // Kitten was terminated
       assert (terminated_asynchronously ());
@@ -421,6 +428,8 @@ int Internal::decide_constraint () {
   }
   // assert (cat_res);
   if (terminated_asynchronously ())
+    return 0;
+  else if (!is_constraint_level (level))
     return 0;
   if (cat_res == 20) { // unsat
     LOG ("constraints falsified");
@@ -454,9 +463,11 @@ int Internal::decide_constraint () {
       // constraint_vars[idx] = last_lit;
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
-      // constraint_vars might include variables that are simplified
-      // before giving to kitten, in which case this assumption may fail:
-      // TODO: actually might be possible to avoid after all
+      // Ignore redundant variables.
+      if (!tmp) {
+        assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
+        continue;
+      }
       assert (tmp);
       const signed char tmp_lit = val (lit);
       int decision = lit;
@@ -473,6 +484,7 @@ int Internal::decide_constraint () {
         LOG ("constraint literal %d already satisfied", lit);
         continue;
       } else if (opts.constraintflip &&
+                 KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 10 &&
                  KITTEN_NAMESPACE (kitten_flip_signed_literal) (
                      constraint_cat, lit)) {
         stats.constraints_flipped++;
