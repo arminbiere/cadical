@@ -92,6 +92,12 @@ static void log_api_call (Internal *internal, const char *name, int arg,
                name, arg, tout.log_code (), suffix);
 }
 
+static void log_api_call_large (Internal *internal, const char *name,
+                                int64_t arg, const char *suffix) {
+  Logger::log (internal, "API call %s'%s (%" PRId64 ")'%s %s",
+               tout.api_code (), name, arg, tout.log_code (), suffix);
+}
+
 static void log_api_call (Internal *internal, const char *name, int arg,
                           int b, const char *suffix) {
   Logger::log (internal, "API call %s'%s (%d, %d)'%s %s", tout.api_code (),
@@ -116,6 +122,12 @@ static void log_api_call (Internal *internal, const char *name,
                tout.api_code (), name, a1, a2, tout.log_code (), s);
 }
 
+static void log_api_call_large (Internal *internal, const char *name,
+                                const char *a1, int64_t a2, const char *s) {
+  Logger::log (internal, "API call %s'%s (\"%s\", %" PRId64 ")'%s %s",
+               tout.api_code (), name, a1, a2, tout.log_code (), s);
+}
+
 /*------------------------------------------------------------------------*/
 
 // We factored out API call begin/end logging and use overloaded functions.
@@ -129,6 +141,12 @@ static void log_api_call_begin (Internal *internal, const char *name,
                                 int arg) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, "started");
+}
+
+static void log_api_call_begin_large (Internal *internal, const char *name,
+                                      int64_t arg) {
+  Logger::log_empty_line (internal);
+  log_api_call_large (internal, name, arg, "started");
 }
 
 static void log_api_call_begin (Internal *internal, const char *name,
@@ -147,6 +165,12 @@ static void log_api_call_begin (Internal *internal, const char *name,
                                 const char *arg1, int arg2) {
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg1, arg2, "started");
+}
+
+static void log_api_call_begin_large (Internal *internal, const char *name,
+                                      const char *arg1, int64_t arg2) {
+  Logger::log_empty_line (internal);
+  log_api_call_large (internal, name, arg1, arg2, "started");
 }
 
 /*------------------------------------------------------------------------*/
@@ -236,6 +260,12 @@ static void log_api_call_returns (Internal *internal, const char *name,
 
 /*------------------------------------------------------------------------*/
 
+#define LOG_API_CALL_BEGIN_LARGE(...) \
+  do { \
+    if (!internal->opts.log) \
+      break; \
+    log_api_call_begin_large (internal, __VA_ARGS__); \
+  } while (0)
 #define LOG_API_CALL_BEGIN(...) \
   do { \
     if (!internal->opts.log) \
@@ -261,6 +291,9 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #else // end of 'then' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
 
+#define LOG_API_CALL_BEGIN_LARGE(...) \
+  do { \
+  } while (0)
 #define LOG_API_CALL_BEGIN(...) \
   do { \
   } while (0)
@@ -279,6 +312,18 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #ifndef NTRACING
 /*------------------------------------------------------------------------*/
 
+#define TRACE_LARGE(NAME, ...) \
+  do { \
+    /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
+    if ((internal == 0)) \
+      break; \
+    internal->stats.api_##NAME++; \
+    LOG_API_CALL_BEGIN_LARGE (__VA_ARGS__); \
+    if (!trace_api_file) \
+      break; \
+    trace_api_call_large (__VA_ARGS__); \
+  } while (0)
+
 #define TRACE(NAME, ...) \
   do { \
     /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
@@ -295,6 +340,13 @@ void Solver::trace_api_call (const char *s0) const {
   assert (trace_api_file);
   LOG ("TRACE %s", s0);
   fprintf (trace_api_file, "%s\n", s0);
+  fflush (trace_api_file);
+}
+
+void Solver::trace_api_call_large (const char *s0, int64_t i1) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %" PRId64, s0, i1);
+  fprintf (trace_api_file, "%s %" PRId64 "\n", s0, i1);
   fflush (trace_api_file);
 }
 
@@ -323,6 +375,14 @@ void Solver::trace_api_call (const char *s0, const char *s1, int i2) const {
   assert (trace_api_file);
   LOG ("TRACE %s %s %d", s0, s1, i2);
   fprintf (trace_api_file, "%s %s %d\n", s0, s1, i2);
+  fflush (trace_api_file);
+}
+
+void Solver::trace_api_call_large (const char *s0, const char *s1,
+                                   int64_t i2) const {
+  assert (trace_api_file);
+  LOG ("TRACE %s %s %" PRId64, s0, s1, i2);
+  fprintf (trace_api_file, "%s %s %" PRId64 "\n", s0, s1, i2);
   fflush (trace_api_file);
 }
 
@@ -623,7 +683,7 @@ void Solver::optimize (int arg) {
 }
 
 bool Solver::limit (const char *arg, int64_t val) {
-  TRACE (limit, "limit", arg, val);
+  TRACE_LARGE (limit, "limit", arg, val);
   REQUIRE_VALID_STATE ();
   REQUIRE (std::string (arg) != "preprocessing" || val <= INT32_MAX,
            "cannot set preprocessing limit to more than INT32_MAX");
