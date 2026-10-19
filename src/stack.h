@@ -87,6 +87,10 @@
     (S).end--; \
   } while (0)
 
+#define backwards_stack(T, E, S) \
+  T E, *E##_PTR = END_STACK (S), *const E##_BEGIN = BEGIN_STACK (S); \
+  E##_PTR != E##_BEGIN && (E = *--E##_PTR, true);
+
 #define all_stack(T, E, S) \
   T E, *E##_PTR = BEGIN_STACK (S), *const E##_END = END_STACK (S); \
   E##_PTR != E##_END && (E = *E##_PTR, true); \

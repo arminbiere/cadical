@@ -168,6 +168,7 @@ struct kitten {
   unsigneds trail;
   unsigneds units;
   unsigneds work;
+  unsigneds prime;
 
   kimits limits;
   int (*terminator) (void *);
@@ -534,6 +535,8 @@ static const char *status_to_string (int status) {
   switch (status) {
   case 10:
     return "formula satisfied";
+  case 11:
+    return "formula satisfied and prime implicant computed";
   case 20:
     return "formula inconsistent";
   case 21:
@@ -906,6 +909,7 @@ void KITTEN_NAMESPACE (kitten_clear) (kitten *kitten) {
   CLEAR_STACK (kitten->trail);
   CLEAR_STACK (kitten->units);
   CLEAR_STACK (kitten->clause);
+  CLEAR_STACK (kitten->prime);
 
   for (all_kits (kit))
     CLEAR_STACK (KATCHES (kit));
@@ -946,6 +950,7 @@ void KITTEN_NAMESPACE (kitten_release) (kitten *kitten) {
   RELEASE_STACK (kitten->units);
   RELEASE_STACK (kitten->clause);
   RELEASE_STACK (kitten->work);
+  RELEASE_STACK (kitten->prime);
 
   for (size_t lit = 0; lit < kitten->size; lit++)
     RELEASE_STACK (kitten->watches[lit]);
@@ -2299,4 +2304,118 @@ bool KITTEN_NAMESPACE (kitten_failed_signed) (kitten *kitten, int elit) {
   REQUIRE_STATUS (20);
   unsigned kelit = int2u (elit);
   return KITTEN_NAMESPACE (kitten_failed) (kitten, kelit);
+}
+
+// checks both watches for clauses with only one literal positively
+// assigned. If such a clause is found, return false. Otherwise fix watch
+// invariant and return true
+static bool prime_propagate (kitten *kitten, const unsigned idx,
+                             void *state) {
+  unsigned lit = 2 * idx;
+  unsigned conflict = INVALID;
+  value *values = kitten->values;
+  for (int i = 0; i < 2; i++) {
+    if (conflict != INVALID)
+      break;
+    lit = lit ^ i;
+    const unsigned not_lit = lit ^ 1;
+    katches *watches = kitten->watches + not_lit;
+    unsigned *q = BEGIN_STACK (*watches);
+    const unsigned *const end_watches = END_STACK (*watches);
+    unsigned const *p = q;
+    uint64_t ticks =
+        (((const char *const) end_watches - (const char *const) q) >> 7) +
+        1;
+    while (p != end_watches) {
+      const unsigned ref = *q++ = *p++;
+      klause *c = dereference_klause (kitten, ref);
+      if (is_learned_klause (c))
+        continue;
+      assert (c->size > 1);
+      unsigned *lits = c->lits;
+      const unsigned other = lits[0] ^ lits[1] ^ not_lit;
+      const value other_value = values[other];
+      ticks++;
+      if (other_value > 0)
+        continue;
+      value replacement_value = -1;
+      unsigned replacement = INVALID;
+      const unsigned *const end_lits = lits + c->size;
+      unsigned *r;
+      for (r = lits + 2; r != end_lits; r++) {
+        replacement = *r;
+        replacement_value = values[replacement];
+        if (replacement_value > 0)
+          break;
+      }
+      if (replacement_value > 0) {
+        assert (replacement != INVALID);
+        ROG (ref, "unwatching %u in", not_lit);
+        lits[0] = other;
+        lits[1] = replacement;
+        *r = not_lit;
+        watch_klause (kitten, replacement, ref);
+        q--;
+      } else {
+        ROG (ref, "idx %u forced prime by", idx);
+        conflict = ref;
+        break;
+      }
+    }
+    while (p != end_watches)
+      *q++ = *p++;
+    SET_END_OF_STACK (*watches, q);
+    ADD (kitten_ticks, ticks);
+  }
+  return conflict == INVALID;
+}
+
+// Compute a subset of the current model that satisfies all
+// original clauses.
+// TODO does not work if flip has been called beforehand
+int KITTEN_NAMESPACE (compute_prime_implicant) (kitten *kitten,
+                                                void *state) {
+  REQUIRE_STATUS (10);
+
+  value *values = kitten->values;
+  kar *vars = kitten->vars;
+  bool limit_hit = 0;
+  assert (EMPTY_STACK (kitten->prime));
+  for (backwards_stack (unsigned, lit, kitten->trail)) {
+    if (KITTEN_TICKS >= kitten->limits.ticks) {
+      LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
+           kitten->limits.ticks, KITTEN_TICKS);
+      limit_hit = 1;
+      break;
+    }
+    assert (values[lit] > 0);
+    const unsigned idx = lit / 2;
+    const unsigned ref = vars[idx].reason;
+    assert (vars[idx].level);
+    klause *c = 0;
+    if (ref != INVALID)
+      c = dereference_klause (kitten, ref);
+    if (ref == INVALID || is_learned_klause (c)) {
+      LOG ("non-prime candidate var %d", idx);
+      if (prime_propagate (kitten, idx, state)) {
+        values[lit] = 0;
+        values[lit ^ 1] = 0;
+      } else
+        assert (values[lit] > 0);
+    }
+  }
+  unsigneds *prime = &kitten->prime;
+  // push on prime implicant stack.
+  for (all_stack (unsigned, lit, kitten->trail)) {
+    if (values[lit] > 0)
+      PUSH_STACK (*prime, lit);
+    else
+      assert (!values[lit]);
+  }
+  // TODO: check if we are able to use partial results (if limit_hit).
+  assert (!EMPTY_STACK (kitten->prime) || limit_hit);
+  UPDATE_STATUS (11);
+
+  int res = SIZE_STACK (kitten->prime);
+  return res;
 }
