@@ -410,16 +410,21 @@ int Internal::decide_constraint () {
       // sort constraint_vars according to current decision heuristic
       if (opts.constraintsort) {
         stats.constraints_sorted++;
-        if (use_scores ())
+        if (use_scores ()) {
+          LOG ("sorting constraint variables based on scores");
           sort (constraint_vars.begin (), constraint_vars.end (),
                 bigger_score (this));
-        else
+        } else {
+          LOG ("sorting constraint variables based on queue idx");
           sort (constraint_vars.begin (), constraint_vars.end (),
                 bigger_queue (this));
+        }
         last_constraint_idx = 0;
       }
-      if (opts.constraintprime)
+      if (opts.constraintprime) {
+        LOG ("computing kitten prime implicant");
         KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
+      }
     } else {
       // Kitten was terminated
       assert (terminated_asynchronously ());

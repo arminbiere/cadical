@@ -566,6 +566,24 @@ static void invalid_api_usage (const char *fun, const char *fmt, ...) {
       INVALID_API_USAGE ("solver argument zero"); \
   } while (0)
 
+#define REQUIRE_FALSIFIED_STATUS() \
+  do { \
+    REQUIRE_INITIALIZED (); \
+    if (!(kitten->status == 20 || kitten->status == 21)) \
+      INVALID_API_USAGE ("invalid status '%s' (expected '%s' or '%s')", \
+                         status_to_string (kitten->status), \
+                         status_to_string (20), status_to_string (21)); \
+  } while (0)
+
+#define REQUIRE_SATISFIED_STATUS() \
+  do { \
+    REQUIRE_INITIALIZED (); \
+    if (!(kitten->status == 10 || kitten->status == 11)) \
+      INVALID_API_USAGE ("invalid status '%s' (expected '%s' or '%s')", \
+                         status_to_string (kitten->status), \
+                         status_to_string (10), status_to_string (11)); \
+  } while (0)
+
 #define REQUIRE_STATUS(EXPECTED) \
   do { \
     REQUIRE_INITIALIZED (); \
@@ -2182,7 +2200,7 @@ void KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (kitten *kitten) {
 
 signed char KITTEN_NAMESPACE (kitten_signed_value) (kitten *kitten,
                                                     int selit) {
-  REQUIRE_STATUS (10);
+  REQUIRE_SATISFIED_STATUS ();
   const unsigned elit = int2u (selit);
   const unsigned eidx = elit / 2;
   if (eidx >= kitten->evars)
@@ -2196,7 +2214,7 @@ signed char KITTEN_NAMESPACE (kitten_signed_value) (kitten *kitten,
 
 signed char KITTEN_NAMESPACE (kitten_value) (kitten *kitten,
                                              unsigned elit) {
-  REQUIRE_STATUS (10);
+  REQUIRE_SATISFIED_STATUS ();
   const unsigned eidx = elit / 2;
   if (eidx >= kitten->evars)
     return 0;
