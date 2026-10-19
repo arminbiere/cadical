@@ -87,7 +87,7 @@ bool parse_int64_str (const char *val_str, int64_t &val) {
     if (!isdigit ((ch = *p++)))
       return false;
 
-    const int64_t bound = -(int64_t) INT_MIN;
+    const int64_t bound = INT64_MAX;
     int64_t mantissa = ch - '0';
 
     while (isdigit (ch = *p++)) {
