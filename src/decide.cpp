@@ -317,7 +317,7 @@ int Internal::decide_assumption () {
 // check for falsified literals with respect to kitten trail
 bool Internal::compute_diverged_constraint () {
   assert (constraint_unsat.empty ());
-  bool res = false;
+  bool backtracked = false;
   for (auto &lit : constraint_vars) {
     const auto tmp_kit =
         KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
@@ -330,7 +330,7 @@ bool Internal::compute_diverged_constraint () {
       assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
       LOG ("backtracking decision %d (not part of kitten implicant)", lit);
       backtrack (var (lit).level - 1);
-      res = true;
+      backtracked = true;
       continue;
     }
     if (!tmp_kit)
@@ -347,16 +347,19 @@ bool Internal::compute_diverged_constraint () {
     constraint_unsat.push_back (lit);
   }
   if (constraint_unsat.empty ())
-    return res;
+    return backtracked;
   int min = 0;
   for (auto &lit : constraint_unsat)
     if (!min || var (lit).level < var (min).level ||
         (var (lit).level == var (min).level &&
          var (lit).trail < var (min).trail))
       min = lit;
-  if (is_decision (min)) {
+  if (!val (min)) {
+    assert (backtracked);
+  } else if (val (min) && is_decision (min)) {
     backtrack (var (min).level - 1);
   } else {
+    assert (val (min) && level >= var (min).level);
     int failed = min;
     if (val (min) > 0)
       failed = -failed;
