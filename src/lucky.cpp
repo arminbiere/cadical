@@ -639,7 +639,7 @@ int Internal::lucky_phases (bool update_limit) {
         stats.lucky++;
       assert (searching_lucky_phases);
 
-      assert (res || !level);
+      assert (res || !level || termination_forced);
       assert (res || propagated == trail.size ());
 
       units = active_before - stats.vars_active;
