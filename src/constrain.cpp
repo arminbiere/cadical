@@ -192,6 +192,7 @@ void Internal::reset_constraint () {
   constraint_cat = 0;
   unsat_constraint = 0;
   marked_failed = true;
+  last_constraint_idx = 0;
 }
 
 void Internal::analyze_failing_constraint (int failed) {

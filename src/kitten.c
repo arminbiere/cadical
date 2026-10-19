@@ -2399,7 +2399,7 @@ void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
       break;
     if (ref == INVALID || is_learned_klause (c)) {
       LOG ("non-prime candidate var %d", idx);
-      assert (vars[idx].level > assumption_levels);
+      assert (vars[idx].level >= assumption_levels);
       if (prime_propagate (kitten, idx)) {
         values[lit] = 0;
         values[lit ^ 1] = 0;

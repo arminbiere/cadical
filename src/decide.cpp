@@ -328,6 +328,7 @@ bool Internal::compute_diverged_constraint () {
       continue;
     if (!tmp_kit && is_decision (lit)) {
       assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
+      LOG ("backtracking decision %d (not part of kitten implicant)", lit);
       backtrack (var (lit).level - 1);
       res = true;
       continue;

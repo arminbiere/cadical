@@ -135,6 +135,7 @@ void External::reset_constraint () {
     constraints.clear ();
     constraint_ids.clear ();
     // TODO: properly clear internal
+    internal->reset_constraint ();
   } else if (constraints.empty ()) {
     LOG ("no constraint to reset");
   } else {
