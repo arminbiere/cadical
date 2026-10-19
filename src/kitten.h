@@ -27,6 +27,7 @@ struct KITTEN_NAMESPACE (kitten_statistics) {
   uint64_t kitten_conflicts;
   uint64_t kitten_decisions;
   uint64_t kitten_propagations;
+  uint64_t kitten_implicant;
   uint64_t kitten_ticks;
   uint64_t kitten_unknown;
   uint64_t kitten_unsat;

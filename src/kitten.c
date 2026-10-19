@@ -2346,16 +2346,21 @@ unsigned KITTEN_NAMESPACE (kitten_size_implicant) (kitten *kitten) {
 void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
   REQUIRE_STATUS (10);
 
+  kitten->statistics.kitten_implicant++;
   value *values = kitten->values;
   kar *vars = kitten->vars;
+#ifndef NDEBUG
   bool limit_hit = 0;
+#endif
   const unsigned assumption_levels = SIZE_STACK (kitten->assumptions);
   assert (EMPTY_STACK (kitten->prime));
   for (backwards_stack (unsigned, lit, kitten->trail)) {
     if (KITTEN_TICKS >= kitten->limits.ticks) {
       LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
            kitten->limits.ticks, KITTEN_TICKS);
+#ifndef NDEBUG
       limit_hit = 1;
+#endif
       break;
     }
     assert (values[lit] > 0);
