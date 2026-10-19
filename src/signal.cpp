@@ -86,12 +86,6 @@ const char *Signal::name (int sig) {
   return "UNKNOWN";
 }
 
-// TODO printing is not reentrant and might lead to deadlock if the signal
-// is raised during another print attempt (and locked IO is used).  To avoid
-// this we have to either run our own low-level printing routine here or in
-// 'Message' or just dump those statistics somewhere else were we have
-// exclusive access to.  All these solutions are painful and not elegant.
-
 static void catch_signal (int sig) {
 #ifndef _WIN32
   if (sig == SIGALRM && absolute_real_time () >= alarm_time) {
@@ -103,18 +97,17 @@ static void catch_signal (int sig) {
     Signal::reset_alarm ();
   } else
 #endif
-  { 
+  {
     // Reraising should happen in solver control for SIGINT and SIGTERM.
     // For SIGABRT and SIGSEGV we reraise immediately.
     switch (sig) {
     case SIGABRT:
-    case SIGSEGV: 
+    case SIGSEGV:
       Signal::reset ();
       ::raise (sig);
     default:
       break;
     }
-
     if (!caught_signal) {
       caught_signal = true;
       if (signal_handler)
@@ -144,13 +137,9 @@ void Signal::alarm (int seconds) {
 
 #endif
 
-void Signal::set_received (int sig) {
-  signal_value = sig;
-}
+void Signal::set_received (int sig) { signal_value = sig; }
 
-int Signal::received () {
-  return signal_value;
-}
+int Signal::received () { return signal_value; }
 
 // Signals for which returning control is sensible
 bool Signal::interrupted () {

@@ -1584,10 +1584,10 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
   //
-  int64_t checked = (int64_t)stats.vivify_checks;
-  int64_t subsumed = (int64_t)stats.vivify_subsumed;
-  int64_t strengthened = (int64_t)stats.vivify_strength;
-  int64_t units = (int64_t)stats.vivify_units;
+  int64_t checked = (int64_t) stats.vivify_checks;
+  int64_t subsumed = (int64_t) stats.vivify_subsumed;
+  int64_t strengthened = (int64_t) stats.vivify_strength;
+  int64_t units = (int64_t) stats.vivify_units;
 
   auto scheduled = static_cast<int64_t> (schedule.size ());
   stats.vivify_scheduled += scheduled;
@@ -1681,16 +1681,16 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     }
   }
 
-  checked = (int64_t)stats.vivify_checks - checked;
+  checked = (int64_t) stats.vivify_checks - checked;
   PHASE ("vivify", stats.vivifications,
          "checked %" PRId64 " clauses %.02f%% of %" PRId64
          " scheduled using %" PRIu64 " ticks",
          checked, percent (checked, scheduled), scheduled, vivifier.ticks);
 
 #ifndef NMETRICS
-  subsumed = (int64_t)stats.vivify_subsumed - subsumed;
-  strengthened = (int64_t)stats.vivify_strength - strengthened;
-  units = (int64_t)stats.vivify_units - units;
+  subsumed = (int64_t) stats.vivify_subsumed - subsumed;
+  strengthened = (int64_t) stats.vivify_strength - strengthened;
+  units = (int64_t) stats.vivify_units - units;
 
   if (units)
     PHASE ("vivify", stats.vivifications,
@@ -1886,12 +1886,12 @@ bool Internal::vivify () {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
-      const int64_t old = (int64_t)stats.vivify_strength_irr;
-      const int64_t old_tried = (int64_t)stats.vivify_checks;
+      const int64_t old = (int64_t) stats.vivify_strength_irr;
+      const int64_t old_tried = (int64_t) stats.vivify_checks;
       vivify_round (vivifier, limit);
-      if ((int64_t)stats.vivify_checks - old_tried == 0 ||
-          (float) ((int64_t)stats.vivify_strength_irr - old) /
-                  (float) ((int64_t)stats.vivify_checks - old_tried) <
+      if ((int64_t) stats.vivify_checks - old_tried == 0 ||
+          (float) ((int64_t) stats.vivify_strength_irr - old) /
+                  (float) ((int64_t) stats.vivify_checks - old_tried) <
               0.01) {
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
       } else {

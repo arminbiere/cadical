@@ -371,8 +371,7 @@ bool Internal::subsume_round () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (!stats.clauses_now_red &&
-      !stats.clauses_now_irr)
+  if (!stats.clauses_now_red && !stats.clauses_now_irr)
     return false;
 
   MODE_SCOPE_SIMPLIFY (SUBSUME);
@@ -467,8 +466,7 @@ bool Internal::subsume_round () {
 
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
-  int64_t total =
-      stats.clauses_now_irr + stats.clauses_now_red;
+  int64_t total = stats.clauses_now_irr + stats.clauses_now_red;
   PHASE ("subsume-round", stats.subsume_rounds,
          "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
          scheduled, percent (scheduled, total), total);
@@ -638,8 +636,7 @@ bool Internal::subsume_round () {
 
 void Internal::subsume () {
 
-  if (!stats.clauses_now_red &&
-      !stats.clauses_now_irr)
+  if (!stats.clauses_now_red && !stats.clauses_now_irr)
     return;
 
   if (unsat)

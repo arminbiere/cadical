@@ -108,7 +108,7 @@ where '<option>' is one of the following
 --profile          compile with '-pg' to profile with 'gprof'
 --memory[-fuzzing] compile with '-rdynamic -fno-omit-frame-pointer' and
                    '-DMOBICAL_MEMORY' to fuzz for bad memory allocation handling
---terminat[e,or][-fuzzing]   compile with '-rdynamic -fno-omit-frame-pointer' and
+--terminate[-fuzzing]   compile with '-rdynamic -fno-omit-frame-pointer' and
                    '-DMOBICAL_TERMINATE' to fuzz for bad terminator handling
 
 --no-contracts     compile without API contract checking code

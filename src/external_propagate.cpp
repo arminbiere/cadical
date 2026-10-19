@@ -108,7 +108,7 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    REQUIRE (!force_no_backtrack,
+    REQUIRE (!conflict,
              "can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }
@@ -1543,7 +1543,7 @@ bool Internal::get_merged_literals (std::vector<int> &eq_class) {
         }
       }
     } else {
-      for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+      for (size_t i = 1; i < external->e2i.vec_e2i.table.size (); ++i) {
         auto id = std::pair<int, int> (i, external->e2i[i]);
         int o_elit = id.second;
         int o_ilit = id.first;
@@ -1586,7 +1586,7 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
       }
     }
   else
-    for (size_t i = 0; i < external->e2i.vec_e2i.table.size (); ++i) {
+    for (size_t i = 1; i < external->e2i.vec_e2i.table.size (); ++i) {
       auto id = std::pair<int, int> (i, external->e2i[i]);
       int ilit = id.second;
       int eidx = id.first;

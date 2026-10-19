@@ -21,8 +21,7 @@ namespace CaDiCaL {
 //
 // The hash table is mostly intended to contain pointers, hence it uses 0x01
 // as tumb.
-template <class Key, class Hash,
-          class KeyIsGarbage,
+template <class Key, class Hash, class KeyIsGarbage,
           class KeyEqual = std::equal_to<Key>,
           class KeyEqualTmpDuplicates = std::equal_to<Key>>
 class hash {
@@ -140,7 +139,7 @@ private:
   Hash hasher;
 
 public:
-  hash () : hasher ({}) {};
+  hash () : hasher ({}){};
   template <class T> hash (T h) : hasher (h) {
     table.resize (64, std::make_pair<size_t, Key> (0, nullptr));
   }

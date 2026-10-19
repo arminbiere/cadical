@@ -156,21 +156,20 @@ template <typename... Profiles> struct ProfileContext {
   const int level;
   std::tuple<Profiles...> profiles;
 
-  inline ProfileContext (Internal *internal, int level,
-                         Profiles... profiles)
+  ProfileContext (Internal *internal, int level, Profiles... profiles)
       : internal (internal), level (level), profiles (profiles...) {
     enterContext ();
   }
-  inline ~ProfileContext () { leaveContext (); }
+  ~ProfileContext () { leaveContext (); }
 
   void enterContext ();
   void leaveContext ();
 
 private:
   template <std::size_t... Is>
-  inline void enterContext (ProfileIndices<Is...> indices);
+  void enterContext (ProfileIndices<Is...> indices);
   template <std::size_t... Is>
-  inline void leaveContext (ProfileIndices<Is...> indices);
+  void leaveContext (ProfileIndices<Is...> indices);
 };
 
 struct ResumeProfile {
@@ -178,18 +177,18 @@ struct ResumeProfile {
   bool condition;
   bool entered;
 
-  inline ResumeProfile (Profile &profile, bool condition = true)
+  ResumeProfile (Profile &profile, bool condition = true)
       : profile (profile), condition (condition), entered (false) {}
 
   void start_profiling (Internal *internal);
   void stop_profiling (Internal *internal);
 
-  inline void enterContext (Internal *internal, int level) {
+  void enterContext (Internal *internal, int level) {
     entered = condition && !profile.active && profile.level <= level;
     if (entered)
       start_profiling (internal);
   }
-  inline void leaveContext (Internal *internal, int level) {
+  void leaveContext (Internal *internal, int level) {
     (void) level;
     if (entered && profile.active)
       stop_profiling (internal);
@@ -201,19 +200,19 @@ struct PauseProfile {
   bool condition;
   bool entered;
 
-  inline PauseProfile (Profile &profile, bool condition = true)
+  PauseProfile (Profile &profile, bool condition = true)
       : profile (profile), condition (condition), entered (false) {}
 
   void start_profiling (Internal *internal);
   void stop_profiling (Internal *internal);
 
-  inline void enterContext (Internal *internal, int level) {
+  void enterContext (Internal *internal, int level) {
     (void) level;
     entered = condition && profile.active;
     if (entered)
       stop_profiling (internal);
   }
-  inline void leaveContext (Internal *internal, int level) {
+  void leaveContext (Internal *internal, int level) {
     (void) level;
     if (entered && !profile.active)
       start_profiling (internal);
@@ -229,19 +228,19 @@ template <std::size_t... Is> struct make_indices<0, Is...> {
 };
 
 template <typename... Profiles>
-inline void ProfileContext<Profiles...>::enterContext () {
+void ProfileContext<Profiles...>::enterContext () {
   enterContext (typename make_indices<sizeof...(Profiles)>::type{});
 }
 
 template <typename... Profiles>
-inline void ProfileContext<Profiles...>::leaveContext () {
+void ProfileContext<Profiles...>::leaveContext () {
   leaveContext (typename make_indices<sizeof...(Profiles)>::type{});
 }
 
 template <typename... Profiles>
 template <std::size_t... Is>
-inline void
-ProfileContext<Profiles...>::enterContext (ProfileIndices<Is...> indices) {
+void ProfileContext<Profiles...>::enterContext (
+    ProfileIndices<Is...> indices) {
   (void) indices;
 
   /*
@@ -257,8 +256,8 @@ ProfileContext<Profiles...>::enterContext (ProfileIndices<Is...> indices) {
 
 template <typename... Profiles>
 template <std::size_t... Is>
-inline void
-ProfileContext<Profiles...>::leaveContext (ProfileIndices<Is...> indices) {
+void ProfileContext<Profiles...>::leaveContext (
+    ProfileIndices<Is...> indices) {
   (void) indices;
 
   /*
@@ -366,6 +365,8 @@ template struct ProfileContext<ResumeProfile, ResumeProfile, PauseProfile,
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
+
+struct Internal;
 
 struct ModeResumeContext {
   Internal *internal;

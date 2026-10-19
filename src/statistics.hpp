@@ -196,6 +196,8 @@
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
   STATISTIC (extended,               1, relative, "per", weakened) \
   STATISTIC (extensions,             1, relative, "per", searches) \
+  STATISTIC (exttointchecked,        3, relative, "per", searches) \
+  STATISTIC (exttointswitched,       3, relative, "per", exttointchecked) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
   STATISTIC (factor_added_literals,  2, relative, "per", factored) \
   STATISTIC (factored,               1, percent, "%", vars) \

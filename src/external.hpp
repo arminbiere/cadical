@@ -5,7 +5,6 @@
 
 #include "exttoint.hpp"
 #include "range.hpp"
-#include "util.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>

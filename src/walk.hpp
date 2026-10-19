@@ -4,8 +4,6 @@
 #include "clause.hpp"
 #include <cstdint>
 
-
-
 namespace CaDiCaL {
 
 // Forward declarations
@@ -28,51 +26,61 @@ struct Internal;
 // And this is without doing any but stuffing to make the structure
 // fit into 64 bits.
 //
-// We later switch to an even more compressed version with the binary flag and
-// the rest being 63 bits.
+// We later switch to an even more compressed version with the binary
+// flag and the rest being 63 bits. The compressed version comes at
+// the cost of not every clause being representable. In that case, we
+// don't use the compressed representation.
 struct ClauseOrBinary {
   // Use a bool for the binary flag and a union for the data.
-  // The union must occupy 7 bytes (56 bits) to fit into 8 bytes total.
-  // However, we enforce 63-bit fields to ensure no padding is added.
+  // However, we enforce 63-bit fields to ensure no padding is
+  // added. In order to be able to test this feature, we introduced an
+  // new option (debug only), to set the limit on each literal to a
+  // smaller number than 31 bits.
 
-  // Union to store either a clause pointer (63 bits) or a TaggedBinary (63 bits).
+  // Union to store either a clause pointer (binary bit + 63 bits) or
+  // a TaggedBinary (binary bit + 63 bits).
   union clause_or_binary {
     // This is not portable C++, but it is unlikely that a compiler does
     // something different for the memory layout. We need (for to have
-    // everything in 64 bits) to have `binary` in both branches and we rely on
-    // the fact that there are at the same position.
+    // everything in 64 bits) to have `binary` in both branches and we rely
+    // on the fact that there are at the same position.
     struct ClausePtr {
       bool binary : 1;
 #if ((ULONG_MAX) == (UINT_MAX))
-      //32 bit version: no bit padding required
+      // 32-bit version: we use all bits, but enforce that binary is
+      // at the first bit for compatibility with TaggedBinary below.
+      int32_t padding : 31;
       uintptr_t clause_ptr;
 #else
-      uintptr_t clause_ptr : 63;  // 63 bits for clause pointer
+      uintptr_t clause_ptr : 63; // 63 bits for clause pointer
 #endif
-      ClausePtr (): binary (0), clause_ptr(0) {};
+      ClausePtr () : binary (0), clause_ptr (0){};
     } clause;
     struct TaggedBinary {
       bool binary : 1;
-      unsigned first_literal : 31;    // 31 bits for first literal
+      // 31 bits for first literal, hence we might overflow. In those
+      // cases, we handle the clause as a long clause
+      unsigned first_literal : 31;
       int other : 32;
 
-    #if defined(LOGGING) || !defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
       CaDiCaL::Clause *d;
-    #endif
+#endif
       TaggedBinary ()
           : first_literal (0), other (0)
-    #if defined(LOGGING) || !defined(NDEBUG)
+#if defined(LOGGING) || !defined(NDEBUG)
             ,
             d (nullptr)
-    #endif
+#endif
       {
         assert (false);
       };
-      TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother);
+      TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit,
+                    int cother);
 
       int lit (Internal *) const;
-    } b;  // Must also occupy 63 bits
-    clause_or_binary () : clause() {};
+    } b; // Must also occupy 63 bits
+    clause_or_binary () : clause (){};
   } tagged;
 
   ClauseOrBinary () : tagged () {}
@@ -87,29 +95,32 @@ struct ClauseOrBinary {
   }
 
   // Constructor for binary clauses (from Clause*, lit, other)
-  ClauseOrBinary (Internal *internal, Clause *d, int lit, int other) noexcept;
+  ClauseOrBinary (Internal *internal, Clause *d, int lit,
+                  int other) noexcept;
 
   bool is_binary () const { return tagged.b.binary; }
 
   Clause *clause () const {
-    assert (!is_binary());
-    return reinterpret_cast<Clause *>(tagged.clause.clause_ptr);
+    assert (!is_binary ());
+    return reinterpret_cast<Clause *> (tagged.clause.clause_ptr);
   }
 
   clause_or_binary::TaggedBinary &tagged_binary () {
-    assert (is_binary());
+    assert (is_binary ());
     return tagged.b;
   }
 
   const clause_or_binary::TaggedBinary &tagged_binary () const {
-    assert (is_binary());
+    assert (is_binary ());
     return tagged.b;
   }
 };
 
 // Ensure ClauseOrBinary occupies exactly 8 bytes in release builds
 #if !defined(LOGGING) && defined(NDEBUG)
-static_assert (sizeof (ClauseOrBinary) == 8, "ClauseOrBinary must occupy exactly 8 bytes in release builds");
+static_assert (
+    sizeof (ClauseOrBinary) == 8,
+    "ClauseOrBinary must occupy exactly 8 bytes in release builds");
 #endif
 } // namespace CaDiCaL
 

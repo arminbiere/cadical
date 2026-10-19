@@ -559,8 +559,8 @@ public:
   // the function is not able to determine satisfiability also zero is
   // returned but the state remains steady.
   //
-  //   require (READY)
-  //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
+  //   require (READY & !SATISFIED & !UNSATISFIED)
+  //   ensure (STEADY | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
 
@@ -794,7 +794,7 @@ public:
   //   require (READY)
   //   ensure (READY)
   //
-  bool limit (const char *arg, int val);
+  bool limit (const char *arg, int64_t val);
   bool is_valid_limit (const char *arg);
 
   // The number of currently active variables and clauses can be queried by
@@ -828,7 +828,8 @@ public:
   int simplify (int rounds = 3);
 
   //------------------------------------------------------------------------
-  // Force termination of 'solve' asynchronously (e.g. via a signal handler).
+  // Force termination of 'solve' asynchronously (e.g. via a signal
+  // handler).
   //
   //  require (SOLVING | READY)
   //  // not immediately (synchronously)
@@ -1005,6 +1006,7 @@ public:
   //   ensure (VALID)
   //
   bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_constraint (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
 

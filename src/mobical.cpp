@@ -2,15 +2,16 @@
 /* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
 /* Copyright (c) 2020-2021 Nils Froleyks, Johannes Kepler University Linz */
-/* Copyright (C) 2022-2025 Katalin Fazekas, Technical University of Vienna*/
-/* Copyright (C) 2021-2025 Armin Biere, University of Freiburg            */
-/* Copyright (C) 2021-2025 Mathias Fleury, University of Freiburg         */
-/* Copyright (C) 2023-2025 Florian Pollitt, University of Freiburg */
-/* Copyright (C) 2024-2024 Tobias Faller, University of Freiburg   */
+/* Copyright (C) 2022-2026 Katalin Fazekas, Technical University of Vienna*/
+/* Copyright (C) 2021-2026 Armin Biere, University of Freiburg            */
+/* Copyright (C) 2021-2026 Mathias Fleury, University of Freiburg         */
+/* Copyright (C) 2023-2026 Florian Pollitt, University of Freiburg */
+/* Copyright (C) 2024-2026 Tobias Faller, University of Freiburg   */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <cstdint>
 #include <cstdio>
 
 namespace CaDiCaL {
@@ -347,7 +348,7 @@ public:
 #undef OPTION
   {
     size_t i = 0;
-#define OPTION(N, V, L, H, O, P, R, D) table[i] = Mopt (#N);
+#define OPTION(N, V, L, H, O, P, R, D) table[i++] = Mopt (#N);
     OPTIONS
 #undef OPTION
   };
@@ -946,7 +947,7 @@ void Mobical::warning (const char *fmt, ...) {
 // adds all clauses before making assumptions and also does not mix in
 // these 'ALWAYS' calls in all possible ways.
 
-constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
+// constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
 
 struct Call {
 
@@ -954,193 +955,353 @@ struct Call {
 
     // clang-format off
 
-    INIT                = shift (  0 ),
-    RESET               = shift (  1 ),
-    SET                 = shift (  2 ),
-    CONFIGURE           = shift (  3 ),
+    INIT                =   0 ,
+    RESET               =   1 ,
+    SET                 =   2 ,
+    CONFIGURE           =   3 ,
                         
-    VARS                = shift (  4 ),
-    ACTIVE              = shift (  5 ),
-    REDUNDANT           = shift (  6 ),
-    IRREDUNDANT         = shift (  7 ),
-    RESIZE              = shift (  8 ),
-    DECLARE             = shift (  9 ),
-    DECLARE_VARS        = shift ( 10 ),
-    RESERVE             = shift ( 11 ),
+    VARS                =   4 ,
+    ACTIVE              =   5 ,
+    REDUNDANT           =   6 ,
+    IRREDUNDANT         =   7 ,
+    RESIZE              =   8 ,
+    DECLARE             =   9 ,
+    DECLARE_VARS        =  10 ,
+    RESERVE             =  11 ,
                         
-    PHASE               = shift ( 12 ),
-    UNPHASE             = shift ( 13 ),
+    PHASE               =  12 ,
+    UNPHASE             =  13 ,
                         
-    ADD                 = shift ( 14 ),
-    ASSUME              = shift ( 15 ),
-    CONSTRAIN           = shift ( 16 ),
-    RESET_ASSUMPTIONS   = shift ( 17 ),
+    ADD                 =  14 ,
+    ASSUME              =  15 ,
+    CONSTRAIN           =  16 ,
+    RESET_ASSUMPTIONS   =  17 ,
                         
-    SOLVE               = shift ( 18 ),
-    SIMPLIFY            = shift ( 19 ),
-    LOOKAHEAD           = shift ( 20 ),
-    CUBING              = shift ( 21 ),
-    PROPAGATE           = shift ( 22 ),
+    SOLVE               =  18 ,
+    SIMPLIFY            =  19 ,
+    LOOKAHEAD           =  20 ,
+    CUBING              =  21 ,
+    PROPAGATE           =  22 ,
                         
-    VAL                 = shift ( 24 ),
-    FLIP                = shift ( 25 ),
-    FLIPPABLE           = shift ( 26 ),
-    FAILED              = shift ( 27 ),
-    FIXED               = shift ( 28 ),
-    IMPLIED             = shift ( 29 ),
+    VAL                 =  24 ,
+    FLIP                =  25 ,
+    FLIPPABLE           =  26 ,
+    FAILED              =  27 ,
+    FIXED               =  28 ,
+    IMPLIED             =  29 ,
                         
-    FREEZE              = shift ( 30 ),
-    FROZEN              = shift ( 31 ),
-    MELT                = shift ( 32 ),
+    FREEZE              =  30 ,
+    FROZEN              =  31 ,
+    MELT                =  32 ,
                         
-    LIMIT               = shift ( 33 ),
-    OPTIMIZE            = shift ( 34 ),
+    LIMIT               =  33 ,
+    OPTIMIZE            =  34 ,
                         
-    DUMP                = shift ( 35 ),
-    STATS               = shift ( 36 ),
+    DUMP                =  35 ,
+    STATS               =  36 ,
                         
-    CONNECT             = shift ( 37 ),
-    OBSERVE             = shift ( 38 ),
-    UNOBSERVE           = shift ( 39 ),
-    RESET_OBSERVED      = shift ( 40 ),
-    IS_DECISION         = shift ( 41 ),
-    IS_WITNESS          = shift ( 42 ),
-    OBSERVED            = shift ( 43 ),
+    CONNECT             =  37 ,
+    OBSERVE             =  38 ,
+    UNOBSERVE           =  39 ,
+    RESET_OBSERVED      =  40 ,
+    IS_DECISION         =  41 ,
+    IS_WITNESS          =  42 ,
+    OBSERVED            =  43 ,
     
-    LEMMA               = shift ( 44 ),
-    DECIDE              = shift ( 45 ),
-    FORCE               = shift ( 46 ),
+    LEMMA               =  44 ,
+    DECIDE              =  45 ,
+    FORCE               =  46 ,
     
-    CB_DECIDE           = shift ( 47 ),
-    CB_PROPAGATE        = shift ( 48 ),
-    CB_HAS_CLAUSE       = shift ( 49 ),
-    CB_ADD_CLAUSE       = shift ( 50 ),
-    CB_ADD_REASON       = shift ( 51 ),
-    CB_CHECK_MODEL      = shift ( 52 ),
-    NOTIFY_ASSIGNMENT   = shift ( 53 ),
-    NOTIFY_BACKTRACK    = shift ( 54 ),
-    NOTIFY_LEVEL        = shift ( 55 ),
+    CB_DECIDE           =  47 ,
+    CB_PROPAGATE        =  48 ,
+    CB_HAS_CLAUSE       =  49 ,
+    CB_ADD_CLAUSE       =  50 ,
+    CB_ADD_REASON       =  51 ,
+    CB_CHECK_MODEL      =  52 ,
+    NOTIFY_ASSIGNMENT   =  53 ,
+    NOTIFY_BACKTRACK    =  54 ,
+    NOTIFY_LEVEL        =  55 ,
 
-    CONCLUDE            = shift ( 56 ),
-    DISCONNECT          = shift ( 57 ),
+    CONCLUDE            =  56 ,
+    DISCONNECT          =  57 ,
                         
-    TRACEPROOF          = shift ( 58 ),
-    FLUSHPROOFTRACE     = shift ( 59 ),
-    CLOSEPROOFTRACE     = shift ( 60 ),
+    TRACEPROOF          =  58 ,
+    FLUSHPROOFTRACE     =  59 ,
+    CLOSEPROOFTRACE     =  60 ,
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC            = shift ( 61 ),
-    LEAKALLOC           = shift ( 62 ),
+    MAXALLOC            =  61 ,
+    LEAKALLOC           =  62 ,
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE           = shift ( 63 ),
+    TERMINATE           =  63 ,
 #endif
 
     // clang-format on
 
-    ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
-             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE | OBSERVED |
-             IS_WITNESS | RESET_OBSERVED | IS_DECISION | DECLARE |
-             DECLARE_VARS,
-    MOCK = LEMMA | DECIDE | FORCE,
-    REPLAY = CB_DECIDE | CB_PROPAGATE | CB_HAS_CLAUSE | CB_ADD_CLAUSE |
-             CB_ADD_REASON | CB_CHECK_MODEL | NOTIFY_ASSIGNMENT |
-             NOTIFY_BACKTRACK | NOTIFY_LEVEL,
-
-    CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF
-#ifdef MOBICAL_MEMORY
-             | MAXALLOC | LEAKALLOC
-#endif
-#ifdef MOBICAL_TERMINATE
-             | TERMINATE
-#endif
-    ,
-    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
-             RESET_ASSUMPTIONS,
-    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS | IMPLIED |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE,
-    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = MOCK | REPLAY,
-
-    // This is used for executing traces
-    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
-
-    // These are used for shrinking traces
-    CLAUSAL = LEMMA | CONSTRAIN | ADD,
-    MATCHING = CONNECT | DISCONNECT,
-    PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | MOCK | REPLAY,
-    LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
-              FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
-              UNOBSERVE | OBSERVE | LEMMA | DECIDE | FORCE,
-    BASIC =
-#ifdef MOBICAL_TERMINATE
-        TERMINATE |
-#endif
-#ifdef MOBICAL_MEMORY
-        LEAKALLOC | MAXALLOC |
-#endif
-        ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | VARS |
-        ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE | RESERVE | DECLARE |
-        DECLARE_VARS | VAL | FLIP | FLIPPABLE | FIXED | FAILED | FROZEN |
-        CONCLUDE | FREEZE | MELT | PHASE | UNPHASE | LIMIT | OPTIMIZE |
-        RESET_OBSERVED | IS_WITNESS | DECIDE | FORCE | RESET_ASSUMPTIONS |
-        OBSERVE | OBSERVED | UNOBSERVE | IS_DECISION | IMPLIED,
-
   };
 
-  Type type; // Explicit typing.
+  const Type type; // Explicit typing.
 
   int64_t res;          // Compute result if any.
   char *name = nullptr; // Option name for 'set' and 'config'
   int arg;              // Argument if necessary.
   int val;              // Option value for 'set'.
+  int64_t large_val;    // Option value for 64-bit 'set'.
   bool executed;
 
-  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0)
+  Call (Type t, int a = 0, int r = 0, const char *o = 0, int v = 0,
+        int64_t w = 0)
       : type (t), res (r), name (o ? strdup (o) : 0), arg (a), val (v),
-        executed (0) {}
+        large_val (w), executed (0) {}
 
   virtual ~Call () {
     if (name)
       free (name);
   }
 
+  virtual bool basic_type () {
+    switch (type) {
+#ifdef MOBICAL_TERMINATE
+    case (Call::TERMINATE):
+#endif
+#ifdef MOBICAL_MEMORY
+    case (Call::LEAKALLOC):
+    case (Call::MAXALLOC):
+#endif
+    case (Call::ASSUME):
+    case (Call::SOLVE):
+    case (Call::SIMPLIFY):
+    case (Call::LOOKAHEAD):
+    case (Call::CUBING):
+    case (Call::PROPAGATE):
+    case (Call::VARS):
+    case (Call::ACTIVE):
+    case (Call::REDUNDANT):
+    case (Call::IRREDUNDANT):
+    case (Call::RESIZE):
+    case (Call::RESERVE):
+    case (Call::DECLARE):
+    case (Call::DECLARE_VARS):
+    case (Call::VAL):
+    case (Call::FLIP):
+    case (Call::FLIPPABLE):
+    case (Call::FIXED):
+    case (Call::FAILED):
+    case (Call::FROZEN):
+    case (Call::CONCLUDE):
+    case (Call::FREEZE):
+    case (Call::MELT):
+    case (Call::PHASE):
+    case (Call::UNPHASE):
+    case (Call::LIMIT):
+    case (Call::OPTIMIZE):
+    case (Call::RESET_OBSERVED):
+    case (Call::IS_WITNESS):
+    case (Call::DECIDE):
+    case (Call::FORCE):
+    case (Call::RESET_ASSUMPTIONS):
+    case (Call::OBSERVE):
+    case (Call::OBSERVED):
+    case (Call::UNOBSERVE):
+    case (Call::IS_DECISION):
+    case (Call::IMPLIED):
+      return true;
+    default:
+      return false;
+    }
+  }
   virtual bool lit_type () {
-    return (((uint64_t) type & (uint64_t) Call::LITTYPE)) != 0;
+    switch (type) {
+    case (Call::PHASE):
+    case (Call::UNPHASE):
+    case (Call::ADD):
+    case (Call::ASSUME):
+    case (Call::VAL):
+    case (Call::FLIP):
+    case (Call::FLIPPABLE):
+    case (Call::FAILED):
+    case (Call::FIXED):
+    case (Call::FREEZE):
+    case (Call::FROZEN):
+    case (Call::MELT):
+    case (Call::CONSTRAIN):
+    case (Call::UNOBSERVE):
+    case (Call::OBSERVE):
+    case (Call::LEMMA):
+    case (Call::DECIDE):
+    case (Call::FORCE):
+      return true;
+    default:
+      return false;
+    }
   }
-  virtual bool extendmap_type () {
-    return (((int) type & (int) Call::EXTENDMAP)) != 0;
+  virtual bool mock_type () {
+    switch (type) {
+    case (Call::LEMMA):
+    case (Call::DECIDE):
+    case (Call::FORCE):
+      return true;
+    default:
+      return false;
+    }
   }
-  virtual bool is_basic () {
-    return (((uint64_t) type & (uint64_t) Call::BASIC)) != 0;
+  virtual bool replay_type () {
+    switch (type) {
+    case (Call::CB_DECIDE):
+    case (Call::CB_PROPAGATE):
+    case (Call::CB_HAS_CLAUSE):
+    case (Call::CB_ADD_CLAUSE):
+    case (Call::CB_ADD_REASON):
+    case (Call::CB_CHECK_MODEL):
+    case (Call::NOTIFY_ASSIGNMENT):
+    case (Call::NOTIFY_BACKTRACK):
+    case (Call::NOTIFY_LEVEL):
+      return true;
+    default:
+      return false;
+    }
   }
-  virtual bool is_clause_type () {
-    return (((uint64_t) type & (uint64_t) Call::CLAUSAL)) != 0;
-  }
-  virtual bool config_type () {
-    return (((uint64_t) type & (uint64_t) Call::CONFIG)) != 0;
+  virtual bool observe_type () {
+    switch (type) {
+    case (Call::OBSERVE):
+    case (Call::UNOBSERVE):
+    case (Call::RESET_OBSERVED):
+      return true;
+    default:
+      return false;
+    }
   }
   virtual bool propagator_type () {
-    return (((uint64_t) type & (uint64_t) Call::PROPAGATOR)) != 0;
+    return replay_type () || mock_type () || observe_type ();
+  }
+  virtual bool during_type () { return mock_type () || propagator_type (); }
+  virtual bool always_type () {
+    switch (type) {
+    case (Call::ACTIVE):
+    case (Call::VARS):
+    case (Call::REDUNDANT):
+    case (Call::IRREDUNDANT):
+    case (Call::FREEZE):
+    case (Call::FROZEN):
+    case (Call::MELT):
+    case (Call::LIMIT):
+    case (Call::OPTIMIZE):
+    case (Call::DUMP):
+    case (Call::STATS):
+    case (Call::RESIZE):
+    case (Call::FIXED):
+    case (Call::PHASE):
+    case (Call::UNPHASE):
+    case (Call::RESERVE):
+    case (Call::OBSERVE):
+    case (Call::UNOBSERVE):
+    case (Call::OBSERVED):
+    case (Call::IS_WITNESS):
+    case (Call::RESET_OBSERVED):
+    case (Call::IS_DECISION):
+    case (Call::DECLARE):
+    case (Call::DECLARE_VARS):
+      return true;
+    default:
+      return false;
+    }
+  }
+  virtual bool extendmap_type () {
+    switch (type) {
+    case (Call::PHASE):
+    case (Call::UNPHASE):
+    case (Call::ADD):
+    case (Call::ASSUME):
+    case (Call::FREEZE):
+    case (Call::CONSTRAIN):
+      return true;
+    default:
+      return false;
+    }
+  }
+  virtual bool clausal_type () {
+    switch (type) {
+    case (Call::LEMMA):
+    case (Call::CONSTRAIN):
+    case (Call::ADD):
+      return true;
+    default:
+      return false;
+    }
+  }
+  virtual bool config_type () {
+    if (always_type ())
+      return true;
+    switch (type) {
+#ifdef MOBICAL_TERMINATE
+    case (Call::TERMINATE):
+#endif
+#ifdef MOBICAL_MEMORY
+    case (Call::LEAKALLOC):
+    case (Call::MAXALLOC):
+#endif
+    case (Call::INIT):
+    case (Call::SET):
+    case (Call::CONFIGURE):
+    case (Call::TRACEPROOF):
+      return true;
+    default:
+      return false;
+    }
   }
   virtual bool matching_type () {
-    return (((uint64_t) type & (uint64_t) Call::MATCHING)) != 0;
+    switch (type) {
+    case (Call::CONNECT):
+    case (Call::DISCONNECT):
+      return true;
+    default:
+      return false;
+    }
   }
   virtual bool before_type () {
-    return (((uint64_t) type & (uint64_t) Call::BEFORE)) != 0;
-  }
-  virtual bool during_type () {
-    return (((uint64_t) type & (uint64_t) Call::DURING)) != 0;
-  }
-  virtual bool always_type () {
-    return (((uint64_t) type & (uint64_t) Call::ALWAYS)) != 0;
+    if (always_type ())
+      return true;
+    switch (type) {
+    case (Call::ADD):
+    case (Call::CONSTRAIN):
+    case (Call::ASSUME):
+    case (Call::DISCONNECT):
+    case (Call::CONNECT):
+    case (Call::RESET_ASSUMPTIONS):
+      return true;
+    default:
+      return false;
+    }
   }
   virtual bool process_type () {
-    return (((uint64_t) type & (uint64_t) Call::PROCESS)) != 0;
+    switch (type) {
+    case (Call::SOLVE):
+    case (Call::SIMPLIFY):
+    case (Call::LOOKAHEAD):
+    case (Call::CUBING):
+    case (Call::PROPAGATE):
+      return true;
+    default:
+      return false;
+    }
   }
   virtual bool after_type () {
-    return (((uint64_t) type & (uint64_t) Call::AFTER)) != 0;
+    if (always_type ())
+      return true;
+    switch (type) {
+    case (Call::VAL):
+    case (Call::FLIP):
+    case (Call::FLIPPABLE):
+    case (Call::FAILED):
+    case (Call::CONCLUDE):
+    case (Call::IMPLIED):
+    case (Call::FLUSHPROOFTRACE):
+    case (Call::CLOSEPROOFTRACE):
+      return true;
+    default:
+      return false;
+    }
   }
 
   // extend the size of `extendmap` by `arg` new variables.
@@ -1258,7 +1419,8 @@ public:
   ReplayPropagator (Solver *s, ExtendMap *e, bool l)
       : solver (s), extendmap (e)
 #ifdef LOGGING
-        , logging (l)
+        ,
+        logging (l)
 #endif
   {
 #ifndef LOGGING
@@ -2274,8 +2436,18 @@ public:
     auto lemma = external_lemmas[reason_id];
     assert (lemma != nullptr);
     assert (lemma->type == PROPAGATING);
+  NEXT_LEMMA_LIT:
     int lit = lemma->next_lit ();
-    assert (!lit || s->external->observed (lit));
+    // if a fixed literal gets unobserved it can happen that a
+    // propagation still relies on this literal.
+    // There are two ways to fix this,
+    // either ignore it here, or backtrack to level 0 when
+    // unobserving a fixed literal to clear all propagations.
+    assert (!lit || s->external->observed (lit) || s->fixed (lit));
+    if (lit && !s->external->observed (lit)) {
+      assert (s->fixed (lit));
+      goto NEXT_LEMMA_LIT;
+    }
 
     if (!lit) {
       lemma->add_count++;
@@ -2674,7 +2846,7 @@ struct ConfigureCall : public Call {
 };
 
 struct LimitCall : public Call {
-  LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
+  LimitCall (const char *o, int64_t v) : Call (LIMIT, 0, 0, o, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (delay) {
@@ -2683,11 +2855,13 @@ struct LimitCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else
-      s->limit (name, val);
+      s->limit (name, large_val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << keyword () << ' ' << name << ' ' << val; }
-  Call *copy () { return new LimitCall (name, val); }
+  void print (ostream &o) {
+    o << keyword () << ' ' << name << ' ' << large_val;
+  }
+  Call *copy () { return new LimitCall (name, large_val); }
   const char *keyword () { return "limit"; }
 };
 
@@ -4042,7 +4216,7 @@ public:
     int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      if (c->is_clause_type () && !c->arg)
+      if (c->clausal_type () && !c->arg)
         res++;
     }
     return res;
@@ -4052,7 +4226,7 @@ public:
     int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      if (c->is_clause_type () && c->arg)
+      if (c->clausal_type () && c->arg)
         res++;
     }
     return res;
@@ -4491,7 +4665,11 @@ void Trace::generate_limits (Random &random) {
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("ticks", random.pick_log (0, 1e9)));
+    push_back (new LimitCall (
+        "ticks",
+        random.pick_log64 (0, ((int64_t) 2) *
+                                  INT32_MAX))); // slightly bigger than
+                                                // 32-bits, but not too much
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
@@ -5251,8 +5429,8 @@ void Mobical::print_statistics () {
          << flush;
     if (shared->memout || shared->timeout) {
       prefix ();
-      cerr << "out-of-time " << shared->timeout << ", "
-           << "out-of-memory " << shared->memout << endl
+      cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
+           << shared->memout << endl
            << flush;
     }
   }
@@ -5343,7 +5521,11 @@ void Trace::child_signal_handler (int sig) {
 #endif
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
+#ifndef __APPLE__
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
+#else
+    if ((int64_t) u.ru_maxrss >> 20 >= mobical.space_limit) {
+#endif
       if (mobical.shared)
         mobical.shared->memout++;
       // Since there is no memout signal we just misuse SIXCPU to notify
@@ -5565,8 +5747,11 @@ int Trace::fork_and_execute () {
     setrlimit64 (RLIMIT_CORE, &limit);
 #endif
 #endif
-    int status;
-    pid_t other = waitpid (child, &status, WUNTRACED);
+    // If SIGTSTP is used in the future rather use waitpid & WUNTRACED
+    // int status;
+    // pid_t other = waitpid (child, &status, WUNTRACED);
+
+    int status, other = wait (&status);
     if (other != child)
       res = 0;
     else if (WIFEXITED (status))
@@ -5697,7 +5882,6 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           tmp_notify = &tmp2;
         }
       }
-      // The attempt should be finished and in a valid state.
       if (Signal::interrupted ())
         break;
     }
@@ -5866,7 +6050,7 @@ bool Trace::shrink_clauses (int expected) {
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
     Call *c = calls[l = r - 1];
-    while (l > 0 && (!c->is_clause_type () || c->arg))
+    while (l > 0 && (!c->clausal_type () || c->arg))
       c = calls[--l];
     if (!l)
       break;
@@ -5890,7 +6074,7 @@ bool Trace::shrink_literals (int expected) {
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (c->is_clause_type () && c->arg)
+    if (c->clausal_type () && c->arg)
       segments.push_back (Segment (l, l + 1));
   }
   return shrink_segments (segments, expected);
@@ -6014,7 +6198,7 @@ bool Trace::shrink_basic (int expected) {
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (!c->is_basic ())
+    if (!c->basic_type ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -6218,12 +6402,11 @@ bool Trace::reduce_values (int expected) {
       if (success) {
         assert (c->val != old_val);
         changed = true;
-      } else
+      } else {
         c->val = old_val;
-
+      }
       if (Signal::interrupted ())
         break;
-
       if (success)
         continue;
 
@@ -6471,9 +6654,21 @@ static bool is_valid_char (int ch) {
   return false;
 }
 
+enum Call_State {
+  INIT = 0,
+  CONFIG = 1,
+  BEFORE = 2,
+  DURING = 3,
+  AFTER = 4,
+  ALWAYS = 5,
+  RESET = 6,
+};
+
 void Reader::parse () {
   int ch, lit = 0, val = 0, solved = 0;
-  uint64_t state = 0, adding = 0;
+  Call_State state = INIT;
+  Call::Type adding = Call::INIT;
+  int64_t large_val = 0;
   Call *prev = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
@@ -6604,9 +6799,9 @@ void Reader::parse () {
         error ("first argument to 'limit' missing");
       if (!second)
         error ("second argument to 'limit' missing");
-      if (!parse_int_str (second, val))
+      if (!parse_int64_str (second, large_val))
         error ("invalid second argument '%s' to 'limit'", second);
-      c = new LimitCall (first, val);
+      c = new LimitCall (first, large_val);
     } else if (!strcmp (keyword, "optimize")) {
       if (!first)
         error ("argument to 'optimize' missing");
@@ -6666,7 +6861,7 @@ void Reader::parse () {
         error ("additional argument '%s' to 'add'", second);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'add'", lit);
-      adding = lit ? (uint64_t) Call::ADD : 0;
+      adding = lit ? Call::ADD : Call::INIT;
       c = new AddCall (lit);
     } else if (!strcmp (keyword, "constrain")) {
       if (!first)
@@ -6677,7 +6872,7 @@ void Reader::parse () {
         error ("additional argument '%s' to 'constrain'", second);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'constrain'", lit);
-      adding = lit ? (uint64_t) Call::CONSTRAIN : 0;
+      adding = lit ? Call::CONSTRAIN : Call::INIT;
       c = new ConstrainCall (lit);
     } else if (!strcmp (keyword, "connect")) {
       c = new ConnectCall ();
@@ -6734,7 +6929,7 @@ void Reader::parse () {
         error ("additional argument '%s' to 'lemma'", second);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'lemma'", lit);
-      adding = lit ? (uint64_t) Call::LEMMA : 0;
+      adding = lit ? Call::LEMMA : Call::INIT;
       LemmaType tmpt = LAZY;
       int tmp = 0;
       if (second) {
@@ -7149,6 +7344,11 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'stats'", first);
       c = new StatsCall ();
+    } else if (!strcmp (keyword, "resource")) {
+      if (first)
+        error ("additional argument '%s' to 'resource'", first);
+      // c = new StatsCall ();
+      mobical.warning ("ignoring 'resource' call");
     } else if (!strcmp (keyword, "reset")) {
       if (first)
         error ("additional argument '%s' to 'reset'", first);
@@ -7231,26 +7431,23 @@ void Reader::parse () {
     // This checks the legal structure of traces described above.
     //
     if (enforce) {
-      if (!state && !(c->type & (Call::INIT
+      if (state == Call_State::INIT &&
+          !(c->type & (Call::INIT
 #ifdef MOBICAL_MEMORY
-                                 | Call::MAXALLOC | Call::LEAKALLOC
+                       | Call::MAXALLOC | Call::LEAKALLOC
 #endif
 #ifdef MOBICAL_TERMINATE
-                                 | Call::TERMINATE
+                       | Call::TERMINATE
 #endif
-                                 )))
+                       )))
         error ("first call has to be an 'init', 'max_alloc', 'leak_alloc'"
                " or 'terminate' call");
 
-      if (state == Call::RESET)
+      if (state == Call_State::RESET)
         error ("'%s' after 'reset'", c->keyword ());
 
-      /*
-      if (state != Call::DURING && c->during_type ())
-        error ("'%s' without 'solve' (or similar)", c->keyword ());
-        */
-
-      if (adding && c->type != adding && c->type != Call::RESET &&
+      if (adding != Call::INIT && c->type != adding &&
+          c->type != Call::RESET &&
           ((adding == Call::ADD && c->type != Call::RESIZE &&
             c->type != Call::VARS && c->type != Call::DECLARE_VARS &&
             c->type != Call::DECLARE) ||
@@ -7258,34 +7455,34 @@ void Reader::parse () {
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
 
-      uint64_t new_state = state;
+      Call_State new_state = state;
 
-      switch ((uint64_t) c->type) {
+      switch (c->type) {
 
       case Call::INIT:
-        if (state)
+        if (state != Call_State::INIT)
           error ("invalid second 'init' call");
-        new_state = Call::CONFIG;
+        new_state = Call_State::CONFIG;
         break;
 
       case Call::SET:
       case Call::CONFIGURE:
-        if (!solved && state == Call::BEFORE) {
+        if (!solved && state == Call_State::BEFORE) {
           assert (before_trigger);
           error ("'%s' can only be called after 'init' before '%s %d'",
                  c->keyword (), before_trigger->keyword (),
                  before_trigger->arg);
-        } else if (state != Call::CONFIG)
+        } else if (state != Call_State::CONFIG)
           error ("'%s' can only be called right after 'init'",
                  c->keyword ());
-        assert (new_state == Call::CONFIG);
+        assert (new_state == Call_State::CONFIG);
         break;
 
       case Call::ADD:
       case Call::ASSUME:
-        if (state != Call::BEFORE)
+        if (state != Call_State::BEFORE)
           before_trigger = c;
-        new_state = Call::BEFORE;
+        new_state = Call_State::BEFORE;
         break;
 
       case Call::LEMMA:
@@ -7300,7 +7497,7 @@ void Reader::parse () {
       case Call::RESET_OBSERVED:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
-        new_state = c->type;
+        new_state = Call_State::ALWAYS;
         break;
 
       case Call::VAL:
@@ -7308,33 +7505,36 @@ void Reader::parse () {
       case Call::FLIPPABLE:
       case Call::FAILED:
       case Call::CONCLUDE:
-        if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
+        if (!solved &&
+            (state == Call_State::CONFIG || state == Call_State::BEFORE))
           error ("'%s' can only be called after 'solve'", c->keyword ());
-        if (solved && state == Call::BEFORE) {
+        if (solved && state == Call_State::BEFORE) {
           assert (before_trigger);
           error ("'%s' only valid after last 'solve' and before '%s %d'",
                  c->keyword (), before_trigger->keyword (),
                  before_trigger->arg);
         }
+        /*
         assert (state == Call::SOLVE || state == Call::SIMPLIFY ||
                 state == Call::LOOKAHEAD || state == Call::CUBING ||
                 state == Call::PROPAGATE || state == Call::OBSERVE ||
                 state == Call::DURING || state == Call::AFTER);
-        new_state = Call::AFTER;
+                */
+        new_state = Call_State::AFTER;
         break;
 
       case Call::DISCONNECT:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
         connected = false;
-        new_state = c->type;
+        new_state = Call_State::ALWAYS;
         break;
 
       case Call::CONNECT:
         if (connected)
           error ("call 'disconnect' before call 'connect' again");
         connected = true;
-        new_state = c->type;
+        new_state = Call_State::ALWAYS;
         break;
 
       case Call::SOLVE:
@@ -7342,10 +7542,10 @@ void Reader::parse () {
       case Call::LOOKAHEAD:
       case Call::CUBING:
       case Call::PROPAGATE:
-        new_state = Call::DURING;
+        new_state = Call_State::DURING;
         break;
       case Call::RESET:
-        new_state = c->type;
+        new_state = Call_State::RESET;
         break;
 
       default:
@@ -8579,7 +8779,6 @@ END_OF_BANNER_AND_OPTIONS:
   if (reraise)
     if ((terminal && (mode & RANDOM)) || shrinking || running)
       cerr << endl;
-
   terminal.reset ();
   print_statistics ();
 

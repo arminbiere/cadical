@@ -91,6 +91,7 @@ OPTION( eagersubsume,         1,  0,  1,0,1,1, "subsume recently learned") \
 OPTION( eagersubsumelim,     20,  1,1e3,0,0,1, "limit on subsumed candidates") \
 OPTION( elevate,              2, -1,  3,0,0,1, "elevate during clause addition") \
 OPTION( elim,                 1,  0,  1,0,1,1, "bounded variable elimination") \
+OPTION( elimaggressiveGC,     0,  0,  1,0,0,1, "run GC earlier during elim (debug only)") \
 OPTION( elimands,             1,  0,  1,0,0,1, "find AND gates") \
 OPTION( elimbackward,         1,  0,  1,0,0,1, "eager backward subsumption") \
 OPTION( elimboundmax,        16, -1,2e6,1,0,1, "maximum elimination bound") \
@@ -155,6 +156,7 @@ OPTION( flushfactor,          3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,           1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,           0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,                 0,  0,  2,0,0,1, "1=FRAT(LRAT), 2=FRAT(DRAT)") \
+OPTION( glueassumptions,      2,  0,  2,0,0,1, "count assumption levels as glue (0=none, 1=one, 2=all)") \
 OPTION( idrup,                0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,                  0,  0,  2,0,0,1, "incremental lazy backtrack (0=off, 1=assumptions-only, 2=everything)") \
 OPTION( incdecay,             1,  0,  4,0,0,1, "decay clauses when doing incremental clauses" ) \
@@ -277,9 +279,11 @@ OPTION( transredeffort,     1e2,  1,1e5,1,0,1, "relative efficiency per mille") 
 OPTION( transredmaxeff,     1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,       0,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( varindexorder,        0,  0,  1,0,0,1, "use literals name given as (DIMACS) input") \
+OPTION( varinitswitch,      1e6,  1,2e9,0,0,1, "check if you need to go from a vector from variables to a hash table") \
 OPTION( varkeepname,          0,  0,  1,0,0,1, "attempt to use the same internal and external name (debug purpose only)") \
 OPTION( varprioritizefirst,   1,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( varprioritizeswap,    0,  0,  1,0,0,1, "reverse VMTF variable ordering (reverse of varindexorder)") \
+OPTION( varswitchscale,      20,  1,100,0,0,1, "geometric reason in percent for rechecking switch (see varinitswitch)") \
 QUTOPT( verbose,              0,  0,  4,0,0,0, "more verbose messages") \
 OPTION( veripb,               0,  0,  4,0,0,1, "odd=check-deletions, greater-two=DRAT") \
 OPTION( vivify,               1,  0,  1,0,1,1, "vivification") \
@@ -301,6 +305,7 @@ OPTION( vivifytier2eff,       2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,          1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,       1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,                 1,  0,  1,0,0,1, "enable random walks") \
+OPTION( walkbinarylimit,     31,  0, 31,0,0,1, "literal bits limit for inlining [debug only]") \
 OPTION( walkddfwstrat,        4,  0,  4,1,0,1, "ddfw weight strategy (0=yalin-itl, 1=yalin=ite, 2=yalin-ith, 3=ddfw, 4=tassat)") \
 OPTION( walkeffort,          80,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( walkfullocc,          2,  0,  2,1,0,1, "0=single-watched, 1=full-occs [like kissat], 2=ddfw") \

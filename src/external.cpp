@@ -10,10 +10,13 @@ namespace CaDiCaL {
 External::External (Internal *i)
     : internal (i), max_var (0), vsize (0), extended (false),
       concluded (false), terminator (0), learner (0), fixed_listener (0),
-      propagator (0), solution (0), vars (max_var) {
+      propagator (0), trace_api_file (0), solution (0), vars (max_var) {
   assert (internal);
   assert (!internal->external);
   internal->external = this;
+  e2i.limit_to_check = internal->opts.varinitswitch;
+  e2i.internal = internal;
+  e2i.incremental_scaling = internal->opts.varswitchscale;
 }
 
 External::~External () {
@@ -125,9 +128,21 @@ void External::reset_concluded () {
 }
 
 void External::reset_constraint () {
-  constraints.clear ();
-  constraint_ids.clear ();
-  internal->reset_constraint ();
+  if (!constraint_tmp.empty ()) {
+    LOG ("the last constraint was not finished");
+    // the constraint was not imported yet and thus not finalized, so
+    // just dropping it
+    constraints.clear ();
+    constraint_ids.clear ();
+    // TODO: properly clear internal
+  } else if (constraints.empty ()) {
+    LOG ("no constraint to reset");
+  } else {
+    LOG ("resetting constraints");
+    constraints.clear ();
+    constraint_ids.clear ();
+    internal->reset_constraint ();
+  }
 }
 
 void External::reset_extended () {
@@ -762,7 +777,7 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
     MSG ("lookahead internal %d external %d", ilit, elit);
     return elit;
   };
-  auto externalize_map = [this, externalize] (std::vector<int> cube) {
+  auto externalize_map = [this, externalize] (std::vector<int> &cube) {
     (void) this;
     MSG ("Cube : ");
     std::for_each (begin (cube), end (cube), externalize);

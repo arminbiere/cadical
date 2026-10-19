@@ -151,7 +151,7 @@ COption *ccadical_options (CCaDiCaL *, size_t *len) {
   return solver_options;
 }
 
-void ccadical_limit (CCaDiCaL *wrapper, const char *name, int val) {
+void ccadical_limit (CCaDiCaL *wrapper, const char *name, int64_t val) {
   ((Wrapper *) wrapper)->solver->limit (name, val);
 }
 

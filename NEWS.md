@@ -1,4 +1,4 @@
-  Version 3.0.X
+Version 3.0.X
 -------------
 
 User Facing Changes:
@@ -13,7 +13,7 @@ User Facing Changes:
   be flipped anymore). This means that lucky will now run if you have
   assumptions. For many short calls, this can be prohibitive. Use
   `--no-luckyassumptions`. To limit the effect, when lucky is not effective, it
-  will not be reused for the next `luckymininterval' conflicts (and then still
+  will not be reused for the next `luckymininterval` conflicts (and then still
   only at the beginning of the solve call). Set this option to 0, if you want to
   make sure that lucky is executed in each 
 
@@ -38,7 +38,13 @@ User Facing Changes:
 - The output of the statistics has changed. `stats` now has 3 values, 0 (few
   statistics as previously), 1 (more statistics), 2 (all statistics, similar to
   old default). Related to this, you can now deactivate some metrics with
-  `./configure --no-metrics`. 
+  `./configure --no-metrics`.
+
+- The `limit` and `ccadical_limit` API calls now takes a 64-bit integers as
+  argument instead of int. Only ticks, conflicts, and decisions support integers
+  larger than 32-bits. The options local search and preprocessing do not (by API
+  contract).
+
 
 New and Improved Techniques:
 
@@ -72,6 +78,27 @@ New and Improved Techniques:
      keep the names given by the input (mostly useful for debugging). The order
      of decision is controlled by `varprioritizefirst` (first imported variable
      = first decision).
+
+Developer only:
+
+- We introduced two new options (`elimaggressiveGC` and `walkbinarylimit`) that
+  are debug only. There are just useful to trigger more behaviors from
+  mobical. The effect is debug only, even if the options exists during in
+  release mode for mobical to behave the same.
+
+
+Version 3.0.1
+-------------
+
+- Less disruptive clause import with user propagators due to `elevate`.
+
+- Changed default value for `preprocesslight` and `factor` to zero (off).
+  Note that disabling `factor` by default means you now only have to declare
+  variables when enabling factor explicitly.
+
+- Improved external terminator reaction time.
+
+- Changed application signal handler to properly terminate the solver.
 
 Version 3.0.0
 -------------

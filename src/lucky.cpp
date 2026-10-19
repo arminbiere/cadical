@@ -111,7 +111,7 @@ void Internal::lucky_assume_decision (int lit) {
 int Internal::trivially_false_satisfiable (int64_t &ticks) {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking that all clauses contain a negative literal");
+  LOG ("checking that all clauses contain a negative literal");
   assert (!level);
   ++stats.lucky_constant_zero;
   int res = lucky_decide_assumptions ();
@@ -171,7 +171,7 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
 int Internal::trivially_true_satisfiable (int64_t &ticks) {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking that all clauses contain a positive literal");
+  LOG ("checking that all clauses contain a positive literal");
   assert (!level);
   ++stats.lucky_constant_one;
   int res = lucky_decide_assumptions ();
@@ -257,8 +257,8 @@ int Internal::lucky_fixed_test (Iterator begin, Iterator end,
                                 signed char pol, std::string str) {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking %s variable index %s assignment", str.c_str (),
-           pol == 1 ? "true" : "false");
+  LOG ("checking %s variable index %s assignment", str.c_str (),
+       pol == 1 ? "true" : "false");
 #ifdef QUIET
   (void) str;
 #endif
@@ -310,7 +310,7 @@ int Internal::forward_true_satisfiable () {
 int Internal::backward_false_satisfiable () {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking decreasing variable index false assignment");
+  LOG ("checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
   stats.lucky_backward_zero++;
@@ -344,7 +344,7 @@ int Internal::backward_false_satisfiable () {
 int Internal::backward_true_satisfiable () {
   if (terminated_asynchronously ())
     return -1;
-  VERBOSE (3, "checking decreasing variable index true assignment");
+  LOG ("checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
   stats.lucky_backward_one++;
@@ -423,8 +423,8 @@ int Internal::lucky_decide_assumptions () {
 int Internal::random_lucky_assignment (signed char pol) {
   if (!opts.luckyrandom)
     return 0;
-  VERBOSE (3, "checking random variable order %s assignment",
-           pol == 1 ? "true" : "false");
+  LOG ("checking random variable order %s assignment",
+       pol == 1 ? "true" : "false");
   assert (!unsat);
   assert (!level);
   stats.lucky_random++;
@@ -483,7 +483,6 @@ int Internal::lucky_phases (bool update_limit) {
   MODE_REQUIRE (SEARCH);
   if (!opts.lucky)
     return 0;
-
   if (!opts.luckyassumptions && !assumptions.empty ())
     return 0;
   if (terminated_asynchronously ())

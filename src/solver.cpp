@@ -2,6 +2,7 @@
 #include "contract.hpp"
 #include "internal.hpp"
 #include <atomic>
+#include <cstdint>
 
 /*------------------------------------------------------------------------*/
 
@@ -517,6 +518,8 @@ int Solver::declare_more_variables (int number_of_vars) {
   // removing this triggers an assertion in
   // external but it maybe it is not necessary
   external->reset_extended ();
+  REQUIRE (number_of_vars <= INT32_MAX - external->max_var,
+           "cannot declare more than 32-bit literals");
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
     external->reserve (new_max_var);
@@ -590,6 +593,12 @@ bool Solver::set (const char *arg, int val) {
         arg, val);
   }
   bool res = internal->opts.set (arg, val);
+  // this options needs to be applied in the first add, so we must
+  // update the value immediatly
+  if (!strcmp (arg, "varinitswitch")) {
+    external->e2i.limit_to_check = val;
+    LOG ("updating varinitswitch");
+  }
   LOG_API_CALL_END ("set", arg, val, res);
 
   return res;
@@ -621,9 +630,14 @@ void Solver::optimize (int arg) {
   LOG_API_CALL_END ("optimize", arg);
 }
 
-bool Solver::limit (const char *arg, int val) {
+bool Solver::limit (const char *arg, int64_t val) {
   TRACE (limit, "limit", arg, val);
   REQUIRE_VALID_STATE ();
+  REQUIRE (std::string (arg) != "preprocessing" || val <= INT32_MAX,
+           "cannot set preprocessing limit to more than INT32_MAX");
+  REQUIRE (std::string (arg) != "localsearch" || val <= INT32_MAX,
+           "cannot set the number of local search before startup to more "
+           "than INT32_MAX");
   bool res = internal->limit (arg, val);
   LOG_API_CALL_END ("limit", arg, val, res);
   return res;
@@ -778,6 +792,8 @@ void Solver::assume (int lit) {
 int Solver::lookahead () {
   TRACE (lookahead, "lookahead");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
+           "cannot call when the problem is already solved");
   transition_to_steady_state ();
   int lit = external->lookahead ();
   LOG_API_CALL_END ("lookahead", lit);
@@ -787,6 +803,10 @@ int Solver::lookahead () {
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   TRACE (lookahead_cubes, "lookahead_cubes");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
+           "cannot call when the problem is already solved");
+  transition_to_steady_state ();
+
   auto cubes = external->generate_cubes (depth, min_depth);
 
   CubesWithStatus cubes2;
@@ -1669,9 +1689,17 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
   LOG_API_CALL_BEGIN ("traverse_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
-             internal->traverse_clauses (it) &&
-             external->traverse_constraint (it);
+             internal->traverse_clauses (it);
   LOG_API_CALL_RETURNS ("traverse_clauses", res);
+  return res;
+}
+
+bool Solver::traverse_constraint (ClauseIterator &it) const {
+  LOG_API_CALL_BEGIN ("traverse_constrain");
+  REQUIRE_VALID_STATE ();
+  // TODO traverse constraints
+  bool res = false; // internal->traverse_constraint (it);
+  LOG_API_CALL_RETURNS ("traverse_constrain", res);
   return res;
 }
 
@@ -1730,7 +1758,7 @@ public:
 
 const char *Solver::write_dimacs (const char *path, int min_max_var) {
   LOG_API_CALL_BEGIN ("write_dimacs", path, min_max_var);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
 #ifndef QUIET
   const double start = internal->time ();
 #endif

@@ -1308,6 +1308,7 @@ struct Internal {
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
+  void sweep_check_counts (int except = 0);
   void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
   bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
   void get_kitten_statistics (kitten *kitten);
@@ -1585,9 +1586,9 @@ struct Internal {
 
   // Internal functions to enable explicit search limits.
   //
-  void limit_terminate (int);
-  void limit_decisions (int);     // Force decision limit.
-  void limit_conflicts (int);     // Force conflict limit.
+  void limit_terminate (int64_t);
+  void limit_decisions (int64_t); // Force decision limit.
+  void limit_conflicts (int64_t); // Force conflict limit.
   void limit_preprocessing (int); // Enable 'n' preprocessing rounds.
   void limit_local_search (int);  // Enable 'n' local search rounds.
   void limit_ticks (int64_t);     // Force ticks limit.
@@ -1595,7 +1596,7 @@ struct Internal {
   // External versions can access limits by 'name'.
   //
   static bool is_valid_limit (const char *name);
-  bool limit (const char *name, int); // 'true' if 'name' valid
+  bool limit (const char *name, int64_t); // 'true' if 'name' valid
 
   // Set all the CDCL search limits and increments for scheduling
   // inprocessing, restarts, clause database reductions, etc.
@@ -1938,9 +1939,10 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // First way of asynchronous termination is through 'terminate' which sets
-  // the 'termination_forced' flag directly.  The second way is through a
-  // call back to a 'terminator' if it is non-zero, which however is costly.
+  // First way of asynchronous termination is through 'terminate' or
+  // 'catch_signal' which sets the 'termination_forced' flag directly.
+  // The second way is through a call back to a 'terminator' if it is
+  // non-zero, which however is costly.
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");

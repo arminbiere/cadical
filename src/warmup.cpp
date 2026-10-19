@@ -220,8 +220,8 @@ int Internal::warmup_decide_assumptions () {
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
       new_trail_level (0);
-      notify_decision ();
       LOG ("added pseudo decision level");
+      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);

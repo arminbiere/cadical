@@ -341,6 +341,8 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       continue;
     if (c->size < 3)
       continue;
+    if (c->size > opts.elimclslim)
+      goto DONE;
 
     bool all_literals_marked = true;
     unsigned arity = 0;
@@ -454,8 +456,13 @@ bool Internal::get_ternary_clause (Clause *d, int &a, int &b, int &c) {
   int found = 0;
   a = b = c = 0;
   for (const auto &lit : *d) {
-    if (val (lit))
+    const signed char tmp = val (lit);
+    if (tmp < 0)
       continue;
+    if (tmp > 0) {
+      mark_garbage (d);
+      return false;
+    }
     if (++found == 1)
       a = lit;
     else if (found == 2)
@@ -475,8 +482,11 @@ bool Internal::match_ternary_clause (Clause *d, int a, int b, int c) {
     return false;
   int found = 0;
   for (const auto &lit : *d) {
-    if (val (lit))
+    const signed char tmp = val (lit);
+    if (tmp < 0)
       continue;
+    if (tmp > 0)
+      return false;
     if (a != lit && b != lit && c != lit)
       return false;
     found++;

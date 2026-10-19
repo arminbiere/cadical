@@ -2548,7 +2548,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
                                                extra_reasons_ulit);
       if (merge_literals (g, g, g->lhs, g->rhs[0], extra_reasons_lit,
                           extra_reasons_ulit)) {
-	assert (garbage);
+        assert (garbage);
         ++internal->stats.congruence_unary;
         ++internal->stats.congruence_unary_and;
       }
@@ -2567,7 +2567,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
                                     extra_reasons_ulit2);
       if (merge_literals (g, h, g->lhs, h->lhs, extra_reasons_lit2,
                           extra_reasons_ulit2)) {
-	assert (garbage);
+        assert (garbage);
         ++internal->stats.congruence_ands;
       }
     } else {
@@ -2660,7 +2660,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
           h->lhs, reasons_implication, reasons_back);
       if (merge_literals (g, h, g->lhs, h->lhs, reasons_implication,
                           reasons_back)) {
-	assert (garbage);
+        assert (garbage);
         ++internal->stats.congruence_xors;
       }
       delete_proof_chain ();
@@ -3586,7 +3586,7 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
         lrat_chain.clear ();
       } else {
         // we have to keep this clause as it is justifying the XOR
-	// gate (and want to delete it later).
+        // gate (and want to delete it later).
         new_tmp_clause (clause);
         if (internal->proof) {
           clause.push_back (pivot);
@@ -3605,10 +3605,10 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
       assert (clause.size () == 1);
       clause.push_back (pivot);
       add_clause_to_chain (clause, id1);
-      clause.pop_back();
+      clause.pop_back ();
       clause.push_back (-pivot);
-      add_clause_to_chain(clause, id2);
-      clause.pop_back();
+      add_clause_to_chain (clause, id2);
+      clause.pop_back ();
     }
     if (clause.size () == 1)
       return;
@@ -6412,7 +6412,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           normalized_lhs = find_eager_representative (normalized_lhs);
         if (merge_literals (g, h, normalized_lhs, h->lhs, extra_reasons_lit,
                             extra_reasons_ulit)) {
-	  assert (garbage);
+          assert (garbage);
           ++internal->stats.congruence_ites;
         }
         delete_proof_chain ();
@@ -6857,7 +6857,7 @@ void Closure::simplify_ite_gate (Gate *g) {
         }
         if (merge_literals (g, h, g->lhs, h->lhs, reasons_lrat,
                             reasons_lrat_back)) {
-	  assert (garbage);
+          assert (garbage);
           ++internal->stats.congruence_ites;
         }
       } else {
@@ -7901,7 +7901,6 @@ void Closure::extract_gates () {
     assert (mu2_ids.empty ());
     assert (mu4_ids.empty ());
   }
-
   extract_xor_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());

@@ -511,6 +511,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
     assert (!c->redundant);
     if (c->garbage)
       continue;
+    if (c->size > opts.elimclslim)
+      return false;
     for (const auto &d : ns) {
       ++eliminator.ticks;
       assert (!d->redundant);
@@ -518,6 +520,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
         continue;
       if (!resolve_gates && substitute && c->gate == d->gate)
         continue;
+      if (d->size > opts.elimclslim)
+        return false;
       stats.eliminate_tried_res++;
       if (resolve_clauses (eliminator, c, pivot, d, true, false)) {
         resolvents++;
@@ -701,7 +705,6 @@ void Internal::mark_eliminated_clauses_as_garbage (
 // Try to eliminate 'pivot' by bounded variable elimination.
 void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
                                           bool &deleted_binary_clause) {
-
   if (!active (pivot))
     return;
   assert (!frozen (pivot));
@@ -908,11 +911,19 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   const int old_eliminated = stats.vars_all_elim;
   const int old_fixed = stats.vars_all_fixed;
 
-  // Limit on garbage literals during variable elimination. If the limit is
-  // hit a garbage collection is performed.
+  // Limit on garbage literals during variable elimination. If the
+  // limit is hit a garbage collection is performed. During
+  // investigation we found that the current limit is never reached
+  // during mobical, hence we introduced the `elimaggressiveGC`
+  // option. However, this is not a useful option for users, hence we
+  // made it debug only.
   //
-  const int64_t garbage_limit =
-      (2 * stats.irredundant_literals / 3) + (1 << 20);
+  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3)
+#ifndef NDEBUG
+                                + (opts.elimaggressiveGC ? 0 : 1 << 20);
+#else
+                                + (1 << 20);
+#endif
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially

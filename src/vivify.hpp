@@ -36,12 +36,11 @@ struct Vivifier {
   int tier2_limit = 0;
   int64_t ticks = 0;
   std::vector<std::tuple<int, Clause *, bool>> lrat_stack;
-  Vivifier (Vivify_Mode mode_tier)
-      : tier (mode_tier) {}
-  std::vector<Clause *> &schedule_tier1 () {return schedules [0];}
-  std::vector<Clause *> &schedule_tier2 () {return schedules [1];}
-  std::vector<Clause *> &schedule_tier3 () {return schedules [2];}
-  std::vector<Clause *> &schedule_irred () {return schedules [3];}
+  Vivifier (Vivify_Mode mode_tier) : tier (mode_tier) {}
+  std::vector<Clause *> &schedule_tier1 () { return schedules[0]; }
+  std::vector<Clause *> &schedule_tier2 () { return schedules[1]; }
+  std::vector<Clause *> &schedule_tier3 () { return schedules[2]; }
+  std::vector<Clause *> &schedule_irred () { return schedules[3]; }
 
   void erase () { erase_vector (sorted); }
 };

@@ -47,8 +47,8 @@ Internal::Internal ()
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
-  // In a previous version we used local automatic allocated 'Clause' on the
-  // stack, which became incompatible with several compilers (see the
+  // In a previous version we used local automatic allocated 'Clause' on
+  // the stack, which became incompatible with several compilers (see the
   // discussion on flexible array member in 'Clause.cpp').
 
   size_t bytes = Clause::bytes (2);
@@ -227,7 +227,8 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
-        // First integer is the presence-flag (even if the clause is empty)
+        // First integer is the presence-flag (even if the clause is
+        // empty)
         external->forgettable_original[id] = {1};
 
         for (auto const &elit : external->eclause)
@@ -809,11 +810,6 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
 
   if (opts.fastelim)
     elimfast ();
-
-  // if (opts.fastelim)
-  //  elimfast ();
-  // if (opts.condition)
-  // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
@@ -1199,8 +1195,8 @@ void Internal::finalize (int res) {
         continue;
       proof->finalize_unit (id, lit);
     }
-    // See the discussion in 'propagate' on why garbage binary clauses stick
-    // around.
+    // See the discussion in 'propagate' on why garbage binary clauses
+    // stick around.
     for (const auto &c : clauses)
       if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);
@@ -1289,12 +1285,13 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
 }
 
 void Internal::declare_variable (int ilit) {
-  reserve_vars (ilit);
-  assert ((size_t) ilit < vsize);
-  if (ilit >= max_var) {
-    stats.vars_unused += (ilit - max_var);
-    stats.vars_inactive += (ilit - max_var);
-    max_var = ilit;
+  int iidx = abs (ilit);
+  reserve_vars (iidx);
+  assert ((size_t) iidx < vsize);
+  if (iidx >= max_var) {
+    stats.vars_unused += (iidx - max_var);
+    stats.vars_inactive += (iidx - max_var);
+    max_var = iidx;
   }
   Flags &f = internal->flags (ilit);
   if (f.declared ())
