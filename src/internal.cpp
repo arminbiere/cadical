@@ -389,7 +389,6 @@ int Internal::propagate_assumptions () {
   int res = already_solved (); // root-level propagation is done here
 
   int last_assumption_level = assumptions.size ();
-  assert (!constraint_cat);
   // TODO: does not work with constraint
   // last_assumption_level += constraints_without_assumptions;
 

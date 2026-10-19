@@ -256,9 +256,14 @@ bool Internal::is_assumption_level (size_t level) {
 bool Internal::is_constraint_level (size_t level) {
   assert (constraints_without_assumptions <= constraint_vars.size ());
   if (constraint_cat &&
-      KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11)
+      KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11) {
+    LOG ("level %zd < implicant %d?", level,
+         KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat));
     return level <
            KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat);
+  }
+  LOG ("level %zd < assumptions %zd + constraints %zd?", level,
+       assumptions.size (), constraints_without_assumptions);
   return level < assumptions.size () + constraints_without_assumptions;
 }
 
@@ -312,13 +317,24 @@ int Internal::decide_assumption () {
 // check for falsified literals with respect to kitten trail
 bool Internal::compute_diverged_constraint () {
   assert (constraint_unsat.empty ());
+  bool res = false;
   for (auto &lit : constraint_vars) {
     const auto tmp_kit =
         KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
-    assert (tmp_kit);
     const auto tmp_cad = val (lit);
-    if (!tmp_cad || tmp_kit == tmp_cad)
+    if (!tmp_cad)
       continue;
+    if (tmp_kit == tmp_cad)
+      continue;
+    if (!tmp_kit && is_decision (lit)) {
+      assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
+      backtrack (var (lit).level - 1);
+      res = true;
+      continue;
+    }
+    if (!tmp_kit)
+      continue;
+    assert (tmp_kit);
     assert (tmp_kit == -tmp_cad);
     if (opts.constraintflip &&
         KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 10 &&
@@ -330,7 +346,7 @@ bool Internal::compute_diverged_constraint () {
     constraint_unsat.push_back (lit);
   }
   if (constraint_unsat.empty ())
-    return false;
+    return res;
   int min = 0;
   for (auto &lit : constraint_unsat)
     if (!min || var (lit).level < var (min).level ||
@@ -402,6 +418,10 @@ int Internal::decide_constraint () {
       stats.constraints_unsat++;
     else if (cat_res == 10) {
       stats.constraints_sat++;
+      if (opts.constraintprime) {
+        LOG ("computing kitten prime implicant");
+        KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
+      }
       // compute conflicts between current trail and kitten model
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
@@ -421,10 +441,6 @@ int Internal::decide_constraint () {
         }
         last_constraint_idx = 0;
       }
-      if (opts.constraintprime) {
-        LOG ("computing kitten prime implicant");
-        KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
-      }
     } else {
       // Kitten was terminated
       assert (terminated_asynchronously ());
@@ -440,7 +456,10 @@ int Internal::decide_constraint () {
     LOG ("constraints falsified");
     unsat_constraint = true;
     res = 20;
-  } else if (cat_res == 10) {
+  } else if (!cat_res)
+    return 0;
+  else {
+    assert (cat_res == 10 || cat_res == 11);
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
     // TODO: re-ordering based on decisions?

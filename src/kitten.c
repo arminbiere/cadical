@@ -1128,8 +1128,8 @@ static void bump (kitten *kitten) {
 
 static inline void unassign (kitten *kitten, value *values, unsigned lit) {
   const unsigned not_lit = lit ^ 1;
-  assert (values[lit]);
-  assert (values[not_lit]);
+  assert (kitten->status == 11 || values[lit]);
+  assert (kitten->status == 11 || values[not_lit]);
   const unsigned idx = lit / 2;
 #ifdef LOGGING
   kar *var = kitten->vars + idx;
@@ -1611,6 +1611,11 @@ static void reset_core (kitten *kitten) {
   CLEAR_STACK (kitten->core);
 }
 
+static void reset_implicant (kitten *kitten) {
+  LOG ("resetting prime implicant");
+  CLEAR_STACK (kitten->prime);
+}
+
 static void reset_assumptions (kitten *kitten) {
   LOG ("reset %zu assumptions", SIZE_STACK (kitten->assumptions));
   unsigned *q = BEGIN_STACK (kitten->assumptions);
@@ -1640,6 +1645,8 @@ static void reset_incremental (kitten *kitten) {
     assert (kitten->failing == INVALID);
   if (kitten->status == 21)
     reset_core (kitten);
+  if (kitten->status == 11)
+    reset_implicant (kitten);
   UPDATE_STATUS (0);
 }
 
@@ -2381,7 +2388,7 @@ void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
 #endif
       break;
     }
-    assert (values[lit] > 0);
+    // assert (values[lit] > 0);
     const unsigned idx = lit / 2;
     const unsigned ref = vars[idx].reason;
     assert (vars[idx].level);
@@ -2396,17 +2403,16 @@ void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
       if (prime_propagate (kitten, idx)) {
         values[lit] = 0;
         values[lit ^ 1] = 0;
-      } else
-        assert (values[lit] > 0);
+      }
+      // else assert (values[lit] > 0);
+      // breaks if kitten_flip happens before.
     }
   }
   unsigneds *prime = &kitten->prime;
   // push on prime implicant stack.
-  for (all_stack (unsigned, lit, kitten->trail)) {
+  for (all_kits (lit)) {
     if (values[lit] > 0)
       PUSH_STACK (*prime, lit);
-    else
-      assert (!values[lit]);
   }
   // TODO: check if we are able to use partial results (if limit_hit).
   assert (!EMPTY_STACK (kitten->prime) || limit_hit);
