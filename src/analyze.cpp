@@ -1274,8 +1274,10 @@ void Internal::analyze () {
   int size = (int) clause.size ();
   int glue = (int) levels.size () - 1;
 
-  size_t last_assumption_level =
-      assumptions.size () + constraint_vars.size ();
+  size_t last_assumption_level = assumptions.size ();
+  // last_assumption_level += constraints_without_assumptions;
+  // TODO: does not make sense to integrate constraints here.
+
   if (last_assumption_level > 0 && opts.glueassumptions < 2 && size > 1) {
     assert (glue > 0);
 

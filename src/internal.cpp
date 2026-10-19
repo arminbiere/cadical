@@ -389,7 +389,9 @@ int Internal::propagate_assumptions () {
   int res = already_solved (); // root-level propagation is done here
 
   int last_assumption_level = assumptions.size ();
-  last_assumption_level += constraints_without_assumptions;
+  assert (!constraint_cat);
+  // TODO: does not work with constraint
+  // last_assumption_level += constraints_without_assumptions;
 
   if (!res) {
     restore_clauses ();
@@ -441,7 +443,8 @@ int Internal::propagate_assumptions () {
 
 void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
-  last_assumption_level += constraint_vars.size ();
+  // last_assumption_level += constraint_vars.size ();
+  // TODO: does not work with constraints.
 
   size_t trail_limit = trail.size ();
   if (level > last_assumption_level)

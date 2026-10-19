@@ -107,10 +107,10 @@ void KITTEN_NAMESPACE (kitten_trace_core) (
     void (*trace) (void *, unsigned, unsigned, bool, size_t,
                    const unsigned *, size_t, const unsigned *));
 
-void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (
-    kitten *, void *state,
-    void (*trace) (void *, unsigned, unsigned, bool, size_t,
-                   const unsigned *, size_t, const unsigned *));
+unsigned KITTEN_NAMESPACE (kitten_size_implicant) (kitten *);
+
+void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *);
+
 #ifdef __cplusplus
 }
 #endif

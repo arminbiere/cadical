@@ -327,8 +327,8 @@ void Internal::analyze_failing_constraint (int failed) {
     // and minimization can never reduce the number of levels
 
     VERBOSE (1, "found %zd failed assumptions %.0f%%", clause.size (),
-             percent (clause.size (),
-                      assumptions.size () + constraint_vars.size ()));
+             percent (clause.size (), assumptions.size () +
+                                          constraints_without_assumptions));
 
     // We do not actually need to learn this clause, since the conflict is
     // forced already by some other clauses.  There is also no bumping

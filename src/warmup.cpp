@@ -256,6 +256,7 @@ int Internal::decide_and_propagate_all_assumptions (
     std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
+  assert (!constraint_cat);
   int res = 0;
   int last_assumption_level = assumptions.size ();
   if (!last_assumption_level)

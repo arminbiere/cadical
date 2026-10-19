@@ -434,6 +434,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   reset_limits ();
   MSG ("generate cubes with %zu assumptions\n", assumptions.size ());
 
+  assert (!constraint_cat);
   assert (ntab.empty ());
   std::vector<int> current_assumptions{assumptions};
   std::vector<std::vector<int>> cubes{{assumptions}};

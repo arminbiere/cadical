@@ -439,7 +439,7 @@ void Internal::compact () {
       assume (ilit);
     }
 
-    PHASE ("compact", stats.compacts, "reassumed %zd external assumptions",
+    PHASE ("compact", stats.compacts, "re-assumed %zd external assumptions",
            external->assumptions.size ());
   }
 

@@ -1371,40 +1371,6 @@ static void failing (kitten *kitten) {
     }
   }
 
-  // this is bfs not dfs so it does not work for lrat :/
-  /*
-  for (size_t next = 0; next < SIZE_STACK (kitten->analyzed); next++) {
-    const unsigned idx = PEEK_STACK (kitten->analyzed, next);
-    assert (marks[idx]);
-    const kar *var = vars + idx;
-    const unsigned reason = var->reason;
-    if (reason == INVALID) {
-      unsigned lit = 2 * idx;
-      if (values[lit] < 0)
-        lit ^= 1;
-      LOG ("failed assumption %u", lit);
-      assert (!kitten->failed[lit]);
-      kitten->failed[lit] = true;
-      const unsigned not_lit = lit ^ 1;
-      PUSH_STACK (kitten->klause, not_lit);
-    } else {
-      ROG (reason, "analyzing");
-      PUSH_STACK (kitten->resolved, reason);
-      klause *c = dereference_klause (kitten, reason);
-      for (all_literals_in_klause (other, c)) {
-        const unsigned other_idx = other / 2;
-        if (other_idx == idx)
-          continue;
-        if (marks[other_idx])
-          continue;
-        marks[other_idx] = true;
-        PUSH_STACK (kitten->analyzed, other_idx);
-        LOG ("analyzing final literal %u", other ^ 1);
-      }
-    }
-  }
-  */
-
   for (all_stack (unsigned, idx, kitten->analyzed))
     assert (marks[idx]), marks[idx] = 0;
   CLEAR_STACK (kitten->analyzed);
@@ -2309,8 +2275,7 @@ bool KITTEN_NAMESPACE (kitten_failed_signed) (kitten *kitten, int elit) {
 // checks both watches for clauses with only one literal positively
 // assigned. If such a clause is found, return false. Otherwise fix watch
 // invariant and return true
-static bool prime_propagate (kitten *kitten, const unsigned idx,
-                             void *state) {
+static bool prime_propagate (kitten *kitten, const unsigned idx) {
   unsigned lit = 2 * idx;
   unsigned conflict = INVALID;
   value *values = kitten->values;
@@ -2370,16 +2335,21 @@ static bool prime_propagate (kitten *kitten, const unsigned idx,
   return conflict == INVALID;
 }
 
+unsigned KITTEN_NAMESPACE (kitten_size_implicant) (kitten *kitten) {
+  REQUIRE_STATUS (11);
+  return SIZE_STACK (kitten->prime);
+}
+
 // Compute a subset of the current model that satisfies all
 // original clauses.
 // TODO does not work if flip has been called beforehand
-int KITTEN_NAMESPACE (compute_prime_implicant) (kitten *kitten,
-                                                void *state) {
+void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
   REQUIRE_STATUS (10);
 
   value *values = kitten->values;
   kar *vars = kitten->vars;
   bool limit_hit = 0;
+  const unsigned assumption_levels = SIZE_STACK (kitten->assumptions);
   assert (EMPTY_STACK (kitten->prime));
   for (backwards_stack (unsigned, lit, kitten->trail)) {
     if (KITTEN_TICKS >= kitten->limits.ticks) {
@@ -2395,9 +2365,12 @@ int KITTEN_NAMESPACE (compute_prime_implicant) (kitten *kitten,
     klause *c = 0;
     if (ref != INVALID)
       c = dereference_klause (kitten, ref);
+    if (ref == INVALID && vars[idx].level <= assumption_levels)
+      break;
     if (ref == INVALID || is_learned_klause (c)) {
       LOG ("non-prime candidate var %d", idx);
-      if (prime_propagate (kitten, idx, state)) {
+      assert (vars[idx].level > assumption_levels);
+      if (prime_propagate (kitten, idx)) {
         values[lit] = 0;
         values[lit ^ 1] = 0;
       } else
@@ -2416,6 +2389,8 @@ int KITTEN_NAMESPACE (compute_prime_implicant) (kitten *kitten,
   assert (!EMPTY_STACK (kitten->prime) || limit_hit);
   UPDATE_STATUS (11);
 
+  /*
   int res = SIZE_STACK (kitten->prime);
   return res;
+  */
 }
