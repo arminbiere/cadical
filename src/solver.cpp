@@ -646,7 +646,7 @@ bool Solver::set (const char *arg, int val) {
   }
   bool res = internal->opts.set (arg, val);
   // this options needs to be applied in the first add, so we must
-  // update the value immediatly
+  // update the value immediately
   if (!strcmp (arg, "varinitswitch")) {
     external->e2i.limit_to_check = val;
     LOG ("updating varinitswitch");
@@ -657,7 +657,7 @@ bool Solver::set (const char *arg, int val) {
 }
 
 bool Solver::set_long_option (const char *arg) {
-  LOG_API_CALL_BEGIN ("set", arg);
+  TRACE (set_long_option, "set_long_option", arg);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only set option '%s' right after initialization", arg);
@@ -676,7 +676,7 @@ bool Solver::set_long_option (const char *arg) {
 }
 
 void Solver::optimize (int arg) {
-  LOG_API_CALL_BEGIN ("optimize", arg);
+  TRACE (optimize, "optimize", arg);
   REQUIRE_VALID_STATE ();
   internal->opts.optimize (arg);
   LOG_API_CALL_END ("optimize", arg);
@@ -1563,6 +1563,7 @@ void Solver::resources () {
 
 const char *Solver::read_dimacs (File *file, int &vars, int strict,
                                  bool *incremental, vector<int> *cubes) {
+  TRACE (read_dimacs, "read_dimacs", file->name (), strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1574,7 +1575,7 @@ const char *Solver::read_dimacs (File *file, int &vars, int strict,
 
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict) {
-  LOG_API_CALL_BEGIN ("read_dimacs", name);
+  TRACE (read_dimacs, "read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1587,7 +1588,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 }
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
-  LOG_API_CALL_BEGIN ("read_dimacs", path);
+  TRACE (read_dimacs, "read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1604,7 +1605,7 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict, bool &incremental,
                                  vector<int> &cubes) {
-  LOG_API_CALL_BEGIN ("read_dimacs", name);
+  TRACE (read_dimacs, "read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1618,7 +1619,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict,
                                  bool &incremental, vector<int> &cubes) {
-  LOG_API_CALL_BEGIN ("read_dimacs", path);
+  TRACE (read_dimacs, "read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1633,7 +1634,7 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict,
 }
 
 const char *Solver::read_solution (const char *path) {
-  LOG_API_CALL_BEGIN ("solution", path);
+  TRACE (read_solution, "read_solution", path);
   REQUIRE_VALID_STATE ();
   File *file = File::read (internal, path);
   if (!file)
@@ -1737,7 +1738,7 @@ bool Solver::force_unassign (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Solver::traverse_clauses (ClauseIterator &it) const {
-  LOG_API_CALL_BEGIN ("traverse_clauses");
+  TRACE (traverse_clauses, "traverse_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
              internal->traverse_clauses (it);
@@ -1746,7 +1747,7 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
 }
 
 bool Solver::traverse_constraint (ClauseIterator &it) const {
-  LOG_API_CALL_BEGIN ("traverse_constrain");
+  TRACE (traverse_constraint, "traverse_constraint");
   REQUIRE_VALID_STATE ();
   bool res = internal->traverse_constraint (it);
   LOG_API_CALL_RETURNS ("traverse_constrain", res);
@@ -1754,7 +1755,7 @@ bool Solver::traverse_constraint (ClauseIterator &it) const {
 }
 
 bool Solver::traverse_witnesses_backward (WitnessIterator &it) const {
-  LOG_API_CALL_BEGIN ("traverse_witnesses_backward");
+  TRACE (traverse_witnesses_backward, "traverse_witnesses_backward");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_non_frozen_units_as_witnesses (it) &&
              external->traverse_witnesses_backward (it);
@@ -1763,7 +1764,7 @@ bool Solver::traverse_witnesses_backward (WitnessIterator &it) const {
 }
 
 bool Solver::traverse_witnesses_forward (WitnessIterator &it) const {
-  LOG_API_CALL_BEGIN ("traverse_witnesses_forward");
+  TRACE (traverse_witnesses_forward, "traverse_witnesses_forward");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_witnesses_forward (it) &&
              external->traverse_all_non_frozen_units_as_witnesses (it);
@@ -1807,7 +1808,7 @@ public:
 };
 
 const char *Solver::write_dimacs (const char *path, int min_max_var) {
-  LOG_API_CALL_BEGIN ("write_dimacs", path, min_max_var);
+  TRACE (write_dimacs, "write_dimacs", path, min_max_var);
   REQUIRE_READY_STATE ();
 #ifndef QUIET
   const double start = internal->time ();
@@ -1878,7 +1879,7 @@ struct WitnessWriter : public WitnessIterator {
 };
 
 const char *Solver::write_extension (const char *path) {
-  LOG_API_CALL_BEGIN ("write_extension", path);
+  TRACE (write_extension, "write_extension", path);
   REQUIRE_VALID_STATE ();
   const char *res = 0;
 #ifndef QUIET
@@ -1933,6 +1934,7 @@ public:
 };
 
 void Solver::copy (Solver &other) const {
+  TRACE (copy, "copy");
   REQUIRE_READY_STATE ();
   REQUIRE (other.state () & CONFIGURING, "target solver already modified");
   internal->opts.copy (other.internal->opts);
