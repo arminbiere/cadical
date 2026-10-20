@@ -6872,6 +6872,13 @@ void Reader::parse () {
       c = new ConnectCall ();
     } else if (!strcmp (keyword, "disconnect")) {
       c = new DisconnectCall ();
+    } else if (!strcmp (keyword, "connect_external_propagator")) {
+      if (!mobical.donot.mock_propagator)
+        mobical.warning ("'connect_external_propagator' may not work "
+                         "properly without '--replay'");
+      c = new ConnectCall ();
+    } else if (!strcmp (keyword, "disconnect_external_propagator")) {
+      c = new DisconnectCall ();
     } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
     } else if (!strcmp (keyword, "observed")) {
