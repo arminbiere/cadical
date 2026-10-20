@@ -1254,6 +1254,7 @@ private:
   friend struct PhaseCall;
   friend struct UnPhaseCall;
   friend struct ReserveCall;
+  friend struct ForceBacktrackCall;
   friend struct IsDecisionCall;
   friend struct CurrentValueCall;
   friend struct LemmaCall;

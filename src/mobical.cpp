@@ -1007,34 +1007,35 @@ struct Call {
     IS_DECISION         =  41 ,
     IS_WITNESS          =  42 ,
     OBSERVED            =  43 ,
+    FORCE_BACKTRACK     =  44 ,
     
-    LEMMA               =  44 ,
-    DECIDE              =  45 ,
-    FORCE               =  46 ,
+    LEMMA               =  45 ,
+    DECIDE              =  46 ,
+    FORCE               =  47 ,
     
-    CB_DECIDE           =  47 ,
-    CB_PROPAGATE        =  48 ,
-    CB_HAS_CLAUSE       =  49 ,
-    CB_ADD_CLAUSE       =  50 ,
-    CB_ADD_REASON       =  51 ,
-    CB_CHECK_MODEL      =  52 ,
-    NOTIFY_ASSIGNMENT   =  53 ,
-    NOTIFY_BACKTRACK    =  54 ,
-    NOTIFY_LEVEL        =  55 ,
+    CB_DECIDE           =  48 ,
+    CB_PROPAGATE        =  49 ,
+    CB_HAS_CLAUSE       =  50 ,
+    CB_ADD_CLAUSE       =  51 ,
+    CB_ADD_REASON       =  52 ,
+    CB_CHECK_MODEL      =  53 ,
+    NOTIFY_ASSIGNMENT   =  54 ,
+    NOTIFY_BACKTRACK    =  55 ,
+    NOTIFY_LEVEL        =  56 ,
 
-    CONCLUDE            =  56 ,
-    DISCONNECT          =  57 ,
+    CONCLUDE            =  57 ,
+    DISCONNECT          =  58 ,
                         
-    TRACEPROOF          =  58 ,
-    FLUSHPROOFTRACE     =  59 ,
-    CLOSEPROOFTRACE     =  60 ,
+    TRACEPROOF          =  59 ,
+    FLUSHPROOFTRACE     =  60 ,
+    CLOSEPROOFTRACE     =  61 ,
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC            =  61 ,
-    LEAKALLOC           =  62 ,
+    MAXALLOC            =  62 ,
+    LEAKALLOC           =  63 ,
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE           =  63 ,
+    TERMINATE           =  64 ,
 #endif
 
     // clang-format on
@@ -1100,6 +1101,7 @@ struct Call {
     case (Call::IS_WITNESS):
     case (Call::DECIDE):
     case (Call::FORCE):
+    case (Call::FORCE_BACKTRACK):
     case (Call::RESET_ASSUMPTIONS):
     case (Call::OBSERVE):
     case (Call::OBSERVED):
@@ -1157,6 +1159,7 @@ struct Call {
     case (Call::NOTIFY_ASSIGNMENT):
     case (Call::NOTIFY_BACKTRACK):
     case (Call::NOTIFY_LEVEL):
+    case (Call::FORCE_BACKTRACK):
       return true;
     default:
       return false;
@@ -3059,6 +3062,24 @@ struct ObserveCall : public Call {
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ObserveCall (arg); }
   const char *keyword () { return "observe"; }
+};
+
+struct ForceBacktrackCall : public Call {
+  ForceBacktrackCall (int l) : Call (FORCE_BACKTRACK, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->force_backtrack (arg);
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new ForceBacktrackCall (arg); }
+  const char *keyword () { return "force_backtrack"; }
 };
 
 struct IsDecisionCall : public Call {
@@ -7093,6 +7114,18 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'is_decision %d'", second, lit);
       c = new IsDecisionCall (lit);
+    } else if (!strcmp (keyword, "force_backtrack")) {
+      if (!first)
+        error ("argument to 'force_backtrack' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'force_backtrack'", first);
+      if (enforce && lit < 0)
+        error ("invalid literal '%d' as argument to 'force_backtrack'",
+               lit);
+      if (second)
+        error ("additional argument '%s' to 'force_backtrack %d'", second,
+               lit);
+      c = new ForceBacktrackCall (lit);
     } else if (!strcmp (keyword, "cb_add_reason_clause_lit")) {
       if (!first)
         error ("argument to 'cb_add_reason_clause_lit' missing");
