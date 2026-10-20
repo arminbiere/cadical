@@ -6893,6 +6893,17 @@ void Reader::parse () {
       c = new ConnectCall ();
     } else if (!strcmp (keyword, "disconnect")) {
       c = new DisconnectCall ();
+    } else if (!strcmp (keyword, "connect_fixed_listener")) {
+      if (enforce)
+        error ("'connect_fixed_listener' not supported (try '--replay')");
+      mobical.warning ("ignoring 'connect_fixed_listener'");
+      continue;
+    } else if (!strcmp (keyword, "disconnect_fixed_listener")) {
+      if (enforce)
+        error (
+            "'disconnect_fixed_listener' not supported (try '--replay')");
+      mobical.warning ("ignoring 'disconnect_fixed_listener'");
+      continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
       if (!mobical.donot.mock_propagator)
         mobical.warning ("'connect_external_propagator' may not work "
