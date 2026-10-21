@@ -2617,8 +2617,6 @@ struct MaxAllocCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (!delay);
     Call::execute (s, extendmap, delay);
-    (void) s;
-    (void) extendmap;
   }
   void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new MaxAllocCall (val); }
@@ -2629,8 +2627,6 @@ struct LeakAllocCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (!delay);
     Call::execute (s, extendmap, delay);
-    (void) s;
-    (void) extendmap;
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new LeakAllocCall (); }
@@ -2644,8 +2640,6 @@ struct TerminateCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (!delay);
     Call::execute (s, extendmap, delay);
-    (void) s;
-    (void) extendmap;
   }
   void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new TerminateCall (val); }
@@ -2664,7 +2658,6 @@ struct VarsCall : public Call {
       rp->push_action (this);
     } else
       res = s->vars ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new VarsCall (); }
@@ -2682,7 +2675,6 @@ struct ActiveCall : public Call {
       rp->push_action (this);
     } else
       res = s->active ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ActiveCall (); }
@@ -2700,7 +2692,6 @@ struct RedundantCall : public Call {
       rp->push_action (this);
     } else
       res = s->redundant ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new RedundantCall (); }
@@ -2718,7 +2709,6 @@ struct IrredundantCall : public Call {
       rp->push_action (this);
     } else
       res = s->irredundant ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new IrredundantCall (); }
@@ -2861,7 +2851,6 @@ struct ConfigureCall : public Call {
     } else {
       s->configure (name);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << name; }
   Call *copy () { return new ConfigureCall (name); }
@@ -2879,7 +2868,6 @@ struct LimitCall : public Call {
       rp->push_action (this);
     } else
       s->limit (name, large_val);
-    (void) (extendmap);
   }
   void print (ostream &o) {
     o << keyword () << ' ' << name << ' ' << large_val;
@@ -2899,7 +2887,6 @@ struct OptimizeCall : public Call {
       rp->push_action (this);
     } else
       s->optimize (val);
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new OptimizeCall (val); }
@@ -3366,7 +3353,6 @@ struct DisconnectCall : public Call {
       mobical.replay_pointer = 0;
     }
     assert (!get_propagator (s));
-    (void) (extendmap);
   }
   void print (ostream &o) {
     o << keyword () << " "
@@ -3407,7 +3393,6 @@ struct SolveCall : public Call {
     } else {
       res = s->solve ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new SolveCall (res); }
@@ -3426,7 +3411,6 @@ struct SimplifyCall : public Call {
     } else {
       res = s->simplify (arg);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new SimplifyCall (arg, res); }
@@ -3445,7 +3429,6 @@ struct PropagateAssumptionsCall : public Call {
     } else {
       s->propagate ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << " " << res; }
   Call *copy () { return new PropagateAssumptionsCall (res); }
@@ -3467,7 +3450,6 @@ struct ImpliedCall : public Call {
           s->state () == State::INCONCLUSIVE)
         s->implied (entrailed);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ImpliedCall (res); }
@@ -3486,7 +3468,6 @@ struct ResetAssumptionsCall : public Call {
     } else {
       s->reset_assumptions ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetAssumptionsCall (); }
@@ -3512,7 +3493,6 @@ struct ResetObservedCall : public Call {
       assert (mp);
       mp->reset_observed ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetObservedCall (); }
@@ -3531,7 +3511,6 @@ struct LookaheadCall : public Call {
     } else {
       res = s->lookahead ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new LookaheadCall (res); }
@@ -3543,7 +3522,6 @@ struct CubingCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     (void) s->generate_cubes (arg);
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new CubingCall (res); }
@@ -3674,7 +3652,6 @@ struct ConcludeCall : public Call {
       else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
         s->conclude ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ConcludeCall (); }
@@ -3743,7 +3720,6 @@ struct DumpCall : public Call {
       rp->push_action (this);
     } else
       s->dump_cnf ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new DumpCall (); }
@@ -3761,7 +3737,6 @@ struct StatsCall : public Call {
       rp->push_action (this);
     } else
       s->statistics ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new StatsCall (); }
@@ -3781,7 +3756,6 @@ struct TraceProofCall : public Call {
     } else {
       s->trace_proof (path.c_str ());
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << path; }
   Call *copy () { return new TraceProofCall (path); }
@@ -3800,7 +3774,6 @@ struct FlushProofTraceCall : public Call {
     } else {
       s->flush_proof_trace ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new FlushProofTraceCall (); }
@@ -3819,7 +3792,6 @@ struct CloseProofTraceCall : public Call {
     } else {
       s->close_proof_trace ();
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new CloseProofTraceCall (); }
@@ -3845,7 +3817,6 @@ struct TraverseClausesCall : public Call {
       MockClauseIterator m;
       s->traverse_clauses (m);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new TraverseClausesCall (); }
@@ -3865,7 +3836,6 @@ struct TraverseConstraintCall : public Call {
       MockClauseIterator m;
       s->traverse_constraint (m);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new TraverseConstraintCall (); }
@@ -3894,7 +3864,6 @@ struct TraverseWitnessesBackwardCall : public Call {
       MockWitnessIterator m;
       s->traverse_witnesses_backward (m);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new TraverseWitnessesBackwardCall (); }
@@ -3914,7 +3883,6 @@ struct TraverseWitnessesForwardCall : public Call {
       MockWitnessIterator m;
       s->traverse_witnesses_forward (m);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new TraverseWitnessesForwardCall (); }
@@ -3935,7 +3903,6 @@ struct ReadDimacsCall : public Call {
     } else {
       s->read_dimacs (path.c_str (), arg);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
   Call *copy () { return new ReadDimacsCall (path, arg); }
@@ -3944,8 +3911,8 @@ struct ReadDimacsCall : public Call {
 
 struct WriteDimacsCall : public Call {
   std::string path;
-  WriteDimacsCall (const string &p, bool min_max_var)
-      : Call (READ_DIMACS, min_max_var), path (p) {}
+  WriteDimacsCall (const string &p, int min_max_var)
+      : Call (WRITE_DIMACS, min_max_var), path (p) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (delay) {
@@ -3956,11 +3923,67 @@ struct WriteDimacsCall : public Call {
     } else {
       s->read_dimacs (path.c_str (), arg);
     }
-    (void) (extendmap);
   }
   void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
   Call *copy () { return new WriteDimacsCall (path, arg); }
   const char *keyword () { return "write_dimacs"; }
+};
+
+struct ReadSolutionCall : public Call {
+  std::string path;
+  ReadSolutionCall (const string &p) : Call (READ_SOLUTION), path (p) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->read_solution (path.c_str ());
+    }
+  }
+  void print (ostream &o) { o << keyword () << ' ' << path; }
+  Call *copy () { return new ReadSolutionCall (path); }
+  const char *keyword () { return "read_solution"; }
+};
+
+struct WriteExtensionCall : public Call {
+  std::string path;
+  WriteExtensionCall (const string &p) : Call (WRITE_EXTENSION), path (p) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->write_extension (path.c_str ());
+    }
+  }
+  void print (ostream &o) { o << keyword () << ' ' << path; }
+  Call *copy () { return new WriteExtensionCall (path); }
+  const char *keyword () { return "write_extension"; }
+};
+
+struct CopyCall : public Call {
+  CopyCall () : Call (COPY) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      Solver copy;
+      s->copy (copy);
+    }
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new CopyCall (); }
+  const char *keyword () { return "copy"; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -7605,6 +7628,42 @@ void Reader::parse () {
         error ("additional argument '%s' to 'traverse_witnesses_backward'",
                first);
       c = new TraverseWitnessesBackwardCall ();
+    } else if (!strcmp (keyword, "write_dimacs")) {
+      if (!first)
+        error ("first argument to 'write_dimacs' missing");
+      if (!second)
+        error ("second argument to 'write_dimacs' missing");
+      if (!parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'write_dimacs'", second);
+      if (enforce && val == INT_MIN)
+        error ("invalid second argument '%s' to 'write_dimacs'", second);
+      c = new WriteDimacsCall (first, val);
+    } else if (!strcmp (keyword, "read_dimacs")) {
+      if (!first)
+        error ("first argument to 'read_dimacs' missing");
+      if (!second)
+        error ("second argument to 'read_dimacs' missing");
+      if (!parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'read_dimacs'", second);
+      if (enforce && !(val == 0 || val == 1))
+        error ("non-boolean second argument '%s' to 'read_dimacs'", second);
+      c = new ReadDimacsCall (first, val);
+    } else if (!strcmp (keyword, "write_extension")) {
+      if (!first)
+        error ("first argument to 'write_extension' missing");
+      if (second)
+        error ("additional argument '%s' to 'write_extension'", second);
+      c = new WriteExtensionCall (first);
+    } else if (!strcmp (keyword, "read_solution")) {
+      if (!first)
+        error ("first argument to 'read_solution' missing");
+      if (second)
+        error ("additional argument '%s' to 'read_solution'", second);
+      c = new ReadSolutionCall (first);
+    } else if (!strcmp (keyword, "copy")) {
+      if (first)
+        error ("additional argument '%s' to 'copy'", first);
+      c = new CopyCall ();
     } else if (!strcmp (keyword, "trace_proof")) {
       if (!first)
         error ("first argument to 'trace_proof' missing");

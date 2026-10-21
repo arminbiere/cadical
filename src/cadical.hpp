@@ -1238,6 +1238,7 @@ private:
   bool is_witness (int lit);
 
   friend struct Call;
+  friend struct ReadSolutionCall;
   friend struct ObservedCall;
   friend struct IsWitnessCall;
   friend class MockPropagator;
