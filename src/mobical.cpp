@@ -1036,6 +1036,11 @@ struct Call {
 #ifdef MOBICAL_TERMINATE
     TERMINATE,
 #endif
+
+    TRAVERSE_CLAUSES,
+    TRAVERSE_CONSTRAINT,
+    TRAVERSE_WITNESSES_BACKWARD,
+    TRAVERSE_WITNESSES_FORWARD,
   };
 
   const Type type; // Explicit typing.
@@ -1105,6 +1110,10 @@ struct Call {
     case (Call::UNOBSERVE):
     case (Call::IS_DECISION):
     case (Call::IMPLIED):
+    case (Call::TRAVERSE_CLAUSES):
+    case (Call::TRAVERSE_CONSTRAINT):
+    case (Call::TRAVERSE_WITNESSES_BACKWARD):
+    case (Call::TRAVERSE_WITNESSES_FORWARD):
       return true;
     default:
       return false;
@@ -1219,6 +1228,10 @@ struct Call {
     case (Call::IS_DECISION):
     case (Call::DECLARE):
     case (Call::DECLARE_VARS):
+    case (Call::TRAVERSE_CLAUSES):
+    case (Call::TRAVERSE_CONSTRAINT):
+    case (Call::TRAVERSE_WITNESSES_BACKWARD):
+    case (Call::TRAVERSE_WITNESSES_FORWARD):
       return true;
     default:
       return false;
@@ -1368,6 +1381,9 @@ struct Call {
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
   virtual Call *copy () = 0;
+  virtual void *get_propagator (Solver *&s) {
+    return s->external->propagator;
+  }
 };
 
 /*------------------------------------------------------------------------*/
@@ -2627,7 +2643,7 @@ struct VarsCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2645,7 +2661,7 @@ struct ActiveCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2663,7 +2679,7 @@ struct RedundantCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2681,7 +2697,7 @@ struct IrredundantCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2699,19 +2715,12 @@ struct ResizeCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
-#ifndef NDEBUG
-      bool has_effect = (s->external->max_var < arg && !arg);
-#endif
       extend_map_to (s, extendmap);
       s->resize (arg);
-#ifndef NDEBUG
-      assert (mobical.donot.extend_map || !has_effect ||
-              extendmap->map.back () == s->external->max_var);
-#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
@@ -2727,7 +2736,7 @@ struct DeclareMoreVariablesCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -2738,7 +2747,6 @@ struct DeclareMoreVariablesCall : public Call {
           s->declare_more_variables (arg);
       // check that our mapping from trace literals to external literals
       // matchs the `declare_more_variables` result.
-      assert (!arg || i == s->external->max_var);
       assert (!arg || mobical.donot.extend_map ||
               extendmap->map.back () == i);
     }
@@ -2754,7 +2762,7 @@ struct DeclareOneMoreVariableCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -2763,7 +2771,6 @@ struct DeclareOneMoreVariableCall : public Call {
       int i =
 #endif
           s->declare_one_more_variable ();
-      assert (i == s->external->max_var);
       assert (mobical.donot.extend_map || extendmap->map.back () == i);
     }
   }
@@ -2778,7 +2785,7 @@ struct UnPhaseCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2795,7 +2802,7 @@ struct PhaseCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2812,7 +2819,7 @@ struct SetCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -2832,7 +2839,7 @@ struct ConfigureCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -2851,7 +2858,7 @@ struct LimitCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2871,7 +2878,7 @@ struct OptimizeCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2908,7 +2915,7 @@ struct AddCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2925,7 +2932,7 @@ struct ConstrainCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -2985,7 +2992,7 @@ struct IsWitnessCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3003,7 +3010,7 @@ struct ObservedCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3022,7 +3029,7 @@ struct UnObserveCall : public Call {
     if (mobical.donot.mock_propagator) {
       if (delay) {
         ReplayPropagator *rp =
-            static_cast<ReplayPropagator *> (s->external->propagator);
+            static_cast<ReplayPropagator *> (get_propagator (s));
         assert (rp);
         rp->push_action (this);
       } else {
@@ -3030,7 +3037,7 @@ struct UnObserveCall : public Call {
       }
     } else {
       MockPropagator *mp =
-          static_cast<MockPropagator *> (s->external->propagator);
+          static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
       mp->remove_observed (map_arg (s, extendmap));
     }
@@ -3047,7 +3054,7 @@ struct ObserveCall : public Call {
     if (mobical.donot.mock_propagator) {
       if (delay) {
         ReplayPropagator *rp =
-            static_cast<ReplayPropagator *> (s->external->propagator);
+            static_cast<ReplayPropagator *> (get_propagator (s));
         assert (rp);
         rp->push_action (this);
       } else {
@@ -3056,7 +3063,7 @@ struct ObserveCall : public Call {
     } else {
       assert (!delay);
       MockPropagator *mp =
-          static_cast<MockPropagator *> (s->external->propagator);
+          static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
       mp->add_observed (map_arg (s, extendmap));
     }
@@ -3072,7 +3079,7 @@ struct ForceBacktrackCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3090,7 +3097,7 @@ struct ForceUnassignCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3108,7 +3115,7 @@ struct IsDecisionCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3126,7 +3133,7 @@ struct CBHasClauseCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3141,7 +3148,7 @@ struct CBAddClauseCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3156,7 +3163,7 @@ struct CBAddReasonCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3171,7 +3178,7 @@ struct CBCheckModelCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
 
     rp->push_action (this);
@@ -3187,7 +3194,7 @@ struct CBPropagateCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3202,7 +3209,7 @@ struct CBDecideCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3217,7 +3224,7 @@ struct NotifyAssignmentCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3233,7 +3240,7 @@ struct NotifyBatchAssignmentCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3248,7 +3255,7 @@ struct NotifyBacktrackCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3263,7 +3270,7 @@ struct NotifyLevelCall : public Call {
     assert (delay);
     Call::execute (s, extendmap, delay);
     ReplayPropagator *rp =
-        static_cast<ReplayPropagator *> (s->external->propagator);
+        static_cast<ReplayPropagator *> (get_propagator (s));
     assert (rp);
     rp->push_action (this);
   }
@@ -3277,8 +3284,7 @@ struct MockForceCall : public Call {
       : Call (FORCE, l, 0, 0, v), forcetype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp =
-        static_cast<MockPropagator *> (s->external->propagator);
+    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
     assert (mp);
     mp->push_force (map_arg (s, extendmap, false), forcetype, val);
   }
@@ -3295,8 +3301,7 @@ struct LemmaCall : public Call {
       : Call (LEMMA, l, 0, 0, v), lemmatype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp =
-        static_cast<MockPropagator *> (s->external->propagator);
+    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
     assert (mp);
     mp->push_lemma_lit (map_arg (s, extendmap, false), lemmatype, val);
   }
@@ -3313,8 +3318,7 @@ struct DecideCall : public Call {
   DecideCall (int l, int v) : Call (DECIDE, l, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp =
-        static_cast<MockPropagator *> (s->external->propagator);
+    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
     assert (mp);
     mp->push_decide_lit (map_arg (s, extendmap, false), val);
   }
@@ -3330,7 +3334,7 @@ struct DisconnectCall : public Call {
     Call::execute (s, extendmap, delay);
     if (!mobical.donot.mock_propagator) {
       MockPropagator *mp =
-          static_cast<MockPropagator *> (s->external->propagator);
+          static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
       s->disconnect_fixed_listener ();
       s->disconnect_external_propagator ();
@@ -3338,13 +3342,13 @@ struct DisconnectCall : public Call {
       mobical.mock_pointer = 0;
     } else {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       s->disconnect_external_propagator ();
       delete rp;
       mobical.replay_pointer = 0;
     }
-    assert (!s->external->propagator);
+    assert (!get_propagator (s));
     (void) (extendmap);
   }
   void print (ostream &o) {
@@ -3362,7 +3366,7 @@ struct AssumeCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3380,7 +3384,7 @@ struct SolveCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3399,7 +3403,7 @@ struct SimplifyCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3418,7 +3422,7 @@ struct PropagateAssumptionsCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3437,7 +3441,7 @@ struct ImpliedCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3459,7 +3463,7 @@ struct ResetAssumptionsCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3479,7 +3483,7 @@ struct ResetObservedCall : public Call {
     if (mobical.donot.mock_propagator) {
       if (delay) {
         ReplayPropagator *rp =
-            static_cast<ReplayPropagator *> (s->external->propagator);
+            static_cast<ReplayPropagator *> (get_propagator (s));
         assert (rp);
         rp->push_action (this);
       } else {
@@ -3487,7 +3491,7 @@ struct ResetObservedCall : public Call {
       }
     } else {
       MockPropagator *mp =
-          static_cast<MockPropagator *> (s->external->propagator);
+          static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
       mp->reset_observed ();
     }
@@ -3504,7 +3508,7 @@ struct LookaheadCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3535,7 +3539,7 @@ struct ValCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3558,7 +3562,7 @@ struct FlipCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3581,7 +3585,7 @@ struct FlippableCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3604,7 +3608,7 @@ struct FixedCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -3621,7 +3625,7 @@ struct FailedCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3644,7 +3648,7 @@ struct ConcludeCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3666,7 +3670,7 @@ struct FreezeCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -3683,7 +3687,7 @@ struct MeltCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
@@ -3700,7 +3704,7 @@ struct FrozenCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -3717,7 +3721,7 @@ struct DumpCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -3735,7 +3739,7 @@ struct StatsCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else
@@ -3754,7 +3758,7 @@ struct TraceProofCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3773,7 +3777,7 @@ struct FlushProofTraceCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
@@ -3792,7 +3796,7 @@ struct CloseProofTraceCall : public Call {
     Call::execute (s, extendmap, delay);
     if (delay) {
       ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (s->external->propagator);
+          static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
     } else {
