@@ -1041,6 +1041,12 @@ struct Call {
     TRAVERSE_CONSTRAINT,
     TRAVERSE_WITNESSES_BACKWARD,
     TRAVERSE_WITNESSES_FORWARD,
+
+    READ_DIMACS,
+    READ_SOLUTION,
+    WRITE_DIMACS,
+    WRITE_EXTENSION,
+    COPY,
   };
 
   const Type type; // Explicit typing.
@@ -1114,6 +1120,11 @@ struct Call {
     case (Call::TRAVERSE_CONSTRAINT):
     case (Call::TRAVERSE_WITNESSES_BACKWARD):
     case (Call::TRAVERSE_WITNESSES_FORWARD):
+    case (Call::READ_DIMACS):
+    case (Call::READ_SOLUTION):
+    case (Call::WRITE_DIMACS):
+    case (Call::WRITE_EXTENSION):
+    case (Call::COPY):
       return true;
     default:
       return false;
@@ -1232,6 +1243,11 @@ struct Call {
     case (Call::TRAVERSE_CONSTRAINT):
     case (Call::TRAVERSE_WITNESSES_BACKWARD):
     case (Call::TRAVERSE_WITNESSES_FORWARD):
+    case (Call::READ_DIMACS):
+    case (Call::READ_SOLUTION):
+    case (Call::WRITE_DIMACS):
+    case (Call::WRITE_EXTENSION):
+    case (Call::COPY):
       return true;
     default:
       return false;
@@ -2746,7 +2762,7 @@ struct DeclareMoreVariablesCall : public Call {
 #endif
           s->declare_more_variables (arg);
       // check that our mapping from trace literals to external literals
-      // matchs the `declare_more_variables` result.
+      // matches the `declare_more_variables` result.
       assert (!arg || mobical.donot.extend_map ||
               extendmap->map.back () == i);
     }
@@ -3023,7 +3039,7 @@ struct ObservedCall : public Call {
 };
 
 struct UnObserveCall : public Call {
-  UnObserveCall (int l) : Call (OBSERVE, l) {}
+  UnObserveCall (int l) : Call (UNOBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
     if (mobical.donot.mock_propagator) {
@@ -3036,6 +3052,7 @@ struct UnObserveCall : public Call {
         s->remove_observed_var (map_arg (s, extendmap));
       }
     } else {
+      assert (!delay);
       MockPropagator *mp =
           static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
@@ -3807,6 +3824,143 @@ struct CloseProofTraceCall : public Call {
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new CloseProofTraceCall (); }
   const char *keyword () { return "close_proof_trace"; }
+};
+
+class MockClauseIterator : public ClauseIterator {
+public:
+  ~MockClauseIterator () {}
+  bool clause (const std::vector<int> &) { return true; };
+};
+
+struct TraverseClausesCall : public Call {
+  TraverseClausesCall () : Call (TRAVERSE_CLAUSES) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      MockClauseIterator m;
+      s->traverse_clauses (m);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new TraverseClausesCall (); }
+  const char *keyword () { return "traverse_clauses"; }
+};
+
+struct TraverseConstraintCall : public Call {
+  TraverseConstraintCall () : Call (TRAVERSE_CONSTRAINT) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      MockClauseIterator m;
+      s->traverse_constraint (m);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new TraverseConstraintCall (); }
+  const char *keyword () { return "traverse_constraint"; }
+};
+
+class MockWitnessIterator : public WitnessIterator {
+public:
+  ~MockWitnessIterator () {}
+  bool witness (const std::vector<int> &, const std::vector<int> &,
+                int64_t) {
+    return true;
+  };
+};
+
+struct TraverseWitnessesBackwardCall : public Call {
+  TraverseWitnessesBackwardCall () : Call (TRAVERSE_WITNESSES_BACKWARD) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      MockWitnessIterator m;
+      s->traverse_witnesses_backward (m);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new TraverseWitnessesBackwardCall (); }
+  const char *keyword () { return "traverse_witnesses_backward"; }
+};
+
+struct TraverseWitnessesForwardCall : public Call {
+  TraverseWitnessesForwardCall () : Call (TRAVERSE_WITNESSES_FORWARD) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      MockWitnessIterator m;
+      s->traverse_witnesses_forward (m);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new TraverseWitnessesForwardCall (); }
+  const char *keyword () { return "traverse_witnesses_forward"; }
+};
+
+struct ReadDimacsCall : public Call {
+  std::string path;
+  ReadDimacsCall (const string &p, bool strict)
+      : Call (READ_DIMACS, strict), path (p) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->read_dimacs (path.c_str (), arg);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
+  Call *copy () { return new ReadDimacsCall (path, arg); }
+  const char *keyword () { return "read_dimacs"; }
+};
+
+struct WriteDimacsCall : public Call {
+  std::string path;
+  WriteDimacsCall (const string &p, bool min_max_var)
+      : Call (READ_DIMACS, min_max_var), path (p) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->read_dimacs (path.c_str (), arg);
+    }
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
+  Call *copy () { return new WriteDimacsCall (path, arg); }
+  const char *keyword () { return "write_dimacs"; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -7433,6 +7587,24 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'reset'", first);
       c = new ResetCall ();
+    } else if (!strcmp (keyword, "traverse_clauses")) {
+      if (first)
+        error ("additional argument '%s' to 'traverse_clauses'", first);
+      c = new TraverseClausesCall ();
+    } else if (!strcmp (keyword, "traverse_constraint")) {
+      if (first)
+        error ("additional argument '%s' to 'traverse_constraint'", first);
+      c = new TraverseConstraintCall ();
+    } else if (!strcmp (keyword, "traverse_witnesses_forward")) {
+      if (first)
+        error ("additional argument '%s' to 'traverse_witnesses_forward'",
+               first);
+      c = new TraverseWitnessesForwardCall ();
+    } else if (!strcmp (keyword, "traverse_witnesses_backward")) {
+      if (first)
+        error ("additional argument '%s' to 'traverse_witnesses_backward'",
+               first);
+      c = new TraverseWitnessesBackwardCall ();
     } else if (!strcmp (keyword, "trace_proof")) {
       if (!first)
         error ("first argument to 'trace_proof' missing");
