@@ -11,6 +11,7 @@
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 
@@ -952,95 +953,89 @@ void Mobical::warning (const char *fmt, ...) {
 struct Call {
 
   enum Type : uint64_t {
+    INIT,
+    RESET,
+    SET,
+    CONFIGURE,
 
-    // clang-format off
+    VARS,
+    ACTIVE,
+    REDUNDANT,
+    IRREDUNDANT,
+    RESIZE,
+    DECLARE,
+    DECLARE_VARS,
+    RESERVE,
 
-    INIT                =   0 ,
-    RESET               =   1 ,
-    SET                 =   2 ,
-    CONFIGURE           =   3 ,
-                        
-    VARS                =   4 ,
-    ACTIVE              =   5 ,
-    REDUNDANT           =   6 ,
-    IRREDUNDANT         =   7 ,
-    RESIZE              =   8 ,
-    DECLARE             =   9 ,
-    DECLARE_VARS        =  10 ,
-    RESERVE             =  11 ,
-                        
-    PHASE               =  12 ,
-    UNPHASE             =  13 ,
-                        
-    ADD                 =  14 ,
-    ASSUME              =  15 ,
-    CONSTRAIN           =  16 ,
-    RESET_ASSUMPTIONS   =  17 ,
-                        
-    SOLVE               =  18 ,
-    SIMPLIFY            =  19 ,
-    LOOKAHEAD           =  20 ,
-    CUBING              =  21 ,
-    PROPAGATE           =  22 ,
-                        
-    VAL                 =  24 ,
-    FLIP                =  25 ,
-    FLIPPABLE           =  26 ,
-    FAILED              =  27 ,
-    FIXED               =  28 ,
-    IMPLIED             =  29 ,
-                        
-    FREEZE              =  30 ,
-    FROZEN              =  31 ,
-    MELT                =  32 ,
-                        
-    LIMIT               =  33 ,
-    OPTIMIZE            =  34 ,
-                        
-    DUMP                =  35 ,
-    STATS               =  36 ,
-                        
-    CONNECT             =  37 ,
-    OBSERVE             =  38 ,
-    UNOBSERVE           =  39 ,
-    RESET_OBSERVED      =  40 ,
-    IS_DECISION         =  41 ,
-    IS_WITNESS          =  42 ,
-    OBSERVED            =  43 ,
-    FORCE_BACKTRACK     =  44 ,
-    // TODO FORCE_UNASSIGN
-    
-    LEMMA               =  45 ,
-    DECIDE              =  46 ,
-    FORCE               =  47 ,
-    
-    CB_DECIDE           =  48 ,
-    CB_PROPAGATE        =  49 ,
-    CB_HAS_CLAUSE       =  50 ,
-    CB_ADD_CLAUSE       =  51 ,
-    CB_ADD_REASON       =  52 ,
-    CB_CHECK_MODEL      =  53 ,
-    NOTIFY_ASSIGNMENT   =  54 ,
-    NOTIFY_BACKTRACK    =  55 ,
-    NOTIFY_LEVEL        =  56 ,
+    PHASE,
+    UNPHASE,
 
-    CONCLUDE            =  57 ,
-    DISCONNECT          =  58 ,
-                        
-    TRACEPROOF          =  59 ,
-    FLUSHPROOFTRACE     =  60 ,
-    CLOSEPROOFTRACE     =  61 ,
+    ADD,
+    ASSUME,
+    CONSTRAIN,
+    RESET_ASSUMPTIONS,
+
+    SOLVE,
+    SIMPLIFY,
+    LOOKAHEAD,
+    CUBING,
+    PROPAGATE,
+
+    VAL,
+    FLIP,
+    FLIPPABLE,
+    FAILED,
+    FIXED,
+    IMPLIED,
+
+    FREEZE,
+    FROZEN,
+    MELT,
+
+    LIMIT,
+    OPTIMIZE,
+
+    DUMP,
+    STATS,
+
+    CONNECT,
+    OBSERVE,
+    UNOBSERVE,
+    RESET_OBSERVED,
+    IS_DECISION,
+    IS_WITNESS,
+    OBSERVED,
+    FORCE_BACKTRACK,
+    FORCE_UNASSIGN,
+
+    LEMMA,
+    DECIDE,
+    FORCE,
+
+    CB_DECIDE,
+    CB_PROPAGATE,
+    CB_HAS_CLAUSE,
+    CB_ADD_CLAUSE,
+    CB_ADD_REASON,
+    CB_CHECK_MODEL,
+    NOTIFY_ASSIGNMENT,
+    NOTIFY_BACKTRACK,
+    NOTIFY_LEVEL,
+
+    CONCLUDE,
+    DISCONNECT,
+
+    TRACEPROOF,
+    FLUSHPROOFTRACE,
+    CLOSEPROOFTRACE,
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC            =  62 ,
-    LEAKALLOC           =  63 ,
+    MAXALLOC,
+    LEAKALLOC,
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE           =  64 ,
+    TERMINATE,
 #endif
-
-    // clang-format on
-
   };
 
   const Type type; // Explicit typing.
@@ -1103,6 +1098,7 @@ struct Call {
     case (Call::DECIDE):
     case (Call::FORCE):
     case (Call::FORCE_BACKTRACK):
+    case (Call::FORCE_UNASSIGN):
     case (Call::RESET_ASSUMPTIONS):
     case (Call::OBSERVE):
     case (Call::OBSERVED):
@@ -1134,6 +1130,7 @@ struct Call {
     case (Call::LEMMA):
     case (Call::DECIDE):
     case (Call::FORCE):
+    case (Call::FORCE_UNASSIGN):
       return true;
     default:
       return false;
@@ -1161,6 +1158,7 @@ struct Call {
     case (Call::NOTIFY_BACKTRACK):
     case (Call::NOTIFY_LEVEL):
     case (Call::FORCE_BACKTRACK):
+    case (Call::FORCE_UNASSIGN):
       return true;
     default:
       return false;
@@ -1226,6 +1224,7 @@ struct Call {
       return false;
     }
   }
+  // lit_type calls that can declare variables
   virtual bool extendmap_type () {
     switch (type) {
     case (Call::PHASE):
@@ -1234,6 +1233,7 @@ struct Call {
     case (Call::ASSUME):
     case (Call::FREEZE):
     case (Call::CONSTRAIN):
+      assert (lit_type ());
       return true;
     default:
       return false;
@@ -1244,6 +1244,7 @@ struct Call {
     case (Call::LEMMA):
     case (Call::CONSTRAIN):
     case (Call::ADD):
+      assert (lit_type ());
       return true;
     default:
       return false;
@@ -3081,6 +3082,24 @@ struct ForceBacktrackCall : public Call {
   void print (ostream &o) { o << keyword () << " " << arg; }
   Call *copy () { return new ForceBacktrackCall (arg); }
   const char *keyword () { return "force_backtrack"; }
+};
+
+struct ForceUnassignCall : public Call {
+  ForceUnassignCall (int l) : Call (FORCE_UNASSIGN, l) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (s->external->propagator);
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      s->force_unassign (map_arg (s, extendmap));
+    }
+  }
+  void print (ostream &o) { o << keyword () << " " << arg; }
+  Call *copy () { return new ForceUnassignCall (arg); }
+  const char *keyword () { return "force_unassign"; }
 };
 
 struct IsDecisionCall : public Call {
@@ -7138,6 +7157,17 @@ void Reader::parse () {
         error ("additional argument '%s' to 'force_backtrack %d'", second,
                lit);
       c = new ForceBacktrackCall (lit);
+    } else if (!strcmp (keyword, "force_unassign")) {
+      if (!first)
+        error ("argument to 'force_unassign' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'force_unassign'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'force_unassign'", lit);
+      if (second)
+        error ("additional argument '%s' to 'force_unassign %d'", second,
+               lit);
+      c = new ForceUnassignCall (lit);
     } else if (!strcmp (keyword, "cb_add_reason_clause_lit")) {
       if (!first)
         error ("argument to 'cb_add_reason_clause_lit' missing");
