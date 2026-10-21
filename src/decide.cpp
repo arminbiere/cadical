@@ -414,6 +414,21 @@ int Internal::decide_constraint () {
   int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
   int res = 0;
   if (!cat_res) {
+    // TODO: bump kitten (and sort before)
+    // sort constraint_vars according to current decision heuristic
+    if (opts.constraintsort) {
+      stats.constraints_sorted++;
+      if (use_scores ()) {
+        LOG ("sorting constraint variables based on scores");
+        sort (constraint_vars.begin (), constraint_vars.end (),
+              bigger_score (this));
+      } else {
+        LOG ("sorting constraint variables based on queue idx");
+        sort (constraint_vars.begin (), constraint_vars.end (),
+              bigger_queue (this));
+      }
+      last_constraint_idx = 0;
+    }
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
@@ -430,20 +445,6 @@ int Internal::decide_constraint () {
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
         return 0;
-      }
-      // sort constraint_vars according to current decision heuristic
-      if (opts.constraintsort) {
-        stats.constraints_sorted++;
-        if (use_scores ()) {
-          LOG ("sorting constraint variables based on scores");
-          sort (constraint_vars.begin (), constraint_vars.end (),
-                bigger_score (this));
-        } else {
-          LOG ("sorting constraint variables based on queue idx");
-          sort (constraint_vars.begin (), constraint_vars.end (),
-                bigger_queue (this));
-        }
-        last_constraint_idx = 0;
       }
     } else {
       // Kitten was terminated

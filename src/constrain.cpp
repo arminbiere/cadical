@@ -344,6 +344,7 @@ void Internal::analyze_failing_constraint (int failed) {
       // not using constraints
       proof->add_assumption_clause (id, clause, lrat_chain, false);
     }
+    // TODO: bump kitten
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
                                            clause.size (), clause.data ());
     lrat_chain.clear ();
