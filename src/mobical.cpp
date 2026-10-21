@@ -3921,7 +3921,7 @@ struct WriteDimacsCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->read_dimacs (path.c_str (), arg);
+      s->write_dimacs (path.c_str (), arg);
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
