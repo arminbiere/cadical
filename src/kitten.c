@@ -1190,6 +1190,7 @@ void completely_backtrack_to_root_level (kitten *kitten) {
       continue;
     unassign (kitten, values, unit);
   }
+  assert (kitten->unassigned == kitten->lits / 2);
   kitten->propagated = 0;
   kitten->level = 0;
   check_queue (kitten);
@@ -2433,13 +2434,13 @@ void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *kitten,
   unsigned iidx = kitten->import[eidx];
   if (!iidx)
     return;
+  iidx--;
+  // completely_backtrack_to_root_level (kitten);
   LOG ("bumping signed external literal %d = %d (=%d) = %d", signed_elit,
        elit, eidx, iidx);
   kitten->statistics.kitten_bumped++;
   dequeue (kitten, iidx);
   enqueue (kitten, iidx);
-  kink *links = kitten->links;
-  kink *link = links + iidx;
-  if (link->stamp > links[kitten->queue.search].stamp)
-    update_search (kitten, iidx);
+  update_search (kitten, iidx);
+  // UPDATE_STATUS (0);
 }
