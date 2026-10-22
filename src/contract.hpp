@@ -5,6 +5,7 @@
 #ifndef NCONTRACTS
 /*------------------------------------------------------------------------*/
 
+#ifndef RCONTRACTS
 // If the user violates API contracts while calling functions declared in
 // 'cadical.hpp' and implemented in 'solver.cpp' then an error is reported.
 // Currently we also force aborting the program.  In the future it might be
@@ -22,6 +23,13 @@
     fflush (stderr); \
     abort (); \
   } while (0)
+
+#else
+#define CONTRACT_VIOLATED(...) \
+  do { \
+    return; \
+  } while (0)
+#endif
 
 #define CALLBACK_VIOLATED(NAME, VALUE, ...) \
   do { \
