@@ -27,6 +27,7 @@ struct KITTEN_NAMESPACE (kitten_statistics) {
   uint64_t kitten_conflicts;
   uint64_t kitten_decisions;
   uint64_t kitten_propagations;
+  uint64_t kitten_bumped;
   uint64_t kitten_implicant;
   uint64_t kitten_ticks;
   uint64_t kitten_unknown;
@@ -50,7 +51,7 @@ void KITTEN_NAMESPACE (kitten_shuffle_clauses) (kitten *);
 void KITTEN_NAMESPACE (kitten_flip_phases) (kitten *);
 void KITTEN_NAMESPACE (kitten_randomize_phases) (kitten *);
 
-void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *);
+void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *, int lit);
 
 void KITTEN_NAMESPACE (kitten_assume) (kitten *, unsigned lit);
 void KITTEN_NAMESPACE (kitten_assume_signed) (kitten *, int lit);

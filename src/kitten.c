@@ -2424,8 +2424,8 @@ void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
   */
 }
 
-void KITTEN_NAMESPACE (bump_signed_literal) (kitten *kitten,
-                                             int signed_elit) {
+void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *kitten,
+                                                    int signed_elit) {
   const unsigned elit = int2u (signed_elit);
   const unsigned eidx = elit / 2;
   if (eidx >= kitten->evars)
@@ -2433,10 +2433,9 @@ void KITTEN_NAMESPACE (bump_signed_literal) (kitten *kitten,
   unsigned iidx = kitten->import[eidx];
   if (!iidx)
     return;
-  const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
-  if (KITTEN_NAMESPACE (kitten_fixed) (kitten, elit))
-    return;
-  LOG ("bumping external literal %d (=%d)", elit, kelit);
+  LOG ("bumping signed external literal %d = %d (=%d) = %d", signed_elit,
+       elit, eidx, iidx);
+  kitten->statistics.kitten_bumped++;
   dequeue (kitten, iidx);
   enqueue (kitten, iidx);
   kink *links = kitten->links;

@@ -429,6 +429,12 @@ int Internal::decide_constraint () {
       }
       last_constraint_idx = 0;
     }
+    if (opts.constraintbump == 2) {
+      for (auto cv = constraint_vars.rbegin ();
+           cv != constraint_vars.rend (); cv++) {
+        KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, *cv));
+      }
+    }
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);

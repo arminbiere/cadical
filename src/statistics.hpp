@@ -89,6 +89,7 @@
   STATISTIC (kitten_conflicts    ,   3, NOTHING, 0, 0) \
   STATISTIC (kitten_decisions    ,   3, NOTHING, 0, 0) \
   STATISTIC (kitten_implicant    ,   3, NOTHING, 0, 0) \
+  STATISTIC (kitten_bumped       ,   3, NOTHING, 0, 0) \
   STATISTIC (kitten_propagations ,   3, NOTHING, 0, 0) \
   STATISTIC (kitten_ticks        ,   3, NOTHING, 0, 0) \
   STATISTIC (kitten_unknown      ,   3, NOTHING, 0, 0) \

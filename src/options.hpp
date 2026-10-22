@@ -75,7 +75,7 @@ OPTION( congruenceite,        1,  0,  1,0,0,1, "extract ITE gates") \
 OPTION( congruencexor,        1,  0,  1,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,   4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,  1,  1,5e6,0,0,1, "XOR gate round") \
-OPTION( constraintbump,       1,  0,  1,0,0,1, "bump kitten literals based on learned clauses") \
+OPTION( constraintbump,       1,  0,  2,0,0,1, "bump kitten literals (1=based on learned clauses, 2=based on constraint var)") \
 OPTION( constraintflip,       1,  0,  1,0,0,1, "try to flip kitten model to resolve conflicts") \
 OPTION( constraintprime,      1,  0,  1,0,0,1, "try to shorten kitten model") \
 OPTION( constraintsort,       1,  0,  1,0,0,1, "sort constraint variables when kitten model is recomputed") \

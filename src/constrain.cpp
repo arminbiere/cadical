@@ -345,6 +345,11 @@ void Internal::analyze_failing_constraint (int failed) {
       proof->add_assumption_clause (id, clause, lrat_chain, false);
     }
     // TODO: bump kitten
+    if (opts.constraintbump == 1) {
+      for (auto &lit : clause) {
+        KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, lit));
+      }
+    }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
                                            clause.size (), clause.data ());
     lrat_chain.clear ();
