@@ -1179,7 +1179,7 @@ void Solver::disconnect_fixed_listener () {
 /*===== IPASIR-UP BEGIN ==================================================*/
 
 void Solver::connect_external_propagator (ExternalPropagator *propagator) {
-  TRACE (connect_external_propagator, "connect_external_propagator");
+  TRACE (connect_propagator, "connect_external_propagator");
   // LOG_API_CALL_BEGIN ("connect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
@@ -1200,7 +1200,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
 }
 
 void Solver::disconnect_external_propagator () {
-  TRACE (disconnect_external_propagator, "disconnect_external_propagator");
+  TRACE (disconnect_propagator, "disconnect_external_propagator");
   // LOG_API_CALL_BEGIN ("disconnect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (external->propagator,
@@ -1742,7 +1742,7 @@ bool Solver::traverse_constraint (ClauseIterator &it) const {
 }
 
 bool Solver::traverse_witnesses_backward (WitnessIterator &it) const {
-  TRACE (traverse_witnesses_backward, "traverse_witnesses_backward");
+  TRACE (traverse_witness_backward, "traverse_witnesses_backward");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_non_frozen_units_as_witnesses (it) &&
              external->traverse_witnesses_backward (it);
@@ -1751,7 +1751,7 @@ bool Solver::traverse_witnesses_backward (WitnessIterator &it) const {
 }
 
 bool Solver::traverse_witnesses_forward (WitnessIterator &it) const {
-  TRACE (traverse_witnesses_forward, "traverse_witnesses_forward");
+  TRACE (traverse_witness_forward, "traverse_witnesses_forward");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_witnesses_forward (it) &&
              external->traverse_all_non_frozen_units_as_witnesses (it);

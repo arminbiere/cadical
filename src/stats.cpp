@@ -31,6 +31,7 @@ Stats::Stats () {
 // PREFIX, NAME, SPACE, NUM, SPACE, REF, SPACE, SYMBOL, SPACE, PRINT
 // 2 + 22 + 1 + 15 + 1 + 11 + 1 + 3 + 1 + 21 = 80
 #define NAME_OFFSET "22"
+#define VERBOSE_NAME_OFFSET "34"
 #define NUM_OFFSET "15"
 #define REF_OFFSET "11.2"
 #define SYMBOL_OFFSET "3"
@@ -52,7 +53,10 @@ Stats::Stats () {
     const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
     const char *SAVED_PRINT = (const char *) (PRINT); \
-    if (SYMBOL == 0) \
+    if (VERBOSE == 4) \
+      MSG ("%-" VERBOSE_NAME_OFFSET "s %" NUM_OFFSET PRId64, NAME ":", \
+           NUM); \
+    else if (SYMBOL == 0) \
       MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64, NAME ":", NUM); \
     else \
       MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 " %" REF_OFFSET \
