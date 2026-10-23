@@ -583,11 +583,16 @@ enum CallType : uint64_t {
   WRITE_DIMACS,
   WRITE_EXTENSION,
   COPY,
-  INVALID_TYPE,
+
+  INVALID_TYPE, // keep this last
 };
 
 struct Shared {
-  int64_t call_type[CallType::INVALID_TYPE];
+  int64_t call_type_executed[CallType::INVALID_TYPE];
+  int64_t call_type_delayed[CallType::INVALID_TYPE];
+#ifdef EXCEPTIONS
+  int64_t call_type_caught[CallType::INVALID_TYPE];
+#endif
   int64_t executed;
   int64_t solved;
   int64_t incremental;
@@ -1401,6 +1406,10 @@ struct Call {
     }
     assert (!executed);
     executed = !delay;
+    if (!delay)
+      mobical.shared->call_type_executed[type]++;
+    else
+      mobical.shared->call_type_delayed[type]++;
   }
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
@@ -1409,7 +1418,7 @@ struct Call {
     return s->external->propagator;
   }
 #ifdef EXCEPTIONS
-  virtual void caught () {}
+  virtual void caught () { mobical.shared->call_type_caught[type]++; }
   virtual bool catching () { return !mobical.donot.catching; }
 #endif
 };
@@ -1428,6 +1437,97 @@ enum MockForceType {
   MF_CB_ADD_REASON_CLAUSE_LIT,
   LAST_MOCK_FORCE_TYPE,
 };
+
+static const char *ct_to_str (CallType type) {
+  // clang-format off
+  return (type == INIT ? "INIT"
+       : (type == RESET ? "" 
+       : (type == SET ? ""
+       : (type == CONFIGURE ? ""
+       : (type == VARS ? ""
+       : (type == ACTIVE ? ""
+       : (type == REDUNDANT ? ""
+       : (type == IRREDUNDANT ? ""
+       : (type == RESIZE ? ""
+       : (type == DECLARE ? ""
+       : (type == DECLARE_VARS ? ""
+       : (type == RESERVE ? ""
+       : (type == PHASE ? ""
+       : (type == UNPHASE ? ""
+       : (type == ADD ? ""
+       : (type == ASSUME ? ""
+       : (type == CONSTRAIN ? ""
+       : (type == RESET_ASSUMPTIONS ? ""
+       : (type == SOLVE ? ""
+       : (type == SIMPLIFY ? ""
+       : (type == LOOKAHEAD ? ""
+       : (type == CUBING ? ""
+       : (type == PROPAGATE ? ""
+       : (type == VAL ? ""
+       : (type == FLIP ? ""
+       : (type == FLIPPABLE ? ""
+       : (type == FAILED ? ""
+       : (type == FIXED ? ""
+       : (type == IMPLIED ? ""
+       : (type == FREEZE ? ""
+       : (type == FROZEN ? ""
+       : (type == MELT ? ""
+       : (type == LIMIT ? ""
+       : (type == OPTIMIZE ? ""
+       : (type == DUMP ? ""
+       : (type == STATS ? ""
+       : (type == CONNECT ? ""
+       : (type == OBSERVE ? ""
+       : (type == UNOBSERVE ? ""
+       : (type == RESET_OBSERVED ? ""
+       : (type == IS_DECISION ? ""
+       : (type == IS_WITNESS ? ""
+       : (type == OBSERVED ? ""
+       : (type == FORCE_BACKTRACK ? ""
+       : (type == FORCE_UNASSIGN ? ""
+       : (type == LEMMA ? ""
+       : (type == DECIDE ? ""
+       : (type == FORCE ? ""
+       : (type == CB_DECIDE ? ""
+       : (type == CB_PROPAGATE ? ""
+       : (type == CB_HAS_CLAUSE ? ""
+       : (type == CB_ADD_CLAUSE ? ""
+       : (type == CB_ADD_REASON ? ""
+       : (type == CB_CHECK_MODEL ? ""
+       : (type == NOTIFY_ASSIGNMENT ? ""
+       : (type == NOTIFY_BACKTRACK ? ""
+       : (type == NOTIFY_LEVEL ? ""
+       : (type == CONCLUDE ? ""
+       : (type == DISCONNECT ? ""
+       : (type == TRACEPROOF ? ""
+       : (type == FLUSHPROOFTRACE ? ""
+       : (type == CLOSEPROOFTRACE ? ""
+#ifdef MOBICAL_MEMORY
+       : (type == MAXALLOC ? ""
+       : (type == LEAKALLOC ? ""
+#endif
+#ifdef MOBICAL_TERMINATE
+       : (type == TERMINATE ? ""
+#endif
+       : (type == TRAVERSE_CLAUSES ? ""
+       : (type == TRAVERSE_CONSTRAINT ? ""
+       : (type == TRAVERSE_WITNESSES_BACKWARD ? ""
+       : (type == TRAVERSE_WITNESSES_FORWARD ? ""
+       : (type == READ_DIMACS ? ""
+       : (type == READ_SOLUTION ? ""
+       : (type == WRITE_DIMACS ? ""
+       : (type == WRITE_EXTENSION ? ""
+       : (type == COPY ? ""
+       : "INVALID_TYPE")))))))))))
+#ifdef MOBICAL_MEMORY
+       ))
+#endif
+#ifdef MOBICAL_TERMINATE
+       )
+#endif
+       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+  // clang-format on
+}
 
 #ifdef LOGGING
 static const char *mft_to_str (MockForceType type) {
@@ -2995,7 +3095,16 @@ struct ConfigureCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->configure (name);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->configure (name);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->configure (name);
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << name; }
@@ -3012,8 +3121,18 @@ struct LimitCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->limit (name, large_val);
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->limit (name, large_val);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->limit (name, large_val);
+    }
   }
   void print (ostream &o) {
     o << keyword () << ' ' << name << ' ' << large_val;
@@ -3031,8 +3150,18 @@ struct OptimizeCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->optimize (val);
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->optimize (val);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->optimize (val);
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << val; }
   Call *copy () { return new OptimizeCall (val); }
@@ -3067,8 +3196,18 @@ struct AddCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->add (map_arg (s, extendmap));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->add (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->add (map_arg (s, extendmap));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new AddCall (arg); }
@@ -3084,8 +3223,18 @@ struct ConstrainCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->constrain (map_arg (s, extendmap));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->constrain (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->constrain (map_arg (s, extendmap));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ConstrainCall (arg); }
@@ -3098,33 +3247,84 @@ struct ConnectCall : public Call {
     assert (!delay);
     Call::execute (s, extendmap, delay);
     // clean up if there was already one mock propagator
-    if (!mobical.donot.mock_propagator) {
-      assert (!mobical.mock_pointer);
+#ifdef EXCEPTIONS
+    if (catching ()) {
+      if (!mobical.donot.mock_propagator) {
+        try {
+          if (!mobical.mock_pointer) {
 #ifdef LOGGING
-      mobical.mock_pointer =
-          new MockPropagator (s, extendmap, mobical.add_set_log_to_true);
+            mobical.mock_pointer = new MockPropagator (
+                s, extendmap, mobical.add_set_log_to_true);
+#else
+            mobical.mock_pointer = new MockPropagator (s, extendmap);
+#endif
+            s->connect_external_propagator (mobical.mock_pointer);
+            s->connect_fixed_listener (mobical.mock_pointer);
+
+            // FixedAssignmentListener does not replay previous
+            // fixed assignment, collect them here explicitly --
+            // EXPENSIVE In practice FixedAssignmentListener is
+            // there from the beginning if needed, in mobical we do
+            // not want to wire in this.
+
+            mobical.mock_pointer->collect_prev_fixed ();
+          }
+        } catch (std::runtime_error &) {
+          free (mobical.mock_pointer);
+          mobical.mock_pointer = 0;
+          caught ();
+        }
+      } else {
+        try {
+          if (!mobical.replay_pointer) {
+#ifdef LOGGING
+            mobical.replay_pointer = new ReplayPropagator (
+                s, extendmap, mobical.add_set_log_to_true);
+#else
+            mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
+#endif
+            s->connect_external_propagator (mobical.replay_pointer);
+          }
+          catch (std::runtime_error &) {
+            free (mobical.replay_pointer);
+            mobical.replay_pointer = 0;
+            caught ();
+          }
+        }
+      }
+    } else {
+#endif
+      if (!mobical.donot.mock_propagator) {
+        assert (!mobical.mock_pointer);
+#ifdef LOGGING
+        mobical.mock_pointer =
+            new MockPropagator (s, extendmap, mobical.add_set_log_to_true);
 #else
       mobical.mock_pointer = new MockPropagator (s, extendmap);
 #endif
-      s->connect_external_propagator (mobical.mock_pointer);
-      s->connect_fixed_listener (mobical.mock_pointer);
+        s->connect_external_propagator (mobical.mock_pointer);
+        s->connect_fixed_listener (mobical.mock_pointer);
 
-      // FixedAssignmentListener does not replay previous fixed
-      // assignment, collect them here explicitly -- EXPENSIVE In practice
-      // FixedAssignmentListener is there from the beginning if needed, in
-      // mobical we do not want to wire in this.
+        // FixedAssignmentListener does not replay previous fixed
+        // assignment, collect them here explicitly -- EXPENSIVE In
+        // practice FixedAssignmentListener is there from the
+        // beginning if needed, in mobical we do not want to wire in
+        // this.
 
-      mobical.mock_pointer->collect_prev_fixed ();
-    } else {
-      assert (!mobical.replay_pointer);
+        mobical.mock_pointer->collect_prev_fixed ();
+      } else {
+        assert (!mobical.replay_pointer);
 #ifdef LOGGING
-      mobical.replay_pointer =
-          new ReplayPropagator (s, extendmap, mobical.add_set_log_to_true);
+        mobical.replay_pointer = new ReplayPropagator (
+            s, extendmap, mobical.add_set_log_to_true);
 #else
       mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
 #endif
-      s->connect_external_propagator (mobical.replay_pointer);
+        s->connect_external_propagator (mobical.replay_pointer);
+      }
+#ifdef EXCEPTIONS
     }
+#endif
   }
   void print (ostream &o) {
     o << keyword () << " "
@@ -3145,7 +3345,16 @@ struct IsWitnessCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->is_witness (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->is_witness (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->is_witness (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -3163,7 +3372,16 @@ struct ObservedCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->observed (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->observed (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->observed (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -3182,7 +3400,16 @@ struct UnObserveCall : public Call {
         assert (rp);
         rp->push_action (this);
       } else {
-        s->remove_observed_var (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+        if (catching ()) {
+          try {
+            s->remove_observed_var (map_arg (s, extendmap));
+          } catch (std::runtime_error &) {
+            caught ();
+          }
+        } else
+#endif
+          s->remove_observed_var (map_arg (s, extendmap));
       }
     } else {
       assert (!delay);
@@ -3208,7 +3435,16 @@ struct ObserveCall : public Call {
         assert (rp);
         rp->push_action (this);
       } else {
-        s->add_observed_var (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+        if (catching ()) {
+          try {
+            s->add_observed_var (map_arg (s, extendmap));
+          } catch (std::runtime_error &) {
+            caught ();
+          }
+        } else
+#endif
+          s->add_observed_var (map_arg (s, extendmap));
       }
     } else {
       assert (!delay);
@@ -3233,7 +3469,16 @@ struct ForceBacktrackCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->force_backtrack (arg);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->force_backtrack (arg);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->force_backtrack (arg);
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -3251,7 +3496,16 @@ struct ForceUnassignCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->force_unassign (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->force_unassign (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->force_unassign (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -3269,7 +3523,16 @@ struct IsDecisionCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->is_decision (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->is_decision (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->is_decision (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << keyword () << " " << arg; }
@@ -3482,23 +3745,56 @@ struct DisconnectCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     assert (!delay);
     Call::execute (s, extendmap, delay);
-    if (!mobical.donot.mock_propagator) {
-      MockPropagator *mp =
-          static_cast<MockPropagator *> (get_propagator (s));
-      assert (mp);
-      s->disconnect_fixed_listener ();
-      s->disconnect_external_propagator ();
-      delete mp;
-      mobical.mock_pointer = 0;
+#ifdef EXCEPTIONS
+    if (catching ()) {
+      if (!mobical.donot.mock_propagator) {
+        MockPropagator *mp =
+            static_cast<MockPropagator *> (get_propagator (s));
+        if (mp) {
+          try {
+            s->disconnect_fixed_listener ();
+            s->disconnect_external_propagator ();
+            delete mp;
+            mobical.mock_pointer = 0;
+          } catch (std::runtime_error &) {
+            caught ();
+          }
+        }
+      } else {
+        ReplayPropagator *rp =
+            static_cast<ReplayPropagator *> (get_propagator (s));
+        if (rp) {
+          try {
+            s->disconnect_external_propagator ();
+            delete rp;
+            mobical.replay_pointer = 0;
+          } catch (std::runtime_error &) {
+            caught ();
+          }
+        }
+      }
     } else {
-      ReplayPropagator *rp =
-          static_cast<ReplayPropagator *> (get_propagator (s));
-      assert (rp);
-      s->disconnect_external_propagator ();
-      delete rp;
-      mobical.replay_pointer = 0;
+#endif
+      if (!mobical.donot.mock_propagator) {
+        MockPropagator *mp =
+            static_cast<MockPropagator *> (get_propagator (s));
+        assert (mp);
+        s->disconnect_fixed_listener ();
+        s->disconnect_external_propagator ();
+        delete mp;
+        mobical.mock_pointer = 0;
+      } else {
+        ReplayPropagator *rp =
+            static_cast<ReplayPropagator *> (get_propagator (s));
+        assert (rp);
+        s->disconnect_external_propagator ();
+        delete rp;
+        mobical.replay_pointer = 0;
+      }
+      assert (!get_propagator (s));
+#ifdef EXCEPTIONS
     }
-    assert (!get_propagator (s));
+#endif
   }
   void print (ostream &o) {
     o << keyword () << " "
@@ -3519,7 +3815,16 @@ struct AssumeCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->assume (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->assume (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->assume (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
@@ -3537,7 +3842,16 @@ struct SolveCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      res = s->solve ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->solve ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->solve ();
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
@@ -3555,7 +3869,16 @@ struct SimplifyCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      res = s->simplify (arg);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->simplify (arg);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->simplify (arg);
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
@@ -3573,7 +3896,16 @@ struct PropagateAssumptionsCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->propagate ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->propagate ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->propagate ();
     }
   }
   void print (ostream &o) { o << keyword () << " " << res; }
@@ -3592,9 +3924,24 @@ struct ImpliedCall : public Call {
       rp->push_action (this);
     } else {
       std::vector<int> entrailed;
-      if (mobical.donot.enforce || s->state () == State::SATISFIED ||
-          s->state () == State::INCONCLUSIVE)
-        s->implied (entrailed);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->implied (entrailed);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          s->implied (entrailed);
+        else if (s->state () == State::SATISFIED ||
+                 s->state () == State::INCONCLUSIVE)
+          s->implied (entrailed);
+
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3612,7 +3959,16 @@ struct ResetAssumptionsCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->reset_assumptions ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->reset_assumptions ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->reset_assumptions ();
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3631,7 +3987,16 @@ struct ResetObservedCall : public Call {
         assert (rp);
         rp->push_action (this);
       } else {
-        s->reset_observed_vars ();
+#ifdef EXCEPTIONS
+        if (catching ()) {
+          try {
+            s->reset_observed_vars ();
+          } catch (std::runtime_error &) {
+            caught ();
+          }
+        } else
+#endif
+          s->reset_observed_vars ();
       }
     } else {
       MockPropagator *mp =
@@ -3655,7 +4020,16 @@ struct LookaheadCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      res = s->lookahead ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->lookahead ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->lookahead ();
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
@@ -3667,7 +4041,16 @@ struct CubingCall : public Call {
   CubingCall (int r = 1) : Call (CUBING, 0, r) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    (void) s->generate_cubes (arg);
+#ifdef EXCEPTIONS
+    if (catching ()) {
+      try {
+        res = s->lookahead ();
+      } catch (std::runtime_error &) {
+        caught ();
+      }
+    } else
+#endif
+      (void) s->generate_cubes (arg);
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
   Call *copy () { return new CubingCall (res); }
@@ -3684,12 +4067,24 @@ struct ValCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      if (mobical.donot.enforce)
-        res = s->val (map_arg (s, extendmap, false));
-      else if (s->state () == SATISFIED)
-        res = s->val (map_arg (s, extendmap, false));
-      else
-        res = 0;
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->val (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          res = s->val (map_arg (s, extendmap, false));
+        else if (s->state () == SATISFIED)
+          res = s->val (map_arg (s, extendmap, false));
+        else
+          res = 0;
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
@@ -3707,12 +4102,24 @@ struct FlipCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      if (mobical.donot.enforce)
-        res = s->flip (map_arg (s, extendmap, false));
-      else if (s->state () == SATISFIED)
-        res = s->flip (map_arg (s, extendmap, false));
-      else
-        res = 0;
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->flip (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          res = s->flip (map_arg (s, extendmap, false));
+        else if (s->state () == SATISFIED)
+          res = s->flip (map_arg (s, extendmap, false));
+        else
+          res = 0;
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
@@ -3730,12 +4137,24 @@ struct FlippableCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      if (mobical.donot.enforce)
-        res = s->flippable (map_arg (s, extendmap, false));
-      else if (s->state () == SATISFIED)
-        res = s->flippable (map_arg (s, extendmap, false));
-      else
-        res = 0;
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->flippable (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          res = s->flippable (map_arg (s, extendmap, false));
+        else if (s->state () == SATISFIED)
+          res = s->flippable (map_arg (s, extendmap, false));
+        else
+          res = 0;
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
@@ -3752,8 +4171,18 @@ struct FixedCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      res = s->fixed (map_arg (s, extendmap, false));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->fixed (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->fixed (map_arg (s, extendmap, false));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FixedCall (arg, res); }
@@ -3770,12 +4199,24 @@ struct FailedCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      if (mobical.donot.enforce)
-        res = s->failed (map_arg (s, extendmap, false));
-      else if (s->state () == UNSATISFIED)
-        res = s->failed (map_arg (s, extendmap, false));
-      else
-        res = 0;
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->failed (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          res = s->failed (map_arg (s, extendmap, false));
+        else if (s->state () == UNSATISFIED)
+          res = s->failed (map_arg (s, extendmap, false));
+        else
+          res = 0;
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
@@ -3793,10 +4234,22 @@ struct ConcludeCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      if (mobical.donot.enforce)
-        s->conclude ();
-      else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
-        s->conclude ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->conclude ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          s->conclude ();
+        else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
+          s->conclude ();
+#ifdef EXCEPTIONS
+      }
+#endif
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3813,8 +4266,18 @@ struct FreezeCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->freeze (map_arg (s, extendmap));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->freeze (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->freeze (map_arg (s, extendmap));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new FreezeCall (arg); }
@@ -3830,8 +4293,24 @@ struct MeltCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
-      s->melt (map_arg (s, extendmap));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->melt (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (mobical.donot.enforce)
+          s->melt (map_arg (s, extendmap));
+        else if (s->frozen (map_arg (s, extendmap)))
+          s->melt (map_arg (s, extendmap));
+#ifdef EXCEPTIONS
+      }
+#endif
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new MeltCall (arg); }
@@ -3847,8 +4326,18 @@ struct FrozenCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      res = s->frozen (map_arg (s, extendmap, false));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->frozen (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->frozen (map_arg (s, extendmap, false));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
   Call *copy () { return new FrozenCall (arg, res); }
@@ -3864,8 +4353,18 @@ struct DumpCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->dump_cnf ();
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->dump_cnf ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->dump_cnf ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new DumpCall (); }
@@ -3881,8 +4380,18 @@ struct StatsCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->statistics ();
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->statistics ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->statistics ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new StatsCall (); }
@@ -3900,7 +4409,16 @@ struct TraceProofCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->trace_proof (path.c_str ());
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->trace_proof (path.c_str ());
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->trace_proof (path.c_str ());
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path; }
@@ -3918,7 +4436,16 @@ struct FlushProofTraceCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->flush_proof_trace ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->flush_proof_trace ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->flush_proof_trace ();
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3936,7 +4463,16 @@ struct CloseProofTraceCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->close_proof_trace ();
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->close_proof_trace ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->close_proof_trace ();
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3961,7 +4497,16 @@ struct TraverseClausesCall : public Call {
       rp->push_action (this);
     } else {
       MockClauseIterator m;
-      s->traverse_clauses (m);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->traverse_clauses (m);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->traverse_clauses (m);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -3980,7 +4525,16 @@ struct TraverseConstraintCall : public Call {
       rp->push_action (this);
     } else {
       MockClauseIterator m;
-      s->traverse_constraint (m);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->traverse_constraint (m);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->traverse_constraint (m);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -4008,7 +4562,16 @@ struct TraverseWitnessesBackwardCall : public Call {
       rp->push_action (this);
     } else {
       MockWitnessIterator m;
-      s->traverse_witnesses_backward (m);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->traverse_witnesses_backward (m);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->traverse_witnesses_backward (m);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -4027,7 +4590,16 @@ struct TraverseWitnessesForwardCall : public Call {
       rp->push_action (this);
     } else {
       MockWitnessIterator m;
-      s->traverse_witnesses_forward (m);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->traverse_witnesses_forward (m);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->traverse_witnesses_forward (m);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -4047,7 +4619,16 @@ struct ReadDimacsCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->read_dimacs (path.c_str (), arg);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->read_dimacs (path.c_str (), arg);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->read_dimacs (path.c_str (), arg);
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
@@ -4067,7 +4648,16 @@ struct WriteDimacsCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->write_dimacs (path.c_str (), arg);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->write_dimacs (path.c_str (), arg);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->write_dimacs (path.c_str (), arg);
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path << ' ' << arg; }
@@ -4086,7 +4676,16 @@ struct ReadSolutionCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->read_solution (path.c_str ());
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->read_solution (path.c_str ());
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->read_solution (path.c_str ());
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path; }
@@ -4105,7 +4704,16 @@ struct WriteExtensionCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
-      s->write_extension (path.c_str ());
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->write_extension (path.c_str ());
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->write_extension (path.c_str ());
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << path; }
@@ -4124,7 +4732,16 @@ struct CopyCall : public Call {
       rp->push_action (this);
     } else {
       Solver copy;
-      s->copy (copy);
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->copy (copy);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->copy (copy);
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -4143,9 +4760,9 @@ class Trace
   int64_t id;
   uint64_t seed;
 
-  // map from mobical vars to solver vars (skipping extension variables)
-  // the map is strictly increasing and gets updated whenever a call with
-  // an argument gets executed.
+  // map from mobical vars to solver vars (skipping extension
+  // variables) the map is strictly increasing and gets updated
+  // whenever a call with an argument gets executed.
   Solver *solver;
   ExtendMap *extendmap;
 
@@ -4255,7 +4872,8 @@ public:
     else if (code == 2)
       o << "# status: resource limit reached (2 / SIGXCPU)" << endl;
     else if (code == 3)
-      o << "# status: forced bad allocation lead to crash / assertion"
+      o << "# status: forced bad allocation lead to crash / "
+           "assertion"
            " (3 / SIGUSR1)"
         << endl;
     else if (code == 4)
@@ -4263,24 +4881,30 @@ public:
            " (4 / SIGUSR2)"
         << endl;
     else if (code == 5)
-      o << "# status: termination request lead to crash / assertion"
+      o << "# status: termination request lead to crash / "
+           "assertion"
            " (5 / SIGTSTP)"
         << endl;
     else if (code == 6)
       o << "# status: unknown signal was raised (6)" << endl;
     else {
       o << "# "
-           "------------------------------------------------------------"
+           "-----------------------------------------------------"
+           "--"
+           "-----"
         << endl;
       o << "# status: ok, exited with code " << code << endl;
       o << "#" << endl;
       for (int i = 0; i < 20; i++)
-        o << "# WARNING: THIS TRACE PROBABLY HAS NOTHING TO DEBUG "
+        o << "# WARNING: THIS TRACE PROBABLY HAS NOTHING TO "
+             "DEBUG "
              "(SPURIOUS)"
           << endl;
       o << "#" << endl;
       o << "# "
-           "------------------------------------------------------------"
+           "-----------------------------------------------------"
+           "--"
+           "-----"
         << endl;
     }
 
@@ -4288,28 +4912,43 @@ public:
 #ifdef MOBICAL_MEMORY
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
         if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
-          o << "# V------------------------------------------------------"
+          o << "# "
+               "V------------------------------------------------"
+               "--"
+               "----"
                "---------------- leak alloc: leaked allocation"
             << endl;
           break;
         }
       }
       if (mobical.shared->bad_alloc.alloc_call_index == i + 1)
-        o << "# V--------------------------------------------------------"
+        o << "# "
+             "V--------------------------------------------------"
+             "--"
+             "----"
              "-------------- bad alloc: failed allocation"
           << endl;
       if (mobical.shared->bad_alloc.signal_call_index == i + 1)
-        o << "# V--------------------------------------------------------"
+        o << "# "
+             "V--------------------------------------------------"
+             "--"
+             "----"
              "-------------- bad alloc: crashed / assertion"
           << endl;
 #endif
 #ifdef MOBICAL_TERMINATE
       if (mobical.shared->limit_terminate.terminate_call_index == i + 1)
-        o << "# V--------------------------------------------------------"
+        o << "# "
+             "V--------------------------------------------------"
+             "--"
+             "----"
              "-------------- terminate: termination requested"
           << endl;
       if (mobical.shared->limit_terminate.signal_call_index == i + 1)
-        o << "# V--------------------------------------------------------"
+        o << "# "
+             "V--------------------------------------------------"
+             "--"
+             "----"
              "-------------- terminate: crashed / assertion"
           << endl;
 #endif
@@ -4346,7 +4985,8 @@ public:
     }
     for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
       if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
-        o << "# ---------------------------------------------------"
+        o << "# "
+             "---------------------------------------------------"
           << endl;
         o << "# Leak of " << mobical.shared->leak_alloc.alloc_size[index]
           << " bytes at (0x" << hex << setw (64 / 4) << setfill ('0')
@@ -4416,7 +5056,8 @@ public:
 
 #ifdef MOBICAL_MEMORY
       if (memory_bad_failed && c->type != CallType::RESET) {
-        continue; // Ignore call, only RESET (deallocation) allowed.
+        continue; // Ignore call, only RESET (deallocation)
+                  // allowed.
       }
 #else
       (void) deallocated;
@@ -4438,8 +5079,8 @@ public:
           memory_leak_next_free = 0;
           continue;
         } else if (c->type == CallType::RESET) {
-          // Set the flag before the reset call such that memory leaks
-          // are found when the reset call leaks memory.
+          // Set the flag before the reset call such that memory
+          // leaks are found when the reset call leaks memory.
           deallocated = true;
         }
 #endif
@@ -4518,9 +5159,10 @@ public:
         }
       } catch (const std::bad_alloc &e) {
         // Ignore out-of-memory errors and assume solver state is
-        // consistent. Only reset calls (destruction of the solver)
-        // are allowed after a bad allocation caused by the bad_alloc call
-        // or by CaDiCaL running out of memory due to process limitations.
+        // consistent. Only reset calls (destruction of the
+        // solver) are allowed after a bad allocation caused by
+        // the bad_alloc call or by CaDiCaL running out of memory
+        // due to process limitations.
         mobical.shared->oom++;
 #ifdef MOBICAL_MEMORY
         if (!memory_bad_failed) {
@@ -4534,7 +5176,8 @@ public:
 
 #ifdef MOBICAL_MEMORY
     // Delete the mock pointer to ignore these memory leaks
-    // in case the reset call failed due to a bad memory allocation.
+    // in case the reset call failed due to a bad memory
+    // allocation.
     if (deallocated) {
       delete mobical.mock_pointer;
       mobical.mock_pointer = nullptr;
@@ -4552,10 +5195,11 @@ public:
         }
       }
     } else {
-      // If reset was not called before reaching here (deallocated is not
-      // set) the leaks are false positives. In this case clear all the
-      // leaks. Otherwise, the user will get leaked memory warnings even
-      // though the memory is not freed since no reset call is present.
+      // If reset was not called before reaching here (deallocated
+      // is not set) the leaks are false positives. In this case
+      // clear all the leaks. Otherwise, the user will get leaked
+      // memory warnings even though the memory is not freed since
+      // no reset call is present.
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
         mobical.shared->leak_alloc.alloc_ptr[index] = nullptr;
       }
@@ -4794,19 +5438,20 @@ bool Trace::ignored_option (const char *name) {
   return false;
 }
 
-// Check whether the trace already contains an option which disables the
-// option 'name'.  Here we assume that an option disables another one if
-// the disabling one has as name proper prefix of the disabled one and the
-// value of the former is set to zero in the trace.
+// Check whether the trace already contains an option which
+// disables the option 'name'.  Here we assume that an option
+// disables another one if the disabling one has as name proper
+// prefix of the disabled one and the value of the former is set
+// to zero in the trace.
 //
 bool Trace::ignore_option (const char *name, int max_var) {
 
   if (ignored_option (name))
     return true;
 
-  // There are options which should be kept at their default value unless
-  // the formula is really small.  Otherwise the solver might run
-  // 'forever'.
+  // There are options which should be kept at their default value
+  // unless the formula is really small.  Otherwise the solver
+  // might run 'forever'.
   //
   if (max_var > SMALL) {
     if (!strcmp (name, "reduce"))
@@ -4821,9 +5466,9 @@ bool Trace::ignore_option (const char *name, int max_var) {
   return false;
 }
 
-// For incomplete solving phases such as 'walk' we do not want to increase
-// the option value above the default and similarly for elimination
-// bounds.
+// For incomplete solving phases such as 'walk' we do not want to
+// increase the option value above the default and similarly for
+// elimination bounds.
 //
 int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
                                   int64_t hi) {
@@ -4856,13 +5501,14 @@ void Trace::generate_options (Random &random, Size size) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_options)
     return;
 
-  // In order to increase throughput we enable 'walk' in 5% tests, which
-  // means disabling it in 95% of the tests.
+  // In order to increase throughput we enable 'walk' in 5% tests,
+  // which means disabling it in 95% of the tests.
   //
   if (random.generate_double () < 0.95)
     push_back (new SetCall ("walk", 0));
 
-  // Also for checking models and assumptions, but with 80% probability.
+  // Also for checking models and assumptions, but with 80%
+  // probability.
   //
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
@@ -4887,8 +5533,8 @@ void Trace::generate_options (Random &random, Size size) {
   for (auto it = Options::begin (); it != Options::end (); it++) {
     const Option &o = *it;
 
-    // This should not be reachable unless the low and high value of an
-    // option in 'options.hpp' are the same.
+    // This should not be reachable unless the low and high value
+    // of an option in 'options.hpp' are the same.
     //
     if (o.lo == o.hi)
       continue;
@@ -4899,8 +5545,8 @@ void Trace::generate_options (Random &random, Size size) {
       continue;
     if (!strcmp (o.name, "logsort"))
       continue;
-    // We keep choosing the value for 'simplify' and 'walk' out of the
-    // loop (see the arguments described above).
+    // We keep choosing the value for 'simplify' and 'walk' out of
+    // the loop (see the arguments described above).
     //
     if (!strcmp (o.name, "simplify"))
       continue;
@@ -4941,8 +5587,9 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (o.name, val));
   }
 
-  // Now setting the option for logging. Even if we do not generate the
-  // log call, we need the side effect of generate_bool ()
+  // Now setting the option for logging. Even if we do not
+  // generate the log call, we need the side effect of
+  // generate_bool ()
   auto log_option =
       std::find_if (Options::begin (), Options::end (),
                     [] (const Option o) { return strcmp (o.name, "log"); });
@@ -5590,8 +6237,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
     int clauses = range * ratio;
 
     // TODO: Test empty clause database by uncommenting here
-    // Note that it can lead to unvalid mobical states in the reduced
-    // trace, so always check the original bug-trace too.
+    // Note that it can lead to unvalid mobical states in the
+    // reduced trace, so always check the original bug-trace too.
     // if (random.generate_double () < 0.01) clauses = 0;
 
     minvars = random.pick_int (1, maxvars + 1);
@@ -5754,6 +6401,11 @@ void Mobical::print_statistics () {
 
 #undef STATISTIC
 #undef METRIC
+    section ("calls");
+    for (uint64_t i = INIT; i < INVALID_TYPE; i++) {
+      CallType type = (CallType) i;
+      PRINT_STATER (, PRIMARY, INC, SECONDARY)
+    }
 
     section ("total");
   }
@@ -5792,8 +6444,8 @@ void Mobical::print_statistics () {
          << flush;
     if (shared->memout || shared->timeout) {
       prefix ();
-      cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
-           << shared->memout << endl
+      cerr << "out-of-time " << shared->timeout << ", "
+           << "out-of-memory " << shared->memout << endl
            << flush;
     }
   }
@@ -5891,8 +6543,9 @@ void Trace::child_signal_handler (int sig) {
 #endif
       if (mobical.shared)
         mobical.shared->memout++;
-      // Since there is no memout signal we just misuse SIXCPU to notify
-      // the calling process that this is a out-of-resource situation.
+      // Since there is no memout signal we just misuse SIXCPU to
+      // notify the calling process that this is a out-of-resource
+      // situation.
       sig = SIGXCPU;
     } else {
       double t = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec +
@@ -6063,8 +6716,8 @@ void Trace::print_trace (void **stack_array, size_t stack_size, ostream &os,
       stack_entry = stack_entry.substr (position + 1);
     }
     smatch match; // Try to unmangle C++ method names
-    regex regex_function_name (
-        "^(.*?)\\(([a-zA-Z0-9_]+)((?:\\+0x[0-9a-fA-F]+)?)\\)(.*?)");
+    regex regex_function_name ("^(.*?)\\(([a-zA-Z0-9_]+)((?:\\+"
+                               "0x[0-9a-fA-F]+)?)\\)(.*?)");
     if (regex_match (stack_entry, match, regex_function_name)) {
       string mangledName = match[2];
       int status = -1;
@@ -6110,9 +6763,9 @@ int Trace::fork_and_execute () {
     setrlimit64 (RLIMIT_CORE, &limit);
 #endif
 #endif
-    // If SIGTSTP is used in the future rather use waitpid & WUNTRACED
-    // int status;
-    // pid_t other = waitpid (child, &status, WUNTRACED);
+    // If SIGTSTP is used in the future rather use waitpid &
+    // WUNTRACED int status; pid_t other = waitpid (child,
+    // &status, WUNTRACED);
 
     int status, other = wait (&status);
     if (other != child)
@@ -6120,7 +6773,8 @@ int Trace::fork_and_execute () {
     else if (WIFEXITED (status))
       res = WEXITSTATUS (status);
     else if (WIFSTOPPED (status) && WSTOPSIG (status) == SIGTSTP) {
-      kill (child, SIGKILL);       // fork is just suspended. Now kill it,
+      kill (child,
+            SIGKILL);              // fork is just suspended. Now kill it,
       waitpid (child, nullptr, 0); // and reap it
       // Termination caused signal.
       res = 5;
@@ -6363,11 +7017,12 @@ void Mobical::notify (Trace &trace, signed char ch) {
 
 /*------------------------------------------------------------------------*/
 
-// Explicit grammar aware three-level hierarchical delta-debugging.
-// First level is in term of incremental solving phases where one phase
-// consists of maximal prefixes of intervals of calls of type
-// '(BEFORE*| PROCESS | DURING* | AFTER*)' or single non-configuration
-// calls.
+// Explicit grammar aware three-level hierarchical
+// delta-debugging. First level is in term of incremental solving
+// phases where one phase consists of maximal prefixes of
+// intervals of calls of type
+// '(BEFORE*| PROCESS | DURING* | AFTER*)' or single
+// non-configuration calls.
 //
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
@@ -6569,7 +7224,8 @@ bool Trace::shrink_basic (int expected) {
   return shrink_segments (segments, expected);
 }
 
-// We first add all non present possible options with their default value.
+// We first add all non present possible options with their
+// default value.
 
 void Trace::add_options (int expected) {
   if (mobical.donot.add)
@@ -6616,8 +7272,8 @@ void Trace::add_options (int expected) {
   notify ();
 }
 
-// Try to set as many options to their lower limit, which also tries to
-// disable as many boolean options.
+// Try to set as many options to their lower limit, which also
+// tries to disable as many boolean options.
 
 bool Trace::shrink_disable (int expected) {
   if (mobical.donot.disable)
@@ -6774,7 +7430,8 @@ bool Trace::reduce_values (int expected) {
       if (success)
         continue;
 
-      // Then try to limit to the high value if current value too large.
+      // Then try to limit to the high value if current value too
+      // large.
       //
       if (c->val > hi) {
         int old_val = c->val;
@@ -6793,10 +7450,11 @@ bool Trace::reduce_values (int expected) {
           continue;
       }
 
-      // Now we do a delta-debugging inspired binary search for the
-      // smallest value for which the execution produces a non-zero exit
-      // code.  It kind of assumes monotonicity and if this is not the
-      // case might not yield the smallest value, but remains logarithmic.
+      // Now we do a delta-debugging inspired binary search for
+      // the smallest value for which the execution produces a
+      // non-zero exit code.  It kind of assumes monotonicity and
+      // if this is not the case might not yield the smallest
+      // value, but remains logarithmic.
       //
       int64_t granularity = ((old_val - (int64_t) lo) + 1l) / 2;
       assert (granularity > 0);
@@ -6952,8 +7610,8 @@ void Trace::shrink (int expected) {
   } while (s);
   map_variables (expected);
   shrink_options (expected);
-  // Execute one last time to get accurate results when memory fuzzing
-  // is enabled.
+  // Execute one last time to get accurate results when memory
+  // fuzzing is enabled.
   if (!Signal::interrupted ())
     fork_and_execute ();
   cerr << flush;
@@ -7009,8 +7667,9 @@ static bool is_valid_char (int ch) {
   if ('0' <= ch && ch <= '9')
     return true;
 
-  // For now proof file paths can only have these additional characters.
-  // We should probably have an escape mechamism (quotes) for paths.
+  // For now proof file paths can only have these additional
+  // characters. We should probably have an escape mechamism
+  // (quotes) for paths.
 
   if (ch == '_' || ch == '/' || ch == '.' || ('A' <= ch && ch <= 'Z'))
     return true;
@@ -7039,7 +7698,8 @@ void Reader::parse () {
   bool connected = 0;
   char line[80];
   while ((ch = next ()) != EOF) {
-    // Ignore comments (used for additional human readable information).
+    // Ignore comments (used for additional human readable
+    // information).
     if (ch == '#') {
       while (ch != '\n') {
         if ((ch = next ()) == EOF)
@@ -7244,13 +7904,14 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "connect_fixed_listener")) {
       if (enforce)
-        error ("'connect_fixed_listener' not supported (try '--replay')");
+        error ("'connect_fixed_listener' not supported (try "
+               "'--replay')");
       mobical.warning ("ignoring 'connect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "disconnect_fixed_listener")) {
       if (enforce)
-        error (
-            "'disconnect_fixed_listener' not supported (try '--replay')");
+        error ("'disconnect_fixed_listener' not supported (try "
+               "'--replay')");
       mobical.warning ("ignoring 'disconnect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
@@ -7329,7 +7990,8 @@ void Reader::parse () {
           error ("invalid argument '%s' to 'lemma'", third);
       }
       if (mobical.donot.mock_propagator)
-        error ("cannot execute 'lemma' with '--do-not-mock-propagator'");
+        error ("cannot execute 'lemma' with "
+               "'--do-not-mock-propagator'");
       c = new LemmaCall (lit, tmpt, val);
       third_argument = true;
     } else if (!strcmp (keyword, "force")) {
@@ -7355,7 +8017,8 @@ void Reader::parse () {
       if (!parse_int_str (third, val))
         error ("invalid argument '%s' to 'force %d %d'", third, lit, tmp);
       if (mobical.donot.mock_propagator)
-        error ("cannot execute 'force' with '--do-not-mock-propagator'");
+        error ("cannot execute 'force' with "
+               "'--do-not-mock-propagator'");
       c = new MockForceCall (lit, tmpt, val);
       third_argument = true;
     } else if (!strcmp (keyword, "decide")) {
@@ -7370,7 +8033,8 @@ void Reader::parse () {
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'decide'", second);
       if (mobical.donot.mock_propagator)
-        error ("cannot execute 'force' with '--do-not-mock-propagator'");
+        error ("cannot execute 'force' with "
+               "'--do-not-mock-propagator'");
       c = new DecideCall (lit, val);
     } else if (!strcmp (keyword, "notify_assignment")) {
       if (!first)
@@ -7378,7 +8042,8 @@ void Reader::parse () {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'notify_assignment'", first);
       if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'notify_assignment'",
+        error ("invalid literal '%d' as argument to "
+               "'notify_assignment'",
                lit);
       if (second)
         error ("additional argument '%s' to 'notify_assignment %d'", second,
@@ -7393,11 +8058,12 @@ void Reader::parse () {
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_assignment_batch'", first);
       if (enforce && val <= 0)
-        error (
-            "invalid value '%d' as argument to 'notify_assignment_batch'",
-            val);
+        error ("invalid value '%d' as argument to "
+               "'notify_assignment_batch'",
+               val);
       if (second)
-        error ("additional argument '%s' to 'notify_assignment_batch %d'",
+        error ("additional argument '%s' to "
+               "'notify_assignment_batch %d'",
                second, val);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'notify_assignment_batch' without "
@@ -7409,7 +8075,9 @@ void Reader::parse () {
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_backtrack'", first);
       if (enforce && val < 0)
-        error ("invalid level '%d' as argument to 'notify_backtrack'", val);
+        error ("invalid level '%d' as argument to "
+               "'notify_backtrack'",
+               val);
       if (second)
         error ("additional argument '%s' to 'notify_backtrack %d'", second,
                val);
@@ -7422,14 +8090,16 @@ void Reader::parse () {
       if (!first)
         error ("argument to 'notify_new_decision_level' missing");
       if (!parse_int_str (first, val))
-        error ("invalid argument '%s' to 'notify_new_decision_level'",
+        error ("invalid argument '%s' to "
+               "'notify_new_decision_level'",
                first);
       if (enforce && val < 0)
-        error (
-            "invalid level '%d' as argument to 'notify_new_decision_level'",
-            val);
+        error ("invalid level '%d' as argument to "
+               "'notify_new_decision_level'",
+               val);
       if (second)
-        error ("additional argument '%s' to 'notify_new_decision_level %d'",
+        error ("additional argument '%s' to "
+               "'notify_new_decision_level %d'",
                second, val);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'notify_new_decision_level' without "
@@ -7480,7 +8150,8 @@ void Reader::parse () {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_backtrack'", first);
       if (enforce && lit < 0)
-        error ("invalid literal '%d' as argument to 'force_backtrack'",
+        error ("invalid literal '%d' as argument to "
+               "'force_backtrack'",
                lit);
       if (second)
         error ("additional argument '%s' to 'force_backtrack %d'", second,
@@ -7492,7 +8163,9 @@ void Reader::parse () {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_unassign'", first);
       if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'force_unassign'", lit);
+        error ("invalid literal '%d' as argument to "
+               "'force_unassign'",
+               lit);
       if (second)
         error ("additional argument '%s' to 'force_unassign %d'", second,
                lit);
@@ -7508,10 +8181,12 @@ void Reader::parse () {
                "'cb_add_reason_clause_lit'",
                lit);
       if (!second)
-        error ("second argument to 'cb_add_reason_clause_lit %d' missing",
+        error ("second argument to 'cb_add_reason_clause_lit %d' "
+               "missing",
                lit);
       if (!parse_int_str (second, val))
-        error ("invalid second argument '%s' to 'cb_add_reason_clause_lit'",
+        error ("invalid second argument '%s' to "
+               "'cb_add_reason_clause_lit'",
                second);
       if (enforce && val == INT_MIN)
         error ("invalid literal '%d' as argument to "
@@ -7525,16 +8200,17 @@ void Reader::parse () {
       if (!first)
         error ("argument to 'cb_add_external_clause_lit' missing");
       if (!parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'cb_add_external_clause_lit'",
+        error ("invalid argument '%s' to "
+               "'cb_add_external_clause_lit'",
                first);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to "
                "'cb_add_external_clause_lit'",
                lit);
       if (second)
-        error (
-            "additional argument '%s' to 'cb_add_external_clause_lit %d'",
-            second, lit);
+        error ("additional argument '%s' to "
+               "'cb_add_external_clause_lit %d'",
+               second, lit);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_add_external_clause_lit' without "
                "'--do-not-mock-propagator'");
@@ -7549,7 +8225,8 @@ void Reader::parse () {
                "'cb_has_external_clause'",
                lit);
       if (!second)
-        error ("second argument to 'cb_has_external_clause' missing");
+        error ("second argument to 'cb_has_external_clause' "
+               "missing");
       if (!parse_int_str (second, val))
         error ("invalid argument '%s' to 'cb_has_external_clause'", second);
       if (enforce && val != 0 && val != 1)
@@ -7570,7 +8247,8 @@ void Reader::parse () {
                "'cb_check_found_model'",
                val);
       if (second)
-        error ("additional argument '%s' to 'cb_check_found_model %d'",
+        error ("additional argument '%s' to "
+               "'cb_check_found_model %d'",
                second, val);
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_check_found_model' without "
@@ -7768,12 +8446,14 @@ void Reader::parse () {
       c = new TraverseConstraintCall ();
     } else if (!strcmp (keyword, "traverse_witnesses_forward")) {
       if (first)
-        error ("additional argument '%s' to 'traverse_witnesses_forward'",
+        error ("additional argument '%s' to "
+               "'traverse_witnesses_forward'",
                first);
       c = new TraverseWitnessesForwardCall ();
     } else if (!strcmp (keyword, "traverse_witnesses_backward")) {
       if (first)
-        error ("additional argument '%s' to 'traverse_witnesses_backward'",
+        error ("additional argument '%s' to "
+               "'traverse_witnesses_backward'",
                first);
       c = new TraverseWitnessesBackwardCall ();
     } else if (!strcmp (keyword, "write_dimacs")) {
@@ -7857,10 +8537,12 @@ void Reader::parse () {
       if (!first)
         lit = 0;
       if (first && !parse_int_str (first, lit))
-        error ("invalid first argument '%s' to 'propagate_assumptions'",
+        error ("invalid first argument '%s' to "
+               "'propagate_assumptions'",
                first);
       if (first && lit != 0 && lit != 10 && lit != 20)
-        error ("invalid result argument '%d' to 'propagate_assumptions",
+        error ("invalid result argument '%d' to "
+               "'propagate_assumptions",
                lit);
       if (second)
         error ("additional argument to 'propagate_assumptions'");
@@ -7891,7 +8573,8 @@ void Reader::parse () {
     //
     if (enforce) {
       if (state == CallState::INITSTATE && !c->init_type ())
-        error ("first call has to be an 'init', 'max_alloc', 'leak_alloc'"
+        error ("first call has to be an 'init', 'max_alloc', "
+               "'leak_alloc'"
                " or 'terminate' call");
 
       if (state == CallState::RESETSTATE)
@@ -7921,7 +8604,8 @@ void Reader::parse () {
       case CallType::CONFIGURE:
         if (!solved && state == CallState::BEFORE) {
           assert (before_trigger);
-          error ("'%s' can only be called after 'init' before '%s %d'",
+          error ("'%s' can only be called after 'init' before "
+                 "'%s %d'",
                  c->keyword (), before_trigger->keyword (),
                  before_trigger->arg);
         } else if (state != CallState::CONFIG)
@@ -7962,14 +8646,18 @@ void Reader::parse () {
           error ("'%s' can only be called after 'solve'", c->keyword ());
         if (solved && state == CallState::BEFORE) {
           assert (before_trigger);
-          error ("'%s' only valid after last 'solve' and before '%s %d'",
+          error ("'%s' only valid after last 'solve' and before "
+                 "'%s %d'",
                  c->keyword (), before_trigger->keyword (),
                  before_trigger->arg);
         }
         /*
-        assert (state == CallType::SOLVE || state == CallType::SIMPLIFY ||
-                state == CallType::LOOKAHEAD || state == CallType::CUBING ||
-                state == CallType::PROPAGATE || state == CallType::OBSERVE
+        assert (state == CallType::SOLVE || state ==
+        CallType::SIMPLIFY || state == CallType::LOOKAHEAD ||
+        state
+        == CallType::CUBING
+        || state == CallType::PROPAGATE || state ==
+        CallType::OBSERVE
         || state == CallType::DURING || state == CallType::AFTER);
                 */
         new_state = CallState::AFTER;
@@ -8331,7 +9019,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 18);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-options");
         tracegen.generate_options = gen_val;
@@ -8350,7 +9039,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-resize");
         tracegen.generate_resize = gen_val;
@@ -8370,7 +9060,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 36);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-declare-one-more-variable");
         tracegen.generate_declare_one_more_variable = gen_val;
@@ -8390,7 +9081,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 33);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-declare-more-variables");
         tracegen.generate_declare_more_variables = gen_val;
@@ -8409,7 +9101,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 21);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-constraint");
         tracegen.generate_constraint = gen_val;
@@ -8428,7 +9121,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-assume");
         tracegen.generate_assume = gen_val;
@@ -8447,7 +9141,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-values");
         tracegen.generate_values = gen_val;
@@ -8466,7 +9161,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 18);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-flipped");
         tracegen.generate_flipped = gen_val;
@@ -8485,7 +9181,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-frozen");
         tracegen.generate_frozen = gen_val;
@@ -8504,7 +9201,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-failed");
         tracegen.generate_failed = gen_val;
@@ -8523,7 +9221,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 16);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-phase");
         tracegen.generate_phase = gen_val;
@@ -8542,7 +9241,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 19);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-conclude");
         tracegen.generate_conclude = gen_val;
@@ -8561,7 +9261,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-freeze");
         tracegen.generate_freeze = gen_val;
@@ -8580,7 +9281,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 15);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-melt");
         tracegen.generate_melt = gen_val;
@@ -8599,7 +9301,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 21);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-propagator");
         tracegen.generate_propagator = gen_val;
@@ -8618,7 +9321,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 17);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-forces");
         tracegen.generate_forces = gen_val;
@@ -8637,7 +9341,8 @@ int Mobical::main (int argc, char **argv) {
           gen_val = atol (argv[i] + 18);
         }
         if (gen_val < 0 || gen_val > 1000)
-          die ("argument value '%d' to '%s' out of bounds (expected "
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
                "[0-1000])",
                gen_val, "--generate-implied");
         tracegen.generate_implied = gen_val;
@@ -8715,15 +9420,18 @@ int Mobical::main (int argc, char **argv) {
       die ("invalid option '%s' (try '-h')", argv[i]);
     else if (is_unsigned_str (argv[i])) {
       if (seed_str)
-        die ("can not handle multiple seeds '%s' and '%s' (try '-h')",
+        die ("can not handle multiple seeds '%s' and '%s' (try "
+             "'-h')",
              seed_str, argv[i]);
       if (input_path)
-        die ("can not combine input trace '%s' and seed '%s' (try '-h')",
+        die ("can not combine input trace '%s' and seed '%s' (try "
+             "'-h')",
              input_path, argv[i]);
       seed_str = argv[i];
     } else if (output_path) {
       assert (input_path);
-      die ("too many trace files specified: '%s', '%s' and '%s' (try "
+      die ("too many trace files specified: '%s', '%s' and '%s' "
+           "(try "
            "'-h')",
            input_path, output_path, argv[i]);
     } else if (input_path) {
@@ -8743,9 +9451,9 @@ int Mobical::main (int argc, char **argv) {
 
   /*----------------------------------------------------------------------*/
 
-  // If a seed and a file (in that order) are specified the file is
-  // actually not an input file but an output file.  To streamline the
-  // code below swap input and output here.
+  // If a seed and a file (in that order) are specified the file
+  // is actually not an input file but an output file.  To
+  // streamline the code below swap input and output here.
   //
   if (input_path && seed_str) {
     assert (!output_path);
@@ -8761,7 +9469,8 @@ int Mobical::main (int argc, char **argv) {
   // Check illegal combinations of options.
 
   if (input_path && donot.seeds)
-    die ("can not use '--no-seeds' while specifying input '%s' explicitly",
+    die ("can not use '--no-seeds' while specifying input '%s' "
+         "explicitly",
          input_path);
 
   if (input_path && limit >= 0)
@@ -8786,7 +9495,8 @@ int Mobical::main (int argc, char **argv) {
     die ("can not combine '--tracing' with '--do-not-execute'");
 
   if (!input_path && donot.enforce)
-    die ("can not use '--do-not-enforce-contracts' without '<input>'");
+    die ("can not use '--do-not-enforce-contracts' without "
+         "'<input>'");
 
   if (output_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' "
