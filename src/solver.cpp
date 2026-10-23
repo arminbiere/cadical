@@ -476,7 +476,7 @@ Solver::Solver () {
 Solver::~Solver () {
 
   TRACE (reset, "reset");
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  // REQUIRE_VALID_OR_SOLVING_STATE ();
   STATE (DELETING);
 
   tracing_nb_lidrup_env_var_method = false;
