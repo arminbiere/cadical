@@ -142,15 +142,15 @@ void Internal::constrain (int lit, int64_t ext_id) {
           constraints_without_assumptions++;
       }
     }
+    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
+                                           constraint_tmp.size (),
+                                           constraint_tmp.data ());
     if (opts.constraintphase == 2) {
       for (auto &lit : constraint_tmp) {
         KITTEN_NAMESPACE (
             kitten_phase_signed_literal (constraint_cat, lit));
       }
     }
-    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
-                                           constraint_tmp.size (),
-                                           constraint_tmp.data ());
     // constraints.push_back (0);
     constraint_tmp.clear ();
   }
