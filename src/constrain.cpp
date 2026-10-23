@@ -197,6 +197,7 @@ void Internal::reset_constraint () {
   constraints_without_assumptions = 0;
   constraint_cat = 0;
   unsat_constraint = 0;
+  unit_constraint_vars = false;
   marked_failed = true;
   last_constraint_idx = 0;
 }

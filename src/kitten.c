@@ -2454,13 +2454,12 @@ void KITTEN_NAMESPACE (kitten_phase_signed_literal) (kitten *kitten,
   unsigned iidx = kitten->import[eidx];
   if (!iidx)
     return;
-  // iidx--;
-  const unsigned ilit = 2 * (--iidx) + (elit & 1);
+  iidx--;
+  const unsigned sign = elit & 1;
   // completely_backtrack_to_root_level (kitten);
-  LOG ("phase signed external literal %d = %d (=%d) = %d = %d", signed_elit,
-       elit, eidx, iidx, ilit);
+  LOG ("phase signed external literal %d = %d (=%d) = %d sign %d",
+       signed_elit, elit, eidx, iidx, sign);
   kitten->statistics.kitten_phase++;
-  const unsigned sign = ilit & 1;
   kitten->phases[iidx] = sign;
   // UPDATE_STATUS (0);
 }

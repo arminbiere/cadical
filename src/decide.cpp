@@ -274,6 +274,20 @@ int Internal::decide_assumption () {
     int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
     if (!cat_res) {
       stats.constraints_solved++;
+      if (!unit_constraint_vars && opts.constrainteager) {
+        unit_constraint_vars = true;
+        for (auto &lit : constraint_vars) {
+          const auto tmp = val (lit);
+          if (tmp && !var (lit).level) {
+            // TODO: unit_id without LRAT?
+            int64_t id = 0; //
+            if (frat || lrat)
+              id = unit_id (lit * tmp);
+            KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id,
+                                                 lit * tmp);
+          }
+        }
+      }
       PROFILE_SCOPE (constraintssolve);
       cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
@@ -433,6 +447,20 @@ int Internal::decide_constraint () {
       for (auto cv = constraint_vars.rbegin ();
            cv != constraint_vars.rend (); cv++) {
         KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, *cv));
+      }
+    }
+    if (!unit_constraint_vars && opts.constrainteager) {
+      unit_constraint_vars = true;
+      for (auto &lit : constraint_vars) {
+        const auto tmp = val (lit);
+        if (tmp && !var (lit).level) {
+          // TODO: unit_id without LRAT?
+          int64_t id = 0; //
+          if (frat || lrat)
+            id = unit_id (lit * tmp);
+          KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id,
+                                               lit * tmp);
+        }
       }
     }
     stats.constraints_solved++;
