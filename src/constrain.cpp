@@ -185,6 +185,7 @@ void Internal::reset_constraint () {
     if (lit) {
       melt (lit);
       flags (lit).constrained = 0;
+      flags (lit).constrained_unit = 0;
     }
   }
   LOG ("cleared %zd constraint literals", constraint_vars.size ());

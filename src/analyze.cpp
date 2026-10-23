@@ -1489,6 +1489,7 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
 
 void Internal::iterate () {
   iterating = false;
+  unit_constraint_vars = false;
   report ('i');
 }
 

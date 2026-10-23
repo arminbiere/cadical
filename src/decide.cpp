@@ -274,20 +274,8 @@ int Internal::decide_assumption () {
     int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
     if (!cat_res) {
       stats.constraints_solved++;
-      if (!unit_constraint_vars && opts.constrainteager) {
-        unit_constraint_vars = true;
-        for (auto &lit : constraint_vars) {
-          const auto tmp = val (lit);
-          if (tmp && !var (lit).level) {
-            // TODO: unit_id without LRAT?
-            int64_t id = 0; //
-            if (frat || lrat)
-              id = unit_id (lit * tmp);
-            KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id,
-                                                 lit * tmp);
-          }
-        }
-      }
+      if (!unit_constraint_vars && opts.constrainteager)
+        eager_constraint_units ();
       PROFILE_SCOPE (constraintssolve);
       cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
@@ -422,6 +410,31 @@ struct bigger_score {
   }
 };
 
+void Internal::eager_constraint_units () {
+  unit_constraint_vars = true;
+  for (auto &lit : constraint_vars) {
+    const auto tmp = val (lit);
+    if (tmp && !var (lit).level) {
+      Flags &f = flags (lit);
+      assert (f.constrained);
+      if (!f.constrained_unit) {
+        f.constrained_unit = true;
+        const int64_t id = ++clause_id;
+        assert (clause.empty ());
+        if (proof) {
+          clause.push_back (lit * tmp);
+          if (lrat)
+            lrat_chain.push_back (unit_id (lit * tmp));
+          // not using constraints
+          proof->add_assumption_clause (id, clause, lrat_chain, false);
+          clause.clear ();
+          lrat_chain.clear ();
+        }
+        KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, lit * tmp);
+      }
+    }
+  }
+}
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
@@ -449,20 +462,8 @@ int Internal::decide_constraint () {
         KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, *cv));
       }
     }
-    if (!unit_constraint_vars && opts.constrainteager) {
-      unit_constraint_vars = true;
-      for (auto &lit : constraint_vars) {
-        const auto tmp = val (lit);
-        if (tmp && !var (lit).level) {
-          // TODO: unit_id without LRAT?
-          int64_t id = 0; //
-          if (frat || lrat)
-            id = unit_id (lit * tmp);
-          KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id,
-                                               lit * tmp);
-        }
-      }
-    }
+    if (!unit_constraint_vars && opts.constrainteager)
+      eager_constraint_units ();
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
