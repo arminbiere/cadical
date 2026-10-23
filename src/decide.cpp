@@ -438,6 +438,7 @@ int Internal::decide_constraint () {
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+    report ('a');
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
     if (cat_res == 20)
       stats.constraints_unsat++;

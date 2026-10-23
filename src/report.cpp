@@ -16,6 +16,7 @@ namespace CaDiCaL {
 
 The 'reports' are shown as 'c <char> ...' with '<char>' as follows:
 
+a  solved kitten constraints
 i  propagated learned unit clause
 O  backtracked after phases reset to original phase
 F  backtracked after flipping phases
@@ -273,6 +274,7 @@ void Internal::report (char type, int verbose) {
     tout.cyan (true);
     break;
   case '-':
+  case 'a':
     tout.normal ();
     break;
   case '0':
