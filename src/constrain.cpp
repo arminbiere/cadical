@@ -142,6 +142,12 @@ void Internal::constrain (int lit, int64_t ext_id) {
           constraints_without_assumptions++;
       }
     }
+    if (opts.constraintphase == 2) {
+      for (auto &lit : constraint_tmp) {
+        KITTEN_NAMESPACE (
+            kitten_phase_signed_literal (constraint_cat, lit));
+      }
+    }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
                                            constraint_tmp.size (),
                                            constraint_tmp.data ());
@@ -345,9 +351,14 @@ void Internal::analyze_failing_constraint (int failed) {
       proof->add_assumption_clause (id, clause, lrat_chain, false);
     }
     // TODO: bump kitten
-    if (opts.constraintbump == 1) {
+    if (opts.constraintbump == 1 || opts.constraintphase) {
       for (auto &lit : clause) {
-        KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, lit));
+        if (opts.constraintbump)
+          KITTEN_NAMESPACE (
+              kitten_bump_signed_literal (constraint_cat, lit));
+        if (opts.constraintphase)
+          KITTEN_NAMESPACE (
+              kitten_phase_signed_literal (constraint_cat, lit));
       }
     }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,

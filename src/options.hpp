@@ -76,8 +76,9 @@ OPTION( congruencexor,        1,  0,  1,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,   4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,  1,  1,5e6,0,0,1, "XOR gate round") \
 OPTION( constraintbump,       1,  0,  2,0,0,1, "bump kitten literals (1=based on learned clauses, 2=based on constraint var)") \
+OPTION( constrainteager,      1,  0,  1,0,0,1, "eager communication of units") \
 OPTION( constraintflip,       1,  0,  1,0,0,1, "try to flip kitten model to resolve conflicts") \
-OPTION( constraintphase,      1,  0,  1,0,0,1, "force kitten phases") \
+OPTION( constraintphase,      1,  0,  2,0,0,1, "suggest kitten phases according to learned clauses (2 = initial clauses too)") \
 OPTION( constraintprime,      1,  0,  1,0,0,1, "try to shorten kitten model") \
 OPTION( constraintsort,       1,  0,  1,0,0,1, "sort constraint variables when kitten model is recomputed") \
 OPTION( cover,                0,  0,  1,0,1,1, "covered clause elimination") \
