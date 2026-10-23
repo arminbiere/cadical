@@ -14,6 +14,7 @@
 #include <climits>
 #include <cstdint>
 #include <cstdio>
+#include <stdexcept>
 
 namespace CaDiCaL {
 
@@ -91,6 +92,9 @@ static const char *USAGE =
 "  --do-not-extend-map       trust variable names in trace\n"
 #ifndef NTRACING
 "  --trace                   trace calls to <output> instead of copying\n"
+#endif
+#ifdef EXCEPTIONS
+"  --do-not-catch            do not catch API contract violation exception\n"
 #endif
 "\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
@@ -294,6 +298,9 @@ struct DoNot {
   bool extend_map = false;      // do not map variables
   bool mock_propagator = false; // do not use mock propagator
   bool ignore_resource_limits = false;
+#ifdef EXCEPTIONS
+  bool catching;
+#endif
 };
 
 /*------------------------------------------------------------------------*/
@@ -1400,6 +1407,10 @@ struct Call {
   virtual void *get_propagator (Solver *&s) {
     return s->external->propagator;
   }
+#ifdef EXCEPTIONS
+  virtual void caught () {}
+  virtual bool catching () { return !mobical.donot.catching; }
+#endif
 };
 
 /*------------------------------------------------------------------------*/
@@ -2656,8 +2667,9 @@ struct VarsCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
+    } else {
       res = s->vars ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new VarsCall (); }
@@ -2673,8 +2685,18 @@ struct ActiveCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      res = s->active ();
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->active ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->active ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ActiveCall (); }
@@ -2690,8 +2712,18 @@ struct RedundantCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      res = s->redundant ();
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->redundant ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->redundant ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new RedundantCall (); }
@@ -2707,8 +2739,18 @@ struct IrredundantCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      res = s->irredundant ();
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          res = s->irredundant ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        res = s->irredundant ();
+    }
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new IrredundantCall (); }
@@ -2725,8 +2767,22 @@ struct ResizeCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          extend_map_to (s, extendmap);
+          s->resize (arg);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+        extend_map_to (s, extendmap);
+        s->resize (arg);
+      }
+#else
       extend_map_to (s, extendmap);
       s->resize (arg);
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
@@ -2746,6 +2802,33 @@ struct DeclareMoreVariablesCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          extend_map_by (s, extendmap, arg);
+#ifndef NDEBUG
+          int i =
+#endif
+              s->declare_more_variables (arg);
+          // check that our mapping from trace literals to external literals
+          // matches the `declare_more_variables` result.
+          assert (!arg || mobical.donot.extend_map ||
+                  extendmap->map.back () == i);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+        extend_map_by (s, extendmap, arg);
+#ifndef NDEBUG
+        int i =
+#endif
+            s->declare_more_variables (arg);
+        // check that our mapping from trace literals to external literals
+        // matches the `declare_more_variables` result.
+        assert (!arg || mobical.donot.extend_map ||
+                extendmap->map.back () == i);
+      }
+#else
       extend_map_by (s, extendmap, arg);
 #ifndef NDEBUG
       int i =
@@ -2755,6 +2838,7 @@ struct DeclareMoreVariablesCall : public Call {
       // matches the `declare_more_variables` result.
       assert (!arg || mobical.donot.extend_map ||
               extendmap->map.back () == i);
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
@@ -2772,12 +2856,35 @@ struct DeclareOneMoreVariableCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          extend_map_to (s, extendmap);
+          extend_map_by (s, extendmap, 1);
+#ifndef NDEBUG
+          int i =
+#endif
+              s->declare_one_more_variable ();
+          assert (mobical.donot.extend_map || extendmap->map.back () == i);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+        extend_map_by (s, extendmap, 1);
+#ifndef NDEBUG
+        int i =
+#endif
+            s->declare_one_more_variable ();
+        assert (mobical.donot.extend_map || extendmap->map.back () == i);
+      }
+#else
       extend_map_by (s, extendmap, 1);
 #ifndef NDEBUG
       int i =
 #endif
           s->declare_one_more_variable ();
       assert (mobical.donot.extend_map || extendmap->map.back () == i);
+#endif
     }
   }
   void print (ostream &o) { o << keyword (); }
@@ -2794,8 +2901,18 @@ struct UnPhaseCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->unphase (map_arg (s, extendmap, false));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->unphase (map_arg (s, extendmap, false));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->unphase (map_arg (s, extendmap, false));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new UnPhaseCall (arg); }
@@ -2811,8 +2928,18 @@ struct PhaseCall : public Call {
           static_cast<ReplayPropagator *> (get_propagator (s));
       assert (rp);
       rp->push_action (this);
-    } else
-      s->phase (map_arg (s, extendmap));
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->phase (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->phase (map_arg (s, extendmap));
+    }
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new PhaseCall (arg); }
@@ -2829,9 +2956,26 @@ struct SetCall : public Call {
       assert (rp);
       rp->push_action (this);
     } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          extend_map_to (s, extendmap);
+          s->set (name, val);
+          if (!strcmp (name, "factorcheck"))
+            extendmap->factor_check = val;
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+        s->set (name, val);
+        if (!strcmp (name, "factorcheck"))
+          extendmap->factor_check = val;
+      }
+#else
       s->set (name, val);
       if (!strcmp (name, "factorcheck"))
         extendmap->factor_check = val;
+#endif
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << name << ' ' << val; }
@@ -8033,6 +8177,12 @@ int Mobical::main (int argc, char **argv) {
 #endif
       tracing = 1;
       donot.shrink.atall = true;
+    } else if (!strcmp (argv[i], "--do-not-catch")) {
+#ifndef EXCEPTIONS
+      die ("compile with 'EXCEPTIONS'");
+#else
+      donot.catching = true;
+#endif
     } else if (!strcmp (argv[i], "--do-not-extend-map"))
       donot.extend_map = true;
     else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
