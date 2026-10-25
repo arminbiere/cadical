@@ -6404,7 +6404,14 @@ void Mobical::print_statistics () {
     section ("calls");
     for (uint64_t i = INIT; i < INVALID_TYPE; i++) {
       CallType type = (CallType) i;
-      PRINT_STATER (, PRIMARY, INC, SECONDARY)
+      PRINT_STATER (ct_to_str (type), shared->call_type_executed[i],
+                    shared->call_type_delayed[i],
+#ifdef EXCEPTIONS
+                    shared->call_type_caught[i]
+#else
+                    shared->call_type_executed[i]
+#endif
+      );
     }
 
     section ("total");
