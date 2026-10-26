@@ -6336,8 +6336,10 @@ void Mobical::add_statistics (Solver *solver) {
 #undef METRIC
 }
 
-#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY) \
+#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY, VERBOSE) \
   do { \
+    if (!PRIMARY && !VERBOSE) \
+      break; \
     const int RELATIVE = percent (INC, SECONDARY); \
     const size_t PNUMBER = std::to_string (PRIMARY).length (); \
     const size_t OFFSET1 = 55 - strlen (NAME) - PNUMBER; \
@@ -6395,11 +6397,11 @@ void Mobical::print_statistics () {
     section ("summary");
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
-                shared->executed);
+                shared->executed, 1);
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, (int64_t) shared->stats_sum.NAME, \
-                (int64_t) shared->stats_count.NAME, shared->executed);
+                (int64_t) shared->stats_count.NAME, shared->executed, 1);
 #else
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL)
 #endif
@@ -6407,17 +6409,17 @@ void Mobical::print_statistics () {
 
 #undef STATISTIC
 #undef METRIC
+
     section ("calls");
     for (uint64_t i = INIT; i < INVALID_TYPE; i++) {
       CallType type = (CallType) i;
       PRINT_STATER (ct_to_str (type), shared->call_type_executed[i],
-                    shared->call_type_delayed[i],
 #ifdef EXCEPTIONS
-                    shared->call_type_caught[i]
+                    shared->call_type_caught[i],
 #else
-                    shared->call_type_executed[i]
+                    shared->call_type_delayed[i],
 #endif
-      );
+                    shared->call_type_executed[i], verbose);
     }
 
     section ("total");
