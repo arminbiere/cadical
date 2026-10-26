@@ -6378,24 +6378,43 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::UNOBSERVE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new UnObserveCall (size));
     break;
   }
   case (CallType::RESET_OBSERVED): {
+    push_back (new ResetObservedCall ());
     break;
   }
   case (CallType::IS_DECISION): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new IsDecisionCall (size));
     break;
   }
   case (CallType::IS_WITNESS): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new IsWitnessCall (size));
     break;
   }
   case (CallType::OBSERVED): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ObservedCall (size));
     break;
   }
   case (CallType::FORCE_BACKTRACK): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ForceBacktrackCall (size));
     break;
   }
   case (CallType::FORCE_UNASSIGN): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ForceUnassignCall (size));
     break;
   }
   case (CallType::LEMMA): {
