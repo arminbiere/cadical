@@ -52,7 +52,7 @@ static const char *USAGE =
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
-"  --violate         generate contract violations\n"
+"  --violate         generate contract violations (implies '-f')\n"
 "\n"
 "Then '<mode>' is one of these\n"
 "\n"
@@ -83,7 +83,7 @@ static const char *USAGE =
 "\n"
 "In order to replay a trace which violates an API contract use\n"
 "\n"
-"  --do-not-enforce-contracts\n"
+"  -f | --do-not-enforce[-contracts]\n"
 "\n"
 "Replay and record traces more faithfully with the following options\n"
 "\n"
@@ -1091,6 +1091,8 @@ struct Call {
     case (CallType::LEAKALLOC):
     case (CallType::MAXALLOC):
 #endif
+    case (CallType::TRACEPROOF):
+    case (CallType::CONFIGURE):
     case (CallType::PRINT_OPTIONS):
     case (CallType::ASSUME):
     case (CallType::SOLVE):
@@ -2080,11 +2082,11 @@ public:
       MLOG ("ignore tainted " << lit << std::endl);
       return false;
     }
-    assert (!value_map[lit]);
-    assert (!s->external->observed (lit));
-    observed_map[abs (lit)] = true;
+    assert (mobical.donot.enforce || !value_map[lit]);
+    assert (mobical.donot.enforce || !s->external->observed (lit));
     MLOG ("adding observed " << lit << std::endl);
     s->add_observed_var (lit);
+    observed_map[abs (lit)] = true;
     return true;
   }
 
@@ -2094,14 +2096,14 @@ public:
       return;
     }
     observed_map.erase (abs (lit));
-    assert (s->external->observed (lit));
+    assert (mobical.donot.enforce || s->external->observed (lit));
     auto it =
         std::find (observed_fixed.begin (), observed_fixed.end (), lit);
     if (it != observed_fixed.end ())
       observed_fixed.erase (it);
     if (value_map[lit]) {
       const int unit = lit * value_map[lit];
-      // We are not necessarily at a synchonized point
+      // We are not necessarily at a synchronized point
       // assert (s->external->current_val (unit) > 0);
       auto level = level_map[lit];
       assert (observed_trail.size () > level);
@@ -3329,7 +3331,7 @@ struct ConnectCall : public Call {
       }
     } else {
 #endif
-      if (!mobical.donot.mock_propagator) {
+      if (!mobical.donot.mock_propagator && !mobical.mock_pointer) {
         assert (!mobical.mock_pointer);
 #ifdef LOGGING
         mobical.mock_pointer =
@@ -3347,7 +3349,7 @@ struct ConnectCall : public Call {
         // this.
 
         mobical.mock_pointer->collect_prev_fixed ();
-      } else {
+      } else if (!mobical.replay_pointer) {
         assert (!mobical.replay_pointer);
 #ifdef LOGGING
         mobical.replay_pointer = new ReplayPropagator (
@@ -3446,13 +3448,23 @@ struct UnObserveCall : public Call {
 #endif
           s->remove_observed_var (map_arg (s, extendmap));
       }
-    } else {
+    } else if (get_propagator (s)) {
       assert (!delay);
       MockPropagator *mp =
           static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
-      mp->remove_observed (map_arg (s, extendmap));
-    }
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          mp->remove_observed (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        mp->remove_observed (map_arg (s, extendmap));
+    } else
+      caught ();
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new UnObserveCall (arg); }
@@ -3481,13 +3493,23 @@ struct ObserveCall : public Call {
 #endif
           s->add_observed_var (map_arg (s, extendmap));
       }
-    } else {
+    } else if (get_propagator (s)) {
       assert (!delay);
       MockPropagator *mp =
           static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
-      mp->add_observed (map_arg (s, extendmap));
-    }
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          mp->add_observed (map_arg (s, extendmap));
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        mp->add_observed (map_arg (s, extendmap));
+    } else
+      caught ();
   }
   void print (ostream &o) { o << keyword () << ' ' << arg; }
   Call *copy () { return new ObserveCall (arg); }
@@ -3732,9 +3754,13 @@ struct MockForceCall : public Call {
       : Call (FORCE, l, 0, 0, v), forcetype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
-    assert (mp);
-    mp->push_force (map_arg (s, extendmap, false), forcetype, val);
+    if (get_propagator (s)) {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (get_propagator (s));
+      assert (mp);
+      mp->push_force (map_arg (s, extendmap, false), forcetype, val);
+    } else
+      caught ();
   }
   void print (ostream &o) {
     o << keyword () << " " << arg << " " << forcetype << " " << val;
@@ -3749,9 +3775,13 @@ struct LemmaCall : public Call {
       : Call (LEMMA, l, 0, 0, v), lemmatype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
-    assert (mp);
-    mp->push_lemma_lit (map_arg (s, extendmap, false), lemmatype, val);
+    if (get_propagator (s)) {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (get_propagator (s));
+      assert (mp);
+      mp->push_lemma_lit (map_arg (s, extendmap, false), lemmatype, val);
+    } else
+      caught ();
   }
   void print (ostream &o) {
     o << keyword () << " " << arg;
@@ -3766,9 +3796,13 @@ struct DecideCall : public Call {
   DecideCall (int l, int v) : Call (DECIDE, l, 0, 0, v) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
-    MockPropagator *mp = static_cast<MockPropagator *> (get_propagator (s));
-    assert (mp);
-    mp->push_decide_lit (map_arg (s, extendmap, false), val);
+    if (get_propagator (s)) {
+      MockPropagator *mp =
+          static_cast<MockPropagator *> (get_propagator (s));
+      assert (mp);
+      mp->push_decide_lit (map_arg (s, extendmap, false), val);
+    } else
+      caught ();
   }
   void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << val; }
   Call *copy () { return new DecideCall (arg, val); }
@@ -3810,7 +3844,7 @@ struct DisconnectCall : public Call {
       }
     } else {
 #endif
-      if (!mobical.donot.mock_propagator) {
+      if (!mobical.donot.mock_propagator && get_propagator (s)) {
         MockPropagator *mp =
             static_cast<MockPropagator *> (get_propagator (s));
         assert (mp);
@@ -3818,14 +3852,15 @@ struct DisconnectCall : public Call {
         s->disconnect_external_propagator ();
         delete mp;
         mobical.mock_pointer = 0;
-      } else {
+      } else if (get_propagator (s)) {
         ReplayPropagator *rp =
             static_cast<ReplayPropagator *> (get_propagator (s));
         assert (rp);
         s->disconnect_external_propagator ();
         delete rp;
         mobical.replay_pointer = 0;
-      }
+      } else
+        caught ();
       assert (!get_propagator (s));
 #ifdef EXCEPTIONS
     }
@@ -4035,12 +4070,13 @@ struct ResetObservedCall : public Call {
 #endif
           s->reset_observed_vars ();
       }
-    } else {
+    } else if (get_propagator (s)) {
       MockPropagator *mp =
           static_cast<MockPropagator *> (get_propagator (s));
       assert (mp);
       mp->reset_observed ();
-    }
+    } else
+      caught ();
   }
   void print (ostream &o) { o << keyword (); }
   Call *copy () { return new ResetObservedCall (); }
@@ -6112,27 +6148,32 @@ void Trace::generate_melt (Random &random) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_melt)
     return;
   int m = vars ();
-  int64_t *frozen = new int64_t[m + 1];
-  for (int i = 1; i <= m; i++)
-    frozen[i] = 0;
-  for (size_t i = 0; i < size (); i++) {
-    Call *c = calls[i];
-    if (c->type == CallType::MELT) {
-      int idx = abs (c->arg);
-      assert (idx > 0), assert (idx <= m);
-      assert (frozen[idx] > 0);
-      frozen[idx]--;
-    } else if (c->type == CallType::FREEZE) {
-      int idx = abs (c->arg);
-      assert (idx > 0), assert (idx <= m);
-      frozen[idx]++;
-    }
-  }
   vector<int> candidates;
-  for (int i = 1; i <= m; i++)
-    if (frozen[i])
+  if (mobical.force.violate) {
+    for (int i = 1; i <= m; i++)
       candidates.push_back (i);
-  delete[] frozen;
+  } else {
+    int64_t *frozen = new int64_t[m + 1];
+    for (int i = 1; i <= m; i++)
+      frozen[i] = 0;
+    for (size_t i = 0; i < size (); i++) {
+      Call *c = calls[i];
+      if (c->type == CallType::MELT) {
+        int idx = abs (c->arg);
+        assert (idx > 0), assert (idx <= m);
+        assert (frozen[idx] > 0);
+        frozen[idx]--;
+      } else if (c->type == CallType::FREEZE) {
+        int idx = abs (c->arg);
+        assert (idx > 0), assert (idx <= m);
+        frozen[idx]++;
+      }
+    }
+    for (int i = 1; i <= m; i++)
+      if (frozen[i])
+        candidates.push_back (i);
+    delete[] frozen;
+  }
   double fraction = random.generate_double () * 0.4;
   for (auto idx : candidates) {
     if (random.generate_double () <= fraction)
@@ -6182,7 +6223,8 @@ void Trace::generate_violating (Random &random) {
   CallType type = (CallType) random.pick_int (0, INVALID_TYPE);
   switch (type) {
   case (CallType::INIT): {
-    push_back (new InitCall ());
+    // Init is bad
+    // push_back (new InitCall ());
     break;
   }
   case (CallType::RESET): {
@@ -6395,7 +6437,7 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::OPTIMIZE): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (-10, 10);
+    const int size = random.pick_int (1, 31);
     push_back (new OptimizeCall (size));
     break;
   }
@@ -6576,7 +6618,8 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::COPY): {
-    push_back (new CopyCall ());
+    // TODO: copy call is not always working
+    // push_back (new CopyCall ());
     break;
   }
   case (CallType::INVALID_TYPE):
@@ -7312,7 +7355,10 @@ int Trace::fork_and_execute () {
 // Delta-debugging algorithm on segments.
 
 bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
-  size_t n = segments.size ();
+  const size_t n = segments.size ();
+#ifndef NDEBUG
+  const size_t num_calls = calls.size ();
+#endif
   if (!n)
     return false;
   size_t granularity = n;
@@ -7345,7 +7391,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           continue;
         Segment &s = segments[i];
         for (size_t j = s.lo; j < s.hi; j++)
-          if (!calls[j]->matching_type ())
+          if (mobical.donot.enforce || !calls[j]->matching_type ())
             ignore[j] = true;
       }
       Trace tmp;
@@ -7383,7 +7429,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         continue;
       Segment &s = segments[i];
       for (size_t j = s.lo; j < s.hi; j++)
-        if (!calls[j]->matching_type ())
+        if (mobical.donot.enforce || !calls[j]->matching_type ())
           ignore[j] = true;
     }
     size_t j = 0;
@@ -7400,6 +7446,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
   delete[] ignore;
   delete[] removed;
   delete[] saved;
+  assert (!res || num_calls > calls.size ());
   return res;
 }
 
@@ -7494,6 +7541,8 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
+  if (mobical.donot.enforce)
+    return false;
   if (Signal::interrupted ())
     return false;
   notify ('p');
@@ -7529,6 +7578,8 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
+  if (mobical.donot.enforce)
+    return false;
   if (Signal::interrupted ())
     return false;
   notify ('c');
@@ -7553,6 +7604,8 @@ bool Trace::shrink_clauses (int expected) {
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
     return false;
+  if (mobical.donot.enforce)
+    return false;
   if (Signal::interrupted ())
     return false;
   notify ('l');
@@ -7572,6 +7625,8 @@ bool Trace::shrink_literals (int expected) {
 // (connect, disconnect) with propagator calls in between
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
+    return false;
+  if (mobical.donot.enforce)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7680,11 +7735,19 @@ bool Trace::shrink_basic (int expected) {
     return false;
   if (Signal::interrupted ())
     return false;
+  size_t first_init = 0;
+  while (calls[first_init]->type != INIT) {
+    first_init++;
+    if (first_init >= calls.size ())
+      return false;
+  }
   notify ('b');
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
+    if (l == first_init)
+      continue;
     Call *c = calls[l];
-    if (!c->basic_type ())
+    if (!mobical.donot.enforce && !c->basic_type ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -9326,7 +9389,9 @@ int Mobical::main (int argc, char **argv) {
       donot.execute = true;
     else if (!strcmp (argv[i], "--do-not-fork"))
       donot.fork = true;
-    else if (!strcmp (argv[i], "--do-not-enforce-contracts"))
+    else if (!strcmp (argv[i], "-f") ||
+             !strcmp (argv[i], "--do-not-enforce") ||
+             !strcmp (argv[i], "--do-not-enforce-contracts"))
       donot.enforce = true;
     else if (!strcmp (argv[i], "--no-seeds"))
       donot.seeds = true;
@@ -9400,6 +9465,7 @@ int Mobical::main (int argc, char **argv) {
                "'-DEXCEPTIONS' to catch them instead)");
 #endif
       force.violate = true;
+      donot.enforce = true;
     } else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
       add_set_log_to_true = true;
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
@@ -9979,6 +10045,7 @@ int Mobical::main (int argc, char **argv) {
   if (tracing && donot.execute)
     die ("can not combine '--tracing' with '--do-not-execute'");
 
+  /*
   if (!input_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' without "
          "'<input>'");
@@ -9986,6 +10053,7 @@ int Mobical::main (int argc, char **argv) {
   if (output_path && donot.enforce)
     die ("can not use '--do-not-enforce-contracts' "
          "with both '<input>' and '<output>'");
+         */
 
   if (!input_path && mobical.donot.mock_propagator)
     die ("can not use '--do-not-mock-propagator' without <input>");
