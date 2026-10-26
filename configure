@@ -28,7 +28,7 @@ profile=no
 memory_fuzzing=no
 terminator_fuzzing=no
 contracts=yes
-ignorecontracts=no
+exceptcontracts=no
 tracing=yes
 unlocked=yes
 pedantic=no
@@ -113,7 +113,7 @@ where '<option>' is one of the following
                    '-DMOBICAL_TERMINATE' to fuzz for bad terminator handling
 
 --no-contracts     compile without API contract checking code
---ignore-contracts ignore violated API contract (and return)
+--except-contracts API contract violation exception (instead of abort)
 --no-tracing       compile without API call tracing code
 --no-contrib       compile without contributed code
 --no-ipasir        compile without ipasir interface
@@ -177,7 +177,7 @@ do
     -q|--quiet) quiet=yes;;
 
     --no-contracts | --no-contract) contracts=no;;
-    --ignore-contracts | --ignore-contract) ignorecontracts=yes;;
+    --except-contracts | --except-contract) exceptcontracts=yes;;
     --no-tracing | --no-trace) tracing=no;;
     --no-contrib) contrib=no;;
     --no-ipasir) ipasir=no;;
@@ -254,7 +254,7 @@ fi
 
 if [ $contracts = no ]
 then
-  [ $ignorecontracts = yes ] && die "'--ignore-contract' not compatible with '--no-contract'"
+  [ $exceptcontracts = yes ] && die "'--except-contract' not compatible with '--no-contract'"
 fi
 
 #--------------------------------------------------------------------------#
@@ -396,7 +396,7 @@ then
 fi
 
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
-[ $ignorecontracts = yes ] && CXXFLAGS="$CXXFLAGS -DRCONTRACTS"
+[ $exceptcontracts = yes ] && CXXFLAGS="$CXXFLAGS -DEXCEPTIONS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 [ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"

@@ -5,12 +5,12 @@
 #ifndef NCONTRACTS
 /*------------------------------------------------------------------------*/
 
-#ifndef RCONTRACTS
-// If the user violates API contracts while calling functions declared in
-// 'cadical.hpp' and implemented in 'solver.cpp' then an error is reported.
-// Currently we also force aborting the program.  In the future it might be
-// better to allow the user to provide a call back function, which then can
-// for instance throw a C++ exception or execute a 'longjmp' in 'C' etc.
+#ifndef EXCEPTIONS
+//  If the user violates API contracts while calling functions declared in
+//  'cadical.hpp' and implemented in 'solver.cpp' then an error is reported.
+//  Currently we also force aborting the program.  In the future it might be
+//  better to allow the user to provide a call back function, which then can
+//  for instance throw a C++ exception or execute a 'longjmp' in 'C' etc.
 
 #define CONTRACT_VIOLATED(...) \
   do { \
@@ -25,9 +25,17 @@
   } while (0)
 
 #else
+#include <stdexcept>
 #define CONTRACT_VIOLATED(...) \
   do { \
-    return; \
+    char buffer1[256]; \
+    snprintf (buffer1, sizeof buffer1, \
+              "invalid API usage of '%s' in '%s': ", __PRETTY_FUNCTION__, \
+              __FILE__); \
+    std::string s = buffer1; \
+    snprintf (buffer1, sizeof buffer1, __VA_ARGS__); \
+    s += buffer1; \
+    throw std::runtime_error (s); \
   } while (0)
 #endif
 
@@ -103,9 +111,10 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
 
 #define REQUIRE_READY_STATE() \
   do { \
-    REQUIRE_VALID_STATE (); \
-    REQUIRE (state () != ADDING, \
-             "clause incomplete (terminating zero not added)"); \
+    REQUIRE_INITIALIZED (); \
+    REQUIRE (this->state () & VALID, "solver in invalid state"); \
+    REQUIRE (this->state () & READY, \
+             "add/constrain incomplete (terminating zero not added)"); \
   } while (0)
 
 #define REQUIRE_VALID_OR_SOLVING_STATE() \
@@ -113,6 +122,13 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
     REQUIRE_INITIALIZED (); \
     REQUIRE (this->state () & (VALID | SOLVING), \
              "solver neither in valid nor solving state"); \
+  } while (0)
+
+#define REQUIRE_READY_OR_SOLVING_STATE() \
+  do { \
+    REQUIRE_INITIALIZED (); \
+    REQUIRE (this->state () & (READY | SOLVING), \
+             "solver neither in ready nor solving state"); \
   } while (0)
 
 #define REQUIRE_VALID_LIT(LIT) \
@@ -149,6 +165,9 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
   do { \
   } while (0)
 #define REQUIRE_VALID_OR_SOLVING_STATE() \
+  do { \
+  } while (0)
+#define REQUIRE_READY_OR_SOLVING_STATE() \
   do { \
   } while (0)
 #define REQUIRE_VALID_LIT(...) \

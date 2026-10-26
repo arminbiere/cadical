@@ -496,7 +496,7 @@ Solver::Solver () {
 Solver::~Solver () {
 
   TRACE (reset, "reset");
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  // REQUIRE_VALID_OR_SOLVING_STATE ();
   STATE (DELETING);
 
   tracing_nb_lidrup_env_var_method = false;
@@ -734,7 +734,7 @@ bool Solver::configure (const char *name) {
 
 void Solver::add (int lit) {
   TRACE (add, "add", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE (state () & (READY | ADDING), "state not ready or adding");
   if (lit) {
     REQUIRE_VALID_LIT (lit);
     if (internal->opts.factor && internal->opts.factorcheck == 1)
@@ -757,12 +757,13 @@ void Solver::add (int lit) {
              "if 'factor' is enabled)",
              (int) abs (lit));
   }
+  assert (!adding_constraint);
   transition_to_steady_state ();
   external->add (lit);
   adding_clause = lit;
   if (adding_clause)
     STATE (ADDING);
-  else if (!adding_constraint)
+  else
     STATE (STEADY);
   LOG_API_CALL_END ("add", lit);
 }
@@ -826,15 +827,17 @@ bool Solver::inconsistent () { return internal->unsat; }
 
 int64_t Solver::constrain (int lit) {
   TRACE (constrain, "constrain", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE (state () & (READY | ADDING_CONSTRAINT),
+           "state not ready or adding constraint");
   if (lit)
     REQUIRE_VALID_LIT (lit);
+  assert (!adding_clause);
   transition_to_steady_state ();
   const int64_t id = external->constrain (lit);
   adding_constraint = lit;
   if (adding_constraint)
-    STATE (ADDING);
-  else if (!adding_clause)
+    STATE (ADDING_CONSTRAINT);
+  else
     STATE (STEADY);
   LOG_API_CALL_RETURNS ("constrain", lit, id);
   return id;
@@ -842,7 +845,7 @@ int64_t Solver::constrain (int lit) {
 
 void Solver::assume (int lit) {
   TRACE (assume, "assume", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE_VALID_LIT (lit);
   transition_to_steady_state ();
   external->assume (lit);
@@ -851,7 +854,7 @@ void Solver::assume (int lit) {
 
 int Solver::lookahead () {
   TRACE (lookahead, "lookahead");
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
@@ -862,7 +865,7 @@ int Solver::lookahead () {
 
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   TRACE (lookahead_cubes, "lookahead_cubes");
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
@@ -879,7 +882,7 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
 
 void Solver::reset_assumptions () {
   TRACE (reset_assumptions, "reset_assumptions");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   transition_to_steady_state ();
   external->reset_assumptions ();
   external->reset_concluded ();
@@ -891,7 +894,7 @@ void Solver::reset_assumptions () {
 
 int Solver::propagate () {
   TRACE (propagate_assumptions, "propagate_assumptions");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   transition_to_steady_state ();
   const int res = external->propagate_assumptions ();
   if (tracing_nb_lidrup_env_var_method)
@@ -1080,16 +1083,20 @@ int Solver::fixed (int lit) const {
 
 void Solver::phase (int lit) {
   TRACE (phase, "phase", lit);
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->phase (lit);
   LOG_API_CALL_END ("phase", lit);
 }
 
 void Solver::unphase (int lit) {
   TRACE (unphase, "unphase", lit);
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->unphase (lit);
   LOG_API_CALL_END ("unphase", lit);
 }
@@ -1098,7 +1105,7 @@ void Solver::unphase (int lit) {
 
 void Solver::terminate () {
   // Since 'terminate' is asynchronous it should not print anything
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  // REQUIRE_VALID_OR_SOLVING_STATE ();
   external->terminate ();
 }
 
@@ -1301,18 +1308,20 @@ int64_t Solver::irredundant () const {
 
 void Solver::freeze (int lit) {
   TRACE (freeze, "freeze", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE_VALID_LIT (lit);
+  transition_to_steady_state ();
   external->freeze (lit);
   LOG_API_CALL_END ("freeze", lit);
 }
 
 void Solver::melt (int lit) {
   TRACE (melt, "melt", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (external->frozen (lit),
            "can not melt completely melted literal '%d'", lit);
+  transition_to_steady_state ();
   external->melt (lit);
   LOG_API_CALL_END ("melt", lit);
 }
@@ -1706,7 +1715,9 @@ bool Solver::is_decision (int lit) {
 
 void Solver::force_backtrack (int new_level) {
   TRACE (force_backtrack, "force_backtrack", new_level);
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () != UNSATISFIED,
+           "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,
            "can not force backtrack without a connected propagator");
   REQUIRE (internal->forced_backt_allowed,
@@ -1730,7 +1741,9 @@ bool Solver::is_witness (int lit) {
 
 bool Solver::force_unassign (int lit) {
   TRACE (force_unassign, "force_unassign", lit);
-  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () != UNSATISFIED,
+           "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,
            "can not force unassign without a connected propagator");
   REQUIRE_VALID_LIT (lit);
