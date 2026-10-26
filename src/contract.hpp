@@ -111,9 +111,10 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
 
 #define REQUIRE_READY_STATE() \
   do { \
-    REQUIRE_VALID_STATE (); \
-    REQUIRE (state () != ADDING, \
-             "clause incomplete (terminating zero not added)"); \
+    REQUIRE_INITIALIZED (); \
+    REQUIRE (this->state () & VALID, "solver in invalid state"); \
+    REQUIRE (this->state () & READY, \
+             "add/constrain incomplete (terminating zero not added)"); \
   } while (0)
 
 #define REQUIRE_VALID_OR_SOLVING_STATE() \
@@ -121,6 +122,13 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
     REQUIRE_INITIALIZED (); \
     REQUIRE (this->state () & (VALID | SOLVING), \
              "solver neither in valid nor solving state"); \
+  } while (0)
+
+#define REQUIRE_READY_OR_SOLVING_STATE() \
+  do { \
+    REQUIRE_INITIALIZED (); \
+    REQUIRE (this->state () & (READY | SOLVING), \
+             "solver neither in ready nor solving state"); \
   } while (0)
 
 #define REQUIRE_VALID_LIT(LIT) \
@@ -157,6 +165,9 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
   do { \
   } while (0)
 #define REQUIRE_VALID_OR_SOLVING_STATE() \
+  do { \
+  } while (0)
+#define REQUIRE_READY_OR_SOLVING_STATE() \
   do { \
   } while (0)
 #define REQUIRE_VALID_LIT(...) \

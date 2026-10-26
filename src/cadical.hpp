@@ -120,10 +120,10 @@ enum Status {
 //                    set / trace
 //  CONFIGURING --------------------------> CONFIGURING
 //
-//               add (non zero literal)
-//        VALID --------------------------> ADDING
+//               add / constrain (non zero literal)
+//        VALID --------------------------> ADDING[_CONSTRAINT]
 //
-//               add (zero literal)
+//               add /constrain (zero literal)
 //        VALID --------------------------> STEADY
 //
 //               assume (non zero literal)
@@ -192,20 +192,21 @@ enum Status {
 // States are represented by a bit-set in order to combine them.
 
 enum State {
-  INITIALIZING = 1,   // during initialization (invalid)
-  CONFIGURING = 2,    // configure options (with 'set')
-  STEADY = 4,         // ready to call 'solve'
-  ADDING = 8,         // adding clause literals (zero missing)
-  SOLVING = 16,       // while solving (within 'solve')
-  SATISFIED = 32,     // satisfiable allows 'val'
-  UNSATISFIED = 64,   // unsatisfiable allows 'failed'
-  DELETING = 128,     // during and after deletion (invalid)
-  INCONCLUSIVE = 256, // unknown allows 'implied'
+  INITIALIZING = 1,       // during initialization (invalid)
+  CONFIGURING = 2,        // configure options (with 'set')
+  STEADY = 4,             // ready to call 'solve'
+  ADDING = 8,             // adding clause literals (zero missing)
+  ADDING_CONSTRAINT = 16, // adding constraint literals (zero missing)
+  SOLVING = 32,           // while solving (within 'solve')
+  SATISFIED = 64,         // satisfiable allows 'val'
+  UNSATISFIED = 128,      // unsatisfiable allows 'failed'
+  DELETING = 256,         // during and after deletion (invalid)
+  INCONCLUSIVE = 512,     // unknown allows 'implied'
 
   // These combined states are used to check contracts.
 
   READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED | INCONCLUSIVE,
-  VALID = READY | ADDING,
+  VALID = READY | ADDING | ADDING_CONSTRAINT,
   INVALID = INITIALIZING | DELETING
 };
 
@@ -285,7 +286,7 @@ public:
   // returning from 'simplify' and 'lookahead.
   //
   //   require (READY)
-  //   ensure (STEADY )
+  //   ensure (STEADY)
   //
   void assume (int lit);
 
@@ -493,9 +494,11 @@ public:
   //
   // Add valid literal to the constraint clause or zero to terminate it.
   //
-  //   require (VALID)                     // recall 'VALID = READY |
-  //   ADDING' if (lit) ensure (ADDING)            // and thus VALID but not
-  //   READY if (!lit) && !adding_clause ensure (STEADY ) // and thus READY
+  //   require (VALID)  // recall 'VALID = READY | ADDING_CONSTRAINT'
+  //   if (lit) ensure (ADDING_CONSTRAINT)
+  //     and thus VALID but not READY
+  //   if (!lit) && !adding_clause ensure (STEADY)
+  //     and thus READY
   //
   void constrain (int lit);
 
@@ -860,6 +863,10 @@ public:
   //   ensure (VALID)
   //
   bool frozen (int lit) const;
+  //
+  //   require (READY)
+  //   ensure (STEADY)
+  //
   void freeze (int lit);
   void melt (int lit); // Also needs 'require (frozen (lit))'.
 
@@ -877,7 +884,7 @@ public:
   //------------------------------------------------------------------------
   // Force the default decision phase of a variable to a certain value.
   //
-  //   require (VALID || SOLVING)
+  //   require (READY || SOLVING)
   //   ensure (STEADY || SOLVING)
   //
   void phase (int lit);
