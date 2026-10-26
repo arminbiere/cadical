@@ -589,10 +589,7 @@ enum CallType : uint64_t {
 
 struct Shared {
   int64_t call_type_executed[CallType::INVALID_TYPE];
-  int64_t call_type_delayed[CallType::INVALID_TYPE];
-#ifdef EXCEPTIONS
   int64_t call_type_caught[CallType::INVALID_TYPE];
-#endif
   int64_t executed;
   int64_t solved;
   int64_t incremental;
@@ -1408,8 +1405,6 @@ struct Call {
     executed = !delay;
     if (!delay)
       mobical.shared->call_type_executed[type]++;
-    else
-      mobical.shared->call_type_delayed[type]++;
   }
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
@@ -1417,7 +1412,6 @@ struct Call {
   virtual void *get_propagator (Solver *&s) {
     return s->external->propagator;
   }
-#ifdef EXCEPTIONS
   virtual void caught () {
     mobical.shared->call_type_caught[type]++;
     if (mobical.verbose) {
@@ -1426,6 +1420,7 @@ struct Call {
       std::cout << "'" << std::endl;
     }
   }
+#ifdef EXCEPTIONS
   virtual bool catching () { return !mobical.donot.catching; }
 #endif
 };
@@ -3944,6 +3939,8 @@ struct ImpliedCall : public Call {
         else if (s->state () == State::SATISFIED ||
                  s->state () == State::INCONCLUSIVE)
           s->implied (entrailed);
+        else
+          caught ();
 
 #ifdef EXCEPTIONS
       }
@@ -4082,12 +4079,13 @@ struct ValCall : public Call {
         }
       } else {
 #endif
+        res = 0;
         if (mobical.donot.enforce)
           res = s->val (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->val (map_arg (s, extendmap, false));
         else
-          res = 0;
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -4117,12 +4115,13 @@ struct FlipCall : public Call {
         }
       } else {
 #endif
+        res = 0;
         if (mobical.donot.enforce)
           res = s->flip (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flip (map_arg (s, extendmap, false));
         else
-          res = 0;
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -4152,12 +4151,13 @@ struct FlippableCall : public Call {
         }
       } else {
 #endif
+        res = 0;
         if (mobical.donot.enforce)
           res = s->flippable (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flippable (map_arg (s, extendmap, false));
         else
-          res = 0;
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -4214,12 +4214,13 @@ struct FailedCall : public Call {
         }
       } else {
 #endif
+        res = 0;
         if (mobical.donot.enforce)
           res = s->failed (map_arg (s, extendmap, false));
         else if (s->state () == UNSATISFIED)
           res = s->failed (map_arg (s, extendmap, false));
         else
-          res = 0;
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -4251,8 +4252,11 @@ struct ConcludeCall : public Call {
 #endif
         if (mobical.donot.enforce)
           s->conclude ();
-        else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
+        else if (s->state () == UNSATISFIED || s->state () == SATISFIED ||
+                 s->state () == INCONCLUSIVE)
           s->conclude ();
+        else
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -4313,6 +4317,8 @@ struct MeltCall : public Call {
           s->melt (map_arg (s, extendmap));
         else if (s->frozen (map_arg (s, extendmap)))
           s->melt (map_arg (s, extendmap));
+        else
+          caught ();
 #ifdef EXCEPTIONS
       }
 #endif
@@ -6414,11 +6420,7 @@ void Mobical::print_statistics () {
     for (uint64_t i = INIT; i < INVALID_TYPE; i++) {
       CallType type = (CallType) i;
       PRINT_STATER (ct_to_str (type), shared->call_type_executed[i],
-#ifdef EXCEPTIONS
                     shared->call_type_caught[i],
-#else
-                    shared->call_type_delayed[i],
-#endif
                     shared->call_type_executed[i], verbose);
     }
 
