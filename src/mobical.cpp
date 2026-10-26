@@ -26,7 +26,7 @@ static const char *USAGE =
 "where '<option>' can be one of the following:\n"
 "\n"
 "  --help    | -h    print this command line option summary and exit\n"
-"  --version         print CaDiCaL's three character version and exit\n"
+"  --version         print CaDiCaL's version number and exit\n"
 "  --build           print build configuration\n"
 "\n"
 "  -v | --verbose    increase verbosity\n"
@@ -52,6 +52,7 @@ static const char *USAGE =
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
+"  --violate         generate contract violations\n"
 "\n"
 "Then '<mode>' is one of these\n"
 "\n"
@@ -67,7 +68,7 @@ static const char *USAGE =
 "\n"
 "Fix solver options independent of the (generated) trace content:\n"
 "\n"
-"  -F[ ]<option>     with '<option>' as in cadical but without '--' prefix\n"
+"  -F[ ]<option>     with '<option>' as in CaDiCaL but without '--' prefix\n"
 "\n"
 "The output trace is not shrunken if it is not failing.  However, before\n"
 "it is written it is executed, unless '--do-not-execute' is specified:\n"
@@ -272,6 +273,7 @@ enum Size { NOSIZE = 0, TINY = 5, SMALL = 10, MEDIUM = 30, BIG = 50 };
 struct Force {
   Size size = NOSIZE;
   int phases = -1;
+  bool violate = false;
 };
 
 // Options to shrink traces.
@@ -5343,6 +5345,8 @@ private:
   void generate_implied (Random &);
 
   void generate_limits (Random &);
+
+  void generate_violating (Random &);
 };
 
 /*------------------------------------------------------------------------*/
@@ -6135,6 +6139,92 @@ void Trace::generate_process (Random &random) {
 
   if (mobical.add_stats_after_solve)
     push_back (new StatsCall ());
+}
+
+void generate_violating (Random &random) {
+  CallType type = (CallType) random.pick_int (0, INVALID_TYPE);
+  switch (type) {
+  case (CallType::INIT):
+  case (CallType::RESET):
+  case (CallType::SET):
+  case (CallType::CONFIGURE):
+  case (CallType::VARS):
+  case (CallType::ACTIVE):
+  case (CallType::REDUNDANT):
+  case (CallType::IRREDUNDANT):
+  case (CallType::RESIZE):
+  case (CallType::DECLARE):
+  case (CallType::DECLARE_VARS):
+  case (CallType::RESERVE):
+  case (CallType::PHASE):
+  case (CallType::UNPHASE):
+  case (CallType::ADD):
+  case (CallType::ASSUME):
+  case (CallType::CONSTRAIN):
+  case (CallType::RESET_ASSUMPTIONS):
+  case (CallType::SOLVE):
+  case (CallType::SIMPLIFY):
+  case (CallType::LOOKAHEAD):
+  case (CallType::CUBING):
+  case (CallType::PROPAGATE):
+  case (CallType::VAL):
+  case (CallType::FLIP):
+  case (CallType::FLIPPABLE):
+  case (CallType::FAILED):
+  case (CallType::FIXED):
+  case (CallType::IMPLIED):
+  case (CallType::FREEZE):
+  case (CallType::FROZEN):
+  case (CallType::MELT):
+  case (CallType::LIMIT):
+  case (CallType::OPTIMIZE):
+  case (CallType::DUMP):
+  case (CallType::STATS):
+  case (CallType::CONNECT):
+  case (CallType::OBSERVE):
+  case (CallType::UNOBSERVE):
+  case (CallType::RESET_OBSERVED):
+  case (CallType::IS_DECISION):
+  case (CallType::IS_WITNESS):
+  case (CallType::OBSERVED):
+  case (CallType::FORCE_BACKTRACK):
+  case (CallType::FORCE_UNASSIGN):
+  case (CallType::LEMMA):
+  case (CallType::DECIDE):
+  case (CallType::FORCE):
+  case (CallType::CB_DECIDE):
+  case (CallType::CB_PROPAGATE):
+  case (CallType::CB_HAS_CLAUSE):
+  case (CallType::CB_ADD_CLAUSE):
+  case (CallType::CB_ADD_REASON):
+  case (CallType::CB_CHECK_MODEL):
+  case (CallType::NOTIFY_ASSIGNMENT):
+  case (CallType::NOTIFY_BACKTRACK):
+  case (CallType::NOTIFY_LEVEL):
+  case (CallType::CONCLUDE):
+  case (CallType::DISCONNECT):
+  case (CallType::TRACEPROOF):
+  case (CallType::FLUSHPROOFTRACE):
+  case (CallType::CLOSEPROOFTRACE):
+#ifdef MOBICAL_MEMORY
+  case (CallType::MAXALLOC):
+  case (CallType::LEAKALLOC):
+#endif
+#ifdef MOBICAL_TERMINATE
+  case (CallType::TERMINATE):
+#endif
+  case (CallType::TRAVERSE_CLAUSES):
+  case (CallType::TRAVERSE_CONSTRAINT):
+  case (CallType::TRAVERSE_WITNESSES_BACKWARD):
+  case (CallType::TRAVERSE_WITNESSES_FORWARD):
+  case (CallType::READ_DIMACS):
+  case (CallType::READ_SOLUTION):
+  case (CallType::WRITE_DIMACS):
+  case (CallType::WRITE_EXTENSION):
+  case (CallType::COPY):
+  case (CallType::INVALID_TYPE):
+    break; // skip
+  }
 }
 
 void Trace::generate (uint64_t i, uint64_t s) {
@@ -8937,7 +9027,13 @@ int Mobical::main (int argc, char **argv) {
       force.size = MEDIUM;
     else if (!strcmp (argv[i], "--big"))
       force.size = BIG;
-    else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
+    else if (!strcmp (argv[i], "--violate")) {
+#ifndef EXCEPTIONS
+      warning ("contract violations count as bugs (compile with "
+               "'-DEXCEPTIONS' to catch them instead)");
+#endif
+      force.violate = true;
+    } else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
       add_set_log_to_true = true;
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
       add_dump_before_solve = true;
