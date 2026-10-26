@@ -518,6 +518,7 @@ enum CallType : uint64_t {
   LOOKAHEAD,
   CUBING,
   PROPAGATE,
+  CONCLUDE,
 
   VAL,
   FLIP,
@@ -537,6 +538,7 @@ enum CallType : uint64_t {
   STATS,
 
   CONNECT,
+  DISCONNECT,
   OBSERVE,
   UNOBSERVE,
   RESET_OBSERVED,
@@ -559,9 +561,6 @@ enum CallType : uint64_t {
   NOTIFY_ASSIGNMENT,
   NOTIFY_BACKTRACK,
   NOTIFY_LEVEL,
-
-  CONCLUDE,
-  DISCONNECT,
 
   TRACEPROOF,
   FLUSHPROOFTRACE,
@@ -4874,6 +4873,11 @@ public:
   ~Trace () { clear (); }
 
   void push_back (Call *c) { calls.push_back (c); }
+  void push_back (Random &random, Call *c) {
+    calls.push_back (c);
+    if (mobical.force.violate)
+      generate_violating (random);
+  }
 
   void print (ostream &o, int code) {
     if (seed)
@@ -5278,7 +5282,6 @@ public:
   void write_prefixed_seed (const char *prefix, int code);
   void write_path (const char *path, int code);
 
-  static bool ignored_option (const char *name);
   bool ignore_option (const char *, int max_var);
   int64_t option_high_value (const char *, int64_t def, int64_t lo,
                              int64_t hi);
@@ -5444,16 +5447,6 @@ Call *Trace::find_option_by_name (const char *name) {
   return res;
 }
 
-// Some options are never part of generated traces.
-//
-bool Trace::ignored_option (const char *name) {
-  if (!strcmp (name, "checkfrozen"))
-    return true;
-  if (!strcmp (name, "terminateint"))
-    return true;
-  return false;
-}
-
 // Check whether the trace already contains an option which
 // disables the option 'name'.  Here we assume that an option
 // disables another one if the disabling one has as name proper
@@ -5462,7 +5455,11 @@ bool Trace::ignored_option (const char *name) {
 //
 bool Trace::ignore_option (const char *name, int max_var) {
 
-  if (ignored_option (name))
+  // Some options are never part of generated traces.
+  //
+  if (!strcmp (name, "checkfrozen"))
+    return true;
+  if (!strcmp (name, "terminateint"))
     return true;
 
   // There are options which should be kept at their default value
@@ -6141,87 +6138,354 @@ void Trace::generate_process (Random &random) {
     push_back (new StatsCall ());
 }
 
-void generate_violating (Random &random) {
+void Trace::generate_violating (Random &random) {
   CallType type = (CallType) random.pick_int (0, INVALID_TYPE);
   switch (type) {
-  case (CallType::INIT):
-  case (CallType::RESET):
-  case (CallType::SET):
-  case (CallType::CONFIGURE):
-  case (CallType::VARS):
-  case (CallType::ACTIVE):
-  case (CallType::REDUNDANT):
-  case (CallType::IRREDUNDANT):
-  case (CallType::RESIZE):
-  case (CallType::DECLARE):
-  case (CallType::DECLARE_VARS):
-  case (CallType::RESERVE):
-  case (CallType::PHASE):
-  case (CallType::UNPHASE):
-  case (CallType::ADD):
-  case (CallType::ASSUME):
-  case (CallType::CONSTRAIN):
-  case (CallType::RESET_ASSUMPTIONS):
-  case (CallType::SOLVE):
-  case (CallType::SIMPLIFY):
-  case (CallType::LOOKAHEAD):
-  case (CallType::CUBING):
-  case (CallType::PROPAGATE):
-  case (CallType::VAL):
-  case (CallType::FLIP):
-  case (CallType::FLIPPABLE):
-  case (CallType::FAILED):
-  case (CallType::FIXED):
-  case (CallType::IMPLIED):
-  case (CallType::FREEZE):
-  case (CallType::FROZEN):
-  case (CallType::MELT):
-  case (CallType::LIMIT):
-  case (CallType::OPTIMIZE):
-  case (CallType::DUMP):
-  case (CallType::STATS):
-  case (CallType::CONNECT):
-  case (CallType::OBSERVE):
-  case (CallType::UNOBSERVE):
-  case (CallType::RESET_OBSERVED):
-  case (CallType::IS_DECISION):
-  case (CallType::IS_WITNESS):
-  case (CallType::OBSERVED):
-  case (CallType::FORCE_BACKTRACK):
-  case (CallType::FORCE_UNASSIGN):
-  case (CallType::LEMMA):
-  case (CallType::DECIDE):
-  case (CallType::FORCE):
-  case (CallType::CB_DECIDE):
-  case (CallType::CB_PROPAGATE):
-  case (CallType::CB_HAS_CLAUSE):
-  case (CallType::CB_ADD_CLAUSE):
-  case (CallType::CB_ADD_REASON):
-  case (CallType::CB_CHECK_MODEL):
-  case (CallType::NOTIFY_ASSIGNMENT):
-  case (CallType::NOTIFY_BACKTRACK):
-  case (CallType::NOTIFY_LEVEL):
-  case (CallType::CONCLUDE):
-  case (CallType::DISCONNECT):
-  case (CallType::TRACEPROOF):
-  case (CallType::FLUSHPROOFTRACE):
-  case (CallType::CLOSEPROOFTRACE):
+  case (CallType::INIT): {
+    push_back (new InitCall ());
+    break;
+  }
+  case (CallType::RESET): {
+    // Reset is bad
+    // push_back (new ResetCall ());
+    break;
+  }
+  case (CallType::SET): {
+    auto it = Options::begin ();
+    const auto size_options = Options::end () - it - 1;
+    const Option &o = *(it + random.pick_int (0, size_options));
+    int val;
+    int64_t hi = option_high_value (o.name, o.def, o.lo, o.hi);
+    if (o.lo < hi) {
+      bool uniform = random.generate_double () < 0.05;
+      if (uniform) {
+        do
+          val = random.pick_int (o.lo, hi);
+        while (val == o.def);
+      } else { // log uniform
+        int64_t range = hi - (int64_t) o.lo;
+        int log;
+        assert (range <= INT_MAX);
+        for (log = 0; log < 30 && (1 << log) < range; log++)
+          if (random.generate_bool ())
+            break;
+        if ((1 << log) < range)
+          range = (1l << log);
+        val = o.lo + random.pick_int (0, range);
+      }
+    } else
+      val = o.lo;
+    push_back (new SetCall (o.name, val));
+    break;
+  }
+  case (CallType::CONFIGURE): {
+    const auto configs = Config::begin ();
+    const int size = Config::end () - configs;
+    const int pos = random.pick_int (0, size - 1);
+    const char *config = configs[pos];
+    assert (Config::has (config));
+    push_back (new ConfigureCall (config));
+    break;
+  }
+  case (CallType::VARS): {
+    push_back (new VarsCall ());
+    break;
+  }
+  case (CallType::ACTIVE): {
+    push_back (new ActiveCall ());
+    break;
+  }
+  case (CallType::REDUNDANT): {
+    push_back (new RedundantCall ());
+    break;
+  }
+  case (CallType::IRREDUNDANT): {
+    push_back (new IrredundantCall ());
+    break;
+  }
+  case (CallType::RESIZE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ResizeCall (size));
+    break;
+  }
+  case (CallType::DECLARE): {
+    push_back (new DeclareOneMoreVariableCall ());
+    break;
+  }
+  case (CallType::DECLARE_VARS): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new DeclareMoreVariablesCall (size));
+    break;
+  }
+  case (CallType::RESERVE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new DeclareMoreVariablesCall (size));
+    break;
+  }
+  case (CallType::PHASE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new PhaseCall (size));
+    break;
+  }
+  case (CallType::UNPHASE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new UnPhaseCall (size));
+    break;
+  }
+  case (CallType::ADD): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new AddCall (size));
+    break;
+  }
+  case (CallType::ASSUME): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new AssumeCall (size));
+    break;
+  }
+  case (CallType::CONSTRAIN): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ConstrainCall (size));
+    break;
+  }
+  case (CallType::RESET_ASSUMPTIONS): {
+    push_back (new ResetAssumptionsCall ());
+    break;
+  }
+  case (CallType::SOLVE): {
+    push_back (new SolveCall ());
+    break;
+  }
+  case (CallType::SIMPLIFY): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, 10);
+    push_back (new SimplifyCall (size));
+    break;
+  }
+  case (CallType::LOOKAHEAD): {
+    push_back (new LookaheadCall ());
+    break;
+  }
+  case (CallType::CUBING): {
+    push_back (new CubingCall ());
+    break;
+  }
+  case (CallType::PROPAGATE): {
+    push_back (new PropagateAssumptionsCall ());
+    break;
+  }
+  case (CallType::VAL): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ValCall (size));
+    break;
+  }
+  case (CallType::FLIP): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FlipCall (size));
+    break;
+  }
+  case (CallType::FLIPPABLE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FlippableCall (size));
+    break;
+  }
+  case (CallType::FAILED): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FailedCall (size));
+    break;
+  }
+  case (CallType::FIXED): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FixedCall (size));
+    break;
+  }
+  case (CallType::IMPLIED): {
+    push_back (new ImpliedCall ());
+    break;
+  }
+  case (CallType::FREEZE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FreezeCall (size));
+    break;
+  }
+  case (CallType::FROZEN): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new FrozenCall (size));
+    break;
+  }
+  case (CallType::MELT): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new MeltCall (size));
+    break;
+  }
+  case (CallType::LIMIT): {
+    if (random.generate_double () < 0.05)
+      push_back (new LimitCall ("terminate", random.pick_log (0, 1e5)));
+    if (random.generate_double () < 0.05)
+      push_back (new LimitCall ("conflicts", random.pick_log (0, 1e4)));
+    if (random.generate_double () < 0.05)
+      push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
+    if (random.generate_double () < 0.05)
+      push_back (new LimitCall (
+          "ticks", random.pick_log64 (0, ((int64_t) 2) * INT32_MAX)));
+    if (random.generate_double () < 0.1)
+      push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
+    if (random.generate_double () < 0.05)
+      push_back (new LimitCall ("localsearch", random.pick_int (0, 1)));
+    break;
+  }
+  case (CallType::OPTIMIZE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (-10, 10);
+    push_back (new OptimizeCall (size));
+    break;
+  }
+  case (CallType::DUMP): {
+    push_back (new DumpCall ());
+    break;
+  }
+  case (CallType::STATS): {
+    push_back (new StatsCall ());
+    break;
+  }
+  case (CallType::CONNECT): {
+    push_back (new ConnectCall ());
+    break;
+  }
+  case (CallType::DISCONNECT): {
+    push_back (new DisconnectCall ());
+    break;
+  }
+  case (CallType::OBSERVE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new ObserveCall (size));
+    break;
+  }
+  case (CallType::UNOBSERVE): {
+    break;
+  }
+  case (CallType::RESET_OBSERVED): {
+    break;
+  }
+  case (CallType::IS_DECISION): {
+    break;
+  }
+  case (CallType::IS_WITNESS): {
+    break;
+  }
+  case (CallType::OBSERVED): {
+    break;
+  }
+  case (CallType::FORCE_BACKTRACK): {
+    break;
+  }
+  case (CallType::FORCE_UNASSIGN): {
+    break;
+  }
+  case (CallType::LEMMA): {
+    break;
+  }
+  case (CallType::DECIDE): {
+    break;
+  }
+  case (CallType::FORCE): {
+    break;
+  }
+  case (CallType::CB_DECIDE): {
+    break;
+  }
+  case (CallType::CB_PROPAGATE): {
+    break;
+  }
+  case (CallType::CB_HAS_CLAUSE): {
+    break;
+  }
+  case (CallType::CB_ADD_CLAUSE): {
+    break;
+  }
+  case (CallType::CB_ADD_REASON): {
+    break;
+  }
+  case (CallType::CB_CHECK_MODEL): {
+    break;
+  }
+  case (CallType::NOTIFY_ASSIGNMENT): {
+    break;
+  }
+  case (CallType::NOTIFY_BACKTRACK): {
+    break;
+  }
+  case (CallType::NOTIFY_LEVEL): {
+    break;
+  }
+  case (CallType::CONCLUDE): {
+    break;
+  }
+  case (CallType::TRACEPROOF): {
+    break;
+  }
+  case (CallType::FLUSHPROOFTRACE): {
+    break;
+  }
+  case (CallType::CLOSEPROOFTRACE): {
+    break;
+  }
 #ifdef MOBICAL_MEMORY
-  case (CallType::MAXALLOC):
-  case (CallType::LEAKALLOC):
+  case (CallType::MAXALLOC): {
+    break;
+  }
+  case (CallType::LEAKALLOC): {
+    break;
+  }
 #endif
 #ifdef MOBICAL_TERMINATE
-  case (CallType::TERMINATE):
+  case (CallType::TERMINATE): {
+    break;
+  }
 #endif
-  case (CallType::TRAVERSE_CLAUSES):
-  case (CallType::TRAVERSE_CONSTRAINT):
-  case (CallType::TRAVERSE_WITNESSES_BACKWARD):
-  case (CallType::TRAVERSE_WITNESSES_FORWARD):
-  case (CallType::READ_DIMACS):
-  case (CallType::READ_SOLUTION):
-  case (CallType::WRITE_DIMACS):
-  case (CallType::WRITE_EXTENSION):
-  case (CallType::COPY):
+  case (CallType::TRAVERSE_CLAUSES): {
+    break;
+  }
+  case (CallType::TRAVERSE_CONSTRAINT): {
+    break;
+  }
+  case (CallType::TRAVERSE_WITNESSES_BACKWARD): {
+    break;
+  }
+  case (CallType::TRAVERSE_WITNESSES_FORWARD): {
+    break;
+  }
+  case (CallType::READ_DIMACS): {
+    break;
+  }
+  case (CallType::READ_SOLUTION): {
+    break;
+  }
+  case (CallType::WRITE_DIMACS): {
+    break;
+  }
+  case (CallType::WRITE_EXTENSION): {
+    break;
+  }
+  case (CallType::COPY): {
+    break;
+  }
   case (CallType::INVALID_TYPE):
     break; // skip
   }
@@ -9597,6 +9861,9 @@ int Mobical::main (int argc, char **argv) {
 
   if (output_path && bug_limit >= 0)
     die ("can not combine '-X' and output '%s'", output_path);
+
+  if (input_path && mobical.force.violate)
+    die ("can not combine '--violate' and input '%s'", input_path);
 
   if (!output_path && donot.execute)
     die ("can not use '--do-no-execute' without '<output>'");
