@@ -106,10 +106,11 @@ static const char *USAGE =
 "\n"
 "  --log | -l        force low-level logging for detailed debugging\n"
 "\n"
-"Implicitly add 'dump' and 'stats' calls to traces:\n"
+"Implicitly add 'dump', 'stats' and 'options' calls to traces:\n"
 "\n"
-"  --dump  | -d      force dumping the CNF before every 'solve'\n"
-"  --stats | -s      force printing statistics after every 'solve'\n"
+"  --dump    | -d    force dumping the CNF before every 'solve'\n"
+"  --stats   | -s    force printing statistics after every 'solve'\n"
+"  --options | -o    force printing options\n"
 "\n"
 "Implicitly add 'configure plain' after setting options:\n"
 "\n"
@@ -495,6 +496,7 @@ enum CallType : uint64_t {
   RESET,
   SET,
   CONFIGURE,
+  PRINT_OPTIONS,
 
   VARS,
   ACTIVE,
@@ -844,6 +846,7 @@ class Mobical : public Handler {
   bool verbose = false;
   bool quiet = false;
 
+  bool add_print_options = false;
   bool add_set_log_to_true = false;
   bool add_dump_before_solve = false;
   bool add_stats_after_solve = false;
@@ -1088,6 +1091,7 @@ struct Call {
     case (CallType::LEAKALLOC):
     case (CallType::MAXALLOC):
 #endif
+    case (CallType::PRINT_OPTIONS):
     case (CallType::ASSUME):
     case (CallType::SOLVE):
     case (CallType::SIMPLIFY):
@@ -1226,6 +1230,7 @@ struct Call {
   }
   virtual bool always_type () {
     switch (type) {
+    case (CallType::PRINT_OPTIONS):
     case (CallType::ACTIVE):
     case (CallType::VARS):
     case (CallType::REDUNDANT):
@@ -1447,6 +1452,7 @@ static const char *ct_to_str (CallType type) {
        : (type == RESET ? "RESET" 
        : (type == SET ? "SET"
        : (type == CONFIGURE ? "CONFIGURE"
+       : (type == PRINT_OPTIONS ? "PRINT_OPTIONS"
        : (type == VARS ? "VARS"
        : (type == ACTIVE ? "ACTIVE"
        : (type == REDUNDANT ? "REDUNDANT"
@@ -1528,7 +1534,7 @@ static const char *ct_to_str (CallType type) {
 #ifdef MOBICAL_TERMINATE
        )
 #endif
-       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+       )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
   // clang-format on
 }
 
@@ -3113,6 +3119,33 @@ struct ConfigureCall : public Call {
   void print (ostream &o) { o << keyword () << ' ' << name; }
   Call *copy () { return new ConfigureCall (name); }
   const char *keyword () { return "configure"; }
+};
+
+struct PrintOptionsCall : public Call {
+  PrintOptionsCall () : Call (PRINT_OPTIONS) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->options ();
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else
+#endif
+        s->options ();
+    }
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new PrintOptionsCall (); }
+  const char *keyword () { return "options"; }
 };
 
 struct LimitCall : public Call {
@@ -5518,13 +5551,13 @@ void Trace::generate_options (Random &random, Size size) {
   // which means disabling it in 95% of the tests.
   //
   if (random.generate_double () < 0.95)
-    push_back (new SetCall ("walk", 0));
+    push_back (random, new SetCall ("walk", 0));
 
   // Also for checking models and assumptions, but with 80%
   // probability.
   //
   if (random.generate_double () < 0.8)
-    push_back (new SetCall ("check", 1));
+    push_back (random, new SetCall ("check", 1));
 
   // In 10% of the remaining cases we use a configuration.
   //
@@ -5534,7 +5567,7 @@ void Trace::generate_options (Random &random, Size size) {
     const int pos = random.pick_int (0, size - 1);
     const char *config = configs[pos];
     assert (Config::has (config));
-    push_back (new ConfigureCall (config));
+    push_back (random, new ConfigureCall (config));
   }
 
   // This is the fraction of options changed.
@@ -5597,7 +5630,7 @@ void Trace::generate_options (Random &random, Size size) {
       }
     } else
       val = o.lo;
-    push_back (new SetCall (o.name, val));
+    push_back (random, new SetCall (o.name, val));
   }
 
   // Now setting the option for logging. Even if we do not
@@ -5634,13 +5667,13 @@ void Trace::generate_options (Random &random, Size size) {
 
 void Trace::generate_queries (Random &random) {
   if (random.generate_double () < 0.02)
-    push_back (new VarsCall ());
+    push_back (random, new VarsCall ());
   if (random.generate_double () < 0.02)
-    push_back (new ActiveCall ());
+    push_back (random, new ActiveCall ());
   if (random.generate_double () < 0.02)
-    push_back (new RedundantCall ());
+    push_back (random, new RedundantCall ());
   if (random.generate_double () < 0.02)
-    push_back (new IrredundantCall ());
+    push_back (random, new IrredundantCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -5649,7 +5682,7 @@ void Trace::generate_resize (Random &random, int max_var) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_resize)
     return;
   int new_max_var = random.pick_int (0, 1.1 * max_var);
-  push_back (new ResizeCall (new_max_var));
+  push_back (random, new ResizeCall (new_max_var));
 }
 
 /*------------------------------------------------------------------------*/
@@ -5659,14 +5692,14 @@ void Trace::generate_declare_more_variables (Random &random) {
       mobical.tracegen.generate_declare_more_variables)
     return;
   int new_max_var = random.pick_int (0, 100);
-  push_back (new DeclareMoreVariablesCall (new_max_var));
+  push_back (random, new DeclareMoreVariablesCall (new_max_var));
 }
 
 void Trace::generate_declare_one_more_variable (Random &random) {
   if (random.pick_int (0, 999) >=
       mobical.tracegen.generate_declare_one_more_variable)
     return;
-  push_back (new DeclareOneMoreVariableCall ());
+  push_back (random, new DeclareOneMoreVariableCall ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -5674,30 +5707,37 @@ void Trace::generate_declare_one_more_variable (Random &random) {
 void Trace::generate_implied (Random &random) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_implied)
     return;
-  push_back (new ImpliedCall ());
+  push_back (random, new ImpliedCall ());
 }
 
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_limits (Random &random) {
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("terminate", random.pick_log (0, 1e5)));
+    push_back (random,
+               new LimitCall ("terminate", random.pick_log (0, 1e5)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("conflicts", random.pick_log (0, 1e4)));
+    push_back (random,
+               new LimitCall ("conflicts", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
+    push_back (random,
+               new LimitCall ("decisions", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall (
-        "ticks",
-        random.pick_log64 (0, ((int64_t) 2) *
+    push_back (
+        random,
+        new LimitCall ("ticks",
+                       random.pick_log64 (
+                           0, ((int64_t) 2) *
                                   INT32_MAX))); // slightly bigger than
                                                 // 32-bits, but not too much
   if (random.generate_double () < 0.1)
-    push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
+    push_back (random,
+               new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
-    push_back (new LimitCall ("localsearch", random.pick_int (0, 1)));
+    push_back (random,
+               new LimitCall ("localsearch", random.pick_int (0, 1)));
   if (random.generate_double () < 0.02)
-    push_back (new OptimizeCall (random.pick_int (0, 31)));
+    push_back (random, new OptimizeCall (random.pick_int (0, 31)));
 }
 
 /*------------------------------------------------------------------------*/
@@ -5750,10 +5790,10 @@ void Trace::generate_clause (Random &random, int minvars, int maxvars,
   vector<int> clause;
   for (int i = 0; i < size; i++) {
     int lit = pick_literal (random, minvars, maxvars, clause);
-    push_back (new AddCall (lit));
+    push_back (random, new AddCall (lit));
     clause.push_back (lit);
   }
-  push_back (new AddCall (0));
+  push_back (random, new AddCall (0));
 }
 
 void Trace::generate_constraint (Random &random, int minvars, int maxvars,
@@ -5766,20 +5806,20 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
   vector<int> clause;
   for (int i = 0; i < size; i++) {
     int lit = pick_literal (random, minvars, maxvars, clause);
-    push_back (new ConstrainCall (lit));
+    push_back (random, new ConstrainCall (lit));
     clause.push_back (lit);
   }
-  push_back (new ConstrainCall (0));
+  push_back (random, new ConstrainCall (0));
   if (random.generate_double () < 0.01)
     return;
   // Generating a new constraint deletes the old one.
   clause.clear ();
   for (int i = 0; i < size; i++) {
     int lit = pick_literal (random, minvars, maxvars, clause);
-    push_back (new ConstrainCall (lit));
+    push_back (random, new ConstrainCall (lit));
     clause.push_back (lit);
   }
-  push_back (new ConstrainCall (0));
+  push_back (random, new ConstrainCall (0));
 }
 
 /*------------------------------------------------------------------------*/
@@ -5789,17 +5829,17 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
       random.pick_int (0, 999) >= mobical.tracegen.generate_propagator)
     return;
   if (!in_connection) {
-    push_back (new ConnectCall ());
+    push_back (random, new ConnectCall ());
     in_connection = true;
   } else if (random.generate_double () < 0.1) {
     observed_vars.clear ();
-    push_back (new DisconnectCall ());
+    push_back (random, new DisconnectCall ());
     in_connection = false;
     return;
   } else if (random.generate_double () < 0.05) {
     observed_vars.clear ();
-    push_back (new DisconnectCall ());
-    push_back (new ConnectCall ());
+    push_back (random, new DisconnectCall ());
+    push_back (random, new ConnectCall ());
   } else if (random.generate_double () < 0.25) {
     auto p = observed_vars.begin ();
     auto q = p;
@@ -5808,12 +5848,12 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
       int var = *q++ = *p++;
       if (random.generate_double () < 0.1) {
         q--;
-        push_back (new UnObserveCall (var));
+        push_back (random, new UnObserveCall (var));
       }
     }
     observed_vars.resize (q - observed_vars.begin ());
   } else if (random.generate_double () < 0.05) {
-    push_back (new ResetObservedCall ());
+    push_back (random, new ResetObservedCall ());
   }
 
   assert (in_connection);
@@ -5829,14 +5869,14 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
     if (random.generate_double () < 0.4)
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ObserveCall (lit));
+    push_back (random, new ObserveCall (lit));
     observed_vars.push_back (abs (lit));
   }
   for (int idx = maxvars + 1; idx <= maxvars + 2 * diff; idx++) {
     if (random.generate_double () < 0.8)
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ObserveCall (lit));
+    push_back (random, new ObserveCall (lit));
     observed_vars.push_back (abs (lit));
   }
 }
@@ -5862,7 +5902,7 @@ void Trace::generate_forces (Random &random, int minvars, int maxvars) {
       const int idx = random.pick_int (minvars, maxvars);
       const int lit = random.generate_bool () ? -idx : idx;
       const int delay = random.pick_int (0, 50);
-      push_back (new MockForceCall (lit, type, delay));
+      push_back (random, new MockForceCall (lit, type, delay));
     }
   }
 }
@@ -5885,7 +5925,7 @@ void Trace::generate_lemmas (Random &random) {
       int lit = random.generate_bool () ? -observed_vars[idx]
                                         : observed_vars[idx];
       int delay = random.pick_int (0, 50);
-      push_back (new DecideCall (lit, delay));
+      push_back (random, new DecideCall (lit, delay));
     }
   }
   if (random.generate_double () >= 0.05) {
@@ -5914,7 +5954,7 @@ void Trace::generate_lemmas (Random &random) {
         picked[idx] = 1;
         int lit = random.generate_bool () ? -observed_vars[idx]
                                           : observed_vars[idx];
-        push_back (new LemmaCall (lit, lemmatype, 0));
+        push_back (random, new LemmaCall (lit, lemmatype, 0));
       }
 
       delete[] picked;
@@ -5922,9 +5962,9 @@ void Trace::generate_lemmas (Random &random) {
         int idx = random.pick_int (0, max_idx);
         int lit = random.generate_bool () ? -observed_vars[idx]
                                           : observed_vars[idx];
-        push_back (new LemmaCall (lit, lemmatype, 0));
+        push_back (random, new LemmaCall (lit, lemmatype, 0));
       }
-      push_back (new LemmaCall (0, lemmatype, delay));
+      push_back (random, new LemmaCall (0, lemmatype, delay));
     }
   }
 }
@@ -5950,15 +5990,15 @@ void Trace::generate_assume (Random &random, int vars) {
     while (picked[idx]);
     picked[idx] = 1;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new AssumeCall (lit));
+    push_back (random, new AssumeCall (lit));
   }
   if (random.generate_double () < 0.01)
-    push_back (new ResetAssumptionsCall ());
+    push_back (random, new ResetAssumptionsCall ());
   delete[] picked;
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (1, max_vars);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new AssumeCall (lit));
+    push_back (random, new AssumeCall (lit));
   }
 }
 
@@ -5971,12 +6011,12 @@ void Trace::generate_values (Random &random, int vars) {
       continue;
     int lit = random.generate_bool () ? -idx : idx;
     bool strict = random.generate_bool ();
-    push_back (new ValCall (lit, strict));
+    push_back (random, new ValCall (lit, strict));
   }
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new ValCall (lit, true));
+    push_back (random, new ValCall (lit, true));
   }
 }
 
@@ -5989,17 +6029,17 @@ void Trace::generate_flipped (Random &random, int vars) {
       continue;
     int lit = random.generate_bool () ? -idx : idx;
     if (random.generate_double () < 0.5)
-      push_back (new FlippableCall (lit));
+      push_back (random, new FlippableCall (lit));
     else
-      push_back (new FlipCall (lit));
+      push_back (random, new FlipCall (lit));
   }
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
     if (random.generate_double () < 0.5)
-      push_back (new FlippableCall (lit));
+      push_back (random, new FlippableCall (lit));
     else
-      push_back (new FlipCall (lit));
+      push_back (random, new FlipCall (lit));
   }
 }
 
@@ -6011,19 +6051,19 @@ void Trace::generate_failed (Random &random, int vars) {
     if (fraction < random.generate_double ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FailedCall (lit));
+    push_back (random, new FailedCall (lit));
   }
   if (random.generate_double () < 0.05) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FailedCall (lit));
+    push_back (random, new FailedCall (lit));
   }
 }
 
 void Trace::generate_conclude (Random &random) {
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_conclude)
     return;
-  push_back (new ConcludeCall ());
+  push_back (random, new ConcludeCall ());
 }
 
 void Trace::generate_frozen (Random &random, int vars) {
@@ -6034,12 +6074,12 @@ void Trace::generate_frozen (Random &random, int vars) {
     if (fraction < random.generate_double ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FrozenCall (lit));
+    push_back (random, new FrozenCall (lit));
   }
   if (random.generate_double () < 0.05) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FrozenCall (lit));
+    push_back (random, new FrozenCall (lit));
   }
 }
 
@@ -6053,18 +6093,18 @@ void Trace::generate_phase (Random &random, int vars) {
     int lit = random.generate_bool () ? -idx : idx;
     bool unphase = random.generate_double () < 0.05;
     if (unphase)
-      push_back (new UnPhaseCall (lit));
+      push_back (random, new UnPhaseCall (lit));
     else
-      push_back (new PhaseCall (lit));
+      push_back (random, new PhaseCall (lit));
   }
   if (random.generate_double () < 0.05) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
     bool unphase = random.generate_double () < 0.05;
     if (unphase)
-      push_back (new UnPhaseCall (lit));
+      push_back (random, new UnPhaseCall (lit));
     else
-      push_back (new PhaseCall (lit));
+      push_back (random, new PhaseCall (lit));
   }
 }
 
@@ -6098,7 +6138,7 @@ void Trace::generate_melt (Random &random) {
     if (random.generate_double () <= fraction)
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new MeltCall (lit));
+    push_back (random, new MeltCall (lit));
   }
 }
 
@@ -6110,7 +6150,7 @@ void Trace::generate_freeze (Random &random, int vars) {
     if (random.generate_double () <= fraction)
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FreezeCall (lit));
+    push_back (random, new FreezeCall (lit));
   }
 }
 
@@ -6121,17 +6161,17 @@ void Trace::generate_process (Random &random) {
   const double fraction = random.generate_double ();
 
   if (fraction < 0.6) {
-    push_back (new SolveCall ());
+    push_back (random, new SolveCall ());
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
-    push_back (new CubingCall (depth));
+    push_back (random, new CubingCall (depth));
   } else if (fraction > 0.9) {
-    push_back (new LookaheadCall ());
+    push_back (random, new LookaheadCall ());
   } else if (fraction > 0.8) {
-    push_back (new PropagateAssumptionsCall ());
+    push_back (random, new PropagateAssumptionsCall ());
   } else {
     const int rounds = random.pick_int (0, 10);
-    push_back (new SimplifyCall (rounds));
+    push_back (random, new SimplifyCall (rounds));
   }
 
   if (mobical.add_stats_after_solve)
@@ -6185,6 +6225,10 @@ void Trace::generate_violating (Random &random) {
     const char *config = configs[pos];
     assert (Config::has (config));
     push_back (new ConfigureCall (config));
+    break;
+  }
+  case (CallType::PRINT_OPTIONS): {
+    push_back (new PrintOptionsCall ());
     break;
   }
   case (CallType::VARS): {
@@ -6418,12 +6462,26 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::LEMMA): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    const int lt = random.pick_int (0, LAST_LEMMA_TYPE - 1);
+    const int delay = random.pick_int (0, 10);
+    push_back (new LemmaCall (size, (LemmaType) lt, delay));
     break;
   }
   case (CallType::DECIDE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    const int delay = random.pick_int (0, 10);
+    push_back (new DecideCall (size, delay));
     break;
   }
   case (CallType::FORCE): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    const int lt = random.pick_int (0, LAST_MOCK_FORCE_TYPE - 1);
+    const int delay = random.pick_int (0, 10);
+    push_back (new MockForceCall (size, (MockForceType) lt, delay));
     break;
   }
   case (CallType::CB_DECIDE): {
@@ -6454,15 +6512,19 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::CONCLUDE): {
+    push_back (new ConcludeCall ());
     break;
   }
   case (CallType::TRACEPROOF): {
+    push_back (new TraceProofCall ("/dev/null"));
     break;
   }
   case (CallType::FLUSHPROOFTRACE): {
+    push_back (new FlushProofTraceCall ());
     break;
   }
   case (CallType::CLOSEPROOFTRACE): {
+    push_back (new CloseProofTraceCall ());
     break;
   }
 #ifdef MOBICAL_MEMORY
@@ -6479,30 +6541,42 @@ void Trace::generate_violating (Random &random) {
   }
 #endif
   case (CallType::TRAVERSE_CLAUSES): {
+    push_back (new TraverseClausesCall ());
     break;
   }
   case (CallType::TRAVERSE_CONSTRAINT): {
+    push_back (new TraverseConstraintCall ());
     break;
   }
   case (CallType::TRAVERSE_WITNESSES_BACKWARD): {
+    push_back (new TraverseWitnessesBackwardCall ());
     break;
   }
   case (CallType::TRAVERSE_WITNESSES_FORWARD): {
+    push_back (new TraverseWitnessesForwardCall ());
     break;
   }
   case (CallType::READ_DIMACS): {
+    // TODO: would need a valid file first...
+    // push_back (new ReadDimacsCall ());
     break;
   }
   case (CallType::READ_SOLUTION): {
+    // TODO: would need a valid file first...
     break;
   }
   case (CallType::WRITE_DIMACS): {
+    // TODO: size should be large enough...
+    const int size = random.pick_int (0, SMALL);
+    push_back (new WriteDimacsCall ("/dev/null", size));
     break;
   }
   case (CallType::WRITE_EXTENSION): {
+    push_back (new WriteExtensionCall ("/dev/null"));
     break;
   }
   case (CallType::COPY): {
+    push_back (new CopyCall ());
     break;
   }
   case (CallType::INVALID_TYPE):
@@ -6567,6 +6641,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
 
   if (mobical.add_plain_after_options)
     push_back (new ConfigureCall ("plain"));
+
+  if (mobical.add_print_options)
+    push_back (new PrintOptionsCall ());
 
   int calls;
   if (mobical.force.phases < 0)
@@ -8208,6 +8285,10 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'configure'", second);
       c = new ConfigureCall (first);
+    } else if (!strcmp (keyword, "options")) {
+      if (first)
+        error ("unexpected argument '%s' after 'options'", first);
+      c = new PrintOptionsCall ();
     } else if (!strcmp (keyword, "limit")) {
       if (!first)
         error ("first argument to 'limit' missing");
@@ -9082,6 +9163,9 @@ void Reader::parse () {
         break;
       }
 
+      if (mobical.add_print_options && state == CallState::CONFIG &&
+          new_state != CallState::CONFIG)
+        trace.push_back (new PrintOptionsCall);
       state = new_state;
       prev = c;
     }
@@ -9322,6 +9406,8 @@ int Mobical::main (int argc, char **argv) {
       add_dump_before_solve = true;
     } else if (!strcmp (argv[i], "-s") || !strcmp (argv[i], "--stats")) {
       add_stats_after_solve = true;
+    } else if (!strcmp (argv[i], "-o") || !strcmp (argv[i], "--options")) {
+      add_print_options = true;
     } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
       add_plain_after_options = true;
     } else if (!strncmp (argv[i], "--always", 8)) {
