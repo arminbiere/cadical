@@ -1061,6 +1061,8 @@ void Solver::phase (int lit) {
   TRACE (phase, "phase", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->phase (lit);
   LOG_API_CALL_END ("phase", lit);
 }
@@ -1069,6 +1071,8 @@ void Solver::unphase (int lit) {
   TRACE (unphase, "unphase", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->unphase (lit);
   LOG_API_CALL_END ("unphase", lit);
 }

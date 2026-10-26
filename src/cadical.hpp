@@ -877,6 +877,9 @@ public:
   //------------------------------------------------------------------------
   // Force the default decision phase of a variable to a certain value.
   //
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || SOLVING)
+  //
   void phase (int lit);
   void unphase (int lit);
 

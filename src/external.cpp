@@ -360,8 +360,9 @@ bool External::failed_constraint () {
 void External::phase (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
-  // this test is a bit stupid, it is triggereing an assertion, but we we
-  // could simply add thos to the other if...
+  // this test is a bit stupid,
+  // it is triggering an assertion, but we
+  // could simply add those to the other if...
   if (std::abs (elit) > max_var) {
     reset_extended ();
   }
