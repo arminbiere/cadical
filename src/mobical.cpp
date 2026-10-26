@@ -1418,7 +1418,14 @@ struct Call {
     return s->external->propagator;
   }
 #ifdef EXCEPTIONS
-  virtual void caught () { mobical.shared->call_type_caught[type]++; }
+  virtual void caught () {
+    mobical.shared->call_type_caught[type]++;
+    if (mobical.verbose) {
+      std::cout << "c [mobical] caught call '";
+      print (std::cout);
+      std::cout << "'" << std::endl;
+    }
+  }
   virtual bool catching () { return !mobical.donot.catching; }
 #endif
 };
@@ -3285,11 +3292,10 @@ struct ConnectCall : public Call {
 #endif
             s->connect_external_propagator (mobical.replay_pointer);
           }
-          catch (std::runtime_error &) {
-            free (mobical.replay_pointer);
-            mobical.replay_pointer = 0;
-            caught ();
-          }
+        } catch (std::runtime_error &) {
+          free (mobical.replay_pointer);
+          mobical.replay_pointer = 0;
+          caught ();
         }
       }
     } else {
