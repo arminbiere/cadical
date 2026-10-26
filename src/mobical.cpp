@@ -505,7 +505,6 @@ enum CallType : uint64_t {
   RESIZE,
   DECLARE,
   DECLARE_VARS,
-  RESERVE,
 
   PHASE,
   UNPHASE,
@@ -1105,7 +1104,6 @@ struct Call {
     case (CallType::REDUNDANT):
     case (CallType::IRREDUNDANT):
     case (CallType::RESIZE):
-    case (CallType::RESERVE):
     case (CallType::DECLARE):
     case (CallType::DECLARE_VARS):
     case (CallType::VAL):
@@ -1248,7 +1246,6 @@ struct Call {
     case (CallType::FIXED):
     case (CallType::PHASE):
     case (CallType::UNPHASE):
-    case (CallType::RESERVE):
     case (CallType::OBSERVE):
     case (CallType::UNOBSERVE):
     case (CallType::OBSERVED):
@@ -1462,7 +1459,6 @@ static const char *ct_to_str (CallType type) {
        : (type == RESIZE ? "RESIZE"
        : (type == DECLARE ? "DECLARE"
        : (type == DECLARE_VARS ? "DECLARE_VARS"
-       : (type == RESERVE ? "RESERVE"
        : (type == PHASE ? "PHASE"
        : (type == UNPHASE ? "UNPHASE"
        : (type == ADD ? "ADD"
@@ -1536,7 +1532,7 @@ static const char *ct_to_str (CallType type) {
 #ifdef MOBICAL_TERMINATE
        )
 #endif
-       )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
   // clang-format on
 }
 
@@ -6300,12 +6296,6 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::DECLARE_VARS): {
-    // TODO: what max size makes sense?
-    const int size = random.pick_int (0, SMALL);
-    push_back (new DeclareMoreVariablesCall (size));
-    break;
-  }
-  case (CallType::RESERVE): {
     // TODO: what max size makes sense?
     const int size = random.pick_int (0, SMALL);
     push_back (new DeclareMoreVariablesCall (size));
