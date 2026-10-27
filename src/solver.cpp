@@ -1698,7 +1698,8 @@ bool Solver::is_decision (int lit) {
 
 void Solver::force_backtrack (int new_level) {
   TRACE (force_backtrack, "force_backtrack", new_level);
-  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () == SOLVING,
+           "can not force backtrack outside of solving");
   REQUIRE (state () != UNSATISFIED,
            "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,
@@ -1724,7 +1725,8 @@ bool Solver::is_witness (int lit) {
 
 bool Solver::force_unassign (int lit) {
   TRACE (force_unassign, "force_unassign", lit);
-  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () == SOLVING,
+           "can not force backtrack outside of solving");
   REQUIRE (state () != UNSATISFIED,
            "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,

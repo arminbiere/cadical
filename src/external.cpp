@@ -91,6 +91,9 @@ void External::reserve (int new_max_var) {
     ext_flags.push_back (0);
     ervars.push_back (0);
   }
+  if (checkfrozen)
+    if (new_max_var >= (int64_t) moltentab.size ())
+      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (internal->i2e.size () == (size_t) internal->max_var + 1);
   assert (eidx == (size_t) new_max_var + 1);
   max_var = new_max_var;
@@ -110,9 +113,6 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (checkfrozen)
-    if (new_max_var >= (int64_t) moltentab.size ())
-      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
 }
 
@@ -559,24 +559,23 @@ bool External::is_decision (int elit) {
   int eidx = abs (elit);
   if (eidx > max_var)
     return false;
-
-  int ilit = internalize (elit);
+  int ilit = internal_lit (elit);
+  if (!ilit)
+    return false;
   return internal->is_decision (ilit);
 }
+
 signed char External::current_val (int elit) {
   assert (observed (elit));
-  // assert (elit < e2i.size ());
-  int ilit = e2i[abs (elit)];
+  int ilit = internalize (elit);
   assert (ilit);
-  if (elit < 0)
-    ilit = -ilit;
   signed char res = internal->val (ilit);
   return res;
 }
 
 bool External::force_unassign (int elit) {
-  const int eidx = abs (elit);
-  const int iidx = e2i[eidx];
+  const int iidx = internal_lit (elit);
+  assert (iidx);
   if (!internal->val (iidx))
     return true;
   while (internal->val (iidx)) {

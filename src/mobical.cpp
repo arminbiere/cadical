@@ -6497,7 +6497,7 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::LEMMA): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (1, SMALL);
+    const int size = random.pick_int (0, SMALL);
     const int lt = random.pick_int (0, LAST_LEMMA_TYPE - 1);
     const int delay = random.pick_int (0, 10);
     push_back (new LemmaCall (size, (LemmaType) lt, delay));
