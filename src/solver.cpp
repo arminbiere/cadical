@@ -1187,7 +1187,7 @@ void Solver::disconnect_fixed_listener () {
 void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   TRACE (connect_propagator, "connect_external_propagator");
   // LOG_API_CALL_BEGIN ("connect_external_propagator");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
@@ -1206,7 +1206,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
 void Solver::disconnect_external_propagator () {
   TRACE (disconnect_propagator, "disconnect_external_propagator");
   // LOG_API_CALL_BEGIN ("disconnect_external_propagator");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (external->propagator,
            "can not disconnect propagator without a connected propagator");
   transition_to_steady_state ();
