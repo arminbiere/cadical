@@ -420,7 +420,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   if (res == 0)
     res = restore_clauses ();
   if (unsat)
-    res = 10;
+    res = 20;
   if (res != 0)
     res = solve (true);
   if (res != 0) {
