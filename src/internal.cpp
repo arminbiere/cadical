@@ -1267,7 +1267,7 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
   if (unsat)
     return it.clause (eclause);
 
-  LOG (constraint, "traversing constraint");
+  LOG (external->constraints, "traversing constraints");
   bool satisfied = false;
   for (auto elit : external->constraints) {
     if (!elit) {

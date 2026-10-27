@@ -2040,6 +2040,16 @@ int KITTEN_NAMESPACE (kitten_solve_prime) (kitten *kitten) {
   if (!res && !EMPTY_STACK (kitten->assumptions))
     reset_assumptions (kitten);
 
+  if (res == 11) {
+    unsigneds *prime = &kitten->prime;
+    const value *const values = kitten->values;
+    // push on prime implicant stack.
+    // TODO: improve
+    for (all_kits (lit)) {
+      if (values[lit] > 0)
+        PUSH_STACK (*prime, lit);
+    }
+  }
   UPDATE_STATUS (res);
 
   if (res == 10)
