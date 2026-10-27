@@ -10075,6 +10075,8 @@ int Mobical::main (int argc, char **argv) {
 
   if (summary == -1 && !(mode & RANDOM))
     summary = 0;
+  if (summary == -1 && quiet)
+    summary = 0;
 
   /*----------------------------------------------------------------------*/
 
