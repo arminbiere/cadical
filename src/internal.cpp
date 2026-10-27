@@ -1259,6 +1259,36 @@ void Internal::dump () {
 }
 /*------------------------------------------------------------------------*/
 
+bool Internal::traverse_constraint (ClauseIterator &it) {
+  if (external->constraints.empty () && !unsat_constraint)
+    return true;
+
+  vector<int> eclause;
+  if (unsat)
+    return it.clause (eclause);
+
+  LOG (constraint, "traversing constraint");
+  bool satisfied = false;
+  for (auto elit : external->constraints) {
+    if (!elit) {
+      if (!satisfied && !it.clause (eclause))
+        return false;
+      eclause.clear ();
+      continue;
+    }
+    const int tmp = external->fixed (elit);
+    if (tmp > 0) {
+      satisfied = true;
+      break;
+    }
+    if (tmp < 0)
+      continue;
+    eclause.push_back (elit);
+  }
+
+  return true;
+}
+
 bool Internal::traverse_clauses (ClauseIterator &it) {
   vector<int> eclause;
   if (unsat)

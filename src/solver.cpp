@@ -1770,8 +1770,7 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
 bool Solver::traverse_constraint (ClauseIterator &it) const {
   TRACE (traverse_constraint, "traverse_constraint");
   REQUIRE_VALID_STATE ();
-  // TODO traverse constraints
-  bool res = false; // internal->traverse_constraint (it);
+  bool res = internal->traverse_constraint (it);
   LOG_API_CALL_RETURNS ("traverse_constrain", res);
   return res;
 }
