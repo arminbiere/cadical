@@ -117,6 +117,7 @@ void KITTEN_NAMESPACE (kitten_trace_core) (
 unsigned KITTEN_NAMESPACE (kitten_size_implicant) (kitten *);
 
 void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *);
+int KITTEN_NAMESPACE (kitten_next_signed_implicant) (kitten *, size_t);
 
 #ifdef __cplusplus
 }

@@ -449,6 +449,7 @@ int Internal::decide_constraint () {
     // TODO: bump kitten (and sort before)
     // sort constraint_vars according to current decision heuristic
     if (opts.constraintsort) {
+      PROFILE_SCOPE (constraintssort)
       stats.constraints_sorted++;
       if (use_scores ()) {
         LOG ("sorting constraint variables based on scores");
@@ -459,6 +460,7 @@ int Internal::decide_constraint () {
         sort (constraint_vars.begin (), constraint_vars.end (),
               bigger_queue (this));
       }
+      PROFILE_SCOPE_EARLY_EXIT (constraintssort)
       last_constraint_idx = 0;
     }
     if (opts.constraintbump == 2) {
@@ -524,25 +526,34 @@ int Internal::decide_constraint () {
     // TODO: keep last constraint_var index to skip part of the loop.
     int lit = 0; //, last_lit;
     size_t idx = 0;
-    assert (last_constraint_idx <= constraint_vars.size ());
-    if (last_constraint_idx == constraint_vars.size ()) {
+    assert (opts.constraintprime ||
+            last_constraint_idx <= constraint_vars.size ());
+    if (!opts.constraintprime &&
+        last_constraint_idx == constraint_vars.size ()) {
       if (control[level].decision == 0)
         idx = last_constraint_idx;
-    } else {
+    } else if (!opts.constraintprime) {
       const int last_decision = constraint_vars[last_constraint_idx];
       // TODO: this is not precise due to fake-decisions
       if (val (last_decision) && var (last_decision).level == level &&
           is_decision (last_decision))
         idx = last_constraint_idx;
     }
-    for (idx = 0; idx < constraint_vars.size (); idx++) {
+    while (true) {
       if (terminated_asynchronously ()) {
         all_constraints_assigned = false;
         break;
       }
-      // last_lit = lit;
-      lit = constraint_vars[idx];
-      // constraint_vars[idx] = last_lit;
+      if (cat_res == 11) {
+        lit = KITTEN_NAMESPACE (
+            kitten_next_signed_implicant (constraint_cat, idx++));
+        if (!lit)
+          break;
+      } else {
+        if (idx >= constraint_vars.size ())
+          break;
+        lit = constraint_vars[idx++];
+      }
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
       // Ignore redundant variables.

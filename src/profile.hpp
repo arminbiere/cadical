@@ -67,6 +67,7 @@ struct Internal;
   PROFILE (constraintsdecide, 3) \
   PROFILE (constraintsdiverge, 3) \
   PROFILE (constraintssolve, 4) \
+  PROFILE (constraintssort, 4) \
   PROFILE (copy, 4) \
   PROFILE (cover, 2) \
   PROFILE (decide, 3) \
