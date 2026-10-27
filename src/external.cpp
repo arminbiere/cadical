@@ -574,7 +574,8 @@ signed char External::current_val (int elit) {
 }
 
 bool External::force_unassign (int elit) {
-  const int iidx = internal_lit (elit);
+  assert (observed (elit));
+  const int iidx = internalize (elit);
   assert (iidx);
   if (!internal->val (iidx))
     return true;
