@@ -141,6 +141,12 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
              "if 'factor' is enabled)", /* TODO only reason? */ \
              (int) abs (LIT)); \
   } while (0)
+#define REQUIRE_VALID_MOLTEN_LIT(LIT) \
+  do { \
+    REQUIRE_VALID_LIT (LIT); \
+    REQUIRE (external->check_frozen ((int) (LIT)), \
+             "can not reuse molten literal %d", LIT); \
+  } while (0)
 
 #define REQUIRE_STEADY_STATE() \
   do { \

@@ -186,14 +186,17 @@ public:
     assert (elit);
     assert (elit != INT_MIN);
     size_t eidx = abs (elit);
-    bool valid = eidx > (size_t) max_var || !ervars[eidx];
-    if (checkfrozen) {
-      if (eidx >= moltentab.size ())
-        valid = false;
-      else if (moltentab[eidx])
-        valid = false;
-    }
-    return valid;
+    return eidx > (size_t) max_var || !ervars[eidx];
+  }
+  inline bool check_frozen (int elit) {
+    if (!checkfrozen)
+      return true;
+    assert (elit);
+    assert (elit != INT_MIN);
+    size_t eidx = abs (elit);
+    if (eidx >= moltentab.size ())
+      return true;
+    return !moltentab[eidx];
   }
 
   inline int internal_lit (int elit) const {

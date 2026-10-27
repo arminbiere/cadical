@@ -413,9 +413,6 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  REQUIRE (eidx > max_var ||
-               (!marked (witness, elit) && !marked (witness, -elit)),
-           "Only clean variables are allowed to be observed.");
   // if (eidx <= max_var &&
   //     (marked (witness, elit) || marked (witness, -elit))) {
   //   LOG ("Error, only clean variables are allowed to become observed.");

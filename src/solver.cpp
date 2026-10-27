@@ -708,7 +708,7 @@ void Solver::add (int lit) {
   TRACE (add, "add", lit);
   REQUIRE (state () & (READY | ADDING), "state not ready or adding");
   if (lit) {
-    REQUIRE_VALID_LIT (lit);
+    REQUIRE_VALID_MOLTEN_LIT (lit);
     if (internal->opts.factor && internal->opts.factorcheck == 1)
       REQUIRE (
           abs (lit) <= external->max_var,
@@ -802,7 +802,7 @@ void Solver::constrain (int lit) {
   REQUIRE (state () & (READY | ADDING_CONSTRAINT),
            "state not ready or adding constraint");
   if (lit)
-    REQUIRE_VALID_LIT (lit);
+    REQUIRE_VALID_MOLTEN_LIT (lit);
   assert (!adding_clause);
   transition_to_steady_state ();
   external->constrain (lit);
@@ -817,7 +817,7 @@ void Solver::constrain (int lit) {
 void Solver::assume (int lit) {
   TRACE (assume, "assume", lit);
   REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   transition_to_steady_state ();
   external->assume (lit);
   LOG_API_CALL_END ("assume", lit);
@@ -1055,7 +1055,7 @@ int Solver::fixed (int lit) const {
 void Solver::phase (int lit) {
   TRACE (phase, "phase", lit);
   REQUIRE_READY_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   if (state () != SOLVING)
     transition_to_steady_state ();
   external->phase (lit);
@@ -1065,7 +1065,7 @@ void Solver::phase (int lit) {
 void Solver::unphase (int lit) {
   TRACE (unphase, "unphase", lit);
   REQUIRE_READY_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   if (state () != SOLVING)
     transition_to_steady_state ();
   external->unphase (lit);
@@ -1217,9 +1217,13 @@ void Solver::disconnect_external_propagator () {
 void Solver::add_observed_var (int idx) {
   TRACE (observe, "observe", idx);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (idx);
+  REQUIRE_VALID_MOLTEN_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
+  REQUIRE (abs (idx) > external->max_var ||
+               (!external->marked (external->witness, abs (idx)) &&
+                !external->marked (external->witness, -abs (idx))),
+           "Only clean variables are allowed to be observed.");
   if (state () != SOLVING)
     transition_to_steady_state ();
   external->add_observed_var (idx);
@@ -1285,7 +1289,7 @@ int64_t Solver::irredundant () const {
 void Solver::freeze (int lit) {
   TRACE (freeze, "freeze", lit);
   REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   transition_to_steady_state ();
   external->freeze (lit);
   LOG_API_CALL_END ("freeze", lit);
@@ -1293,8 +1297,8 @@ void Solver::freeze (int lit) {
 
 void Solver::melt (int lit) {
   TRACE (melt, "melt", lit);
-  REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   REQUIRE (external->frozen (lit),
            "can not melt completely melted literal '%d'", lit);
   transition_to_steady_state ();
