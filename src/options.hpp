@@ -79,7 +79,7 @@ OPTION( constraintbump,       1,  0,  2,0,0,1, "bump kitten literals (1=based on
 OPTION( constrainteager,      1,  0,  1,0,0,1, "eager communication of units") \
 OPTION( constraintflip,       1,  0,  1,0,0,1, "try to flip kitten model to resolve conflicts") \
 OPTION( constraintphase,      1,  0,  2,0,0,1, "suggest kitten phases according to learned clauses (2 = initial clauses too)") \
-OPTION( constraintprime,      1,  0,  1,0,0,1, "try to shorten kitten model") \
+OPTION( constraintprime,      1,  0,  2,0,0,1, "try to shorten kitten model (2=by construction)") \
 OPTION( constraintsort,       1,  0,  1,0,0,1, "sort constraint variables when kitten model is recomputed") \
 OPTION( cover,                0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covereffort,          4,  1,1e5,1,0,1, "relative efficiency per mille") \

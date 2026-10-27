@@ -134,6 +134,7 @@ struct kitten {
   size_t evars;
 
   size_t end_original_ref;
+  unsigned last_klause_decision;
 
   struct {
     unsigned first, last;
@@ -164,6 +165,8 @@ struct kitten {
   unsigneds export;
   unsigneds klause;
   unsigneds klauses;
+  unsigneds original_klause_refs; // of size > 1
+  unsigneds klause_decision_control;
   unsigneds resolved;
   unsigneds trail;
   unsigneds units;
@@ -831,6 +834,9 @@ static void new_original_klause (kitten *kitten, unsigned id) {
   unsigned res = new_reference (kitten);
   unsigned size = SIZE_STACK (kitten->klause);
   unsigneds *klauses = &kitten->klauses;
+  unsigneds *original_klause_refs = &kitten->original_klause_refs;
+  if (size > 1)
+    PUSH_STACK (*original_klause_refs, SIZE_STACK (*klauses));
   PUSH_STACK (*klauses, id);
   PUSH_STACK (*klauses, size);
   PUSH_STACK (*klauses, 0);
@@ -838,7 +844,8 @@ static void new_original_klause (kitten *kitten, unsigned id) {
     PUSH_STACK (*klauses, lit);
   connect_new_klause (kitten, res);
   kitten->end_original_ref = SIZE_STACK (*klauses);
-  kitten->statistics.original++;
+  kitten->last_klause_decision = SIZE_STACK (*original_klause_refs);
+  INC (original);
 }
 
 static void enlarge_external (kitten *kitten, size_t eidx) {
@@ -909,7 +916,7 @@ unsigned new_learned_klause (kitten *kitten) {
       PUSH_STACK (*klauses, ref);
   connect_new_klause (kitten, res);
   kitten->learned = true;
-  kitten->statistics.learned++;
+  INC (learned);
   return res;
 }
 
@@ -963,6 +970,8 @@ void KITTEN_NAMESPACE (kitten_release) (kitten *kitten) {
   RELEASE_STACK (kitten->export);
   RELEASE_STACK (kitten->klause);
   RELEASE_STACK (kitten->klauses);
+  RELEASE_STACK (kitten->original_klause_refs);
+  RELEASE_STACK (kitten->klause_decision_control);
   RELEASE_STACK (kitten->resolved);
   RELEASE_STACK (kitten->trail);
   RELEASE_STACK (kitten->units);
@@ -1478,6 +1487,87 @@ static int decide (kitten *kitten) {
   return 0;
 }
 
+static int decide_next_clause (kitten *kitten) {
+  if (!kitten->level && !EMPTY_STACK (kitten->trail))
+    flush_trail (kitten);
+  unsigneds *klause_decision_control = &kitten->klause_decision_control;
+  unsigned *last_klause_decision = &kitten->last_klause_decision;
+  while (kitten->level < SIZE_STACK (*klause_decision_control)) {
+    *last_klause_decision = POP_STACK (*klause_decision_control);
+  }
+
+  const value *const values = kitten->values;
+  unsigned decision = INVALID;
+  const size_t assumptions = SIZE_STACK (kitten->assumptions);
+  while (kitten->level < assumptions) {
+    unsigned assumption = PEEK_STACK (kitten->assumptions, kitten->level);
+    value value = values[assumption];
+    if (value < 0) {
+      LOG ("found failing assumption %u", assumption);
+      failing (kitten);
+      return 20;
+    } else if (value > 0) {
+
+      kitten->level++;
+      PUSH_STACK (*klause_decision_control, *last_klause_decision);
+      LOG ("pseudo decision level %u for already satisfied assumption %u",
+           kitten->level, assumption);
+    } else {
+      decision = assumption;
+      LOG ("using assumption %u as decision", decision);
+      break;
+    }
+  }
+
+  if (!kitten->unassigned)
+    return 10;
+
+  if (KITTEN_TICKS >= kitten->limits.ticks) {
+    LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
+         kitten->limits.ticks, KITTEN_TICKS);
+    return -1;
+  }
+
+  if (kitten->terminator && kitten->terminator (kitten->terminator_data)) {
+    LOG ("terminator requested termination");
+    return -1;
+  }
+
+  if (decision != INVALID) {
+    INC (kitten_decisions);
+    kitten->level++;
+    PUSH_STACK (*klause_decision_control, *last_klause_decision);
+    assign (kitten, decision, INVALID);
+    return 0;
+  }
+
+  const unsigned *const okr_begin =
+      BEGIN_STACK (kitten->original_klause_refs);
+  while (*last_klause_decision) {
+    const unsigned kref = *(okr_begin + *--last_klause_decision);
+    klause *c = dereference_klause (kitten, kref);
+    assert (c->size >= 1);
+    assert (!is_learned_klause (c));
+    const unsigned l1 = c->lits[0];
+    const unsigned l2 = c->lits[1];
+    const value v1 = values[l1];
+    const value v2 = values[l2];
+    // assert watch invariant
+    assert (v1 > 0 || v2 > 0 || (v1 >= 0 && v2 >= 0));
+    if (v1 > 0 || v2 > 0)
+      continue;
+    assert (!v1 && !v2);
+    decision = l1;
+  }
+  if (decision == INVALID)
+    return 11;
+  INC (kitten_decisions);
+  PUSH_STACK (*klause_decision_control, *last_klause_decision);
+  kitten->level++;
+  assign (kitten, decision, INVALID);
+  return 0;
+}
+
 static void inconsistent (kitten *kitten, unsigned ref) {
   assert (ref != INVALID);
   assert (kitten->inconsistent == INVALID);
@@ -1615,6 +1705,8 @@ static void reset_core (kitten *kitten) {
 static void reset_implicant (kitten *kitten) {
   LOG ("resetting prime implicant");
   CLEAR_STACK (kitten->prime);
+  kitten->last_klause_decision = SIZE_STACK (kitten->original_klause_refs);
+  CLEAR_STACK (kitten->klause_decision_control);
 }
 
 static void reset_assumptions (kitten *kitten) {
@@ -1646,8 +1738,7 @@ static void reset_incremental (kitten *kitten) {
     assert (kitten->failing == INVALID);
   if (kitten->status == 21)
     reset_core (kitten);
-  if (kitten->status == 11)
-    reset_implicant (kitten);
+  reset_implicant (kitten);
   UPDATE_STATUS (0);
 }
 
@@ -1901,6 +1992,60 @@ int KITTEN_NAMESPACE (kitten_solve) (kitten *kitten) {
 
   if (res == 10)
     INC (kitten_sat);
+  else if (res == 20)
+    INC (kitten_unsat);
+  else
+    INC (kitten_unknown);
+
+  LOG ("finished solving with result %d", res);
+
+  return res;
+}
+
+int KITTEN_NAMESPACE (kitten_solve_prime) (kitten *kitten) {
+  REQUIRE_INITIALIZED ();
+  if (kitten->status)
+    reset_incremental (kitten);
+  else // if (kitten->level)
+    completely_backtrack_to_root_level (kitten);
+
+  LOG ("starting solving under %zu assumptions",
+       SIZE_STACK (kitten->assumptions));
+
+  INC (kitten_solved);
+
+  int res = propagate_units (kitten);
+  while (!res) {
+    const unsigned conflict = propagate (kitten);
+    if (kitten->terminator &&
+        kitten->terminator (kitten->terminator_data)) {
+      LOG ("terminator requested termination");
+      res = -1;
+      break;
+    }
+    if (conflict != INVALID) {
+      if (kitten->level)
+        analyze (kitten, conflict);
+      else {
+        inconsistent (kitten, conflict);
+        res = 20;
+      }
+    } else
+      res = decide_next_clause (kitten);
+  }
+
+  if (res < 0)
+    res = 0;
+
+  if (!res && !EMPTY_STACK (kitten->assumptions))
+    reset_assumptions (kitten);
+
+  UPDATE_STATUS (res);
+
+  if (res == 10)
+    INC (kitten_sat);
+  else if (res == 11)
+    INC (kitten_implicant);
   else if (res == 20)
     INC (kitten_unsat);
   else
@@ -2372,7 +2517,7 @@ unsigned KITTEN_NAMESPACE (kitten_size_implicant) (kitten *kitten) {
 void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
   REQUIRE_STATUS (10);
 
-  kitten->statistics.kitten_implicant++;
+  INC (kitten_implicant);
   value *values = kitten->values;
   kar *vars = kitten->vars;
 #ifndef NDEBUG
@@ -2438,7 +2583,7 @@ void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *kitten,
   // completely_backtrack_to_root_level (kitten);
   LOG ("bumping signed external literal %d = %d (=%d) = %d", signed_elit,
        elit, eidx, iidx);
-  kitten->statistics.kitten_bumped++;
+  INC (kitten_bumped);
   dequeue (kitten, iidx);
   enqueue (kitten, iidx);
   update_search (kitten, iidx);
@@ -2459,7 +2604,7 @@ void KITTEN_NAMESPACE (kitten_phase_signed_literal) (kitten *kitten,
   // completely_backtrack_to_root_level (kitten);
   LOG ("phase signed external literal %d = %d (=%d) = %d sign %d",
        signed_elit, elit, eidx, iidx, sign);
-  kitten->statistics.kitten_phase++;
+  INC (kitten_phase);
   kitten->phases[iidx] = sign;
   // UPDATE_STATUS (0);
 }

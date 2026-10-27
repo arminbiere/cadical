@@ -81,6 +81,7 @@ void KITTEN_NAMESPACE (kitten_set_terminator) (kitten *, void *,
                                                int (*) (void *));
 
 int KITTEN_NAMESPACE (kitten_solve) (kitten *);
+int KITTEN_NAMESPACE (kitten_solve_prime) (kitten *);
 int KITTEN_NAMESPACE (kitten_status) (kitten *);
 
 signed char KITTEN_NAMESPACE (kitten_value) (kitten *, unsigned);

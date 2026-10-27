@@ -167,6 +167,7 @@
   STATISTIC (constraints_failed,     2, percent, "%", constraints_added) \
   STATISTIC (constraints_flipped,    2, percent, "%", constraints_added) \
   STATISTIC (constraints_lit,        2, relative, "per", constraints_added) \
+  STATISTIC (constraints_prime,      2, percent, "%", constraints_solved) \
   STATISTIC (constraints_reset,      2, relative, "per", searches) \
   STATISTIC (constraints_sat,        2, percent, "%", constraints_solved) \
   STATISTIC (constraints_solved,     2, relative, "per", decisions) \

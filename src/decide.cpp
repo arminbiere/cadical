@@ -277,16 +277,20 @@ int Internal::decide_assumption () {
       if (!unit_constraint_vars && opts.constrainteager)
         eager_constraint_units ();
       PROFILE_SCOPE (constraintssolve);
-      cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+      if (opts.constraintprime == 2)
+        cat_res = KITTEN_NAMESPACE (kitten_solve_prime) (constraint_cat);
+      else
+        cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+      report ('a'); // TODO: maybe only verbose
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
       if (cat_res == 20)
         stats.constraints_unsat++;
       else if (cat_res == 10)
         stats.constraints_sat++;
-      else {
-        // Kitten was terminated
+      else if (cat_res == 11)
+        stats.constraints_prime++;
+      else // kitten was terminated
         assert (terminated_asynchronously ());
-      }
     }
     if (cat_res == 20) { // unsat
       LOG ("constraints falsified");
@@ -466,17 +470,28 @@ int Internal::decide_constraint () {
       eager_constraint_units ();
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
-    cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
-    report ('a');
+    if (opts.constraintprime == 2)
+      cat_res = KITTEN_NAMESPACE (kitten_solve_prime) (constraint_cat);
+    else
+      cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+    report ('a'); // TODO: maybe only verbose
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
     if (cat_res == 20)
       stats.constraints_unsat++;
     else if (cat_res == 10) {
       stats.constraints_sat++;
-      if (opts.constraintprime) {
+      if (opts.constraintprime == 1) {
         LOG ("computing kitten prime implicant");
         KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
+        stats.constraints_prime++;
       }
+      // compute conflicts between current trail and kitten model
+      if (compute_diverged_constraint ()) {
+        stats.constraints_diverged++;
+        return 0;
+      }
+    } else if (cat_res == 11) {
+      stats.constraints_prime++;
       // compute conflicts between current trail and kitten model
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
