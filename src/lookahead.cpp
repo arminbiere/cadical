@@ -396,7 +396,7 @@ int Internal::lookahead_probing () {
     PHASE ("lookahead-probe-round", stats.probingrounds,
            "found %" PRId64 " hyper binary resolvents", hbrs);
 
-  MSG ("lookahead literal %d with %d\n", res, max_hbrs);
+  MSG ("lookahead literal %d with %d", res, max_hbrs);
 
   return res;
 }

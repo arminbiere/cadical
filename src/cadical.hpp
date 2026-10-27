@@ -635,8 +635,8 @@ public:
   // might need to reallocate tables, it destroys a satisfying assignment
   // and has the same state transition and conditions as 'assume' etc.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
@@ -652,13 +652,14 @@ public:
   // variable name of the consecutive range of newly delcared variables.
   // It has the same state transition and conditions as 'resize' above.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
   //   require (SOLVING)
   //   ensure (SOLVING)
+  //
   int declare_more_variables (int number_of_additional_new_vars);
 
   // Returns the next fresh variable that was not used internally.

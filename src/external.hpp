@@ -156,6 +156,7 @@ public:
   // larger than 'max_var' are not molten and can thus always be used in the
   // future.  Only needed to check and debug old style freeze semantics.
   //
+  bool checkfrozen;
   vector<bool> moltentab;
 
   //----------------------------------------------------------------------//
@@ -184,8 +185,15 @@ public:
   inline bool is_valid_input (int elit) {
     assert (elit);
     assert (elit != INT_MIN);
-    int eidx = abs (elit);
-    return eidx > max_var || !ervars[eidx];
+    size_t eidx = abs (elit);
+    bool valid = eidx > (size_t) max_var || !ervars[eidx];
+    if (checkfrozen) {
+      if (eidx >= moltentab.size ())
+        valid = false;
+      else if (moltentab[eidx])
+        valid = false;
+    }
+    return valid;
   }
 
   inline int internal_lit (int elit) const {

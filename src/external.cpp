@@ -17,6 +17,7 @@ External::External (Internal *i)
   e2i.limit_to_check = internal->opts.varinitswitch;
   e2i.internal = internal;
   e2i.incremental_scaling = internal->opts.varswitchscale;
+  checkfrozen = internal->opts.checkfrozen;
 }
 
 External::~External () {
@@ -109,7 +110,7 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (internal->opts.checkfrozen)
+  if (checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
   assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
@@ -189,7 +190,7 @@ int External::internalize (int elit, bool extension) {
       if (elit < 0)
         ilit = -ilit;
     }
-    if (internal->opts.checkfrozen) {
+    if (checkfrozen) {
       assert (eidx < (int64_t) moltentab.size ());
       if (moltentab[eidx])
         FATAL ("can not reuse molten literal %d", eidx);
@@ -206,7 +207,7 @@ int External::internalize (int elit, bool extension) {
     if (extension)
       f.elim = false;
     if (!marked (tainted, elit) && marked (witness, -elit)) {
-      assert (!internal->opts.checkfrozen);
+      assert (!checkfrozen);
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
@@ -687,7 +688,7 @@ void External::check_solve_result (int res) {
 // for checking the deprecated 'freeze' semantics.
 
 void External::update_molten_literals () {
-  if (!internal->opts.checkfrozen)
+  if (!checkfrozen)
     return;
   assert ((size_t) max_var + 1 == moltentab.size ());
 #ifdef LOGGING
