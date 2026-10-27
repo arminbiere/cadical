@@ -322,6 +322,7 @@ int Internal::decide_assumption () {
 
 // check for falsified literals with respect to kitten trail
 bool Internal::compute_diverged_constraint () {
+  PROFILE_SCOPE (constraintsdiverge);
   assert (constraint_unsat.empty ());
   bool backtracked = false;
   for (auto &lit : constraint_vars) {
