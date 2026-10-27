@@ -5294,6 +5294,8 @@ public:
     int res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
+      if (!c->lit_type ())
+        continue;
       int tmp = abs (c->arg);
       if (tmp > res)
         res = tmp;
@@ -5305,7 +5307,7 @@ public:
     int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      if (c->type == CallType::ADD && !c->arg)
+      if (c->clausal_type () && !c->arg)
         res++;
     }
     return res;
@@ -5315,7 +5317,7 @@ public:
     int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      if (c->type == CallType::ADD && c->arg)
+      if (c->clausal_type () && c->arg)
         res++;
     }
     return res;
