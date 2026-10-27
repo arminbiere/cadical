@@ -54,16 +54,21 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   } else if (state () == INCONCLUSIVE) {
+    LOG ("API leaves state %sINCONCLUSIVE%s", tout.emph_code (),
+         tout.normal_code ());
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   }
   if (state () == ADDING || state () == ADDING_CONSTRAINT)
     return;
@@ -532,7 +537,8 @@ int Solver::vars () const {
 void Solver::resize (int min_max_var) {
   TRACE (resize, "resize", min_max_var);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  transition_to_steady_state ();
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   if (min_max_var <= external->max_var) {
     LOG ("do nothing");
   } else {
@@ -546,7 +552,8 @@ int Solver::declare_more_variables (int number_of_vars) {
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (number_of_vars <= INT32_MAX - external->max_var,
            "cannot declare more than 32-bit literals");
-  transition_to_steady_state ();
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
     external->reserve (new_max_var);
@@ -557,7 +564,8 @@ int Solver::declare_more_variables (int number_of_vars) {
 int Solver::declare_one_more_variable () {
   TRACE (declare_var, "declare_var");
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  transition_to_steady_state ();
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   int new_max_var = external->max_var + 1;
   external->init (new_max_var);
   LOG_API_CALL_END ("declare_var");
@@ -1177,9 +1185,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
 
-  if (external->propagator)
-    disconnect_external_propagator ();
-
+  transition_to_steady_state ();
   external->propagator = propagator;
 #ifndef NTRACING
   external->trace_api_file = trace_api_file;
@@ -1196,6 +1202,7 @@ void Solver::disconnect_external_propagator () {
   REQUIRE_VALID_STATE ();
   REQUIRE (external->propagator,
            "can not disconnect propagator without a connected propagator");
+  transition_to_steady_state ();
   external->reset_observed_vars ();
 
   external->propagator = 0;
@@ -1213,6 +1220,8 @@ void Solver::add_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }
@@ -1227,6 +1236,8 @@ void Solver::remove_observed_var (int idx) {
                !external->observed (idx) || !external->current_val (idx) ||
                !internal->conflict,
            "can not unobserve assigned variable during conflict analysis");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->remove_observed_var (idx);
   LOG_API_CALL_END ("unobserve", idx);
 }
@@ -1237,6 +1248,8 @@ void Solver::reset_observed_vars () {
   REQUIRE (
       external->propagator,
       "can not reset observed variables without a connected propagator");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->reset_observed_vars ();
   LOG_API_CALL_END ("reset_observed");
 }

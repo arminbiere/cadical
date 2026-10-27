@@ -690,7 +690,7 @@ void External::check_solve_result (int res) {
 void External::update_molten_literals () {
   if (!checkfrozen)
     return;
-  assert ((size_t) max_var + 1 == moltentab.size ());
+  assert (!max_var || (size_t) max_var + 1 == moltentab.size ());
 #ifdef LOGGING
   int registered = 0, molten = 0;
 #endif
