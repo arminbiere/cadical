@@ -55,17 +55,24 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   } else if (state () == INCONCLUSIVE) {
+    LOG ("API leaves state %sINCONCLUSIVE%s", tout.emph_code (),
+         tout.normal_code ());
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+    external->reset_extended ();
   }
+  if (state () == ADDING || state () == ADDING_CONSTRAINT)
+    return;
   if (state () != STEADY)
     STATE (STEADY);
 }
@@ -550,15 +557,8 @@ int Solver::vars () const {
 void Solver::resize (int min_max_var) {
   TRACE (resize, "resize", min_max_var);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  /* TODO: this code is problematic with
-   * REQUIRE_VALID_SOLVING_STATE ();
-   * as it allows to add 1 -> resize -> solve
-   if (state () != SOLVING)
-     transition_to_steady_state ();
-   */
-  // removing this triggers an assertion in
-  // external but it maybe it is not necessary
-  external->reset_extended ();
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   if (min_max_var <= external->max_var) {
     LOG ("do nothing");
   } else {
@@ -570,16 +570,10 @@ void Solver::resize (int min_max_var) {
 int Solver::declare_more_variables (int number_of_vars) {
   TRACE (declare_vars, "declare_vars", number_of_vars);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  /* TODO: fuzz without. this code is problematic
-   * as it allows to add 1 -> declare -> solve
-  if (state () != SOLVING)
-    transition_to_steady_state ();
-  */
-  // removing this triggers an assertion in
-  // external but it maybe it is not necessary
-  external->reset_extended ();
   REQUIRE (number_of_vars <= INT32_MAX - external->max_var,
            "cannot declare more than 32-bit literals");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   int new_max_var = external->max_var + number_of_vars;
   if (number_of_vars)
     external->reserve (new_max_var);
@@ -590,14 +584,8 @@ int Solver::declare_more_variables (int number_of_vars) {
 int Solver::declare_one_more_variable () {
   TRACE (declare_var, "declare_var");
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  /* TODO: fuzz without. this code is problematic
-   * as it allows to add 1 -> declare -> solve
   if (state () != SOLVING)
     transition_to_steady_state ();
-  */
-  // removing this triggers an assertion in
-  // external but it maybe it is not necessary
-  external->reset_extended ();
   int new_max_var = external->max_var + 1;
   external->init (new_max_var);
   LOG_API_CALL_END ("declare_var");
@@ -653,11 +641,15 @@ bool Solver::set (const char *arg, int val) {
         arg, val);
   }
   bool res = internal->opts.set (arg, val);
-  // this options needs to be applied in the first add, so we must
+  // these options need to be applied in the first add, so we must
   // update the value immediately
   if (!strcmp (arg, "varinitswitch")) {
     external->e2i.limit_to_check = val;
     LOG ("updating varinitswitch");
+  }
+  if (!strcmp (arg, "checkfrozen")) {
+    external->checkfrozen = val;
+    LOG ("updating checkfrozen");
   }
   LOG_API_CALL_END ("set", arg, val, res);
 
@@ -736,7 +728,7 @@ void Solver::add (int lit) {
   TRACE (add, "add", lit);
   REQUIRE (state () & (READY | ADDING), "state not ready or adding");
   if (lit) {
-    REQUIRE_VALID_LIT (lit);
+    REQUIRE_VALID_MOLTEN_LIT (lit);
     if (internal->opts.factor && internal->opts.factorcheck == 1)
       REQUIRE (
           abs (lit) <= external->max_var,
@@ -830,7 +822,7 @@ int64_t Solver::constrain (int lit) {
   REQUIRE (state () & (READY | ADDING_CONSTRAINT),
            "state not ready or adding constraint");
   if (lit)
-    REQUIRE_VALID_LIT (lit);
+    REQUIRE_VALID_MOLTEN_LIT (lit);
   assert (!adding_clause);
   transition_to_steady_state ();
   const int64_t id = external->constrain (lit);
@@ -846,7 +838,7 @@ int64_t Solver::constrain (int lit) {
 void Solver::assume (int lit) {
   TRACE (assume, "assume", lit);
   REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   transition_to_steady_state ();
   external->assume (lit);
   LOG_API_CALL_END ("assume", lit);
@@ -1084,7 +1076,7 @@ int Solver::fixed (int lit) const {
 void Solver::phase (int lit) {
   TRACE (phase, "phase", lit);
   REQUIRE_READY_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   if (state () != SOLVING)
     transition_to_steady_state ();
   external->phase (lit);
@@ -1094,7 +1086,7 @@ void Solver::phase (int lit) {
 void Solver::unphase (int lit) {
   TRACE (unphase, "unphase", lit);
   REQUIRE_READY_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   if (state () != SOLVING)
     transition_to_steady_state ();
   external->unphase (lit);
@@ -1214,9 +1206,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
 
-  if (external->propagator)
-    disconnect_external_propagator ();
-
+  transition_to_steady_state ();
   external->propagator = propagator;
 #ifndef NTRACING
   external->trace_api_file = trace_api_file;
@@ -1233,6 +1223,7 @@ void Solver::disconnect_external_propagator () {
   REQUIRE_VALID_STATE ();
   REQUIRE (external->propagator,
            "can not disconnect propagator without a connected propagator");
+  transition_to_steady_state ();
   external->reset_observed_vars ();
 
   external->propagator = 0;
@@ -1247,9 +1238,15 @@ void Solver::disconnect_external_propagator () {
 void Solver::add_observed_var (int idx) {
   TRACE (observe, "observe", idx);
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  REQUIRE_VALID_LIT (idx);
+  REQUIRE_VALID_MOLTEN_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
+  REQUIRE (abs (idx) > external->max_var ||
+               (!external->marked (external->witness, abs (idx)) &&
+                !external->marked (external->witness, -abs (idx))),
+           "Only clean variables are allowed to be observed.");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }
@@ -1264,6 +1261,8 @@ void Solver::remove_observed_var (int idx) {
                !external->observed (idx) || !external->current_val (idx) ||
                !internal->conflict,
            "can not unobserve assigned variable during conflict analysis");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->remove_observed_var (idx);
   LOG_API_CALL_END ("unobserve", idx);
 }
@@ -1274,6 +1273,8 @@ void Solver::reset_observed_vars () {
   REQUIRE (
       external->propagator,
       "can not reset observed variables without a connected propagator");
+  if (state () != SOLVING)
+    transition_to_steady_state ();
   external->reset_observed_vars ();
   LOG_API_CALL_END ("reset_observed");
 }
@@ -1309,7 +1310,7 @@ int64_t Solver::irredundant () const {
 void Solver::freeze (int lit) {
   TRACE (freeze, "freeze", lit);
   REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   transition_to_steady_state ();
   external->freeze (lit);
   LOG_API_CALL_END ("freeze", lit);
@@ -1317,8 +1318,8 @@ void Solver::freeze (int lit) {
 
 void Solver::melt (int lit) {
   TRACE (melt, "melt", lit);
-  REQUIRE_READY_STATE ();
-  REQUIRE_VALID_LIT (lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_MOLTEN_LIT (lit);
   REQUIRE (external->frozen (lit),
            "can not melt completely melted literal '%d'", lit);
   transition_to_steady_state ();
@@ -1358,6 +1359,9 @@ bool Solver::trace_proof (const char *path) {
       state () == CONFIGURING,
       "can only start proof tracing to '%s' right after initialization",
       path);
+  REQUIRE (internal->file_tracers.empty () ||
+               !internal->file_tracers.back ()->closed (),
+           "proof trace already closed");
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
@@ -1715,7 +1719,8 @@ bool Solver::is_decision (int lit) {
 
 void Solver::force_backtrack (int new_level) {
   TRACE (force_backtrack, "force_backtrack", new_level);
-  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () == SOLVING,
+           "can not force backtrack outside of solving");
   REQUIRE (state () != UNSATISFIED,
            "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,
@@ -1741,7 +1746,8 @@ bool Solver::is_witness (int lit) {
 
 bool Solver::force_unassign (int lit) {
   TRACE (force_unassign, "force_unassign", lit);
-  REQUIRE_READY_OR_SOLVING_STATE ();
+  REQUIRE (state () == SOLVING,
+           "can not force backtrack outside of solving");
   REQUIRE (state () != UNSATISFIED,
            "can not backtrack in unsatisfied state");
   REQUIRE (external->propagator,

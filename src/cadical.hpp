@@ -375,7 +375,7 @@ public:
   // the first one is implicitly disconnected.
   //
   //   require (VALID)
-  //   ensure (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   void connect_terminator (Terminator *terminator);
   void disconnect_terminator ();
@@ -422,8 +422,8 @@ public:
   // An observed variable is allowed to be a fresh variable and it can be
   // added also during solving.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void add_observed_var (int var);
 
@@ -431,16 +431,16 @@ public:
   // set unobserved only when it is unassigned, in order to guarantee
   // that no yet unexplained external propagation involves it.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void remove_observed_var (int var);
 
   // Removes all the 'observed' flags from the variables. Disconnecting the
   // propagator invokes this step as well.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void reset_observed_vars ();
 
@@ -641,8 +641,8 @@ public:
   // might need to reallocate tables, it destroys a satisfying assignment
   // and has the same state transition and conditions as 'assume' etc.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
@@ -658,13 +658,14 @@ public:
   // variable name of the consecutive range of newly delcared variables.
   // It has the same state transition and conditions as 'resize' above.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
   //   require (SOLVING)
   //   ensure (SOLVING)
+  //
   int declare_more_variables (int number_of_additional_new_vars);
 
   // Returns the next fresh variable that was not used internally.

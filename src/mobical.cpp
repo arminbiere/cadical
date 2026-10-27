@@ -6502,14 +6502,14 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::DECIDE): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (0, SMALL);
+    const int size = random.pick_int (1, SMALL);
     const int delay = random.pick_int (0, 10);
     push_back (new DecideCall (size, delay));
     break;
   }
   case (CallType::FORCE): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (0, SMALL);
+    const int size = random.pick_int (1, SMALL);
     const int lt = random.pick_int (0, LAST_MOCK_FORCE_TYPE - 1);
     const int delay = random.pick_int (0, 10);
     push_back (new MockForceCall (size, (MockForceType) lt, delay));
@@ -10073,6 +10073,8 @@ int Mobical::main (int argc, char **argv) {
   check_mode_valid ();
 
   if (summary == -1 && !(mode & RANDOM))
+    summary = 0;
+  if (summary == -1 && quiet)
     summary = 0;
 
   /*----------------------------------------------------------------------*/

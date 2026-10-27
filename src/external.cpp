@@ -17,6 +17,7 @@ External::External (Internal *i)
   e2i.limit_to_check = internal->opts.varinitswitch;
   e2i.internal = internal;
   e2i.incremental_scaling = internal->opts.varswitchscale;
+  checkfrozen = internal->opts.checkfrozen;
 }
 
 External::~External () {
@@ -90,6 +91,9 @@ void External::reserve (int new_max_var) {
     ext_flags.push_back (0);
     ervars.push_back (0);
   }
+  if (checkfrozen)
+    if (new_max_var >= (int64_t) moltentab.size ())
+      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (internal->i2e.size () == (size_t) internal->max_var + 1);
   assert (eidx == (size_t) new_max_var + 1);
   max_var = new_max_var;
@@ -109,9 +113,6 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (internal->opts.checkfrozen)
-    if (new_max_var >= (int64_t) moltentab.size ())
-      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
 }
 
@@ -195,7 +196,7 @@ int External::internalize (int elit, bool extension) {
       if (elit < 0)
         ilit = -ilit;
     }
-    if (internal->opts.checkfrozen) {
+    if (checkfrozen) {
       assert (eidx < (int64_t) moltentab.size ());
       if (moltentab[eidx])
         FATAL ("can not reuse molten literal %d", eidx);
@@ -212,7 +213,7 @@ int External::internalize (int elit, bool extension) {
     if (extension)
       f.elim = false;
     if (!marked (tainted, elit) && marked (witness, -elit)) {
-      assert (!internal->opts.checkfrozen);
+      assert (!checkfrozen);
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
@@ -440,9 +441,6 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  REQUIRE (eidx > max_var ||
-               (!marked (witness, elit) && !marked (witness, -elit)),
-           "Only clean variables are allowed to be observed.");
   // if (eidx <= max_var &&
   //     (marked (witness, elit) || marked (witness, -elit))) {
   //   LOG ("Error, only clean variables are allowed to become observed.");
@@ -589,24 +587,24 @@ bool External::is_decision (int elit) {
   int eidx = abs (elit);
   if (eidx > max_var)
     return false;
-
-  int ilit = internalize (elit);
+  int ilit = internal_lit (elit);
+  if (!ilit)
+    return false;
   return internal->is_decision (ilit);
 }
+
 signed char External::current_val (int elit) {
   assert (observed (elit));
-  // assert (elit < e2i.size ());
-  int ilit = e2i[abs (elit)];
+  int ilit = internalize (elit);
   assert (ilit);
-  if (elit < 0)
-    ilit = -ilit;
   signed char res = internal->val (ilit);
   return res;
 }
 
 bool External::force_unassign (int elit) {
-  const int eidx = abs (elit);
-  const int iidx = e2i[eidx];
+  assert (observed (elit));
+  const int iidx = internalize (elit);
+  assert (iidx);
   if (!internal->val (iidx))
     return true;
   while (internal->val (iidx)) {
@@ -720,9 +718,9 @@ void External::check_solve_result (int res) {
 // for checking the deprecated 'freeze' semantics.
 
 void External::update_molten_literals () {
-  if (!internal->opts.checkfrozen)
+  if (!checkfrozen)
     return;
-  assert ((size_t) max_var + 1 == moltentab.size ());
+  assert (!max_var || (size_t) max_var + 1 == moltentab.size ());
 #ifdef LOGGING
   int registered = 0, molten = 0;
 #endif
