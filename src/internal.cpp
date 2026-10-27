@@ -1108,7 +1108,7 @@ int Internal::restore_clauses () {
   return res;
 }
 
-int Internal::lookahead () {
+int Internal::lookahead (int &lit) {
   assert (clause.empty ());
   PROFILE_SCOPE (lookahead);
   assert (!lookingahead);
@@ -1123,16 +1123,19 @@ int Internal::lookahead () {
     LOG ("external notifications are turned off during preprocessing.");
     private_steps = true;
   }
-  int tmp = already_solved ();
-  if (!tmp)
-    tmp = restore_clauses ();
-  int res = 0;
-  if (!tmp)
-    res = lookahead_probing ();
-  if (res == INT_MIN)
-    res = 0;
+  int res = already_solved ();
+  if (!res)
+    res = restore_clauses ();
+  if (!res)
+    lit = lookahead_probing ();
+  if (lit == INT_MIN) {
+    assert (unsat);
+    res = 20;
+    lit = 0;
+  } else
+    assert (!unsat);
   reset_solving ();
-  report_solving (tmp);
+  report_solving (res);
   assert (lookingahead);
   lookingahead = false;
   PROFILE_SCOPE_EARLY_EXIT (lookahead);

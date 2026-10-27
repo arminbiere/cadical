@@ -829,7 +829,14 @@ int Solver::lookahead () {
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
-  int lit = external->lookahead ();
+  int lit = 0;
+  int res = external->lookahead (lit);
+  if (res == 10)
+    STATE (SATISFIED);
+  else if (res == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (INCONCLUSIVE);
   LOG_API_CALL_END ("lookahead", lit);
   return lit;
 }
@@ -870,13 +877,13 @@ int Solver::propagate () {
   const int res = external->propagate_assumptions ();
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
   if (res == 10)
     STATE (SATISFIED);
   else if (res == 20)
     STATE (UNSATISFIED);
   else
     STATE (INCONCLUSIVE);
+  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
   return res;
 }
 

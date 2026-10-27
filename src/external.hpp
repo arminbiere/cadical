@@ -424,7 +424,7 @@ public:
   void conclude_unknown ();
 
   /*----------------------------------------------------------------------*/
-  int lookahead ();
+  int lookahead (int &);
   CaDiCaL::CubesWithStatus generate_cubes (int, int);
 
   int fixed (int elit) const; // Implemented in 'internal.hpp'.

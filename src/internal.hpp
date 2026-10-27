@@ -1617,7 +1617,7 @@ struct Internal {
   void finalize (int);
 
   //
-  int lookahead ();
+  int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();

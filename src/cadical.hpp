@@ -555,7 +555,7 @@ public:
   // returned but the state remains steady.
   //
   //   require (READY & !SATISFIED & !UNSATISFIED)
-  //   ensure (STEADY | SATISFIED | UNSATISFIED)
+  //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
 
