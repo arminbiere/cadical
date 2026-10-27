@@ -204,8 +204,8 @@ void Internal::reset_constraint () {
 }
 
 void Internal::analyze_failing_constraint (int failed) {
+  PROFILE_SCOPE (constraintsanalyze);
   stats.constraints_analyzed++;
-  PROFILE_SCOPE (analyze);
 
   LOG ("analyzing failing constraint %s", LOGLIT (failed));
 

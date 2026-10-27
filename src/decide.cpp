@@ -516,6 +516,7 @@ int Internal::decide_constraint () {
   } else if (!cat_res)
     return 0;
   else {
+    PROFILE_SCOPE (constraintsdecide)
     assert (cat_res == 10 || cat_res == 11);
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
@@ -593,6 +594,7 @@ int Internal::decide_constraint () {
           backtrack (var (lit).level - 1);
           */
         all_constraints_assigned = false;
+        PROFILE_SCOPE_EARLY_EXIT (constraintsdecide)
         break;
       }
       idx++;
