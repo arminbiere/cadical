@@ -2416,6 +2416,26 @@ signed char KITTEN_NAMESPACE (kitten_fixed) (kitten *kitten,
   return res;
 }
 
+signed char KITTEN_NAMESPACE (kitten_implied) (kitten *kitten,
+                                               unsigned elit) {
+  REQUIRE_STATUS (10);
+  const unsigned eidx = elit / 2;
+  if (eidx >= kitten->evars)
+    return 0;
+  unsigned iidx = kitten->import[eidx];
+  if (!iidx)
+    return 0;
+  iidx--;
+  const unsigned ilit = 2 * iidx + (elit & 1);
+  signed char res = kitten->values[ilit];
+  if (!res)
+    return 0;
+  kar *v = kitten->vars + iidx;
+  if (v->level < SIZE_STACK (kitten->assumptions))
+    return 0;
+  return res;
+}
+
 signed char KITTEN_NAMESPACE (kitten_fixed_signed) (kitten *kitten,
                                                     int elit) {
   unsigned kelit = int2u (elit);
@@ -2433,6 +2453,8 @@ bool KITTEN_NAMESPACE (kitten_flip_literal) (kitten *kitten,
     return false;
   const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
   if (KITTEN_NAMESPACE (kitten_fixed) (kitten, elit))
+    return false;
+  if (KITTEN_NAMESPACE (kitten_implied) (kitten, elit))
     return false;
   return flip_literal (kitten, ilit);
 }
