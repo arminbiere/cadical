@@ -829,6 +829,7 @@ int Solver::lookahead () {
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
+  STATE (SOLVING);
   int lit = 0;
   int res = external->lookahead (lit);
   if (res == 10)
@@ -847,6 +848,7 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
+  STATE (SOLVING);
 
   auto cubes = external->generate_cubes (depth, min_depth);
 
@@ -874,6 +876,7 @@ int Solver::propagate () {
   TRACE (propagate_assumptions, "propagate_assumptions");
   REQUIRE_READY_STATE ();
   transition_to_steady_state ();
+  STATE (SOLVING);
   const int res = external->propagate_assumptions ();
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
