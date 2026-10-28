@@ -274,8 +274,11 @@ int Internal::decide_assumption () {
     int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
     if (!cat_res) {
       stats.constraints_solved++;
-      if (!unit_constraint_vars && opts.constrainteager)
+      if (!unit_constraint_vars && opts.constrainteager) {
+        PROFILE_SCOPE (constraintseager);
         eager_constraint_units ();
+        PROFILE_SCOPE_EARLY_EXIT (constraintseager);
+      }
       PROFILE_SCOPE (constraintssolve);
       if (opts.constraintprime == 2)
         cat_res = KITTEN_NAMESPACE (kitten_solve_prime) (constraint_cat);
@@ -464,10 +467,12 @@ int Internal::decide_constraint () {
       last_constraint_idx = 0;
     }
     if (opts.constraintbump == 2) {
+      PROFILE_SCOPE (constraintsbump)
       for (auto cv = constraint_vars.rbegin ();
            cv != constraint_vars.rend (); cv++) {
         KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, *cv));
       }
+      PROFILE_SCOPE_EARLY_EXIT (constraintsbump)
     }
     if (!unit_constraint_vars && opts.constrainteager)
       eager_constraint_units ();
@@ -485,7 +490,9 @@ int Internal::decide_constraint () {
       stats.constraints_sat++;
       if (opts.constraintprime == 1) {
         LOG ("computing kitten prime implicant");
+        PROFILE_SCOPE (constraintssolve);
         KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
+        PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
         stats.constraints_prime++;
       }
       // compute conflicts between current trail and kitten model
