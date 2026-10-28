@@ -1130,6 +1130,8 @@ int Internal::lookahead (int &lit) {
   PROFILE_SCOPE (lookahead);
   assert (!lookingahead);
   lookingahead = true;
+  if (proof)
+    proof->solve_query ();
   activating_all_new_imported_literals ();
   if (external_prop) {
     if (level) {
@@ -1143,7 +1145,8 @@ int Internal::lookahead (int &lit) {
   int res = already_solved ();
   if (!res)
     res = restore_clauses ();
-  if (unsat) // restore_clauses only returns 20 if the propagation returns unsat
+  if (unsat) // restore_clauses only returns 20 if the propagation returns
+             // unsat
     res = 20;
   if (!res)
     lit = lookahead_probing ();
