@@ -530,10 +530,11 @@ int Internal::decide_constraint () {
     size_t idx = 0;
     assert (opts.constraintprime ||
             last_constraint_idx <= constraint_vars.size ());
-    if (cat_res == 10 && last_constraint_idx == constraint_vars.size ()) {
+    if (false && cat_res == 10 &&
+        last_constraint_idx == constraint_vars.size ()) {
       if (control[level].decision == 0)
         idx = last_constraint_idx;
-    } else if (cat_res == 10) {
+    } else if (false && cat_res == 10) {
       const int last_decision = constraint_vars[last_constraint_idx];
       // TODO: this is not precise due to fake-decisions
       if (val (last_decision) && var (last_decision).level == level &&
