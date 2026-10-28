@@ -855,6 +855,12 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   CubesWithStatus cubes2;
   cubes2.status = cubes.status;
   cubes2.cubes = cubes.cubes;
+  if (cubes2.status == 10)
+    STATE (SATISFIED);
+  else if (cubes2.status == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (INCONCLUSIVE);
   LOG_API_CALL_RETURNS ("lookahead_cubes", cubes2.status);
   LOG_API_CALL_END ("lookahead_cubes");
   return cubes2;
