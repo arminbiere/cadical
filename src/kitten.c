@@ -1821,7 +1821,7 @@ static unsigned int2u (int lit) {
 }
 static int u2int (unsigned lit) {
   assert (lit != INVALID);
-  int idx = lit / 2 + 1;
+  int idx = (lit >> 1) + 1;
   if (lit & 1)
     idx = -idx;
   return idx;
@@ -2053,8 +2053,10 @@ int KITTEN_NAMESPACE (kitten_solve_prime) (kitten *kitten) {
     // push on prime implicant stack.
     // TODO: improve
     for (all_kits (lit)) {
-      if (values[lit] > 0)
+      if (values[lit] > 0) {
+        LOG ("pushing prime %zd = %d", lit, export_literal (kitten, lit));
         PUSH_STACK (*prime, export_literal (kitten, lit));
+      }
     }
   }
   UPDATE_STATUS (res);
@@ -2574,8 +2576,10 @@ void KITTEN_NAMESPACE (kitten_compute_prime_implicant) (kitten *kitten) {
   unsigneds *prime = &kitten->prime;
   // push on prime implicant stack.
   for (all_kits (lit)) {
-    if (values[lit] > 0)
+    if (values[lit] > 0) {
+      LOG ("pushing prime %zd = %d", lit, export_literal (kitten, lit));
       PUSH_STACK (*prime, export_literal (kitten, lit));
+    }
   }
   // TODO: check if we are able to use partial results (if limit_hit).
   assert (!EMPTY_STACK (kitten->prime) || limit_hit);
@@ -2594,7 +2598,7 @@ int KITTEN_NAMESPACE (kitten_next_signed_implicant) (kitten *kitten,
   if (idx >= SIZE_STACK (*prime))
     return 0;
   // already exported
-  return u2int (idx);
+  return u2int (PEEK_STACK (*prime, idx));
 }
 
 void KITTEN_NAMESPACE (kitten_bump_signed_literal) (kitten *kitten,

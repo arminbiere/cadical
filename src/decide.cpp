@@ -555,13 +555,16 @@ int Internal::decide_constraint () {
       if (cat_res == 11) {
         lit = KITTEN_NAMESPACE (
             kitten_next_signed_implicant (constraint_cat, idx++));
-        if (!lit)
+        if (!lit) {
+          LOG ("all implicant literals assigned");
           break;
+        }
       } else {
         if (idx >= constraint_vars.size ())
           break;
         lit = constraint_vars[idx++];
       }
+      LOG ("next constraint literal %s", LOGLIT (lit));
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
       // Ignore redundant variables.
