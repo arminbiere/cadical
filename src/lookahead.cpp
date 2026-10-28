@@ -402,6 +402,8 @@ int Internal::lookahead_probing () {
 }
 
 CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
+  if (proof)
+    proof->solve_query ();
   if (!active () || depth == 0) {
     CubesWithStatus cubes;
     cubes.status = 0;
