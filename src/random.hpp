@@ -86,12 +86,12 @@ public:
     assert (l <= r);
     const uint64_t delta = 1 + r - (unsigned) l;
     int64_t log_delta = delta ? 0 : 64;
-    while (log_delta < 64 && (1u << log_delta) < delta)
+    while (log_delta < 64 && ((uint64_t)1u << log_delta) < delta)
       log_delta++;
     const int log_res = pick_int (0, log_delta);
     unsigned tmp = generate ();
     if (log_res < 64)
-      tmp &= (1u << log_res) - 1;
+      tmp &= (((uint64_t)1) << log_res) - 1;
     if (delta)
       tmp %= delta;
     const int64_t res = l + tmp;

@@ -1126,14 +1126,18 @@ int Internal::lookahead (int &lit) {
   int res = already_solved ();
   if (!res)
     res = restore_clauses ();
+  if (unsat) // restore_clauses only returns 20 if the propagation returns unsat
+    res = 20;
   if (!res)
     lit = lookahead_probing ();
+  else if (res == 20)
+    lit = INT_MIN;
   if (lit == INT_MIN) {
-    assert (unsat);
+    assert (unsat || unsat_constraint);
     res = 20;
     lit = 0;
   } else
-    assert (!unsat);
+    assert (!unsat && !unsat_constraint);
   reset_solving ();
   report_solving (res);
   assert (lookingahead);
