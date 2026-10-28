@@ -94,6 +94,8 @@ bool KITTEN_NAMESPACE (kitten_failed) (kitten *, unsigned);
 bool KITTEN_NAMESPACE (kitten_failed_signed) (kitten *, int);
 bool KITTEN_NAMESPACE (kitten_flip_literal) (kitten *, unsigned);
 bool KITTEN_NAMESPACE (kitten_flip_signed_literal) (kitten *, int);
+signed char KITTEN_NAMESPACE (kitten_implied) (kitten *, unsigned);
+signed char KITTEN_NAMESPACE (kitten_implied_signed) (kitten *, int);
 
 unsigned KITTEN_NAMESPACE (kitten_compute_clausal_core) (kitten *,
                                                          uint64_t *learned);

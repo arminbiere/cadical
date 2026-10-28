@@ -2431,9 +2431,14 @@ signed char KITTEN_NAMESPACE (kitten_implied) (kitten *kitten,
   if (!res)
     return 0;
   kar *v = kitten->vars + iidx;
-  if (v->level < SIZE_STACK (kitten->assumptions))
+  if (v->level > SIZE_STACK (kitten->assumptions))
     return 0;
   return res;
+}
+signed char KITTEN_NAMESPACE (kitten_implied_signed) (kitten *kitten,
+                                                      int signed_elit) {
+  unsigned elit = int2u (signed_elit);
+  return KITTEN_NAMESPACE (kitten_implied) (kitten, elit);
 }
 
 signed char KITTEN_NAMESPACE (kitten_fixed_signed) (kitten *kitten,
