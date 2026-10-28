@@ -490,9 +490,9 @@ int Internal::decide_constraint () {
       stats.constraints_sat++;
       if (opts.constraintprime == 1) {
         LOG ("computing kitten prime implicant");
-        PROFILE_SCOPE (constraintssolve);
+        PROFILE_SCOPE (constraintsprime);
         KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
-        PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
+        PROFILE_SCOPE_EARLY_EXIT (constraintsprime);
         stats.constraints_prime++;
       }
       // compute conflicts between current trail and kitten model

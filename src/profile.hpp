@@ -65,9 +65,10 @@ struct Internal;
   PROFILE (constraints, 2) \
   PROFILE (constraintsanalyze, 3) \
   PROFILE (constraintsbump, 4) \
-  PROFILE (constraintsdecide, 3) \
-  PROFILE (constraintsdiverge, 3) \
-  PROFILE (constraintseager, 3) \
+  PROFILE (constraintsdecide, 4) \
+  PROFILE (constraintsdiverge, 4) \
+  PROFILE (constraintseager, 4) \
+  PROFILE (constraintsprime, 4) \
   PROFILE (constraintssolve, 4) \
   PROFILE (constraintssort, 4) \
   PROFILE (copy, 4) \
