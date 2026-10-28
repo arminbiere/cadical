@@ -68,6 +68,7 @@ struct Internal;
   PROFILE (constraintsdecide, 4) \
   PROFILE (constraintsdiverge, 4) \
   PROFILE (constraintseager, 4) \
+  PROFILE (constraintsphase, 4) \
   PROFILE (constraintsprime, 4) \
   PROFILE (constraintssolve, 4) \
   PROFILE (constraintssort, 4) \

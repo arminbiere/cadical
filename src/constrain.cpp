@@ -43,6 +43,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
     constraint_tmp.push_back (lit);
     return;
   }
+  PROFILE_SCOPE (constraints);
   assert (!lit);
   stats.constraints_added++;
   LOG (constraint_tmp, "shrinking constraint");
@@ -146,6 +147,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
                                            constraint_tmp.size (),
                                            constraint_tmp.data ());
     if (opts.constraintphase == 2) {
+      PROFILE_SCOPE (constraintsphase);
       for (auto &lit : constraint_tmp) {
         KITTEN_NAMESPACE (
             kitten_phase_signed_literal (constraint_cat, lit));
@@ -354,6 +356,7 @@ void Internal::analyze_failing_constraint (int failed) {
     }
     // TODO: bump kitten
     if (opts.constraintbump == 1 || opts.constraintphase) {
+      PROFILE_SCOPE (constraintsphase);
       for (auto &lit : clause) {
         if (opts.constraintbump)
           KITTEN_NAMESPACE (
@@ -362,6 +365,7 @@ void Internal::analyze_failing_constraint (int failed) {
           KITTEN_NAMESPACE (
               kitten_phase_signed_literal (constraint_cat, lit));
       }
+      PROFILE_SCOPE_EARLY_EXIT (constraintsphase);
     }
     KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
                                            clause.size (), clause.data ());
