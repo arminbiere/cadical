@@ -522,24 +522,32 @@ int Internal::decide_constraint () {
     assert (cat_res == 10 || cat_res == 11);
     LOG ("using kitten model");
     bool all_constraints_assigned = true;
+    bool pseudo_level =
+        (size_t) level > assumptions.size () && !control[level].decision;
     // TODO: re-ordering based on decisions?
     // TODO: keep last constraint_var index to skip part of the loop.
     int lit = 0; //, last_lit;
     size_t idx = 0;
     assert (opts.constraintprime ||
             last_constraint_idx <= constraint_vars.size ());
-    if (!opts.constraintprime &&
-        last_constraint_idx == constraint_vars.size ()) {
+    if (cat_res == 10 && last_constraint_idx == constraint_vars.size ()) {
       if (control[level].decision == 0)
         idx = last_constraint_idx;
-    } else if (!opts.constraintprime) {
+    } else if (cat_res == 10) {
       const int last_decision = constraint_vars[last_constraint_idx];
       // TODO: this is not precise due to fake-decisions
       if (val (last_decision) && var (last_decision).level == level &&
           is_decision (last_decision))
         idx = last_constraint_idx;
+    } else if (false && cat_res == 11) {
+      assert (opts.constraintprime);
+      const int last_decision = KITTEN_NAMESPACE (
+          kitten_next_signed_implicant (constraint_cat, idx++));
+      if (val (last_decision) && var (last_decision).level == level &&
+          is_decision (last_decision))
+        idx = last_constraint_idx;
     }
-    while (true) {
+    while (!pseudo_level) {
       if (terminated_asynchronously ()) {
         all_constraints_assigned = false;
         break;
@@ -557,6 +565,7 @@ int Internal::decide_constraint () {
       const signed char tmp =
           KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
       // Ignore redundant variables.
+      // assert (!tmp);
       if (!tmp) {
         assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
         continue;
