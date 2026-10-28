@@ -407,8 +407,8 @@ public:
   // Disconnection of the external propagator resets all the observed
   // variables.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (READY)
+  //   ensure (STEADY)
   //
   void connect_external_propagator (ExternalPropagator *propagator);
   void disconnect_external_propagator ();
@@ -561,7 +561,7 @@ public:
   // returned but the state remains steady.
   //
   //   require (READY & !SATISFIED & !UNSATISFIED)
-  //   ensure (STEADY | SATISFIED | UNSATISFIED)
+  //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
 

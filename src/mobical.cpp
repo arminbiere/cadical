@@ -158,6 +158,7 @@ static const char *USAGE =
 "  --[always-,never-]generate-propagator[]<r> [100]\n"
 "  --[always-,never-]generate-forces[]<r> [900]\n"
 "  --[always-,never-]generate-implied[]<r> [500]\n"
+"  --[always-,never-]generate-violate[]<r> [950]\n"
 "\n"
 "The standard mode of using the model based tester is to start it in\n"
 "random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
@@ -326,6 +327,7 @@ struct TraceGen {
   int generate_propagator = 100;
   int generate_forces = 900;
   int generate_implied = 500;
+  int generate_violate = 950;
 };
 
 /*------------------------------------------------------------------------*/
@@ -6215,17 +6217,20 @@ void Trace::generate_process (Random &random) {
 }
 
 void Trace::generate_violating (Random &random) {
+  assert (mobical.force.violate);
+  if (random.pick_int (0, 999) >= mobical.tracegen.generate_violate)
+    return;
   CallType type = (CallType) random.pick_int (0, INVALID_TYPE);
   switch (type) {
   case (CallType::INIT): {
     // Init is bad
     // push_back (new InitCall ());
-    break;
+    // instead continue...
   }
   case (CallType::RESET): {
     // Reset is bad
     // push_back (new ResetCall ());
-    break;
+    // instead continue...
   }
   case (CallType::SET): {
     auto it = Options::begin ();
@@ -6516,31 +6521,40 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::CB_DECIDE): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CB_PROPAGATE): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CB_HAS_CLAUSE): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CB_ADD_CLAUSE): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CB_ADD_REASON): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CB_CHECK_MODEL): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::NOTIFY_ASSIGNMENT): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::NOTIFY_BACKTRACK): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::NOTIFY_LEVEL): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::CONCLUDE): {
     push_back (new ConcludeCall ());
@@ -6560,15 +6574,18 @@ void Trace::generate_violating (Random &random) {
   }
 #ifdef MOBICAL_MEMORY
   case (CallType::MAXALLOC): {
-    break;
+    // continue
+    // break;
   }
   case (CallType::LEAKALLOC): {
-    break;
+    // continue
+    // break;
   }
 #endif
 #ifdef MOBICAL_TERMINATE
   case (CallType::TERMINATE): {
-    break;
+    // continue
+    // break;
   }
 #endif
   case (CallType::TRAVERSE_CLAUSES): {
@@ -6590,11 +6607,12 @@ void Trace::generate_violating (Random &random) {
   case (CallType::READ_DIMACS): {
     // TODO: would need a valid file first...
     // push_back (new ReadDimacsCall ());
-    break;
+    // break;
+    // but continue
   }
   case (CallType::READ_SOLUTION): {
     // TODO: would need a valid file first...
-    break;
+    // break;
   }
   case (CallType::WRITE_DIMACS): {
     // TODO: size should be large enough...
@@ -6602,13 +6620,13 @@ void Trace::generate_violating (Random &random) {
     push_back (new WriteDimacsCall ("/dev/null", size));
     break;
   }
-  case (CallType::WRITE_EXTENSION): {
-    push_back (new WriteExtensionCall ("/dev/null"));
-    break;
-  }
   case (CallType::COPY): {
     // TODO: copy call is not always working
     // push_back (new CopyCall ());
+    // break;
+  }
+  case (CallType::WRITE_EXTENSION): {
+    push_back (new WriteExtensionCall ("/dev/null"));
     break;
   }
   case (CallType::INVALID_TYPE):
@@ -9502,6 +9520,8 @@ int Mobical::main (int argc, char **argv) {
         tracegen.generate_forces = 1000;
       else if (!strcmp (argv[i] + 8, "-generate-implied"))
         tracegen.generate_implied = 1000;
+      else if (!strcmp (argv[i] + 8, "-generate-violate"))
+        tracegen.generate_violate = 1000;
       else
         die ("invalid argument '%s' (try '-h')", argv[i]);
     } else if (!strncmp (argv[i], "--never", 7)) {
@@ -9539,6 +9559,8 @@ int Mobical::main (int argc, char **argv) {
         tracegen.generate_forces = 0;
       else if (!strcmp (argv[i] + 7, "-generate-implied"))
         tracegen.generate_implied = 0;
+      else if (!strcmp (argv[i] + 7, "-generate-violate"))
+        tracegen.generate_violate = 0;
       else
         die ("invalid argument '%s' (try '-h')", argv[i]);
     } else if (!strncmp (argv[i], "--generate", 10)) {
@@ -9885,6 +9907,26 @@ int Mobical::main (int argc, char **argv) {
                "[0-1000])",
                gen_val, "--generate-implied");
         tracegen.generate_implied = gen_val;
+      } else if (!strncmp (argv[i], "--generate-violate", 18)) {
+        if (!strcmp (argv[i], "--generate-violate")) {
+          if (++i == argc)
+            die ("argument to '%s' missing (try '-h')", argv[i - 1]);
+          if (!is_unsigned_str (argv[i]))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i],
+                 argv[i - 1]);
+          gen_val = atol (argv[i]);
+        } else {
+          if (!is_unsigned_str (argv[i] + 18))
+            die ("invalid argument '%s' to '%s' (try '-h')", argv[i] + 18,
+                 "--generate-violate");
+          gen_val = atol (argv[i] + 18);
+        }
+        if (gen_val < 0 || gen_val > 1000)
+          die ("argument value '%d' to '%s' out of bounds "
+               "(expected "
+               "[0-1000])",
+               gen_val, "--generate-violate");
+        tracegen.generate_violate = gen_val;
       } else
         die ("invalid argument '%s' (try '-h')", argv[i]);
     } else if (!strcmp (argv[i], "-L")) {

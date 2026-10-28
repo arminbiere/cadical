@@ -850,7 +850,15 @@ int Solver::lookahead () {
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
-  int lit = external->lookahead ();
+  STATE (SOLVING);
+  int lit = 0;
+  int res = external->lookahead (lit);
+  if (res == 10)
+    STATE (SATISFIED);
+  else if (res == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (INCONCLUSIVE);
   LOG_API_CALL_END ("lookahead", lit);
   return lit;
 }
@@ -861,12 +869,19 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
   transition_to_steady_state ();
+  STATE (SOLVING);
 
   auto cubes = external->generate_cubes (depth, min_depth);
 
   CubesWithStatus cubes2;
   cubes2.status = cubes.status;
   cubes2.cubes = cubes.cubes;
+  if (cubes2.status == 10)
+    STATE (SATISFIED);
+  else if (cubes2.status == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (INCONCLUSIVE);
   LOG_API_CALL_RETURNS ("lookahead_cubes", cubes2.status);
   LOG_API_CALL_END ("lookahead_cubes");
   return cubes2;
@@ -888,16 +903,17 @@ int Solver::propagate () {
   TRACE (propagate_assumptions, "propagate_assumptions");
   REQUIRE_READY_STATE ();
   transition_to_steady_state ();
+  STATE (SOLVING);
   const int res = external->propagate_assumptions ();
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
   if (res == 10)
     STATE (SATISFIED);
   else if (res == 20)
     STATE (UNSATISFIED);
   else
     STATE (INCONCLUSIVE);
+  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
   return res;
 }
 
@@ -1201,7 +1217,7 @@ void Solver::disconnect_fixed_listener () {
 void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   TRACE (connect_propagator, "connect_external_propagator");
   // LOG_API_CALL_BEGIN ("connect_external_propagator");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
@@ -1220,7 +1236,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
 void Solver::disconnect_external_propagator () {
   TRACE (disconnect_propagator, "disconnect_external_propagator");
   // LOG_API_CALL_BEGIN ("disconnect_external_propagator");
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (external->propagator,
            "can not disconnect propagator without a connected propagator");
   transition_to_steady_state ();

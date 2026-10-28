@@ -726,6 +726,7 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0, int64_t new_id = 0);
   void promote_clause (Clause *, int new_glue);
+  void undelete_clause (Clause *);
   void promote_clause_glue_only (Clause *, int new_glue);
   void make_irredundant (Clause *);
   size_t shrink_clause (Clause *, int new_size);
@@ -1641,7 +1642,7 @@ struct Internal {
   void finalize (int);
 
   //
-  int lookahead ();
+  int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();

@@ -756,14 +756,16 @@ int External::solve (bool preprocess_only) {
 
 void External::terminate () { internal->terminate (); }
 
-int External::lookahead () {
+int External::lookahead (int &lit) {
   reset_extended ();
   update_molten_literals ();
-  int ilit = internal->lookahead ();
+  int ilit = 0;
+  int res = internal->lookahead (ilit);
   const int elit =
       (ilit && ilit != INT_MIN) ? internal->externalize (ilit) : 0;
   LOG ("lookahead internal %d external %d", ilit, elit);
-  return elit;
+  lit = elit;
+  return res;
 }
 
 CaDiCaL::CubesWithStatus External::generate_cubes (int depth,

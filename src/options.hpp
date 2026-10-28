@@ -229,7 +229,7 @@ OPTION( restartmarginfocused,10,  0, 25,0,0,1, "focused slow fast margin in perc
 OPTION( restartmarginstable, 25,  0, 25,0,0,1, "stable slow fast margin in percent") \
 OPTION( restartreusetrail,    1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,           0,  0,  2,0,0,1, "restore all clauses (2=really)") \
-OPTION( restoreflush,         0,  0,  1,0,0,1, "remove satisfied clauses") \
+OPTION( restoreflush,         0,  0,  0,0,0,1, "remove satisfied clauses (unsound)") \
 OPTION( score,                1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,        950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,                 0,  0,2e9,0,0,1, "random seed") \

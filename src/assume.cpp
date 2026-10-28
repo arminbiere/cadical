@@ -539,7 +539,7 @@ void Internal::conclude_unsat () {
 
 void Internal::reset_concluded () {
   // this is preemptive fix: if you reset the constrain without
-  // reseting the assumptions, you should not reset the assumptions in
+  // resetting the assumptions, you should not reset the assumptions in
   // the proofs.  This is not possible anymore since reset_constrain
   // () is not part part of the API anymore, but this was possible in
   // 3.0.1. Therefore, for defensive programming, we decided to
