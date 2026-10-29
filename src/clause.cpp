@@ -274,12 +274,22 @@ void Internal::deallocate_clause (Clause *c) {
   char *p = (char *) c;
   if (arena.contains (p))
     return;
-  LOG (c, "deallocate pointer %p", (void *) c);
+#ifdef LOGGING
+  if (opts.logpointer)
+    LOG (c, "deallocate pointer %p", (void *) c);
+  else
+    LOG (c, "deallocate");
+#endif
   delete[] p;
 }
 
 void Internal::delete_clause (Clause *c) {
-  LOG (c, "delete pointer %p", (void *) c);
+#ifdef LOGGING
+  if (opts.logpointer)
+    LOG (c, "delete pointer %p", (void *) c);
+  else
+    LOG (c, "delete");
+#endif
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {

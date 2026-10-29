@@ -1,6 +1,7 @@
 
 #include "profile.hpp"
 #include "internal.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 #ifndef QUIET
@@ -96,21 +97,27 @@ void Internal::print_profile () {
   double solve = profiles.solve.value;
   uint64_t solve_ticks = profiles.solve.search_ticks;
 
+  MSG ("%12s %8s %12s %12s %7s", "ticks", "percent", "rate", "real",
+       "solve");
+  LINE ();
+
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
-    MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", profs[i]->value,
-         percent (profs[i]->value, solve), profs[i]->name,
+    MSG ("%12" PRId64 " %7.2f%% %12.0f %12.2f %7.2f%% %-20s",
          profs[i]->search_ticks,
-         percent (profs[i]->search_ticks, solve_ticks));
+         percent (profs[i]->search_ticks, solve_ticks),
+         relative (profs[i]->search_ticks, profs[i]->value),
+         profs[i]->value, percent (profs[i]->value, solve), profs[i]->name);
   }
 
   MSG ("  "
        "==================================================================="
        "=");
-  MSG ("%12.2f %7.2f%% %-20s %12" PRId64 " %7.2f%%", solve,
-       percent (solve, now), "solve", solve_ticks, 100.0);
+  MSG ("%12" PRId64 " %7.2f%% %12.0f %12.2f %7.2f%% %-20s", solve_ticks,
+       100.0, relative (solve_ticks, solve), solve, percent (solve, now),
+       "solve");
 
   LINE ();
   PRT ("last line shows %s time for solving", time_type);

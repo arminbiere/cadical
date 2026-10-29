@@ -608,6 +608,26 @@ void Solver::trace_api_calls (FILE *file) {
   trace_api_call ("init");
 }
 
+void Solver::trace_api_calls (const char *path) {
+  LOG_API_CALL_BEGIN ("trace_api_calls");
+  REQUIRE_VALID_STATE ();
+  // REQUIRE (file != 0, "invalid zero file argument");
+  REQUIRE (!tracing_api_calls_through_environment_variable_method,
+           "already tracing API calls "
+           "using environment variable 'CADICAL_API_TRACE'");
+  REQUIRE (!trace_api_file, "called twice");
+
+  FILE *file = fopen (path, "w");
+  if (!file) {
+    WARNING ("failed to open '%s' to trace API calls", path);
+    return;
+  }
+  trace_api_file = file;
+  close_trace_api_file = true;
+  LOG_API_CALL_END ("trace_api_calls");
+  trace_api_call ("init");
+}
+
 #endif
 /*------------------------------------------------------------------------*/
 
