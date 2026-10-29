@@ -119,7 +119,13 @@ void Internal::protect_reasons () {
       continue;
     if (reason == external_reason)
       continue;
-    LOG (reason, "protecting assigned %d reason %p", lit, (void *) reason);
+#ifdef LOGGING
+    if (opts.logpointer)
+      LOG (reason, "protecting assigned %d reason %p", lit,
+           (void *) reason);
+    else
+      LOG (reason, "protecting assigned %d reason", lit);
+#endif
     assert (!reason->reason);
     reason->reason = true;
 #ifdef LOGGING
@@ -152,8 +158,13 @@ void Internal::unprotect_reasons () {
       continue;
     if (reason == external_reason)
       continue;
-    LOG (reason, "unprotecting assigned %d reason %p", lit,
-         (void *) reason);
+#ifdef LOGGING
+    if (opts.logpointer)
+      LOG (reason, "unprotecting assigned %d reason %p", lit,
+           (void *) reason);
+    else
+      LOG (reason, "unprotecting assigned %d reason", lit);
+#endif
     assert (reason->reason);
     reason->reason = false;
 #ifdef LOGGING
@@ -317,8 +328,13 @@ void Internal::copy_clause (Clause *c) {
   char *q = arena.copy (p, c->bytes ());
   c->copy = (Clause *) q;
   c->moved = true;
-  LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, (void *) c,
-       (void *) c->copy);
+#ifdef LOGGING
+  if (opts.logpointer)
+    LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, (void *) c,
+         (void *) c->copy);
+  else
+    LOG ("copied clause[%" PRId64 "]", c->id);
+#endif
 }
 
 // This is the moving garbage collector.
