@@ -8448,46 +8448,52 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "connect_fixed_listener")) {
       if (enforce)
-        error ("'connect_fixed_listener' not supported (try "
-               "'--replay')");
+        error (
+            "'connect_fixed_listener' not supported (try '-f' to execute "
+            "regardless)");
       mobical.warning ("ignoring 'connect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "disconnect_fixed_listener")) {
       if (enforce)
-        error ("'disconnect_fixed_listener' not supported (try "
-               "'--replay')");
+        error ("'disconnect_fixed_listener' not supported (try '-f' to "
+               "execute "
+               "regardless)");
       mobical.warning ("ignoring 'disconnect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "connect_proof_tracer")) {
       if (enforce)
-        error ("'connect_proof_tracer' not supported (try "
-               "'--replay')");
+        error ("'connect_proof_tracer' not supported (try '-f' to execute "
+               "regardless)");
       mobical.warning ("ignoring 'connect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "disconnect_proof_tracer")) {
       if (enforce)
-        error ("'disconnect_proof_tracer' not supported (try "
-               "'--replay')");
+        error (
+            "'disconnect_proof_tracer' not supported (try '-f' to execute "
+            "regardless)");
       mobical.warning ("ignoring 'disconnect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "connect_learner")) {
       if (enforce)
-        error ("'connect_learner' not supported (try "
-               "'--replay')");
+        error ("'connect_learner' not supported (try '-f' to execute "
+               "regardless)");
       mobical.warning ("ignoring 'connect_learner'");
       continue;
     } else if (!strcmp (keyword, "disconnect_learner")) {
       if (enforce)
-        error ("'disconnect_learner' not supported (try "
-               "'--replay')");
+        error ("'disconnect_learner' not supported (try '-f' to execute "
+               "regardless)");
       mobical.warning ("ignoring 'disconnect_learner'");
       continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
       if (!mobical.donot.mock_propagator)
-        mobical.warning ("'connect_external_propagator' may not work "
-                         "properly without '--replay'");
+        error ("cannot execute 'connect_external_propagator' without "
+               "'--do-not-mock-propagator'");
       c = new ConnectCall ();
     } else if (!strcmp (keyword, "disconnect_external_propagator")) {
+      if (!mobical.donot.mock_propagator)
+        error ("cannot execute 'disconnect_external_propagator' without "
+               "'--do-not-mock-propagator'");
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
@@ -9131,8 +9137,15 @@ void Reader::parse () {
       if (first)
         error ("additional argument to 'declare_var'");
       c = new DeclareOneMoreVariableCall ();
-    } else
-      error ("invalid keyword '%s'", keyword);
+    } else {
+      if (enforce)
+        error ("invalid keyword '%s' (try '-f' to execute regardless)",
+               keyword);
+      mobical.warning ("ignoring invalid keyword '%s' (due to '-f')",
+                       keyword);
+      continue;
+    }
+
     if (enforce && third && !third_argument) {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
