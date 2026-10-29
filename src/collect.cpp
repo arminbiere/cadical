@@ -330,10 +330,10 @@ void Internal::copy_clause (Clause *c) {
   c->moved = true;
 #ifdef LOGGING
   if (opts.logpointer)
-    LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, (void *) c,
-         (void *) c->copy);
+    LOG ("copied clause[%" PRId64 "] from %p to %p", c->copy->id,
+         (void *) c, (void *) c->copy);
   else
-    LOG ("copied clause[%" PRId64 "]", c->id);
+    LOG ("copied clause[%" PRId64 "]", c->copy->id);
 #endif
 }
 
