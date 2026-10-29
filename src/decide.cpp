@@ -79,7 +79,7 @@ int Internal::next_random_decision () {
     return 0;
 
   if (!randomized_deciding) {
-    if (level && !is_constraint_level (level)) {
+    if (level && !is_constraint_level (level - 1)) {
       LOG ("random decision delayed because too deep");
       return 0;
     }
