@@ -359,7 +359,12 @@ void Internal::mark_garbage (Clause *c) {
   c->garbage = true;
   c->used = 0;
 
-  LOG (c, "marked garbage pointer %p", (void *) c);
+#ifdef LOGGING
+  if (opts.logpointer)
+    LOG (c, "marked garbage pointer %p", (void *) c);
+  else
+    LOG (c, "marked garbage");
+#endif
 }
 
 /*------------------------------------------------------------------------*/
