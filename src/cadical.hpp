@@ -691,6 +691,9 @@ public:
   //   ensure (VALID)
   //
   void trace_api_calls (FILE *file);
+  // same, but the file is owned by the library and is closed during
+  // deletion
+  void trace_api_calls (const char *name);
 #endif
 
   //------------------------------------------------------------------------

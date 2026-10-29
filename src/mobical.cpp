@@ -8458,6 +8458,30 @@ void Reader::parse () {
                "'--replay')");
       mobical.warning ("ignoring 'disconnect_fixed_listener'");
       continue;
+    } else if (!strcmp (keyword, "connect_proof_tracer")) {
+      if (enforce)
+        error ("'connect_proof_tracer' not supported (try "
+               "'--replay')");
+      mobical.warning ("ignoring 'connect_proof_tracer'");
+      continue;
+    } else if (!strcmp (keyword, "disconnect_proof_tracer")) {
+      if (enforce)
+        error ("'disconnect_proof_tracer' not supported (try "
+               "'--replay')");
+      mobical.warning ("ignoring 'disconnect_proof_tracer'");
+      continue;
+    } else if (!strcmp (keyword, "connect_learner")) {
+      if (enforce)
+        error ("'connect_learner' not supported (try "
+               "'--replay')");
+      mobical.warning ("ignoring 'connect_learner'");
+      continue;
+    } else if (!strcmp (keyword, "disconnect_learner")) {
+      if (enforce)
+        error ("'disconnect_learner' not supported (try "
+               "'--replay')");
+      mobical.warning ("ignoring 'disconnect_learner'");
+      continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
       if (!mobical.donot.mock_propagator)
         mobical.warning ("'connect_external_propagator' may not work "
