@@ -257,13 +257,13 @@ bool Internal::is_constraint_level (size_t level) {
   assert (constraints_without_assumptions <= constraint_vars.size ());
   if (constraint_cat &&
       KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11) {
-    LOG ("level %zd < implicant %d?", level,
-         KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat));
+    // LOG ("level %zd < implicant %d?", level,
+    // KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat));
     return level <
            KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat);
   }
-  LOG ("level %zd < assumptions %zd + constraints %zd?", level,
-       assumptions.size (), constraints_without_assumptions);
+  // LOG ("level %zd < assumptions %zd + constraints %zd?", level,
+  // assumptions.size (), constraints_without_assumptions);
   return level < assumptions.size () + constraints_without_assumptions;
 }
 
