@@ -1623,9 +1623,13 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
   File *file = File::read (internal, external_file, name);
-  assert (file);
-  const char *err = read_dimacs (file, vars, strict);
-  delete file;
+  DeferDeletePtr<File> delete_file ((File *) file);
+  const char *err = 0;
+  if (!file)
+    err = internal->error_message.init ("failed to read DIMACS file '%s'",
+                                        name);
+  else
+    err = read_dimacs (file, vars, strict);
   LOG_API_CALL_RETURNS ("read_dimacs", name, err);
   return err;
 }
@@ -1636,11 +1640,14 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
   File *file = File::read (internal, path);
-  if (!file)
-    return internal->error_message.init ("failed to read DIMACS file '%s'",
-                                         path);
-  const char *err = read_dimacs (file, vars, strict);
-  delete file;
+  DeferDeletePtr<File> delete_file ((File *) file);
+  const char *err = 0;
+  if (!file) {
+    err = internal->error_message.init ("failed to read DIMACS file '%s'",
+                                        path);
+  } else {
+    err = read_dimacs (file, vars, strict);
+  }
   LOG_API_CALL_RETURNS ("read_dimacs", path, err);
   return err;
 }
@@ -1653,9 +1660,14 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
   File *file = File::read (internal, external_file, name);
-  assert (file);
-  const char *err = read_dimacs (file, vars, strict, &incremental, &cubes);
-  delete file;
+  DeferDeletePtr<File> delete_file ((File *) file);
+  const char *err = 0;
+  if (!file) {
+    err = internal->error_message.init ("failed to read DIMACS file '%s'",
+                                        name);
+  } else {
+    err = read_dimacs (file, vars, strict, &incremental, &cubes);
+  }
   LOG_API_CALL_RETURNS ("read_dimacs", name, err);
   return err;
 }
@@ -1667,11 +1679,14 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict,
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
   File *file = File::read (internal, path);
-  if (!file)
-    return internal->error_message.init ("failed to read DIMACS file '%s'",
-                                         path);
-  const char *err = read_dimacs (file, vars, strict, &incremental, &cubes);
-  delete file;
+  DeferDeletePtr<File> delete_file ((File *) file);
+  const char *err = 0;
+  if (!file) {
+    err = internal->error_message.init ("failed to read DIMACS file '%s'",
+                                        path);
+  } else {
+    err = read_dimacs (file, vars, strict, &incremental, &cubes);
+  }
   LOG_API_CALL_RETURNS ("read_dimacs", path, err);
   return err;
 }
@@ -1680,13 +1695,16 @@ const char *Solver::read_solution (const char *path) {
   TRACE (read_solution, "read_solution", path);
   REQUIRE_VALID_STATE ();
   File *file = File::read (internal, path);
-  if (!file)
-    return internal->error_message.init (
+  DeferDeletePtr<File> delete_file ((File *) file);
+  if (!file) {
+    const char *err = internal->error_message.init (
         "failed to read solution file '%s'", path);
+    LOG_API_CALL_RETURNS ("read_solution", path, err);
+    return err;
+  }
   Parser *parser = new Parser (this, file, 0, 0);
+  DeferDeletePtr<Parser> delete_parser ((Parser *) parser);
   const char *err = parser->parse_solution ();
-  delete parser;
-  delete file;
   if (!err)
     external->check_assignment (&External::sol);
   LOG_API_CALL_RETURNS ("read_solution", path, err);
@@ -1868,6 +1886,7 @@ const char *Solver::write_dimacs (const char *path, int min_max_var) {
   LOG ("found maximal variable %d and %" PRId64 " clauses", counter.vars,
        counter.clauses);
   File *file = File::write (internal, path);
+  DeferDeletePtr<File> delete_file ((File *) file);
   const char *res = 0;
   if (file) {
     int actual_max_vars = max (min_max_var, counter.vars);
@@ -1882,7 +1901,6 @@ const char *Solver::write_dimacs (const char *path, int min_max_var) {
     if (!traverse_clauses (writer))
       res = internal->error_message.init (
           "writing to DIMACS file '%s' failed", path);
-    delete file;
   } else
     res = internal->error_message.init (
         "failed to open DIMACS file '%s' for writing", path);
@@ -1935,12 +1953,12 @@ const char *Solver::write_extension (const char *path) {
   const double start = internal->time ();
 #endif
   File *file = File::write (internal, path);
+  DeferDeletePtr<File> delete_file ((File *) file);
   WitnessWriter writer (file);
   if (file) {
     if (!traverse_witnesses_backward (writer))
       res = internal->error_message.init (
           "writing to DIMACS file '%s' failed", path);
-    delete file;
   } else
     res = internal->error_message.init (
         "failed to open extension file '%s' for writing", path);
