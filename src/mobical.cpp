@@ -3286,14 +3286,14 @@ struct ConnectCall : public Call {
 #ifdef EXCEPTIONS
     if (catching ()) {
       if (!mobical.donot.mock_propagator) {
-        try {
-          if (!mobical.mock_pointer) {
+        if (!mobical.mock_pointer) {
 #ifdef LOGGING
-            mobical.mock_pointer = new MockPropagator (
-                s, extendmap, mobical.add_set_log_to_true);
+          mobical.mock_pointer = new MockPropagator (
+              s, extendmap, mobical.add_set_log_to_true);
 #else
-            mobical.mock_pointer = new MockPropagator (s, extendmap);
+          mobical.mock_pointer = new MockPropagator (s, extendmap);
 #endif
+          try {
             s->connect_external_propagator (mobical.mock_pointer);
             s->connect_fixed_listener (mobical.mock_pointer);
 
@@ -3304,28 +3304,30 @@ struct ConnectCall : public Call {
             // not want to wire in this.
 
             mobical.mock_pointer->collect_prev_fixed ();
+          } catch (std::runtime_error &) {
+            delete mobical.mock_pointer;
+            mobical.mock_pointer = 0;
+            caught ();
           }
-        } catch (std::runtime_error &) {
-          free (mobical.mock_pointer);
-          mobical.mock_pointer = 0;
+        } else
           caught ();
-        }
       } else {
-        try {
-          if (!mobical.replay_pointer) {
+        if (!mobical.replay_pointer) {
 #ifdef LOGGING
-            mobical.replay_pointer = new ReplayPropagator (
-                s, extendmap, mobical.add_set_log_to_true);
+          mobical.replay_pointer = new ReplayPropagator (
+              s, extendmap, mobical.add_set_log_to_true);
 #else
-            mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
+          mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
 #endif
+          try {
             s->connect_external_propagator (mobical.replay_pointer);
+          } catch (std::runtime_error &) {
+            delete mobical.replay_pointer;
+            mobical.replay_pointer = 0;
+            caught ();
           }
-        } catch (std::runtime_error &) {
-          free (mobical.replay_pointer);
-          mobical.replay_pointer = 0;
+        } else
           caught ();
-        }
       }
     } else {
 #endif
@@ -5158,10 +5160,12 @@ public:
         if (c->type == CallType::MAXALLOC) {
           memory_bad_alloc = c->val;
           memory_bad_size = 0;
+          c->execute (solver, extendmap);
           continue;
         } else if (c->type == CallType::LEAKALLOC) {
           memory_leak_alloc = 1;
           memory_leak_next_free = 0;
+          c->execute (solver, extendmap);
           continue;
         } else if (c->type == CallType::RESET) {
           // Set the flag before the reset call such that memory
