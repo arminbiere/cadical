@@ -3286,14 +3286,14 @@ struct ConnectCall : public Call {
 #ifdef EXCEPTIONS
     if (catching ()) {
       if (!mobical.donot.mock_propagator) {
-        try {
-          if (!mobical.mock_pointer) {
+        if (!mobical.mock_pointer) {
 #ifdef LOGGING
-            mobical.mock_pointer = new MockPropagator (
-                s, extendmap, mobical.add_set_log_to_true);
+          mobical.mock_pointer = new MockPropagator (
+              s, extendmap, mobical.add_set_log_to_true);
 #else
-            mobical.mock_pointer = new MockPropagator (s, extendmap);
+          mobical.mock_pointer = new MockPropagator (s, extendmap);
 #endif
+          try {
             s->connect_external_propagator (mobical.mock_pointer);
             s->connect_fixed_listener (mobical.mock_pointer);
 
@@ -3304,28 +3304,30 @@ struct ConnectCall : public Call {
             // not want to wire in this.
 
             mobical.mock_pointer->collect_prev_fixed ();
+          } catch (std::runtime_error &) {
+            delete mobical.mock_pointer;
+            mobical.mock_pointer = 0;
+            caught ();
           }
-        } catch (std::runtime_error &) {
-          free (mobical.mock_pointer);
-          mobical.mock_pointer = 0;
+        } else
           caught ();
-        }
       } else {
-        try {
-          if (!mobical.replay_pointer) {
+        if (!mobical.replay_pointer) {
 #ifdef LOGGING
-            mobical.replay_pointer = new ReplayPropagator (
-                s, extendmap, mobical.add_set_log_to_true);
+          mobical.replay_pointer = new ReplayPropagator (
+              s, extendmap, mobical.add_set_log_to_true);
 #else
-            mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
+          mobical.replay_pointer = new ReplayPropagator (s, extendmap, 0);
 #endif
+          try {
             s->connect_external_propagator (mobical.replay_pointer);
+          } catch (std::runtime_error &) {
+            delete mobical.replay_pointer;
+            mobical.replay_pointer = 0;
+            caught ();
           }
-        } catch (std::runtime_error &) {
-          free (mobical.replay_pointer);
-          mobical.replay_pointer = 0;
+        } else
           caught ();
-        }
       }
     } else {
 #endif
@@ -5158,10 +5160,12 @@ public:
         if (c->type == CallType::MAXALLOC) {
           memory_bad_alloc = c->val;
           memory_bad_size = 0;
+          c->execute (solver, extendmap);
           continue;
         } else if (c->type == CallType::LEAKALLOC) {
           memory_leak_alloc = 1;
           memory_leak_next_free = 0;
+          c->execute (solver, extendmap);
           continue;
         } else if (c->type == CallType::RESET) {
           // Set the flag before the reset call such that memory
@@ -5622,15 +5626,21 @@ void Trace::generate_options (Random &random, Size size) {
       continue;
 
     // We ignore logging here and set it below to make mobical
-    // deterministic
+    // deterministic. Same with quiet options
     if (!strcmp (o.name, "log"))
       continue;
     if (!strcmp (o.name, "logsort"))
       continue;
+    if (!strcmp (o.name, "logpointer"))
+      continue;
+    if (!strcmp (o.name, "verbose"))
+      continue;
+    if (!strcmp (o.name, "quiet"))
+      continue;
     // We keep choosing the value for 'simplify' and 'walk' out of
     // the loop (see the arguments described above).
     //
-    if (!strcmp (o.name, "simplify"))
+    if (!strcmp (o.name, "check"))
       continue;
     if (!strcmp (o.name, "walk"))
       continue;
@@ -5672,19 +5682,44 @@ void Trace::generate_options (Random &random, Size size) {
   // Now setting the option for logging. Even if we do not
   // generate the log call, we need the side effect of
   // generate_bool ()
-  auto log_option =
-      std::find_if (Options::begin (), Options::end (),
-                    [] (const Option o) { return strcmp (o.name, "log"); });
+  auto log_option = std::find_if (
+      Options::begin (), Options::end (),
+      [] (const Option o) { return !strcmp (o.name, "log"); });
   const bool should_log = random.generate_bool ();
   auto logsort_option = std::find_if (
       Options::begin (), Options::end (),
-      [] (const Option o) { return strcmp (o.name, "logsort"); });
+      [] (const Option o) { return !strcmp (o.name, "logsort"); });
   const bool should_logsort = random.generate_bool ();
+  auto logpointer_option = std::find_if (
+      Options::begin (), Options::end (),
+      [] (const Option o) { return !strcmp (o.name, "logpointer"); });
+  const bool should_logpointer = random.generate_bool ();
+  auto quiet_option = std::find_if (
+      Options::begin (), Options::end (),
+      [] (const Option o) { return !strcmp (o.name, "quiet"); });
+  const bool should_quiet = random.generate_bool ();
+  auto verbose_option = std::find_if (
+      Options::begin (), Options::end (),
+      [] (const Option o) { return !strcmp (o.name, "verbose"); });
+  const bool should_verbose = random.generate_bool ();
 
 #ifdef LOGGING
   // sanity check
   assert (log_option != Options::end ());
   assert (logsort_option != Options::end ());
+  assert (logpointer_option != Options::end ());
+#else
+  assert (log_option == Options::end ());
+  assert (logsort_option == Options::end ());
+  assert (logpointer_option == Options::end ());
+#endif
+#ifndef QUIET
+  // sanity check
+  assert (quiet_option != Options::end ());
+  assert (verbose_option != Options::end ());
+#else
+  assert (quiet_option == Options::end ());
+  assert (verbose_option == Options::end ());
 #endif
   if (log_option != Options::end () &&
       should_log) { // only if the option was found
@@ -5695,6 +5730,21 @@ void Trace::generate_options (Random &random, Size size) {
   if (logsort_option != Options::end () && should_logsort) {
 #ifdef LOGGING
     push_back (new SetCall (logsort_option->name, should_logsort));
+#endif
+  }
+  if (logpointer_option != Options::end () && should_logpointer) {
+#ifdef LOGGING
+    push_back (new SetCall (logpointer_option->name, should_logpointer));
+#endif
+  }
+  if (quiet_option != Options::end () && should_quiet) {
+#ifndef QUIET
+    push_back (new SetCall (quiet_option->name, should_quiet));
+#endif
+  }
+  if (verbose_option != Options::end () && should_verbose) {
+#ifndef QUIET
+    push_back (new SetCall (verbose_option->name, should_verbose));
 #endif
   }
 }
@@ -8123,9 +8173,15 @@ void Trace::shrink (int expected) {
   };
 
   mobical.shrinking = true;
-  mobical.notified.clear ();
+SHRINK_AGAIN:
+  if (!mobical.notified.empty ()) {
+    mobical.notified.clear ();
+    mobical.terminal.erase_line_if_connected_otherwise_new_line ();
+  }
+
   assert (!mobical.donot.shrink.atall);
-  if (!size ())
+  const size_t current_size = size ();
+  if (!current_size)
     return;
   add_options (expected);
   Shrinking l = NONE;
@@ -8154,6 +8210,8 @@ void Trace::shrink (int expected) {
   if (!Signal::interrupted ())
     fork_and_execute ();
   cerr << flush;
+  if (current_size != size ())
+    goto SHRINK_AGAIN;
   mobical.shrinking = false;
 }
 

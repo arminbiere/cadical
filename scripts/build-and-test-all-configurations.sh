@@ -130,11 +130,39 @@ runExtraMobical () {
     ok=`expr $ok + 1`
   fi
 }
+runViolateMobical () {
+  if [ "$*" = "" ]
+  then
+    configureoptions=""
+  else
+    configureoptions=" $*"
+  fi
+  if skip $*
+  then
+    cecho "[$running] $environment$configure$configureoptions # skipped"
+    skipped=`expr $skipped + 1`
+  else
+    cecho "[$running] $environment$configure$configureoptions && make$makeoptions$makeflags && ./build/mobical 42 --medium -L 1000 --do-not-fork && make$makeoptions$makeflags test && make$makeoptions$makeflags clean"
+    $configure$configureoptions $* >/dev/null 2>&1
+    test $? = 0 || die "configuration $running failed (run '$configure$configureoptions $*' to investigate)"
+    make$makeoptions$makeflags >/dev/null 2>&1
+    test $? = 0 || die "building configuration $running failed (run 'make' to investigate)"
+    make$makeoptions$makeflags test >/dev/null 2>&1
+    test $? = 0 || die "testing configuration $running failed (run 'make test' to investigate)"
+    ./build/mobical 42 --medium -L 1000 --do-not-fork --violate
+ >/dev/null 2>&1
+    test $? = 0 || die "./build/mobical 42 -L 10000 $running failed (run 'make test' to investigate)"
+
+    make$makeoptions$makeflags clean >/dev/null 2>&1
+    test $? = 0 || die "cleaning configuration $running failed (run 'make clean' to investigate)"
+    ok=`expr $ok + 1`
+  fi
+}
 
 ############################################################################
 
 begin=0
-end=37
+end=42
 
 m32=no
 undefined=no
@@ -255,8 +283,17 @@ map_and_run () {
     # extra flags
     36) run --no-metrics;;
 
+    # terminate fuzzing
+    37) runExtraMobical -p --terminate-fuzzing;;
+    38) runExtraMobical -a -p --terminate-fuzzing;;
+    
+    # terminate fuzzing
+    39) runViolateMobical -p --except-contracts;;
+    40) runViolateMobical -a -p --except-contracts;;
+      
     # memory fuzzing
-    37) runExtraMobical -a -p --memory-fuzzing
+    41) runExtraMobical -p --memory-fuzzing;;
+    42) runExtraMobical -a -p --memory-fuzzing
 
       executed_last_configuration=yes # Keep this as part of last configuration!
 

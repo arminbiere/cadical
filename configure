@@ -26,6 +26,8 @@ coverage=no
 flexible=yes
 profile=no
 memory_fuzzing=no
+dynamic=no
+frame_pointer=no
 terminator_fuzzing=no
 contracts=yes
 exceptcontracts=no
@@ -187,8 +189,8 @@ do
     --coverage) coverage=yes;;
     --profile) profile=yes;;
 
-    --memory|--memory-fuzzing) memory_fuzzing=yes;;
-    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing) terminator_fuzzing=yes;;
+    --memory|--memory-fuzzing) memory_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
+    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing) terminator_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
 
     --competition) competition=yes;;
     --no-options) deactivate_options=yes;;
@@ -377,8 +379,10 @@ fi
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 [ $metrics = no ] && CFLAGS="$CFLAGS -DNMETRICS"
 
-[ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
-[ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_TERMINATE"
+[ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_MEMORY"
+[ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_TERMINATE"
+[ $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
+[ $frame_pointer = yes ] && CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
 
 if [ $pedantic = yes ]
 then
