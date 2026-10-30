@@ -1367,6 +1367,7 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
   bool res = (internal_file != 0);
   DeferDeletePtr<File> delete_file ((File *) internal_file);
   internal->trace (internal_file);
+  delete_file.release ();
   LOG_API_CALL_RETURNS ("trace_proof", name, res);
   return res;
 }
@@ -1385,6 +1386,7 @@ bool Solver::trace_proof (const char *path) {
   bool res = (internal_file != 0);
   DeferDeletePtr<File> delete_file ((File *) internal_file);
   internal->trace (internal_file);
+  delete_file.release ();
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
 }
