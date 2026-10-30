@@ -52,6 +52,7 @@ void Solver::transition_to_steady_state () {
   } else if (state () == SATISFIED) {
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
+    external->conclude_sat ();
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
@@ -59,6 +60,7 @@ void Solver::transition_to_steady_state () {
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
+    internal->conclude_unsat ();
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
@@ -66,6 +68,7 @@ void Solver::transition_to_steady_state () {
   } else if (state () == INCONCLUSIVE) {
     LOG ("API leaves state %sINCONCLUSIVE%s", tout.emph_code (),
          tout.normal_code ());
+    external->conclude_unknown ();
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();

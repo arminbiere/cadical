@@ -1554,7 +1554,7 @@ static int decide_next_clause (kitten *kitten) {
     for (all_literals_in_klause (lit, c)) {
       const value v = values[lit];
       if (v > 0) {
-        best = lit;
+        best = INVALID; // skip satisfied clause
         break;
       } else if (v < 0)
         continue;
