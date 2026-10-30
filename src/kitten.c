@@ -1541,6 +1541,7 @@ static int decide_next_clause (kitten *kitten) {
     return 0;
   }
 
+  kink *const links = kitten->links;
   const unsigned *const okr_begin =
       BEGIN_STACK (kitten->original_klause_refs);
   while (*last_klause_decision) {
@@ -1548,16 +1549,24 @@ static int decide_next_clause (kitten *kitten) {
     klause *c = dereference_klause (kitten, kref);
     assert (c->size >= 1);
     assert (!is_learned_klause (c));
-    const unsigned l1 = c->lits[0];
-    const unsigned l2 = c->lits[1];
-    const value v1 = values[l1];
-    const value v2 = values[l2];
-    // assert watch invariant
-    assert (v1 > 0 || v2 > 0 || (v1 >= 0 && v2 >= 0));
-    if (v1 > 0 || v2 > 0)
-      continue;
-    assert (!v1 && !v2);
-    decision = l1;
+    unsigned best = c->lits[0];
+    uint64_t best_stamp = (links + (best / 2))->stamp;
+    for (all_literals_in_klause (lit, c)) {
+      const value v = values[lit];
+      if (v > 0) {
+        best = lit;
+        break;
+      } else if (v < 0)
+        continue;
+      const unsigned lit_idx = lit / 2;
+      kink *const l = links + lit_idx;
+      const uint64_t stamp = l->stamp;
+      if (stamp <= best_stamp)
+        continue;
+      best = lit;
+      best_stamp = stamp;
+    }
+    decision = best;
   }
   if (decision == INVALID)
     return 11;
