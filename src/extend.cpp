@@ -381,40 +381,6 @@ void External::terminate_cube_stack () {
   clause_data.push_back(0);
 }
 
-void External::create_cube_stack_and_push_clause (
-    const vector<int> &iwit_cube, Clause *c) {
-  LOG (iwit_cube, "creating a cube stack for cube");
-  LOG (c, "and pushing");
-
-  const uint32_t ss_idx = cube_stacks.allocate ();
-  assert (ss_idx <= UINT32_MAX);
-
-  internal->stats.ws_created++;
-
-  WitnessStack &ss = cube_stacks[ss_idx];
-  assert (!ss.stack);
-
-  const unsigned initial_size = 2 + iwit_cube.size () + 3 + c->size + 1;
-  ss.allocate (initial_size, arena);
-
-  for (const auto &iwit : iwit_cube) {
-    const int ewit = internal->externalize (iwit);
-    assert (ewit);
-
-    ss.push_back (ewit, arena);
-
-    if (!marked (witness, ewit))
-      mark (witness, ewit);
-  }
-
-  // delimit witness cube by zero
-  ss.push_back (0, arena);
-  push_cube_clause (c);
-
-  witness_order.push_back (0);
-  witness_order.push_back (static_cast<int> (ss_idx));
-}
-
 void External::create_cube_stack_and_push_external_clause (
     const vector<int> &clause, 
     const vector<int> &ewit_cube, int64_t id) {
