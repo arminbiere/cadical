@@ -6,7 +6,6 @@
 #include "exttoint.hpp"
 #include "range.hpp"
 #include "util.hpp"
-#include "witness_stack.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
@@ -103,15 +102,6 @@ public:
   vector<int> clause_data;
   vector<int> witness_data; // entries of form: wit | blit | idx
 
-  WitnessArena arena; // Memory management of witness stacks
-  CubeStackChunk cube_stacks; // Vector + free list for cube stack references.
-
-  vector<int> witness_order; // Sequence of single witnesses/cube references.
-  vector<WitnessStack> witness_stacks;
-  vector<uint32_t> ws_index; // Indices into the witness stacks
-  vector<bool> restoring; 
-  vector<uint32_t> skipped; // Number of skipped clauses for a given witness
-  
   vector<bool> witness; // Non-emptyness flag for witness stacks
   vector<bool> tainted; // Literal tainted in adding literals.
 
@@ -216,7 +206,6 @@ public:
                                             const vector<int> &w, int64_t id);
   /* ------------------------------------------------------------------------ */
   void create_cube_stack (const vector<int> &iwit_cube);
-
   void push_cube_clause (Clause *c);
   void terminate_cube_stack ();
 

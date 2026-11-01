@@ -414,7 +414,7 @@ void External::restore () {
 #endif
 
   internal->stats.restore_clauses_read += clauses.read;
-  internal->stats.restore_wit_skipped += clauses.witness_skipped;
+  internal->stats.restore_clauses_skipped += clauses.witness_skipped;
 
   tainted.clear ();
   tainted.shrink_to_fit ();
