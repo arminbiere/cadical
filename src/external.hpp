@@ -282,7 +282,7 @@ public:
                        const int64_t id,
                        const int ewit, const int blit);
   
-  void restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses);
+  void restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses, RestoreStats &clauses);
 
   void restore ();
 

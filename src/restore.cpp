@@ -121,7 +121,7 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
-void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
+void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witness, RestoreStats &clauses) {
   auto q = clause_data.begin () + ss_idx;
   bool restore_clauses = false;
 
@@ -137,6 +137,13 @@ void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
   if (!restore_clauses && !(internal->opts.restoreall == 2)) {
     LOG ("untainted and not forced to restore all clauses.");
     clauses.witness_skipped++;
+    // now also mark witnesses as skipped.
+    q = clause_data.begin () + ss_idx;
+    while (*q) {
+      const int ewit = *q++;
+      if (!marked (skipped_witness, ewit))
+        mark (skipped_witness, ewit);
+    }
     return;
   }
   
@@ -279,6 +286,8 @@ void External::restore () {
   if (tainted.empty () && internal->opts.restoreall != 2)
     return;
   
+  vector<bool> skipped_witness; // implies that the witness will still exist afterwards.
+
   assert (witness_data.size () % 3 == 0);
 
   auto read = witness_data.begin ();
@@ -291,7 +300,7 @@ void External::restore () {
     const uint32_t idx = static_cast<uint32_t> (*read++);
 
     if (!blit) {
-      restore_cube_stack (idx, clauses);
+      restore_cube_stack (idx, skipped_witness, clauses);
       continue;
     } 
     assert (ewit);
@@ -344,7 +353,9 @@ void External::restore () {
     }
 
     if (ewit) {
-      clauses.witness_skipped++;   
+      clauses.witness_skipped++;
+      if (!marked (skipped_witness, ewit))
+        mark (skipped_witness, ewit); 
     }
     *write++ = ewit;
     *write++ = blit;
@@ -354,8 +365,7 @@ void External::restore () {
   witness_data.resize (write - witness_data.begin ());
   shrink_vector (witness_data);
 
-  while (!witness.empty () && !witness.back ())
-    witness.pop_back ();
+  witness = std::move (skipped_witness);
   
   constexpr double THRESHOLD = 0.25;
   constexpr size_t MIN_FRAGMENTED_SIZE =  1 << 20; // 1 MiB
