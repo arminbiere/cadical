@@ -1,6 +1,33 @@
 #include "internal.hpp"
 #include "util.hpp"
 
+// REVIEW:
+// The extension data allows to reconstruct a satisfying assignment for the
+// original formula after removing weakened clauses. This was pioneered by
+// Niklas Soerensson in MiniSAT and for instance is described in our
+// inprocessing paper, published at IJCAR'12. The first few functions are used
+// to add clauses to the extension.
+//
+// Each unique witness has its own 'witness stack', onto which clauses
+// associated with that witness are pushed. The witness itself is pushed
+// onto a separate stack, 'witness order'. By separating witness information
+// from clause data, we improve the average-case runtime of model extension
+// and clause restoration.
+//
+// By using the clause size as a delimiter between clauses on witness
+// stacks, we can represent clauses compactly. In general, a clause
+// C = {l1, ..., lk} is encoded as follows:
+//    size idu idl l1 ... lk size
+//
+// Usually, the witness is a subset of the clause, and its ID fits into
+// a 32-bit field. We exploit these properties by using the three most
+// significant bits of the size field as follows:
+// bit 31: The clause size is less than 2^29.
+// bit 30: The witness is a subset of the clause.
+// bit 29: The ID fits into a 32-bit field.
+// This allows us to use a more compact representation in the common case.
+//
+/* -------------------------------------------------------------------------- */
 namespace CaDiCaL {
 
 static constexpr uint32_t CLAUSE_SMALL = 1u << 31;
@@ -11,7 +38,7 @@ static constexpr uint32_t SIZE_MASK    = (1u << 29) - 1;
 static inline void decode_size_field (const int size_field, bool &wit_embedded, 
                                bool &id_long, unsigned &other_lits_size) {
   // In the binary clause case size can be zero but then we have the witness
-  // implicit and set a flag.
+  // implicit and have set the corresponding bit.
   assert (size_field); 
 
   const uint32_t encoded = static_cast<uint32_t> (size_field);
@@ -22,29 +49,24 @@ static inline void decode_size_field (const int size_field, bool &wit_embedded,
   other_lits_size = clause_small ? (encoded & SIZE_MASK) : encoded;
 }
 
-// The extension stack allows to reconstruct a satisfying assignment for the
-// original formula after removing eliminated clauses.  This was pioneered
-// by Niklas Soerensson in MiniSAT and for instance is described in our
-// inprocessing paper, published at IJCAR'12.  This first function adds a
-// clause to this stack.  First the blocking or eliminated literal is added,
-// and then the rest of the clause.
-/* -------------------------------------------------------------------------- */
 void External::push_clause_on_witness_stack (int iwit, Clause *c) {
   assert (iwit);
-  LOG (c, "Pushing on witness stack %d (ilit)", iwit);
+  LOG (c, "pushing on witness stack %d (ilit)", iwit);
+
+  const unsigned size = c->size;
+
   internal->stats.weakened++;
-  internal->stats.weakened_lengths += c->size;
+  internal->stats.weakened_lengths += size;
   
   const int ewit = internal->externalize (iwit);
   assert (ewit);
   const unsigned uwit = elit2ulit (ewit);
   if (uwit >= witness_stacks.size ())
-    witness_stacks.resize (uwit + 1); // the witness bitset is resized in mark
+    witness_stacks.resize (uwit + 1);
 
   auto &stack = witness_stacks[uwit];
   if (stack.empty ()) {
-    // size | cap | es | idl | |C| - 1 | es
-    const unsigned approx_min_size = 4 + c->size;
+    const unsigned approx_min_size = 4 + size;
     stack.allocate (approx_min_size, arena);
     internal->stats.ws_created++;
   }
@@ -52,15 +74,13 @@ void External::push_clause_on_witness_stack (int iwit, Clause *c) {
   stack.push_back (0, arena); // Will be updated in the end.
   const uint32_t first_size_field = stack.size () - 1;
   
-  // We can use the upper 3 bits for flagging if the clause has less than 
-  // (1u << 29) - 1 litereals which is roughly 536.9 million
-  const unsigned size = c->size;
   const bool compactable = size < (1u << 29); 
-  const bool id_long = c->id > UINT32_MAX; // does not fit into 32 bit
+  const bool id_long = c->id > UINT32_MAX;
 
   const uint32_t idu = static_cast<uint32_t> (c->id >> 32);
   const uint32_t idl = static_cast<uint32_t> (c->id);
-  // If we cannot flag or the id is just to long we push both parts.
+  // If we cannot flag since the clause is too large or the id is just too long
+  // we push both parts.
   if (!compactable || id_long) {
     LOG ("pushing long id %" PRId64, c->id);
     stack.push_back (static_cast<int> (idu), arena);
@@ -72,32 +92,31 @@ void External::push_clause_on_witness_stack (int iwit, Clause *c) {
   }
 
   // Now we will push the literals. 
-  // We will skip the witness if it is embeddable, i.e. if the clause is
-  // compactable and the witness is included in the clause
+  // We will skip the witness literal if possible, i.e. if the clause is
+  // compactable and the witness is included in the clause.
   int blit = 0;
   bool embedded = false;
   for (const auto &lit : *c) {
     const int elit = internal->externalize (lit);
 
     if (elit == ewit) {
-      if (compactable) { // Do not store the witness literal twice
+      if (compactable) { // Do not store the witness literal here.
         embedded = true;
         continue;
       }
-    } else if (!blit) { // Also do not store the blocking literal twice.
+    } else if (!blit) { // Also do not store the blocking literal here.
       blit = elit;
       continue;
     }
 
-    LOG ("pushing literal %d (external %d)", lit, elit);
     stack.push_back (elit, arena);
   }
   assert (blit);
 
   // Finally we update the size fields accordingly.
-  uint32_t updated_size = c->size - 1; // Blocking literal is stored elsewhere
+  uint32_t updated_size = c->size - 1; // Blocking literal is stored elsewhere.
   if (embedded) {
-    updated_size--; // One literal less in the literals field.
+    updated_size--;
     updated_size |= EMBEDDED; 
   }
   if (compactable) {
@@ -108,7 +127,7 @@ void External::push_clause_on_witness_stack (int iwit, Clause *c) {
   // Update the first size field and push the terminating size field.
   stack.stack[first_size_field] = static_cast<int> (updated_size);
   stack.push_back (static_cast<int> (updated_size), arena);
-  LOG (stack.begin (), static_cast<unsigned> (stack.end () - stack.begin ()), "stack now: ");
+
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
@@ -124,7 +143,8 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   assert (id > 0);
   assert (c.size ());
 
-  LOG (c.begin (), c.end (), "Pushing clause on witness stack %d (ilit)", iwit);
+  LOG (c.begin (), c.end (), 
+    "pushing on witness stack %d (ilit) clause[%" PRId64 "] ", iwit, id);
   internal->stats.weakened++;
   
   const unsigned size = c.size ();
@@ -135,11 +155,10 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   assert (ewit);
   const unsigned uwit = elit2ulit (ewit);
   if (uwit >= witness_stacks.size ())
-    witness_stacks.resize (uwit + 1); // the witness bitset is resized in mark
+    witness_stacks.resize (uwit + 1);
 
   auto &stack = witness_stacks[uwit];
   if (stack.empty ()) {
-    // size | cap | es | idl | |C| - 1 | es
     const unsigned approx_min_size = 4 + size;
     stack.allocate (approx_min_size, arena);
     internal->stats.ws_created++;
@@ -148,14 +167,13 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   stack.push_back (0, arena); // Will be updated in the end.
   const uint32_t first_size_field = stack.size () - 1;
   
-  // We can use the upper 3 bits for flagging if the clause has less than 
-  // (1u << 29) - 1 litereals which is roughly 536.9 million
   const bool compactable = size < (1u << 29); 
-  const bool id_long = id > UINT32_MAX; // does not fit into 32 bit
+  const bool id_long = id > UINT32_MAX;
 
   const uint32_t idu = static_cast<uint32_t> (id >> 32);
   const uint32_t idl = static_cast<uint32_t> (id);
-  // If we cannot flag or the id is just to long we push both parts.
+  // If we cannot flag since the clause is too large or the id is just too long
+  // we push both parts.
   if (!compactable || id_long) {
     LOG ("pushing long id %" PRId64, id);
     stack.push_back (static_cast<int> (idu), arena);
@@ -167,32 +185,31 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   }
 
   // Now we will push the literals. 
-  // We will skip the witness if it is embeddable, i.e. if the clause is
-  // compactable and the witness is included in the clause
+  // We will skip the witness literal if possible, i.e. if the clause is
+  // compactable and the witness is included in the clause.
   int blit = 0;
   bool embedded = false;
   for (const auto &lit : c) {
     const int elit = internal->externalize (lit);
 
     if (elit == ewit) {
-      if (compactable) {
+      if (compactable) { // Do not store the witness literal here.
         embedded = true;
         continue;
       }
-    } else if (!blit) {
+    } else if (!blit) { // Also do not store the blocking literal here.
       blit = elit;
       continue;
     }
 
-    LOG ("pushing literal %d (external %d)", lit, elit);
     stack.push_back (elit, arena);
   }
   assert (blit);
 
   // Finally we update the size fields accordingly.
-  uint32_t updated_size = size - 1; // Blocking literal is not stored here
+  uint32_t updated_size = size - 1; // Blocking literal is stored elsewhere.
   if (embedded) {
-    updated_size--; // One literal less in the literals field.
+    updated_size--;
     updated_size |= EMBEDDED; 
   }
   if (compactable) {
@@ -203,6 +220,7 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   // Update the first size field and push the terminating size field.
   stack.stack[first_size_field] = static_cast<int> (updated_size);
   stack.push_back (static_cast<int> (updated_size), arena);
+
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
@@ -215,7 +233,9 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
 
 void External::push_binary_clause_on_witness_stack (int64_t id, int iwit, 
                                                       int other) {
-  LOG ("Pushing binary clause[%" PRId64 "] %d %d on witness stack %d (ilit)", id, iwit, other, iwit);
+  LOG ("pushing on witness stack %d (ilit) binary clause[%" PRId64 "] %d %d", 
+    iwit, id, other, iwit);
+
   internal->stats.weakened++;
   internal->stats.weakened_lengths += 2;
 
@@ -223,7 +243,7 @@ void External::push_binary_clause_on_witness_stack (int64_t id, int iwit,
   assert (ewit);
   const unsigned uwit = elit2ulit (ewit);
   if (uwit >= witness_stacks.size ())
-    witness_stacks.resize (uwit + 1); // the witness bitset is resized in mark
+    witness_stacks.resize (uwit + 1);
 
   auto &stack = witness_stacks[uwit];
   
@@ -246,7 +266,7 @@ void External::push_binary_clause_on_witness_stack (int64_t id, int iwit,
     stack.push_back (static_cast<int> (idl), arena);
   }
 
-  // No literal will be pushed. Both literals are on witness_order
+  // No literal will be pushed. Both literals are on witness_order.
 
   uint32_t updated_size = 0;
   updated_size |= EMBEDDED;
@@ -265,24 +285,32 @@ void External::push_binary_clause_on_witness_stack (int64_t id, int iwit,
   witness_order.push_back (ewit);
 
   const int elit = internal->externalize (other);
-  LOG ("pushing to witness %d and blocking literal %d (external)", ewit, elit);
+  LOG ("pushing witness %d and blocking literal %d (external)", ewit, elit);
   witness_order.push_back (elit); // blocking literal
 }
 
 /* -------------------------------------------------------------------------- */
-// A shared stack ist just a witness stack that contains its cube.
-// We write the cube first, then delimit by zero followed by one or more
-// encoded clauses as usual.
-// Shared Stack: w1 w2 ... wk 0 EC_1 EC_2 ... ECl
+// A witness cube stack is similar to a regular witness stack.
+// Instead of pushing the witness cube itself onto 'witness_order',
+// we store it at the beginning of the cube stack and push only a
+// reference to it onto 'witness_order'.
+// As with regular witness stacks, clauses are then pushed onto this
+// stack using the usual encoding.
 //
-// For more than one clause that should be pushed to a shared stack we first
-// create the shared stack and then push clauses to it using 
-// create_shared_stack and push_shared_clause
-// If just one clause is to be associated with the witness cube 
-// create_shared_stack_and_push_clause can be used.
+// To store multiple clauses that share a witness cube, we first call
+// 'create_cube_stack' to obtain an index of the stack in the arena.
+// We can then push clauses onto this stack using 'push_cube_clause'
+// and the obtained index. 
 //
+// Cube stacks are not stored in 'witness_stacks', since there is no
+// straightforward way to index them using an unsigned literal.
+// Consequently, witness cube stacks have slightly different semantics
+// from regular witness stacks: each stack contains a sequence of clauses
+// that were weakened consecutively. All clauses on a cube stack are
+// extended and restored together.
+// 
 uint32_t External::create_cube_stack (const vector<int> &iwit_cube) {
-  LOG (iwit_cube, "Creating cube stack for witness cube ");
+  LOG (iwit_cube, "creating cube stack for witness cube ");
   const uint32_t ss_idx = cube_stacks.allocate ();
   assert (ss_idx <= UINT32_MAX);
 
@@ -295,7 +323,6 @@ uint32_t External::create_cube_stack (const vector<int> &iwit_cube) {
 
   // First we push the cube to the data stack then we delimit by '0' and 
   // can continue to push clauses.
-  // data: w1 w2 ... wk 0 EC1 EC2 .. ECl
   for (const auto &iwit : iwit_cube) {
     const int ewit = internal->externalize (iwit);
     assert (ewit);
@@ -305,7 +332,6 @@ uint32_t External::create_cube_stack (const vector<int> &iwit_cube) {
     if (!marked (witness, ewit))
       mark (witness, ewit);
   }
-  // delimit witness cube by zero
   ss.push_back (0, arena);
   witness_order.push_back (0);
   witness_order.push_back (static_cast<int> (ss_idx));
@@ -319,15 +345,9 @@ void External::push_cube_clause (uint32_t ss_idx, Clause *c) {
 
   WitnessStack &ss = cube_stacks[ss_idx];
 
-  LOG (c, "Pushing to cube stack: ");
-  // We use a similar encoding as for regular clause entries.
-  // We do not need to push a time stamp for every clause since it is shared.
-  // Also we will not attempt to embedd the witness cube in the clause for now.
-  // es (idu) idl l1 ... lk es
+  LOG (c, "pushing to cube stack ");
   ss.push_back (0, arena); // Will be updated in the end.
   const uint32_t first_size_field = ss.size () - 1 - 2;
-  LOG ("first size field at %u", first_size_field);
-  // no need to push a stamp here.
 
   const unsigned size = c->size;
   const bool compactable = size < (1u << 29);
@@ -337,11 +357,11 @@ void External::push_cube_clause (uint32_t ss_idx, Clause *c) {
   const uint32_t idl = (c->id & (((int64_t) 1 << 32) - 1));
 
   if (!compactable || id_long) {
-    LOG ("pushing long id");
+    LOG ("pushing long id %" PRId64, c->id);
     ss.push_back (static_cast<int> (idu), arena);
     ss.push_back (static_cast<int> (idl), arena);
   } else {
-    LOG ("pushing compact id");
+    LOG ("pushing compact id %" PRId64, c->id);
     ss.push_back (static_cast<int> (idl), arena);
   }
 
@@ -367,7 +387,8 @@ void External::push_cube_clause (uint32_t ss_idx, Clause *c) {
 
 void External::create_cube_stack_and_push_clause (
     const vector<int> &iwit_cube, Clause *c) {
-  LOG (c, "Creating a cube stack for a single clause with witness cube.");
+  LOG (iwit_cube, "creating a cube stack for cube");
+  LOG (c, "and pushing");
 
   const uint32_t ss_idx = cube_stacks.allocate ();
   assert (ss_idx <= UINT32_MAX);
@@ -376,7 +397,7 @@ void External::create_cube_stack_and_push_clause (
 
   WitnessStack &ss = cube_stacks[ss_idx];
   assert (!ss.stack);
-  // size cap | cube literals | 0 | es | idl | clause literals | es
+
   const unsigned initial_size = 2 + iwit_cube.size () + 3 + c->size + 1;
   ss.allocate (initial_size, arena);
 
@@ -408,7 +429,7 @@ void External::create_cube_stack_and_push_external_clause (
 
   WitnessStack &ss = cube_stacks[ss_idx];
   assert (!ss.stack);
-  // size cap | cube literals | 0 | es | idl | clause literals | es
+  
   const unsigned initial_size = 2 + ewit_cube.size () + 3 + clause.size () + 1;
   ss.allocate (initial_size, arena);
 
@@ -429,7 +450,7 @@ void External::create_cube_stack_and_push_external_clause (
   }
   ss.push_back (0, arena);
 
-  // then push the clause 
+  // then push the clause. 
   ss.push_back (0, arena); // Updated in the end.
   const uint32_t first_size_field = ss.size () - 1 - 2;
 
@@ -441,11 +462,11 @@ void External::create_cube_stack_and_push_external_clause (
   const uint32_t idl = (id & (((int64_t) 1 << 32) - 1));
 
   if (!compactable || id_long) {
-    LOG ("pushing long id");
+    LOG ("pushing long id %" PRId64, id);
     ss.push_back (static_cast<int> (idu), arena);
     ss.push_back (static_cast<int> (idl), arena);
   } else {
-    LOG ("pushing compact id");
+    LOG ("pushing compact id %" PRId64, id);
     ss.push_back (static_cast<int> (idl), arena);
   }
 
@@ -497,7 +518,7 @@ void External::push_external_clause_on_witness_stack (
   assert (ilit && ilit != INT_MIN);
   
   const unsigned uwit = elit2ulit (ewit);
-  LOG ("ewit: %d, uwit: %u", ewit, uwit);
+  
   if (uwit >= witness_stacks.size ())
     witness_stacks.resize (uwit + 1);
 
@@ -512,7 +533,7 @@ void External::push_external_clause_on_witness_stack (
 
   const unsigned size = c.size ();
   const bool compactable = size < (1u << 29);
-  const bool id_long = id > UINT32_MAX; // does not fit into 32 bit
+  const bool id_long = id > UINT32_MAX;
 
   const uint32_t idu = static_cast<uint32_t> (id >> 32);
   const uint32_t idl = static_cast<uint32_t> (id);
@@ -550,7 +571,7 @@ void External::push_external_clause_on_witness_stack (
       blit = elit;
       continue;
     }
-    LOG ("pushing literal %d (external %d)", ilit, elit);
+
     stack.push_back (elit, arena);
   }
   assert (blit);
@@ -565,6 +586,7 @@ void External::push_external_clause_on_witness_stack (
     if (id_long)
       updated_size |= ID_LONG;
   }
+
   // Update the first size field and push the terminating size field.
   stack.stack[first_size_field] = static_cast<int> (updated_size);
   stack.push_back (static_cast<int> (updated_size), arena);
@@ -591,19 +613,23 @@ void External::push_external_clause_and_witness_on_extension (
 }
 
 /*------------------------------------------------------------------------*/
-// TODO: Update description
-// This is the actual extension process. It goes backward over the clauses
-// on the extension stack and flips the assignment of one of the blocking
-// literals in the conditional autarky stored before the clause.  In the
-// original algorithm for witness construction for variable elimination and
-// blocked clause removal the conditional autarky consists of a single
-// literal from the removed clause, while in general the autarky witness can
-// contain an arbitrary set of literals.  We are using the more general
-// witness reconstruction here which for instance would also work for
-// super-blocked or set-blocked clauses.
+// This is the actual extension process. We traverse 'witness_order'
+// backward and extend the corresponding clauses on the witness stacks.
+//
+// For each clause, we first check whether its witness is assigned.
+// If so, the clause is satisfied and we can skip examining its literals.
+// We also push a blocking literal for this purpose: we only examine
+// the clause's literals if neither the witness nor the blocking literal
+// is satisfied.
+// For a witness cube stack, we first check whether the witness cube
+// is satisfied. If so, we can skip all clauses on this stack.
+// Otherwise, we examine the clauses sequentially by traversing the
+// stack backward. Once we find a clause that is unsatisfied by the
+// current assignment, we assign the witness cube and can skip the
+// remaining clauses on this stack.
 
 void External::extend_cube_stack (uint32_t ss_idx, ExtendStats &stats) {
-  LOG ("Extending cube stack with witness cube");
+  LOG ("extending cube stack at index %u", ss_idx);
   WitnessStack &ss = cube_stacks[ss_idx];
 #ifndef QUIET
   stats.extension_size += ss.size ();
@@ -615,7 +641,7 @@ void External::extend_cube_stack (uint32_t ss_idx, ExtendStats &stats) {
 
   // first check the cube for being satisfied. Also check if this stack has been
   // already been scheduled for extension.
-  LOG ("witness cube:");
+  LOG ("witness cube: ");
   while (*q) {
     LOG ("%d", *q);
     const int ewit = *q++; 
@@ -631,26 +657,26 @@ void External::extend_cube_stack (uint32_t ss_idx, ExtendStats &stats) {
   }
 
   if (satisfied) {
-    LOG ("Witness cube already satisfied.");
+    LOG ("witness cube already satisfied.");
     stats.extend_blocked++;
     return;
   }
 
   // The witness cube is not fully assigned. Therefore we need to check for
   // unsatisfied clauses.
-  auto begin_of_clauses = q + 1; // this should be the first size field
+  auto begin_of_clauses = q + 1;
   q = end_of_stack;
   bool assign_witness = false;
   while (q != begin_of_clauses) {
     stats.clauses_read++;
-    q--; // q now points to the trailing size field
+    q--;
     bool wit_embedded, id_long;
     unsigned other_lits_size;
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
     assert (!wit_embedded);
     assert (other_lits_size);
 
-    q--; // q points to the last literal now
+    q--;
 
     auto idl_pos = q - other_lits_size;
     bool satisfied = false;
@@ -661,14 +687,13 @@ void External::extend_cube_stack (uint32_t ss_idx, ExtendStats &stats) {
         satisfied = true;
       --q;
     }
-    // q should now point to the idl field.
+    
     // assign the cube.
     if (!satisfied) {
       assign_witness = true;
       break;
     }
-    // es (idu) idl
-    //           q
+
     q -= (id_long ? 1 : 0) + 1;
   }
 
@@ -722,7 +747,7 @@ void External::extend () {
   ws_index.resize (witness_stacks.size ());
   skipped.resize (witness_stacks.size ());
 
-  // initialize the indices into the stacks
+  // Initialize the indices into the stacks.
   for (unsigned uwit = 0; uwit < witness_stacks.size (); uwit++) {
     WitnessStack &stack = witness_stacks[uwit];
     if (stack.empty ())
@@ -831,7 +856,6 @@ void External::extend () {
 }
 
 /* -------------------------------------------------------------------------- */
-/* ---------------------------- Traversal Functions --------------------------*/
 bool External::traverse_cube_stack_backward (WitnessIterator &it, uint32_t ss_idx) {
   WitnessStack &ss = cube_stacks[ss_idx];
 
@@ -844,18 +868,18 @@ bool External::traverse_cube_stack_backward (WitnessIterator &it, uint32_t ss_id
     witness.push_back (ewit);
   }
   
-  auto begin_of_clauses = q + 1; // first size field of first clause
+  auto begin_of_clauses = q + 1;
   q = ss.end ();
   vector<int> clause;
   while (q != begin_of_clauses) {
-    q--; // q now points to the trailing size field
+    q--;
     bool wit_embedded, id_long;
     unsigned other_lits_size;
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
     assert (!wit_embedded);
     assert (other_lits_size);
 
-    q--; // q points to the last literal now
+    q--;
 
     auto idl_pos = q - other_lits_size;
 
@@ -875,7 +899,6 @@ bool External::traverse_cube_stack_backward (WitnessIterator &it, uint32_t ss_id
     }
     assert (id);
     
-    // q points to the first size field.
     reverse (clause.begin (), clause.end ());
 
     if (!it.witness (clause, witness, id)) {
@@ -897,7 +920,7 @@ bool External::traverse_cube_stack_forward (WitnessIterator &it, uint32_t ss_idx
     witness.push_back (ewit);
   }
 
-  q++; // q points to the first size field of the first clause.
+  q++;
   auto end = ss.end ();
   vector<int> clause;
   while (q != end) {
@@ -923,14 +946,13 @@ bool External::traverse_cube_stack_forward (WitnessIterator &it, uint32_t ss_idx
     while (q != end_of_lits) {
       clause.push_back (*q++);
     }
-    // q points to the trailing size field
 
     reverse (clause.begin (), clause.end ());
 
     if (!it.witness (clause, witness, id)) {
       return false;
     }
-    q++; // q points to the next clauses first size field or end of stack
+    q++;
   }
   return true;
 }
@@ -955,11 +977,10 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
   auto p = witness_order.end ();
 
   while (p != witness_order.begin ()) {
-    const int blit = *--p; // skip blocking literal (or shared stack index, then wit is 0)
+    // skip blocking literal (or shared stack index, then wit is 0)
+    const int blit = *--p;
     const int ewit = *--p;
 
-    // Shared Stack case. ... 0 idx ...
-    //                        ^
     if (!ewit) { 
       const uint32_t ss_idx = static_cast<uint32_t> (*(p + 1));
       if (!traverse_cube_stack_backward (it, ss_idx)) {
@@ -975,7 +996,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
 
     uint32_t idx = ws_index[uwit];
     assert (idx);
-    auto q = stack.begin () + idx; // one beyond the trailing size field
+    auto q = stack.begin () + idx;
     bool wit_embedded, id_long;
     unsigned other_lits_size;
     q--;
@@ -984,7 +1005,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     witness.clear ();
     witness.push_back (ewit);
 
-    q--; // q points to the last literal of the clause.
+    q--;
     auto idl_pos = q - other_lits_size;
     clause.clear ();
     clause.push_back (blit);
@@ -993,7 +1014,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     }
     if (wit_embedded)
       clause.push_back (ewit);
-    // q points to idl
+
     int64_t id;
     if (id_long) {
       const uint64_t upper = static_cast<uint32_t> (*(q - 1));
@@ -1031,9 +1052,7 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
   while (p != witness_order.end ()) {
     const int ewit = *p++;
     const int blit = *p++;
-    
-    // Shared Stack case. ... 0 idx ...
-    //                        ^
+
     if (!ewit) { 
       const uint32_t ss_idx = static_cast<uint32_t> (*(p - 1));
       if (!traverse_cube_stack_forward (it, ss_idx)) {
@@ -1050,7 +1069,7 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
     uint32_t idx = ws_index[uwit];
     assert (idx < stack.size () - 2); 
 
-    auto q = stack.begin () + idx; // on the first size field of the next clause
+    auto q = stack.begin () + idx;
     bool wit_embedded, id_long;
     unsigned other_lits_size;
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
@@ -1067,7 +1086,6 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
       id = static_cast<uint32_t> (*(q + 1));
       q += 2;
     }
-    // q points to the first literal of the clause
 
     auto end_of_lits = q + other_lits_size; 
     clause.clear ();
@@ -1083,7 +1101,7 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
       ws_index.shrink_to_fit ();
       return false;
     }
-    q++; // q points to the next clauses first size field
+    q++;
     ws_index[uwit] = q - stack.begin ();
   }
   ws_index.clear ();

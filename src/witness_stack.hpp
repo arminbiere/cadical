@@ -11,7 +11,13 @@ namespace CaDiCaL {
 
 // Arena for smaller witness stacks
 //
-struct WitnessArena {
+// A common case are stacks that contain two binary or one ternary clause.
+// For two binary clauses we commonly need 8 integers:
+// size | capacity | S | idl | S | S' | idl' | S' 
+// For one ternay clause we commonly need 6 integers : 
+// size | capacity | S | idl | l_o | S
+
+struct WitnessArena { 
 
 	static constexpr unsigned NUM_CLASSES = 6;
 
