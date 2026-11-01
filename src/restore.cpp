@@ -62,7 +62,7 @@ static inline void decode_size_field (const int size_field, bool &wit_embedded,
   other_lits_size = clause_small ? (encoded & SIZE_MASK) : encoded;
 }
 
-static inline int64_t decode_id (const int *p, const bool id_long) {
+static inline int64_t decode_id (vector<int>::const_iterator p, const bool id_long) {
   if (!id_long)
     return static_cast<uint32_t> (*(p + 1));
   const uint64_t upper = static_cast<uint32_t> (*(p + 1));
@@ -71,10 +71,11 @@ static inline int64_t decode_id (const int *p, const bool id_long) {
 }
 
 /*------------------------------------------------------------------------*/ 
-void External::restore_clause (const int* begin, const int* end,
+void External::restore_clause (vector<int>::const_iterator begin,
+                               vector<int>::const_iterator end,
                                const int64_t id,
                                const int ewit, const int blit) {
-  LOG (begin, static_cast<unsigned> (end - begin), 
+  LOG (begin, end, 
     "restoring external clause[%" PRId64 "]", id);
   
   assert (eclause.empty ());
@@ -120,6 +121,7 @@ void External::restore_clause (const int* begin, const int* end,
   internal->stats.restored_clauses++;
 }
 
+// TODO: update this according to the new representation
 void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
   WitnessStack &ss = cube_stacks[ss_idx];
   assert (!ss.empty ());
@@ -149,8 +151,8 @@ void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
     assert (!wit_embedded);
     
-    int64_t id = decode_id (q, id_long);
-    LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
+    // int64_t id = decode_id (q, id_long); // TODO: uses iterator now for q
+    //LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
 
     auto lit = q + (id_long ? 3 : 2); // es (idu) idl l1 
     auto begin = lit;
@@ -170,7 +172,7 @@ void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
       clauses.satisfied++;
     } else {
       clauses.restored++;
-      restore_clause (begin, end, id, 0, 0); 
+      //restore_clause (begin, end, id, 0, 0);  // TODO: change to iterators
     }
     
     q += 1 + (id_long ? 2 : 1) + other_lits_size + 1;
@@ -180,6 +182,209 @@ void External::restore_cube_stack (uint32_t ss_idx, RestoreStats &clauses) {
   internal->stats.ws_freed++;
 }
 
+void External::defragment_clause_data () {
+  LOG ("defragmenting clause data of %zu elements", clause_data.size ());
+
+  assert (witness_data.size () % 3 == 0);
+
+  size_t write = 0;
+
+  for (auto p = witness_data.begin (); p != witness_data.end (); p += 3) {
+    const int ewit = p[0];
+    const int blit = p[1];
+    // Shared stacks are handled separately.
+    if (!blit)
+      continue;
+    assert (ewit);
+    const uint32_t idx = static_cast<uint32_t> (p[2]);
+
+    bool wit_embedded, id_long;
+    unsigned other_lits_size;
+    decode_size_field (clause_data[idx], wit_embedded, id_long, other_lits_size);
+
+    const size_t record_size = 2 + other_lits_size + (id_long ? 2 : 1);
+
+    assert (idx + record_size <= clause_data.size ());
+    assert (write <= UINT32_MAX);
+
+    // Update the index in the witness entry
+    p[2] = static_cast<int> (write);
+
+    // Move the record to its compacted position.
+    if (write != idx) {
+      std::memmove (clause_data.data () + write, 
+                    clause_data.data () + idx,
+                    record_size * sizeof (int));
+    }
+    write += record_size;
+  }
+
+  clause_data.resize (write);
+  fragmented_clause_data = 0;
+
+  LOG ("defragmented clause data to %zu elements", clause_data.size ());
+}
+
+void External::restore () {
+  PROFILE_SCOPE (restore);
+  internal->stats.restorations++;
+
+  RestoreStats clauses = {};
+
+  if (internal->opts.restoreall && tainted.empty ())
+    PHASE ("restore", internal->stats.restorations,
+           "forced to restore all clauses");
+
+#ifndef QUIET
+  {
+    unsigned numtainted = 0;
+    for (const auto b : tainted)
+      if (b)
+        numtainted++;
+
+    PHASE ("restore", internal->stats.restorations,
+           "starting with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
+  }
+#endif
+// --------------------------------------------------------
+  if (tainted.empty () && internal->opts.restoreall != 2)
+    return;
+  
+  assert (witness_data.size () % 3 == 0);
+
+  auto read = witness_data.begin ();
+  auto write = witness_data.begin (); 
+  auto end = witness_data.end ();
+
+  while (read != end) {
+    const int ewit = *read++;
+    const int blit = *read++;
+    const uint32_t idx = static_cast<uint32_t> (*read++);
+
+    assert (blit); // TODO: remove once cube stacks are in place
+    if (!blit) {
+      // TODO: logic
+      continue;
+    } 
+    assert (ewit);
+
+    // restore the corresponding clause
+    if (internal->opts.restoreall == 2 || marked (tainted, -ewit)) { 
+      
+      bool wit_embedded, id_long;
+      unsigned other_lits_size;
+
+      clauses.read++;
+
+      // Now restore the next clause
+      auto p = clause_data.begin () + idx;
+      decode_size_field (*p, wit_embedded, id_long, other_lits_size);
+
+      int64_t id = decode_id (p, id_long);
+      LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
+
+      auto lit = p + (id_long ? 3 : 2);
+      auto begin = lit;
+      auto end_of_lits = lit + other_lits_size;
+      int satisfied = 0;
+      while (lit != end_of_lits) {
+        if (!satisfied && fixed (*lit) > 0)
+          satisfied = *lit;
+        ++lit;
+      }
+
+      if (!satisfied && wit_embedded) {
+        if (fixed (ewit) > 0)
+          satisfied = ewit;
+      }
+
+      if (satisfied && !internal->opts.restoreflush) {
+        LOG (begin, end_of_lits,
+            "forced to not remove %d satisfied", satisfied);
+        satisfied = 0;
+      }
+
+      if (satisfied) {
+        clauses.satisfied++;
+      } else {
+        clauses.restored++;
+        restore_clause (begin, end_of_lits, id, ewit, blit);
+        fragmented_clause_data += 2 + other_lits_size + (id_long ? 2 : 1);
+      }
+      
+      continue;
+    }
+
+    if (ewit) {
+      clauses.witness_skipped++;   
+    }
+    *write++ = ewit;
+    *write++ = blit;
+    *write++ = idx;
+  }
+
+  witness_data.resize (write - witness_data.begin ());
+  shrink_vector (witness_data);
+
+  while (!witness.empty () && !witness.back ())
+    witness.pop_back ();
+  
+  constexpr double THRESHOLD = 0.1;
+  constexpr size_t MIN_FRAGMENTED_SIZE =  1 << 20; // 1 MiB
+
+  const size_t fragmented_bytes = fragmented_clause_data * sizeof (int);
+
+  if (fragmented_bytes >= MIN_FRAGMENTED_SIZE &&
+      fragmented_clause_data >= THRESHOLD * clause_data.size ()) {
+    internal->stats.restore_defrags++;
+    defragment_clause_data ();
+  }
+
+#ifndef QUIET
+  if (clauses.satisfied)
+    PHASE ("restore", internal->stats.restorations,
+           "removed %" PRId64 " satisfied %.0f%% of %" PRId64
+           " read clauses",
+           clauses.satisfied, percent (clauses.satisfied, clauses.read),
+           clauses.read);
+  else
+    PHASE ("restore", internal->stats.restorations,
+           "no satisfied clause removed out of %" PRId64
+           " read clauses",
+           clauses.read);
+
+  if (clauses.restored)
+    PHASE ("restore", internal->stats.restorations,
+           "restored %" PRId64 " clauses %.0f%% out of %" PRId64
+           " read clauses",
+           clauses.restored, percent (clauses.restored, clauses.read),
+           clauses.read);
+  else
+    PHASE ("restore", internal->stats.restorations,
+           "no clause restored out of %" PRId64 " read clauses",
+           clauses.read);
+  {
+    unsigned numtainted = 0;
+    for (const auto &b : tainted)
+      if (b)
+        numtainted++;
+
+    PHASE ("restore", internal->stats.restorations,
+           "finishing with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
+  }
+#endif
+
+  internal->stats.restore_clauses_read += clauses.read;
+  internal->stats.restore_wit_skipped += clauses.witness_skipped;
+
+  tainted.clear ();
+  tainted.shrink_to_fit ();
+} 
+
+/*
+// OLD
 void External::restore () {
   PROFILE_SCOPE (restore);
   internal->stats.restorations++;
@@ -371,5 +576,5 @@ void External::restore () {
   tainted.clear ();
   tainted.shrink_to_fit ();
 } 
-
+*/
 } // namespace CaDiCaL

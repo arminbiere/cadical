@@ -98,6 +98,11 @@ public:
   bool extended; // Have been extended.
   bool concluded;
 
+
+  size_t fragmented_clause_data = 0;
+  vector<int> clause_data;
+  vector<int> witness_data; // entries of form: wit | blit | idx
+
   WitnessArena arena; // Memory management of witness stacks
   CubeStackChunk cube_stacks; // Vector + free list for cube stack references.
 
@@ -272,7 +277,10 @@ public:
             satisfied, restored;
   };
 
-  void restore_clause (const int *begin, const int *end,
+  void defragment_clause_data ();
+
+  void restore_clause (vector<int>::const_iterator begin, 
+                       vector<int>::const_iterator end,
                        const int64_t id,
                        const int ewit, const int blit);
   
