@@ -357,7 +357,7 @@ void External::restore () {
   while (!witness.empty () && !witness.back ())
     witness.pop_back ();
   
-  constexpr double THRESHOLD = 0.1;
+  constexpr double THRESHOLD = 0.25;
   constexpr size_t MIN_FRAGMENTED_SIZE =  1 << 20; // 1 MiB
 
   const size_t fragmented_bytes = fragmented_clause_data * sizeof (int);
