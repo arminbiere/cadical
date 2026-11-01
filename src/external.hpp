@@ -215,10 +215,10 @@ public:
   void push_external_clause_on_witness_stack (const vector<int> &c, 
                                             const vector<int> &w, int64_t id);
   /* ------------------------------------------------------------------------ */
-  uint32_t create_cube_stack (const vector<int> &iwit_cube);
+  void create_cube_stack (const vector<int> &iwit_cube);
 
-  void push_cube_clause (uint32_t ss_idx, Clause *c);
-  
+  void push_cube_clause (Clause *c);
+  void terminate_cube_stack ();
   void create_cube_stack_and_push_clause (const vector<int> &iwit_cube, 
     Clause *c);
 
@@ -456,8 +456,9 @@ public:
 
   bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
   bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
-  bool traverse_cube_stack_backward (WitnessIterator &it, uint32_t ss_idx);
-  bool traverse_cube_stack_forward (WitnessIterator &it, uint32_t ss_idx);
+  bool traverse_cube_stack (WitnessIterator &it, uint32_t ss_idx);
+  //bool traverse_cube_stack_backward (WitnessIterator &it, uint32_t ss_idx);
+  //bool traverse_cube_stack_forward (WitnessIterator &it, uint32_t ss_idx);
   bool traverse_witnesses_backward (WitnessIterator &);
   bool traverse_witnesses_forward (WitnessIterator &);
 
