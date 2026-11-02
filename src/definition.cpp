@@ -1,6 +1,5 @@
 #include "internal.hpp"
-#include "kitten-config.h"
-#include "kitten.h"
+#include "citten.h"
 
 namespace CaDiCaL {
 
@@ -205,7 +204,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       // representation we instead implement the translation in kitten
       if (!c->garbage) {
         LOG (c, "adding to kitten");
-        KITTEN_NAMESPACE (kitten_clause_with_id_and_exception)
+        kitten_clause_with_id_and_exception
         (citten, exported, c->size, c->literals, except);
       }
       exported++;
@@ -213,22 +212,22 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   }
   stats.eliminate_def_check++;
   const size_t limit = opts.elimdefticks;
-  KITTEN_NAMESPACE (kitten_set_ticks_limit) (citten, limit);
-  int status = KITTEN_NAMESPACE (kitten_solve) (citten);
+  kitten_set_ticks_limit (citten, limit);
+  int status = kitten_solve (citten);
   if (!exported)
     goto ABORT;
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
     uint64_t learned;
     unsigned reduced =
-        KITTEN_NAMESPACE (kitten_compute_clausal_core) (citten, &learned);
+        kitten_compute_clausal_core (citten, &learned);
     LOG ("1st sub-solver core of size %u original clauses out of %u",
          reduced, exported);
     for (int i = 2; i <= opts.elimdefcores; i++) {
-      KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (citten);
-      KITTEN_NAMESPACE (kitten_shuffle_clauses) (citten);
-      KITTEN_NAMESPACE (kitten_set_ticks_limit) (citten, 10 * limit);
-      int tmp = KITTEN_NAMESPACE (kitten_solve) (citten);
+      kitten_shrink_to_clausal_core (citten);
+      kitten_shuffle_clauses (citten);
+      kitten_set_ticks_limit (citten, 10 * limit);
+      int tmp = kitten_solve (citten);
       assert (!tmp || tmp == 20);
       if (!tmp) {
         LOG ("aborting core extraction");
@@ -238,7 +237,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       unsigned previous = reduced;
 #endif
       reduced =
-          KITTEN_NAMESPACE (kitten_compute_clausal_core) (citten, &learned);
+          kitten_compute_clausal_core (citten, &learned);
       LOG ("%d sub-solver core of size %u original clauses out of %u", i,
            reduced, exported);
       assert (reduced <= previous);
@@ -249,7 +248,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     stats.eliminate_def_success++;
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
-    KITTEN_NAMESPACE (kitten_traverse_core_ids)
+    kitten_traverse_core_ids
     (citten, &extractor, traverse_definition_core);
     assert (eliminator.definition_unit);
     int unit = 0;
@@ -266,11 +265,11 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       if (proof) {
         if (lrat) {
           extractor.unit = unit;
-          KITTEN_NAMESPACE (kitten_trace_core)
+          kitten_trace_core
           (citten, &extractor, traverse_one_sided_core_lemma_with_lrat);
         } else {
           extractor.unit = unit;
-          KITTEN_NAMESPACE (kitten_traverse_core_clauses)
+          kitten_traverse_core_clauses
           (citten, &extractor, traverse_one_sided_core_lemma);
         }
       } else
@@ -282,7 +281,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     LOG ("sub-solver failed to show that definition exists");
   }
   stats.eliminate_def_ticks +=
-      KITTEN_NAMESPACE (kitten_current_ticks) (citten);
+      kitten_current_ticks (citten);
   return;
 }
 

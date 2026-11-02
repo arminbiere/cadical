@@ -1,4 +1,4 @@
-#include "kitten.h"
+#include "citten.h"
 #include "random.h"
 #include "stack.h"
 
@@ -559,7 +559,7 @@ static const char *status_to_string (int status) {
 }
 
 static void invalid_api_usage (const char *fun, const char *fmt, ...) {
-  fprintf (stderr, "kitten: fatal error: invalid API usage in '%s': ", fun);
+  fprintf (stderr, "citten: fatal error: invalid API usage in '%s': ", fun);
   va_list ap;
   va_start (ap, fmt);
   vfprintf (stderr, fmt, ap);
@@ -596,7 +596,7 @@ static void invalid_api_usage (const char *fun, const char *fmt, ...) {
     kitten->status = (STATUS); \
   } while (0)
 
-kitten *KITTEN_NAMESPACE (kitten_init) (void) {
+kitten *kitten_init (void) {
   kitten *kitten;
   CALLOC (kitten, 1);
   initialize_kitten (kitten);
@@ -604,12 +604,12 @@ kitten *KITTEN_NAMESPACE (kitten_init) (void) {
 }
 
 #ifdef LOGGING
-void KITTEN_NAMESPACE (kitten_set_logging) (kitten *kitten) {
+void kitten_set_logging (kitten *kitten) {
   logging = true;
 }
 #endif
 
-void KITTEN_NAMESPACE (kitten_track_antecedents) (kitten *kitten) {
+void kitten_track_antecedents (kitten *kitten) {
   REQUIRE_STATUS (0);
 
   if (kitten->learned)
@@ -619,7 +619,7 @@ void KITTEN_NAMESPACE (kitten_track_antecedents) (kitten *kitten) {
   kitten->antecedents = true;
 }
 
-void KITTEN_NAMESPACE (kitten_randomize_phases) (kitten *kitten) {
+void kitten_randomize_phases (kitten *kitten) {
   REQUIRE_INITIALIZED ();
 
   LOG ("randomizing phases");
@@ -651,7 +651,7 @@ void KITTEN_NAMESPACE (kitten_randomize_phases) (kitten *kitten) {
     phases[i++] = (random >> shift++) & 1;
 }
 
-void KITTEN_NAMESPACE (kitten_flip_phases) (kitten *kitten) {
+void kitten_flip_phases (kitten *kitten) {
   REQUIRE_INITIALIZED ();
 
   LOG ("flipping phases");
@@ -672,19 +672,19 @@ void KITTEN_NAMESPACE (kitten_flip_phases) (kitten *kitten) {
     phases[i++] ^= 1;
 }
 
-void KITTEN_NAMESPACE (kitten_no_ticks_limit) (kitten *kitten) {
+void kitten_no_ticks_limit (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   LOG ("forcing no ticks limit");
   kitten->limits.ticks = UINT64_MAX;
 }
 
-uint64_t KITTEN_NAMESPACE (kitten_current_ticks) (kitten *kitten) {
+uint64_t kitten_current_ticks (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   const uint64_t current = KITTEN_TICKS;
   return current;
 }
 
-void KITTEN_NAMESPACE (kitten_set_ticks_limit) (kitten *kitten,
+void kitten_set_ticks_limit (kitten *kitten,
                                                 uint64_t delta) {
   REQUIRE_INITIALIZED ();
   const uint64_t current = KITTEN_TICKS;
@@ -700,14 +700,14 @@ void KITTEN_NAMESPACE (kitten_set_ticks_limit) (kitten *kitten,
   kitten->limits.ticks = limit;
 }
 
-void KITTEN_NAMESPACE (kitten_no_terminator) (kitten *kitten) {
+void kitten_no_terminator (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   LOG ("removing terminator");
   kitten->terminator = 0;
   kitten->terminator_data = 0;
 }
 
-void KITTEN_NAMESPACE (kitten_set_terminator) (kitten *kitten, void *data,
+void kitten_set_terminator (kitten *kitten, void *data,
                                                int (*terminator) (void *)) {
   REQUIRE_INITIALIZED ();
   LOG ("setting terminator");
@@ -757,7 +757,7 @@ static void shuffle_units (kitten *kitten) {
   shuffle_unsigned_stack (kitten, &kitten->units);
 }
 
-void KITTEN_NAMESPACE (kitten_shuffle_clauses) (kitten *kitten) {
+void kitten_shuffle_clauses (kitten *kitten) {
   REQUIRE_STATUS (0);
   shuffle_queue (kitten);
   shuffle_katches (kitten);
@@ -893,7 +893,7 @@ unsigned new_learned_klause (kitten *kitten) {
   return res;
 }
 
-void KITTEN_NAMESPACE (kitten_clear) (kitten *kitten) {
+void kitten_clear (kitten *kitten) {
   LOG ("clear kitten of size %zu", kitten->size);
 
   assert (EMPTY_STACK (kitten->analyzed));
@@ -934,7 +934,7 @@ void KITTEN_NAMESPACE (kitten_clear) (kitten *kitten) {
   clear_kitten (kitten);
 }
 
-void KITTEN_NAMESPACE (kitten_release) (kitten *kitten) {
+void kitten_release (kitten *kitten) {
   RELEASE_STACK (kitten->analyzed);
   RELEASE_STACK (kitten->assumptions);
   RELEASE_STACK (kitten->core);
@@ -1730,7 +1730,7 @@ static unsigned int2u (int lit) {
   return (lit < 0) + 2u * (unsigned) idx;
 }
 
-void KITTEN_NAMESPACE (kitten_assume) (kitten *kitten, unsigned elit) {
+void kitten_assume (kitten *kitten, unsigned elit) {
   REQUIRE_INITIALIZED ();
   if (kitten->status)
     reset_incremental (kitten);
@@ -1739,12 +1739,12 @@ void KITTEN_NAMESPACE (kitten_assume) (kitten *kitten, unsigned elit) {
   PUSH_STACK (kitten->assumptions, ilit);
 }
 
-void KITTEN_NAMESPACE (kitten_assume_signed) (kitten *kitten, int elit) {
+void kitten_assume_signed (kitten *kitten, int elit) {
   unsigned kelit = int2u (elit);
-  KITTEN_NAMESPACE (kitten_assume) (kitten, kelit);
+  kitten_assume (kitten, kelit);
 }
 
-void KITTEN_NAMESPACE (kitten_clause_with_id_and_exception) (
+void kitten_clause_with_id_and_exception (
     kitten *kitten, unsigned id, size_t size, const int *elits,
     unsigned except) {
   REQUIRE_INITIALIZED ();
@@ -1771,7 +1771,7 @@ void KITTEN_NAMESPACE (kitten_clause_with_id_and_exception) (
   CLEAR_STACK (kitten->klause);
 }
 
-void KITTEN_NAMESPACE (kitten_clause_with_id_and_equivalence) (
+void kitten_clause_with_id_and_equivalence (
     kitten *kitten, unsigned id, size_t size, const int *elits,
     unsigned lit, unsigned other) {
   REQUIRE_INITIALIZED ();
@@ -1804,29 +1804,29 @@ void KITTEN_NAMESPACE (kitten_clause_with_id_and_equivalence) (
   CLEAR_STACK (kitten->klause);
 }
 
-void KITTEN_NAMESPACE (kitten_clause) (kitten *kitten, size_t size,
+void kitten_clause (kitten *kitten, size_t size,
                                        unsigned *elits) {
-  KITTEN_NAMESPACE (kitten_clause_with_id_and_exception)
+  kitten_clause_with_id_and_exception
   (kitten, INVALID, size, elits, INVALID);
 }
 
-void KITTEN_NAMESPACE (kitten_clause_with_id) (kitten *kitten, unsigned id,
+void kitten_clause_with_id (kitten *kitten, unsigned id,
                                                size_t size, int *elits) {
-  KITTEN_NAMESPACE (kitten_clause_with_id_and_exception)
+  kitten_clause_with_id_and_exception
   (kitten, id, size, elits, INVALID);
 }
 
-void KITTEN_NAMESPACE (kitten_unit) (kitten *kitten, unsigned lit) {
-  KITTEN_NAMESPACE (kitten_clause) (kitten, 1, &lit);
+void kitten_unit (kitten *kitten, unsigned lit) {
+  kitten_clause (kitten, 1, &lit);
 }
 
-void KITTEN_NAMESPACE (kitten_binary) (kitten *kitten, unsigned a,
+void kitten_binary (kitten *kitten, unsigned a,
                                        unsigned b) {
   unsigned clause[2] = {a, b};
-  KITTEN_NAMESPACE (kitten_clause) (kitten, 2, clause);
+  kitten_clause (kitten, 2, clause);
 }
 
-int KITTEN_NAMESPACE (kitten_solve) (kitten *kitten) {
+int kitten_solve (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   if (kitten->status)
     reset_incremental (kitten);
@@ -1878,12 +1878,12 @@ int KITTEN_NAMESPACE (kitten_solve) (kitten *kitten) {
   return res;
 }
 
-int KITTEN_NAMESPACE (kitten_status) (kitten *kitten) {
+int kitten_status (kitten *kitten) {
   return kitten->status;
 }
 
 unsigned
-KITTEN_NAMESPACE (kitten_compute_clausal_core) (kitten *kitten,
+kitten_compute_clausal_core (kitten *kitten,
                                                 uint64_t *learned_ptr) {
   REQUIRE_STATUS (20);
 
@@ -1957,7 +1957,7 @@ DONE:
   return original;
 }
 
-void KITTEN_NAMESPACE (kitten_traverse_core_ids) (
+void kitten_traverse_core_ids (
     kitten *kitten, void *state, void (*traverse) (void *, unsigned)) {
   REQUIRE_STATUS (21);
 
@@ -1983,7 +1983,7 @@ void KITTEN_NAMESPACE (kitten_traverse_core_ids) (
   assert (kitten->status == 21);
 }
 
-void KITTEN_NAMESPACE (kitten_traverse_core_clauses) (
+void kitten_traverse_core_clauses (
     kitten *kitten, void *state,
     void (*traverse) (void *, bool, size_t, const unsigned *)) {
   REQUIRE_STATUS (21);
@@ -2016,7 +2016,7 @@ void KITTEN_NAMESPACE (kitten_traverse_core_clauses) (
   assert (kitten->status == 21);
 }
 
-void KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
+void kitten_traverse_core_clauses_with_id (
     kitten *kitten, void *state,
     void (*traverse) (void *state, unsigned, bool learned, size_t,
                       const unsigned *)) {
@@ -2051,7 +2051,7 @@ void KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
   assert (kitten->status == 21);
 }
 
-void KITTEN_NAMESPACE (kitten_trace_core) (
+void kitten_trace_core (
     kitten *kitten, void *state,
     void (*trace) (void *, unsigned, unsigned, bool, size_t,
                    const unsigned *, size_t, const unsigned *)) {
@@ -2099,7 +2099,7 @@ void KITTEN_NAMESPACE (kitten_trace_core) (
   assert (kitten->status == 21);
 }
 
-void KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (kitten *kitten) {
+void kitten_shrink_to_clausal_core (kitten *kitten) {
   REQUIRE_STATUS (21);
 
   LOG ("shrinking formula to core of original clauses");
@@ -2173,7 +2173,7 @@ void KITTEN_NAMESPACE (kitten_shrink_to_clausal_core) (kitten *kitten) {
   UPDATE_STATUS (0);
 }
 
-signed char KITTEN_NAMESPACE (kitten_signed_value) (kitten *kitten,
+signed char kitten_signed_value (kitten *kitten,
                                                     int selit) {
   REQUIRE_STATUS (10);
   const unsigned elit = int2u (selit);
@@ -2187,7 +2187,7 @@ signed char KITTEN_NAMESPACE (kitten_signed_value) (kitten *kitten,
   return kitten->values[ilit];
 }
 
-signed char KITTEN_NAMESPACE (kitten_value) (kitten *kitten,
+signed char kitten_value (kitten *kitten,
                                              unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
@@ -2200,7 +2200,7 @@ signed char KITTEN_NAMESPACE (kitten_value) (kitten *kitten,
   return kitten->values[ilit];
 }
 
-signed char KITTEN_NAMESPACE (kitten_fixed) (kitten *kitten,
+signed char kitten_fixed (kitten *kitten,
                                              unsigned elit) {
   const unsigned eidx = elit / 2;
   if (eidx >= kitten->evars)
@@ -2219,13 +2219,13 @@ signed char KITTEN_NAMESPACE (kitten_fixed) (kitten *kitten,
   return res;
 }
 
-signed char KITTEN_NAMESPACE (kitten_fixed_signed) (kitten *kitten,
+signed char kitten_fixed_signed (kitten *kitten,
                                                     int elit) {
   unsigned kelit = int2u (elit);
-  return KITTEN_NAMESPACE (kitten_fixed) (kitten, kelit);
+  return kitten_fixed (kitten, kelit);
 }
 
-bool KITTEN_NAMESPACE (kitten_flip_literal) (kitten *kitten,
+bool kitten_flip_literal (kitten *kitten,
                                              unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
@@ -2235,19 +2235,19 @@ bool KITTEN_NAMESPACE (kitten_flip_literal) (kitten *kitten,
   if (!iidx)
     return false;
   const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
-  if (KITTEN_NAMESPACE (kitten_fixed) (kitten, elit))
+  if (kitten_fixed (kitten, elit))
     return false;
   return flip_literal (kitten, ilit);
 }
 
-bool KITTEN_NAMESPACE (kitten_flip_signed_literal) (kitten *kitten,
+bool kitten_flip_signed_literal (kitten *kitten,
                                                     int elit) {
   REQUIRE_STATUS (10);
   unsigned kelit = int2u (elit);
-  return KITTEN_NAMESPACE (kitten_flip_literal) (kitten, kelit);
+  return kitten_flip_literal (kitten, kelit);
 }
 
-bool KITTEN_NAMESPACE (kitten_failed) (kitten *kitten, unsigned elit) {
+bool kitten_failed (kitten *kitten, unsigned elit) {
   REQUIRE_STATUS (20);
   const unsigned eidx = elit / 2;
   if (eidx >= kitten->evars)

@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -1055,12 +1055,12 @@ void Internal::init_citten () {
   if (!opts.elimdef)
     return;
   assert (!citten);
-  citten = KITTEN_NAMESPACE (kitten_init) ();
+  citten = kitten_init ();
 }
 
 void Internal::reset_citten () {
   if (citten) {
-    KITTEN_NAMESPACE (kitten_release) (citten);
+    kitten_release (citten);
     citten = 0;
   }
 }

@@ -107,7 +107,7 @@ extern "C" {
 
 // c headers
 extern "C" {
-#include "kitten.h"
+#include "citten.h"
 }
 /*------------------------------------------------------------------------*/
 
