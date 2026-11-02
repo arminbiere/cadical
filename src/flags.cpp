@@ -36,6 +36,9 @@ void Internal::mark_fixed (int lit) {
   assert (!active (lit));
   assert (f.fixed ());
 
+  if (opts.constrainteager && f.constrained)
+    constraint_fixed.push_back (lit);
+
   if (external_prop && private_steps) {
     // If pre/inprocessing found a fixed assignment, we want the propagator
     // to know about it.

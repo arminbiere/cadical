@@ -420,36 +420,32 @@ struct bigger_score {
 
 void Internal::eager_constraint_units () {
   unit_constraint_vars = true;
-  for (auto &lit : constraint_vars) {
-    const auto tmp = val (lit);
-    if (tmp && !var (lit).level) {
-      Flags &f = flags (lit);
-      assert (f.constrained);
-      if (!f.constrained_unit) {
-        f.constrained_unit = true;
-        const int64_t id = ++clause_id;
-        assert (clause.empty ());
-        if (proof) {
-          clause.push_back (lit * tmp);
-          if (lrat)
-            lrat_chain.push_back (unit_id (lit * tmp));
-          // not using constraints
-          proof->add_assumption_clause (id, clause, lrat_chain, false);
-          clause.clear ();
-          lrat_chain.clear ();
-        }
-        KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, lit * tmp);
-      }
+  for (auto &lit : constraint_fixed) {
+    assert (flags (lit).fixed ());
+    assert (flags (lit).constrained);
+    assert (val (lit) > 0);
+    const int64_t id = ++clause_id;
+    assert (clause.empty ());
+    if (proof) {
+      clause.push_back (lit);
+      if (lrat)
+        lrat_chain.push_back (unit_id (lit));
+      // not using constraints
+      proof->add_assumption_clause (id, clause, lrat_chain, false);
+      clause.clear ();
+      lrat_chain.clear ();
     }
+    KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, lit);
   }
+  constraint_fixed.clear ();
 }
+
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
   int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
   int res = 0;
   if (!cat_res) {
-    // TODO: bump kitten (and sort before)
     // sort constraint_vars according to current decision heuristic
     if (opts.constraintsort) {
       PROFILE_SCOPE (constraintssort)
@@ -466,6 +462,7 @@ int Internal::decide_constraint () {
       PROFILE_SCOPE_EARLY_EXIT (constraintssort)
       last_constraint_idx = 0;
     }
+    // bump kitten (after sorting)
     if (opts.constraintbump == 2) {
       PROFILE_SCOPE (constraintsbump)
       for (auto cv = constraint_vars.rbegin ();
@@ -474,8 +471,11 @@ int Internal::decide_constraint () {
       }
       PROFILE_SCOPE_EARLY_EXIT (constraintsbump)
     }
-    if (!unit_constraint_vars && opts.constrainteager)
+    if (!unit_constraint_vars && opts.constrainteager) {
+      PROFILE_SCOPE (constraintseager);
       eager_constraint_units ();
+      PROFILE_SCOPE_EARLY_EXIT (constraintseager);
+    }
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     if (opts.constraintprime == 2)

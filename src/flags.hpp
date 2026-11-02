@@ -41,8 +41,7 @@ struct Flags { // Variable flags.
   // 2 if negated lit is in failure
   //
   unsigned char assumed : 2;
-  unsigned char constrained : 1;      // var is constrained
-  unsigned char constrained_unit : 1; // var is unit and communicated
+  unsigned char constrained : 1; // var is constrained
   unsigned char failed : 2;
 
   enum {
@@ -64,8 +63,7 @@ struct Flags { // Variable flags.
         factored = backbone1 = backbone0 = false;
     subsume = elim = ternary = true;
     block = 3u;
-    skip = assumed = constrained = constrained_unit = failed =
-        marked_signed = factor = 0;
+    skip = assumed = constrained = failed = marked_signed = factor = 0;
     status = UNUSED;
   }
 

@@ -277,6 +277,7 @@ struct Internal {
   // vector<int> constraints;  // literals of the constraints
   vector<int> constraint_vars;  // variables of the constraints
   vector<int> constraint_unsat; // variables of the constraints
+  vector<int> constraint_fixed; // variables of the constraints
   vector<int> failing_assumptions;
   size_t constraints_without_assumptions;
   size_t last_constraint_idx;
