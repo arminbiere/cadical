@@ -1055,12 +1055,12 @@ void Internal::init_citten () {
   if (!opts.elimdef)
     return;
   assert (!citten);
-  citten = kitten_init ();
+  citten = citten_init ();
 }
 
 void Internal::reset_citten () {
   if (citten) {
-    kitten_release (citten);
+    citten_release (citten);
     citten = 0;
   }
 }
