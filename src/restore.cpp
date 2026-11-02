@@ -136,7 +136,6 @@ void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
   q++; // Skip cube terminator
   if (!restore_clauses && !(internal->opts.restoreall == 2)) {
     LOG ("untainted and not forced to restore all clauses.");
-    clauses.witness_skipped++;
     // now also mark witnesses as skipped.
     q = clause_data.begin () + ss_idx;
     while (*q) {
@@ -148,13 +147,13 @@ void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
   }
   
   while (*q != 0) {
-    clauses.read++;
+    clauses.total++;
     bool wit_embedded, id_long; 
     unsigned other_lits_size;
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
     assert (!wit_embedded);
     
-    int64_t id = decode_id (q, id_long); // TODO: uses iterator now for q
+    int64_t id = decode_id (q, id_long);
     LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
 
     auto lit = q + (id_long ? 3 : 2); // es (idu) idl l1 
@@ -178,7 +177,7 @@ void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
       restore_clause (begin, end, id, 0, 0);
     }
     
-    q += 1 + (id_long ? 2 : 1) + other_lits_size + 1;
+    q += 1 + (id_long ? 2 : 1) + other_lits_size;
   }
   fragmented_clause_data += q - (clause_data.begin () + ss_idx) + 1;
 }
@@ -210,7 +209,7 @@ void External::defragment_clause_data () {
         decode_size_field (*end, wit_embedded, id_long, other_lits_size);
         assert (!wit_embedded);
 
-        end += 2 + other_lits_size + (id_long ? 2 : 1);
+        end += 1 + other_lits_size + (id_long ? 2 : 1);
       }
       ++end; // Include the final terminating zero.
       const size_t stack_size = end - begin;
@@ -237,7 +236,7 @@ void External::defragment_clause_data () {
     unsigned other_lits_size;
     decode_size_field (clause_data[idx], wit_embedded, id_long, other_lits_size);
 
-    const size_t record_size = 2 + other_lits_size + (id_long ? 2 : 1);
+    const size_t record_size = 1 + other_lits_size + (id_long ? 2 : 1);
 
     assert (idx + record_size <= clause_data.size ());
     assert (write <= UINT32_MAX);
@@ -304,14 +303,14 @@ void External::restore () {
       continue;
     } 
     assert (ewit);
+    
+    clauses.total++;
 
     // restore the corresponding clause
     if (internal->opts.restoreall == 2 || marked (tainted, -ewit)) { 
       
       bool wit_embedded, id_long;
       unsigned other_lits_size;
-
-      clauses.read++;
 
       // Now restore the next clause
       auto p = clause_data.begin () + idx;
@@ -346,14 +345,13 @@ void External::restore () {
       } else {
         clauses.restored++;
         restore_clause (begin, end_of_lits, id, ewit, blit);
-        fragmented_clause_data += 2 + other_lits_size + (id_long ? 2 : 1);
+        fragmented_clause_data += 1 + other_lits_size + (id_long ? 2 : 1);
       }
       
       continue;
     }
 
     if (ewit) {
-      clauses.witness_skipped++;
       if (!marked (skipped_witness, ewit))
         mark (skipped_witness, ewit); 
     }
@@ -366,14 +364,9 @@ void External::restore () {
   shrink_vector (witness_data);
 
   witness = std::move (skipped_witness);
-  
-  constexpr double THRESHOLD = 0.25;
-  constexpr size_t MIN_FRAGMENTED_SIZE =  1 << 20; // 1 MiB
 
-  const size_t fragmented_bytes = fragmented_clause_data * sizeof (int);
-
-  if (fragmented_bytes >= MIN_FRAGMENTED_SIZE &&
-      fragmented_clause_data >= THRESHOLD * clause_data.size ()) {
+  if (100 * fragmented_clause_data >
+      internal->opts.restoredefraglim * clause_data.size ()) {
     internal->stats.restore_defrags++;
     defragment_clause_data ();
   }
@@ -382,25 +375,25 @@ void External::restore () {
   if (clauses.satisfied)
     PHASE ("restore", internal->stats.restorations,
            "removed %" PRId64 " satisfied %.0f%% of %" PRId64
-           " read clauses",
-           clauses.satisfied, percent (clauses.satisfied, clauses.read),
-           clauses.read);
+           " clauses",
+           clauses.satisfied, percent (clauses.satisfied, clauses.total),
+           clauses.total);
   else
     PHASE ("restore", internal->stats.restorations,
            "no satisfied clause removed out of %" PRId64
-           " read clauses",
-           clauses.read);
+           " clauses",
+           clauses.total);
 
   if (clauses.restored)
     PHASE ("restore", internal->stats.restorations,
            "restored %" PRId64 " clauses %.0f%% out of %" PRId64
-           " read clauses",
-           clauses.restored, percent (clauses.restored, clauses.read),
-           clauses.read);
+           " clauses",
+           clauses.restored, percent (clauses.restored, clauses.total),
+           clauses.total);
   else
     PHASE ("restore", internal->stats.restorations,
-           "no clause restored out of %" PRId64 " read clauses",
-           clauses.read);
+           "no clause restored out of %" PRId64 " clauses",
+           clauses.total);
   {
     unsigned numtainted = 0;
     for (const auto &b : tainted)
@@ -412,9 +405,6 @@ void External::restore () {
            percent (numtainted, 2u * max_var));
   }
 #endif
-
-  internal->stats.restore_clauses_read += clauses.read;
-  internal->stats.restore_clauses_skipped += clauses.witness_skipped;
 
   tainted.clear ();
   tainted.shrink_to_fit ();

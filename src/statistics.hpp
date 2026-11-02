@@ -257,9 +257,7 @@
   STATISTIC (restorations,           1, relative, "per", searches) \
   STATISTIC (restored_clauses,       1, relative, "per", restorations) \
   STATISTIC (restored_literals,      2, relative, "per", restored_clauses) \
-  STATISTIC (restore_clauses_read,   2, relative, "per", restorations) \
-  STATISTIC (restore_defrags,        2, relative, "per", restorations) \
-  STATISTIC (restore_clauses_skipped,2, relative, "per", restorations) \
+  STATISTIC (restore_defrags,        2, percent, "%", restorations) \
   STATISTIC (reused,                 1, relative, "per", restart) \
   STATISTIC (reused_levels,          2, relative, "per", reused) \
   STATISTIC (reused_stable,          2, relative, "per", reused) \

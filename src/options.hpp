@@ -223,6 +223,7 @@ OPTION( restartmarginstable, 25,  0, 25,0,0,1, "stable slow fast margin in perce
 OPTION( restartreusetrail,    1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,           0,  0,  2,0,0,1, "restore all clauses (2=really)") \
 OPTION( restorecompact,       0,  0,  1,0,0,1, "compact witness order stack after restoring") \
+OPTION( restoredefraglim,    25,  0,100,0,0,1, "defragment when fragmented data is more than percent of the total size") \
 OPTION( restoreflush,         0,  0,  1,0,0,1, "remove satisfied clauses") \
 OPTION( score,                1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,        950,500,1e3,0,0,1, "score factor per mille") \

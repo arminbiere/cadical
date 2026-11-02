@@ -13,7 +13,6 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
-#include <queue>
 
 /*------------------------------------------------------------------------*/
 
@@ -260,8 +259,7 @@ public:
 
   /*----------------------------------------------------------------------*/
   struct RestoreStats {
-    int64_t read, witness_skipped, 
-            satisfied, restored;
+    int64_t total, satisfied, restored;
   };
 
   void defragment_clause_data ();
