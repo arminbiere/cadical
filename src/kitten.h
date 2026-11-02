@@ -35,18 +35,17 @@ void KITTEN_NAMESPACE (kitten_assume) (kitten *, unsigned lit);
 void KITTEN_NAMESPACE (kitten_assume_signed) (kitten *, int lit);
 
 void KITTEN_NAMESPACE (kitten_clause) (kitten *, size_t size, unsigned *);
-void KITTEN_NAMESPACE (citten_clause_with_id) (kitten *, unsigned id,
-                                               size_t size, int *);
+
 void KITTEN_NAMESPACE (kitten_unit) (kitten *, unsigned);
 void KITTEN_NAMESPACE (kitten_binary) (kitten *, unsigned, unsigned);
 
+void KITTEN_NAMESPACE (kitten_clause_with_id) (kitten *, unsigned id,
+                                               size_t size, int *);
 void KITTEN_NAMESPACE (kitten_clause_with_id_and_exception) (
-    kitten *, unsigned id, size_t size, const unsigned *, unsigned except);
-
-void KITTEN_NAMESPACE (citten_clause_with_id_and_exception) (
     kitten *, unsigned id, size_t size, const int *, unsigned except);
-void KITTEN_NAMESPACE (citten_clause_with_id_and_equivalence) (
+void KITTEN_NAMESPACE (kitten_clause_with_id_and_equivalence) (
     kitten *, unsigned id, size_t size, const int *, unsigned, unsigned);
+
 void KITTEN_NAMESPACE (kitten_no_ticks_limit) (kitten *);
 void KITTEN_NAMESPACE (kitten_set_ticks_limit) (kitten *, uint64_t);
 uint64_t KITTEN_NAMESPACE (kitten_current_ticks) (kitten *);

@@ -1745,33 +1745,6 @@ void KITTEN_NAMESPACE (kitten_assume_signed) (kitten *kitten, int elit) {
 }
 
 void KITTEN_NAMESPACE (kitten_clause_with_id_and_exception) (
-    kitten *kitten, unsigned id, size_t size, const unsigned *elits,
-    unsigned except) {
-  REQUIRE_INITIALIZED ();
-  if (kitten->status)
-    reset_incremental (kitten);
-  assert (EMPTY_STACK (kitten->klause));
-  const unsigned *const end = elits + size;
-  for (const unsigned *p = elits; p != end; p++) {
-    const unsigned elit = *p;
-    if (elit == except)
-      continue;
-    const unsigned ilit = import_literal (kitten, elit);
-    assert (ilit < kitten->lits);
-    const unsigned iidx = ilit / 2;
-    if (kitten->marks[iidx])
-      INVALID_API_USAGE ("variable '%u' of literal '%u' occurs twice",
-                         elit / 2, elit);
-    kitten->marks[iidx] = true;
-    PUSH_STACK (kitten->klause, ilit);
-  }
-  for (unsigned *p = kitten->klause.begin; p != kitten->klause.end; p++)
-    kitten->marks[*p / 2] = false;
-  new_original_klause (kitten, id);
-  CLEAR_STACK (kitten->klause);
-}
-
-void KITTEN_NAMESPACE (citten_clause_with_id_and_exception) (
     kitten *kitten, unsigned id, size_t size, const int *elits,
     unsigned except) {
   REQUIRE_INITIALIZED ();
@@ -1798,7 +1771,7 @@ void KITTEN_NAMESPACE (citten_clause_with_id_and_exception) (
   CLEAR_STACK (kitten->klause);
 }
 
-void KITTEN_NAMESPACE (citten_clause_with_id_and_equivalence) (
+void KITTEN_NAMESPACE (kitten_clause_with_id_and_equivalence) (
     kitten *kitten, unsigned id, size_t size, const int *elits,
     unsigned lit, unsigned other) {
   REQUIRE_INITIALIZED ();
@@ -1837,9 +1810,9 @@ void KITTEN_NAMESPACE (kitten_clause) (kitten *kitten, size_t size,
   (kitten, INVALID, size, elits, INVALID);
 }
 
-void KITTEN_NAMESPACE (citten_clause_with_id) (kitten *kitten, unsigned id,
+void KITTEN_NAMESPACE (kitten_clause_with_id) (kitten *kitten, unsigned id,
                                                size_t size, int *elits) {
-  KITTEN_NAMESPACE (citten_clause_with_id_and_exception)
+  KITTEN_NAMESPACE (kitten_clause_with_id_and_exception)
   (kitten, id, size, elits, INVALID);
 }
 

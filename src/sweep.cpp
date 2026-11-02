@@ -376,7 +376,7 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
   // assert (sweeper.clause.size () > 1);
   for (const auto &lit : sweeper.clause)
     add_literal_to_environment (sweeper, depth, lit);
-  KITTEN_NAMESPACE (citten_clause_with_id)
+  KITTEN_NAMESPACE (kitten_clause_with_id)
   (citten, sweeper.clauses.size (), sweeper.clause.size (),
    sweeper.clause.data ());
   sweeper.clause.clear ();

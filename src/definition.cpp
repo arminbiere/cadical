@@ -205,7 +205,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       // representation we instead implement the translation in kitten
       if (!c->garbage) {
         LOG (c, "adding to kitten");
-        KITTEN_NAMESPACE (citten_clause_with_id_and_exception)
+        KITTEN_NAMESPACE (kitten_clause_with_id_and_exception)
         (citten, exported, c->size, c->literals, except);
       }
       exported++;
