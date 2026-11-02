@@ -604,9 +604,7 @@ citten *citten_init (void) {
 }
 
 #ifdef LOGGING
-void citten_set_logging (citten *citten) {
-  logging = true;
-}
+void citten_set_logging (citten *citten) { logging = true; }
 #endif
 
 void citten_track_antecedents (citten *citten) {
@@ -684,8 +682,7 @@ uint64_t citten_current_ticks (citten *citten) {
   return current;
 }
 
-void citten_set_ticks_limit (citten *citten,
-                                                uint64_t delta) {
+void citten_set_ticks_limit (citten *citten, uint64_t delta) {
   REQUIRE_INITIALIZED ();
   const uint64_t current = CITTEN_TICKS;
   uint64_t limit;
@@ -708,7 +705,7 @@ void citten_no_terminator (citten *citten) {
 }
 
 void citten_set_terminator (citten *citten, void *data,
-                                               int (*terminator) (void *)) {
+                            int (*terminator) (void *)) {
   REQUIRE_INITIALIZED ();
   LOG ("setting terminator");
   citten->terminator = terminator;
@@ -1744,9 +1741,9 @@ void citten_assume_signed (citten *citten, int elit) {
   citten_assume (citten, kelit);
 }
 
-void citten_clause_with_id_and_exception (
-    citten *citten, unsigned id, size_t size, const int *elits,
-    unsigned except) {
+void citten_clause_with_id_and_exception (citten *citten, unsigned id,
+                                          size_t size, const int *elits,
+                                          unsigned except) {
   REQUIRE_INITIALIZED ();
   if (citten->status)
     reset_incremental (citten);
@@ -1771,9 +1768,9 @@ void citten_clause_with_id_and_exception (
   CLEAR_STACK (citten->klause);
 }
 
-void citten_clause_with_id_and_equivalence (
-    citten *citten, unsigned id, size_t size, const int *elits,
-    unsigned lit, unsigned other) {
+void citten_clause_with_id_and_equivalence (citten *citten, unsigned id,
+                                            size_t size, const int *elits,
+                                            unsigned lit, unsigned other) {
   REQUIRE_INITIALIZED ();
   if (citten->status)
     reset_incremental (citten);
@@ -1804,24 +1801,21 @@ void citten_clause_with_id_and_equivalence (
   CLEAR_STACK (citten->klause);
 }
 
-void citten_clause (citten *citten, size_t size,
-                                       unsigned *elits) {
-  citten_clause_with_id_and_exception
-  (citten, INVALID, size, elits, INVALID);
+void citten_clause (citten *citten, size_t size, unsigned *elits) {
+  citten_clause_with_id_and_exception (citten, INVALID, size, elits,
+                                       INVALID);
 }
 
-void citten_clause_with_id (citten *citten, unsigned id,
-                                               size_t size, int *elits) {
-  citten_clause_with_id_and_exception
-  (citten, id, size, elits, INVALID);
+void citten_clause_with_id (citten *citten, unsigned id, size_t size,
+                            int *elits) {
+  citten_clause_with_id_and_exception (citten, id, size, elits, INVALID);
 }
 
 void citten_unit (citten *citten, unsigned lit) {
   citten_clause (citten, 1, &lit);
 }
 
-void citten_binary (citten *citten, unsigned a,
-                                       unsigned b) {
+void citten_binary (citten *citten, unsigned a, unsigned b) {
   unsigned clause[2] = {a, b};
   citten_clause (citten, 2, clause);
 }
@@ -1878,13 +1872,10 @@ int citten_solve (citten *citten) {
   return res;
 }
 
-int citten_status (citten *citten) {
-  return citten->status;
-}
+int citten_status (citten *citten) { return citten->status; }
 
-unsigned
-citten_compute_clausal_core (citten *citten,
-                                                uint64_t *learned_ptr) {
+unsigned citten_compute_clausal_core (citten *citten,
+                                      uint64_t *learned_ptr) {
   REQUIRE_STATUS (20);
 
   if (!citten->antecedents)
@@ -1957,8 +1948,8 @@ DONE:
   return original;
 }
 
-void citten_traverse_core_ids (
-    citten *citten, void *state, void (*traverse) (void *, unsigned)) {
+void citten_traverse_core_ids (citten *citten, void *state,
+                               void (*traverse) (void *, unsigned)) {
   REQUIRE_STATUS (21);
 
   LOG ("traversing core of original clauses");
@@ -1983,9 +1974,9 @@ void citten_traverse_core_ids (
   assert (citten->status == 21);
 }
 
-void citten_traverse_core_clauses (
-    citten *citten, void *state,
-    void (*traverse) (void *, bool, size_t, const unsigned *)) {
+void citten_traverse_core_clauses (citten *citten, void *state,
+                                   void (*traverse) (void *, bool, size_t,
+                                                     const unsigned *)) {
   REQUIRE_STATUS (21);
 
   LOG ("traversing clausal core");
@@ -2051,10 +2042,10 @@ void citten_traverse_core_clauses_with_id (
   assert (citten->status == 21);
 }
 
-void citten_trace_core (
-    citten *citten, void *state,
-    void (*trace) (void *, unsigned, unsigned, bool, size_t,
-                   const unsigned *, size_t, const unsigned *)) {
+void citten_trace_core (citten *citten, void *state,
+                        void (*trace) (void *, unsigned, unsigned, bool,
+                                       size_t, const unsigned *, size_t,
+                                       const unsigned *)) {
   REQUIRE_STATUS (21);
 
   LOG ("tracing clausal core");
@@ -2173,8 +2164,7 @@ void citten_shrink_to_clausal_core (citten *citten) {
   UPDATE_STATUS (0);
 }
 
-signed char citten_signed_value (citten *citten,
-                                                    int selit) {
+signed char citten_signed_value (citten *citten, int selit) {
   REQUIRE_STATUS (10);
   const unsigned elit = int2u (selit);
   const unsigned eidx = elit / 2;
@@ -2187,8 +2177,7 @@ signed char citten_signed_value (citten *citten,
   return citten->values[ilit];
 }
 
-signed char citten_value (citten *citten,
-                                             unsigned elit) {
+signed char citten_value (citten *citten, unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
   if (eidx >= citten->evars)
@@ -2200,8 +2189,7 @@ signed char citten_value (citten *citten,
   return citten->values[ilit];
 }
 
-signed char citten_fixed (citten *citten,
-                                             unsigned elit) {
+signed char citten_fixed (citten *citten, unsigned elit) {
   const unsigned eidx = elit / 2;
   if (eidx >= citten->evars)
     return 0;
@@ -2219,14 +2207,12 @@ signed char citten_fixed (citten *citten,
   return res;
 }
 
-signed char citten_fixed_signed (citten *citten,
-                                                    int elit) {
+signed char citten_fixed_signed (citten *citten, int elit) {
   unsigned kelit = int2u (elit);
   return citten_fixed (citten, kelit);
 }
 
-bool citten_flip_literal (citten *citten,
-                                             unsigned elit) {
+bool citten_flip_literal (citten *citten, unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
   if (eidx >= citten->evars)
@@ -2240,8 +2226,7 @@ bool citten_flip_literal (citten *citten,
   return flip_literal (citten, ilit);
 }
 
-bool citten_flip_signed_literal (citten *citten,
-                                                    int elit) {
+bool citten_flip_signed_literal (citten *citten, int elit) {
   REQUIRE_STATUS (10);
   unsigned kelit = int2u (elit);
   return citten_flip_literal (citten, kelit);

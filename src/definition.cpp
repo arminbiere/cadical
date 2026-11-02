@@ -1,5 +1,5 @@
-#include "internal.hpp"
 #include "citten.h"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
@@ -204,8 +204,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       // representation we instead implement the translation in citten
       if (!c->garbage) {
         LOG (c, "adding to citten");
-        citten_clause_with_id_and_exception
-        (citten, exported, c->size, c->literals, except);
+        citten_clause_with_id_and_exception (citten, exported, c->size,
+                                             c->literals, except);
       }
       exported++;
     }
@@ -219,8 +219,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
     uint64_t learned;
-    unsigned reduced =
-        citten_compute_clausal_core (citten, &learned);
+    unsigned reduced = citten_compute_clausal_core (citten, &learned);
     LOG ("1st sub-solver core of size %u original clauses out of %u",
          reduced, exported);
     for (int i = 2; i <= opts.elimdefcores; i++) {
@@ -236,8 +235,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
 #ifndef NDEBUG
       unsigned previous = reduced;
 #endif
-      reduced =
-          citten_compute_clausal_core (citten, &learned);
+      reduced = citten_compute_clausal_core (citten, &learned);
       LOG ("%d sub-solver core of size %u original clauses out of %u", i,
            reduced, exported);
       assert (reduced <= previous);
@@ -248,8 +246,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     stats.eliminate_def_success++;
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
-    citten_traverse_core_ids
-    (citten, &extractor, traverse_definition_core);
+    citten_traverse_core_ids (citten, &extractor, traverse_definition_core);
     assert (eliminator.definition_unit);
     int unit = 0;
     if (eliminator.definition_unit == 2) {
@@ -265,12 +262,12 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       if (proof) {
         if (lrat) {
           extractor.unit = unit;
-          citten_trace_core
-          (citten, &extractor, traverse_one_sided_core_lemma_with_lrat);
+          citten_trace_core (citten, &extractor,
+                             traverse_one_sided_core_lemma_with_lrat);
         } else {
           extractor.unit = unit;
-          citten_traverse_core_clauses
-          (citten, &extractor, traverse_one_sided_core_lemma);
+          citten_traverse_core_clauses (citten, &extractor,
+                                        traverse_one_sided_core_lemma);
         }
       } else
         assign_unit (unit);
@@ -280,8 +277,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");
   }
-  stats.eliminate_def_ticks +=
-      citten_current_ticks (citten);
+  stats.eliminate_def_ticks += citten_current_ticks (citten);
   return;
 }
 

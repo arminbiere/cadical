@@ -214,8 +214,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
 
 bool Internal::citten_ticks_limit_hit (Sweeper &sweeper, const char *when) {
   const uint64_t current =
-      citten_current_ticks (citten) +
-      sweeper.current_ticks;
+      citten_current_ticks (citten) + sweeper.current_ticks;
   if (current >= sweeper.limit.ticks) {
     LOG ("'citten_ticks' limit of %" PRIu64 " ticks hit after %" PRIu64
          " ticks during %s",
@@ -376,9 +375,8 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
   // assert (sweeper.clause.size () > 1);
   for (const auto &lit : sweeper.clause)
     add_literal_to_environment (sweeper, depth, lit);
-  citten_clause_with_id
-  (citten, sweeper.clauses.size (), sweeper.clause.size (),
-   sweeper.clause.data ());
+  citten_clause_with_id (citten, sweeper.clauses.size (),
+                         sweeper.clause.size (), sweeper.clause.data ());
   sweeper.clause.clear ();
   if (opts.sweepcountbinary || sweeper.clause.size () > 2)
     sweeper.encoded++;
@@ -501,8 +499,7 @@ void Internal::citten_clear_track_log_terminate () {
   citten_clear (citten);
   citten_track_antecedents (citten);
   if (external->terminator)
-    citten_set_terminator
-  (citten, internal, citten_terminate);
+    citten_set_terminator (citten, internal, citten_terminate);
 #ifdef LOGGING
   if (opts.log)
     citten_set_logging (citten);
@@ -621,10 +618,10 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
   sweeper.save = core;
   citten_compute_clausal_core (citten, 0);
   if (lrat)
-    citten_trace_core
-  (citten, &sweeper, save_core_clause_with_lrat);
-  else citten_traverse_core_clauses_with_id (
-      citten, &sweeper, save_core_clause);
+    citten_trace_core (citten, &sweeper, save_core_clause_with_lrat);
+  else
+    citten_traverse_core_clauses_with_id (citten, &sweeper,
+                                          save_core_clause);
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
@@ -664,8 +661,7 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
     assert (idx > 0);
     const int lit = idx;
     const int not_lit = -lit;
-    const signed char tmp =
-        citten_signed_value (citten, lit);
+    const signed char tmp = citten_signed_value (citten, lit);
     const int candidate = (tmp < 0) ? not_lit : lit;
     LOG ("sweeping candidate %d", candidate);
     sweeper.backbone.push_back (candidate);
@@ -701,8 +697,7 @@ void Internal::sweep_refine_partition (Sweeper &sweeper) {
         continue;
       if (val (other))
         continue;
-      signed char value =
-          citten_signed_value (citten, other);
+      signed char value = citten_signed_value (citten, other);
       if (!value)
         LOG ("dropping sub-solver unassigned %d", other);
       else if (value > 0) {
@@ -739,8 +734,7 @@ void Internal::sweep_refine_partition (Sweeper &sweeper) {
         continue;
       if (val (other))
         continue;
-      signed char value =
-          citten_signed_value (citten, other);
+      signed char value = citten_signed_value (citten, other);
       if (value < 0) {
         new_partition.push_back (other);
         assigned_false++;
@@ -778,8 +772,7 @@ void Internal::sweep_refine_backbone (Sweeper &sweeper) {
     const int lit = *p;
     if (val (lit))
       continue;
-    signed char value =
-        citten_signed_value (citten, lit);
+    signed char value = citten_signed_value (citten, lit);
     if (!value)
       LOG ("dropping sub-solver unassigned %d", lit);
     else if (value > 0)
