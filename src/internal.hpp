@@ -118,7 +118,6 @@ using namespace std;
 struct Coveror;
 struct External;
 struct Walker_DDFW;
-struct WalkerFO;
 struct Walker;
 class Tracer;
 class FileTracer;
@@ -823,7 +822,6 @@ struct Internal {
   void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
-  void bump_clause2 (Clause *);
   void clear_unit_analyzed_literals ();
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
@@ -1463,12 +1461,6 @@ struct Internal {
                      ClauseOrBinary::clause_or_binary::TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
-
-  int walk_full_occs_round (int64_t limit, bool prev);
-  void walk_full_occs ();
-  void walk_full_occs_save_minimum (WalkerFO &);
-  void make_clauses_along_occurrences (WalkerFO &walker, int lit);
-  void make_clauses_along_unsatisfied (WalkerFO &walker, int lit);
 
   int walk_ddfw_round (int64_t limit, bool prev);
   void walk_ddfw ();

@@ -185,6 +185,9 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
 #define CB_REQUIRE(...) \
   do { \
   } while (0)
+#define REQUIRE_VALID_MOLTEN_LIT(LIT) \
+  do { \
+  } while (0)
 
 /*------------------------------------------------------------------------*/
 #endif

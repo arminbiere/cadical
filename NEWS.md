@@ -57,7 +57,8 @@ New and Improved Techniques:
 - Improved BVA, now includes XOR and ITE factorization and considers
   learned clauses.
 
-- New DDFW algorithm for walking.
+- New DDFW algorithm for walking. Also removed the walk based on full
+- occurrences presented at POS'26, due to its limited effect.
 
 - Equivalent literals substitution (`decompose`) now also works on frozen
   literals: those literals are replaced (but are kept via binary clauses).
