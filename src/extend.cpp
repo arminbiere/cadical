@@ -1,7 +1,6 @@
 #include "internal.hpp"
 #include "util.hpp"
 
-// REVIEW:
 // The extension data allows to reconstruct a satisfying assignment for the
 // original formula after removing weakened clauses. This was pioneered by
 // Niklas Soerensson in MiniSAT and for instance is described in our
@@ -41,6 +40,7 @@
 //          as a literal.
 //  bit 29: The clause ID fits into 32 bits.
 // This allows a more compact representation in the common case.
+//
 /* -------------------------------------------------------------------------- */
 namespace CaDiCaL {
 
@@ -115,11 +115,11 @@ void External::push_clause_on_witness_stack (int iwit, Clause *c) {
     const int elit = internal->externalize (lit);
 
     if (elit == ewit) {
-      if (compactable) { // Do not store the witness literal here.
+      if (compactable) { // Do not store the witness literal.
         embedded = true;
         continue;
       }
-    } else if (!blit) { // Also do not store the blocking literal here.
+    } else if (!blit) { // Also pick some blit. It is stored on witness_data.
       blit = elit;
       continue;
     }
@@ -201,11 +201,11 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
     const int elit = internal->externalize (lit);
 
     if (elit == ewit) {
-      if (compactable) { // Do not store the witness literal here.
+      if (compactable) { // Do not store the witness literal.
         embedded = true;
         continue;
       }
-    } else if (!blit) { // Also do not store the blocking literal here.
+    } else if (!blit) { // Also pick some blit. It is stored on witness_data.
       blit = elit;
       continue;
     }
@@ -366,7 +366,6 @@ void External::push_cube_clause (Clause *c) {
 }
 
 void External::terminate_cube_stack () {
-  LOG ("terminating cube stack with '0'");
   clause_data.push_back(0);
 }
 
@@ -547,8 +546,8 @@ void External::push_external_clause_and_witness_on_extension (
 }
 
 /*------------------------------------------------------------------------*/
-// This is the actual extension process. We traverse 'witness_order'
-// backward and extend the corresponding clauses on the witness stacks.
+// This is the actual extension process. We traverse 'witness_data'
+// backward and extend the corresponding clauses.
 //
 // For each clause, we first check whether its witness is assigned.
 // If so, the clause is satisfied and we can skip examining its literals.
@@ -558,9 +557,9 @@ void External::push_external_clause_and_witness_on_extension (
 // For a witness cube stack, we first check whether the witness cube
 // is satisfied. If so, we can skip all clauses on this stack.
 // Otherwise, we examine the clauses sequentially by traversing the
-// stack backward. Once we find a clause that is unsatisfied by the
-// current assignment, we assign the witness cube and can skip the
-// remaining clauses on this stack.
+// stack. Once we find a clause that is unsatisfied by the current assignment, 
+// we assign the witness cube and can skip the remaining clauses on this stack.
+//
 
 void External::extend_cube_stack (uint32_t ss_idx, ExtendStats &stats) {
   LOG ("extending cube stack at index %u", ss_idx);
@@ -678,9 +677,6 @@ void External::extend () {
 
     // blit && ewit ==> regular clause entry
     // !blit && ewit ==> witness cube reference
-    // TODO: !blit && !ewit ==> offset marker (for supporting 64 bit indexing)
-    //       This should basically happen once. This allows us to only store 
-    //       32 bit indices per clause. 
     if (!blit) { // cube stack reference.
       extend_cube_stack (idx, stats);
       continue;
@@ -786,8 +782,6 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
   if (internal->unsat)
     return true;
 
-  LOG ("traversing witnesses backward...");
-
   vector<int> clause, witness;
 
   auto p = witness_data.end ();
@@ -839,8 +833,6 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
   if (internal->unsat)
     return true;
   
-  LOG ("traversing witnesses forward...");
-
   vector<int> clause, witness;
  
   auto p = witness_data.begin ();

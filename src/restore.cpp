@@ -121,7 +121,7 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
-void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witness, RestoreStats &clauses) {
+bool External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witness, RestoreStats &clauses) {
   auto q = clause_data.begin () + ss_idx;
   bool restore_clauses = false;
 
@@ -143,7 +143,7 @@ void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
       if (!marked (skipped_witness, ewit))
         mark (skipped_witness, ewit);
     }
-    return;
+    return false;
   }
   
   while (*q != 0) {
@@ -180,6 +180,7 @@ void External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
     q += 1 + (id_long ? 2 : 1) + other_lits_size;
   }
   fragmented_clause_data += q - (clause_data.begin () + ss_idx) + 1;
+  return true;
 }
 
 void External::defragment_clause_data () {
@@ -299,9 +300,14 @@ void External::restore () {
     const uint32_t idx = static_cast<uint32_t> (*read++);
 
     if (!blit) {
-      restore_cube_stack (idx, skipped_witness, clauses);
+      if (!restore_cube_stack (idx, skipped_witness, clauses)) {
+        *write++ = ewit;
+        *write++ = blit;
+        *write++ = idx;
+      }
       continue;
     } 
+
     assert (ewit);
     
     clauses.total++;

@@ -169,10 +169,10 @@
   STATISTIC (eliminate_tried_res,    2, relative, "per", eliminate_tried) \
   STATISTIC (eliminate_xor,          2, percent, "%", eliminate_gates) \
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
+  STATISTIC (extensions,             1, relative, "per", searches) \
   STATISTIC (extended,               1, relative, "per", weakened) \
   STATISTIC (extend_clauses_blocked, 2, relative, "per", weakened) \
   STATISTIC (extend_clauses_read,    2, relative, "per", weakened) \
-  STATISTIC (extensions,             1, relative, "per", searches) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
   STATISTIC (factor_added_literals,  2, relative, "per", factored) \
   STATISTIC (factored,               1, percent, "%", vars) \
