@@ -407,6 +407,9 @@ static atomic<bool> tracing_api_calls_through_environment_variable_method{
 #define TRACE(...) \
   do { \
   } while (0)
+#define TRACE_LARGE(...) \
+  do { \
+  } while (0)
 
 /*------------------------------------------------------------------------*/
 #endif
