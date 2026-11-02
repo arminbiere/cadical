@@ -920,9 +920,7 @@ int Internal::local_search_round (int round) {
     limit = LONG_MAX;
 
   int res;
-  if (opts.walkfullocc == 1)
-    res = walk_full_occs_round (limit, true);
-  else if (opts.walkfullocc == 2)
+  if (opts.walkalgo == 1)
     res = walk_ddfw_round (limit, true);
   else
     res = walk_round (limit, true);

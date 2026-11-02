@@ -211,7 +211,7 @@ void Internal::bump_variables () {
 
 // We use the glue time stamp table 'gtab' for fast glue computation.
 
-int Internal::recompute_glue (Clause *c) {
+int Internal::recompute_glue (Clause *const c) {
   int res = 0;
   const int64_t stamp = ++stats.clause_recompute_glue;
   for (const auto &lit : *c) {
@@ -228,14 +228,26 @@ int Internal::recompute_glue (Clause *c) {
 
 // Clauses resolved since the last reduction are marked as 'used', their
 // glue is recomputed and they are promoted if the glue shrinks.  Note that
-// promotion from 'tier3' to 'tier2' will set 'used' to '2'.
-
+// promotion from 'tier3' to 'tier2' will set sets 'used' to 'max_used'.
+//
+// In order to limit the recomputations of the glue, we don't recompute the
+// glue if the clause is already tier1.  However, if we recompute the tier,
+// we still have to do it for the tier limit to be correct.  Since the tier
+// limit is slowly moving down, we actually use the limit
+// `(tier_limit + 1) / 2` (glues are >= 1, so this is the upper-half
+// midpoint) which skips enough recomputation but should allow the solver to
+// get find the proper tier-1 limit.
 inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
   c->used = max_used;
   if (c->hyper)
     return;
   if (!c->redundant)
+    return;
+  const int tier_limit = min (tier1[true], tier1[false]);
+  if (!opts.recomputetier && c->glue <= tier_limit)
+    return;
+  if (opts.recomputetier && c->glue <= (tier_limit + 1) / 2)
     return;
   int new_glue = recompute_glue (c);
   if (new_glue < c->glue)
@@ -247,7 +259,6 @@ inline void Internal::bump_clause (Clause *c) {
   ++stats.bump_used[stable];
 }
 
-void Internal::bump_clause2 (Clause *c) { bump_clause (c); }
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the
