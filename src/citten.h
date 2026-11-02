@@ -26,14 +26,13 @@ void citten_shuffle_clauses (citten *);
 void citten_flip_phases (citten *);
 void citten_randomize_phases (citten *);
 
-void citten_assume (citten *, unsigned lit);
+void citten_assume (citten *, int lit);
 void citten_assume_signed (citten *, int lit);
 
-void citten_clause (citten *, size_t size, unsigned *);
+void citten_unit (citten *, int);
+void citten_binary (citten *, int, int);
 
-void citten_unit (citten *, unsigned);
-void citten_binary (citten *, unsigned, unsigned);
-
+void citten_clause (citten *, size_t size, int *);
 void citten_clause_with_id (citten *, unsigned id, size_t size, int *);
 void citten_clause_with_id_and_exception (citten *, unsigned id,
                                           size_t size, const int *,

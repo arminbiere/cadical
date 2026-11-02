@@ -1727,7 +1727,7 @@ static unsigned int2u (int lit) {
   return (lit < 0) + 2u * (unsigned) idx;
 }
 
-void citten_assume (citten *citten, unsigned elit) {
+void citten_assume (citten *citten, int elit) {
   REQUIRE_INITIALIZED ();
   if (citten->status)
     reset_incremental (citten);
@@ -1801,7 +1801,7 @@ void citten_clause_with_id_and_equivalence (citten *citten, unsigned id,
   CLEAR_STACK (citten->klause);
 }
 
-void citten_clause (citten *citten, size_t size, unsigned *elits) {
+void citten_clause (citten *citten, size_t size, int *elits) {
   citten_clause_with_id_and_exception (citten, INVALID, size, elits,
                                        INVALID);
 }
@@ -1811,12 +1811,12 @@ void citten_clause_with_id (citten *citten, unsigned id, size_t size,
   citten_clause_with_id_and_exception (citten, id, size, elits, INVALID);
 }
 
-void citten_unit (citten *citten, unsigned lit) {
+void citten_unit (citten *citten, int lit) {
   citten_clause (citten, 1, &lit);
 }
 
-void citten_binary (citten *citten, unsigned a, unsigned b) {
-  unsigned clause[2] = {a, b};
+void citten_binary (citten *citten, int a, int b) {
+  int clause[2] = {a, b};
   citten_clause (citten, 2, clause);
 }
 
