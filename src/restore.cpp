@@ -186,16 +186,15 @@ bool External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnes
 void External::defragment_clause_data () {
   LOG ("defragmenting clause data of %zu elements", clause_data.size ());
 
-  assert (witness_data.size () % 3 == 0);
-
   size_t write = 0;
 
-  for (auto p = witness_data.begin (); p != witness_data.end (); p += 3) {
-    const int blit = p[1];
-    const uint32_t idx = static_cast<uint32_t> (p[2]);
+  for (auto p = witness_data.begin (); p != witness_data.end (); ++p) {
+    WitnessEntry &entry = *p;
+    const int blit = entry.blit;
+    const uint64_t idx = entry.idx;
     
     if (!blit) {
-      assert (!p[0]); // ewit
+      assert (!entry.ewit); // ewit
       auto begin = clause_data.begin () + idx;
       auto end = begin;
       // Skip the witness cube and its terminating zero.
@@ -216,10 +215,9 @@ void External::defragment_clause_data () {
       const size_t stack_size = end - begin;
 
       assert (idx + stack_size <= clause_data.size ());
-      assert (write <= UINT32_MAX);
 
       // Update the cube stack index.
-      p[2] = static_cast<int> (write);
+      entry.idx = write;
 
       // Move the complete shared stack.
       if (write != idx) {
@@ -230,7 +228,7 @@ void External::defragment_clause_data () {
       write += stack_size;
       continue;
     }
-    assert (p[0]); // ewit
+    assert (entry.ewit);
     
 
     bool wit_embedded, id_long;
@@ -240,10 +238,9 @@ void External::defragment_clause_data () {
     const size_t record_size = 1 + other_lits_size + (id_long ? 2 : 1);
 
     assert (idx + record_size <= clause_data.size ());
-    assert (write <= UINT32_MAX);
 
     // Update the index in the witness entry
-    p[2] = static_cast<int> (write);
+    entry.idx = write;
 
     // Move the record to its compacted position.
     if (write != idx) {
@@ -288,22 +285,19 @@ void External::restore () {
   
   vector<bool> skipped_witness; // implies that the witness will still exist afterwards.
 
-  assert (witness_data.size () % 3 == 0);
-
   auto read = witness_data.begin ();
   auto write = witness_data.begin (); 
   auto end = witness_data.end ();
 
   while (read != end) {
-    const int ewit = *read++;
-    const int blit = *read++;
-    const uint32_t idx = static_cast<uint32_t> (*read++);
+    const WitnessEntry &entry = *read++;
+    const int ewit = entry.ewit;
+    const int blit = entry.blit;
+    const uint64_t idx = entry.idx;
 
     if (!blit) {
       if (!restore_cube_stack (idx, skipped_witness, clauses)) {
-        *write++ = ewit;
-        *write++ = blit;
-        *write++ = idx;
+        *write++ = entry;
       }
       continue;
     } 
@@ -361,9 +355,7 @@ void External::restore () {
       if (!marked (skipped_witness, ewit))
         mark (skipped_witness, ewit); 
     }
-    *write++ = ewit;
-    *write++ = blit;
-    *write++ = idx;
+    *write++ = entry;
   }
 
   witness_data.resize (write - witness_data.begin ());

@@ -99,7 +99,14 @@ public:
 
   size_t fragmented_clause_data = 0;
   vector<int> clause_data;
-  vector<int> witness_data; // entries of form: wit | blit | idx
+
+  struct WitnessEntry {
+    int ewit;
+    int blit;
+    uint64_t idx;
+  };
+
+  vector<WitnessEntry> witness_data;
 
   vector<bool> witness; // Non-emptyness flag for witness stacks
   vector<bool> tainted; // Literal tainted in adding literals.
