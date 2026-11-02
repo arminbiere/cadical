@@ -120,10 +120,10 @@ enum Status {
 //                    set / trace
 //  CONFIGURING --------------------------> CONFIGURING
 //
-//               add (non zero literal)
-//        VALID --------------------------> ADDING
+//               add / constrain (non zero literal)
+//        VALID --------------------------> ADDING[_CONSTRAINT]
 //
-//               add (zero literal)
+//               add /constrain (zero literal)
 //        VALID --------------------------> STEADY
 //
 //               assume (non zero literal)
@@ -192,20 +192,21 @@ enum Status {
 // States are represented by a bit-set in order to combine them.
 
 enum State {
-  INITIALIZING = 1,   // during initialization (invalid)
-  CONFIGURING = 2,    // configure options (with 'set')
-  STEADY = 4,         // ready to call 'solve'
-  ADDING = 8,         // adding clause literals (zero missing)
-  SOLVING = 16,       // while solving (within 'solve')
-  SATISFIED = 32,     // satisfiable allows 'val'
-  UNSATISFIED = 64,   // unsatisfiable allows 'failed'
-  DELETING = 128,     // during and after deletion (invalid)
-  INCONCLUSIVE = 256, // unknown allows 'implied'
+  INITIALIZING = 1,       // during initialization (invalid)
+  CONFIGURING = 2,        // configure options (with 'set')
+  STEADY = 4,             // ready to call 'solve'
+  ADDING = 8,             // adding clause literals (zero missing)
+  ADDING_CONSTRAINT = 16, // adding constraint literals (zero missing)
+  SOLVING = 32,           // while solving (within 'solve')
+  SATISFIED = 64,         // satisfiable allows 'val'
+  UNSATISFIED = 128,      // unsatisfiable allows 'failed'
+  DELETING = 256,         // during and after deletion (invalid)
+  INCONCLUSIVE = 512,     // unknown allows 'implied'
 
   // These combined states are used to check contracts.
 
   READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED | INCONCLUSIVE,
-  VALID = READY | ADDING,
+  VALID = READY | ADDING | ADDING_CONSTRAINT,
   INVALID = INITIALIZING | DELETING
 };
 
@@ -285,7 +286,7 @@ public:
   // returning from 'simplify' and 'lookahead.
   //
   //   require (READY)
-  //   ensure (STEADY )
+  //   ensure (STEADY)
   //
   void assume (int lit);
 
@@ -374,7 +375,7 @@ public:
   // the first one is implicitly disconnected.
   //
   //   require (VALID)
-  //   ensure (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   void connect_terminator (Terminator *terminator);
   void disconnect_terminator ();
@@ -406,8 +407,8 @@ public:
   // Disconnection of the external propagator resets all the observed
   // variables.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (READY)
+  //   ensure (STEADY)
   //
   void connect_external_propagator (ExternalPropagator *propagator);
   void disconnect_external_propagator ();
@@ -421,8 +422,8 @@ public:
   // An observed variable is allowed to be a fresh variable and it can be
   // added also during solving.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void add_observed_var (int var);
 
@@ -430,16 +431,16 @@ public:
   // set unobserved only when it is unassigned, in order to guarantee
   // that no yet unexplained external propagation involves it.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void remove_observed_var (int var);
 
   // Removes all the 'observed' flags from the variables. Disconnecting the
   // propagator invokes this step as well.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void reset_observed_vars ();
 
@@ -493,9 +494,11 @@ public:
   //
   // Add valid literal to the constraint clause or zero to terminate it.
   //
-  //   require (VALID)                     // recall 'VALID = READY |
-  //   ADDING' if (lit) ensure (ADDING)            // and thus VALID but not
-  //   READY if (!lit) && !adding_clause ensure (STEADY ) // and thus READY
+  //   require (VALID)  // recall 'VALID = READY | ADDING_CONSTRAINT'
+  //   if (lit) ensure (ADDING_CONSTRAINT)
+  //     and thus VALID but not READY
+  //   if (!lit) && !adding_clause ensure (STEADY)
+  //     and thus READY
   //
   void constrain (int lit);
 
@@ -551,7 +554,7 @@ public:
   // the function is not able to determine satisfiability also zero is
   // returned but the state remains steady.
   //
-  //   require (READY)
+  //   require (READY & !SATISFIED & !UNSATISFIED)
   //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
@@ -632,8 +635,8 @@ public:
   // might need to reallocate tables, it destroys a satisfying assignment
   // and has the same state transition and conditions as 'assume' etc.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
@@ -649,13 +652,14 @@ public:
   // variable name of the consecutive range of newly delcared variables.
   // It has the same state transition and conditions as 'resize' above.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
   //   require (SOLVING)
   //   ensure (SOLVING)
+  //
   int declare_more_variables (int number_of_additional_new_vars);
 
   // Returns the next fresh variable that was not used internally.
@@ -687,6 +691,9 @@ public:
   //   ensure (VALID)
   //
   void trace_api_calls (FILE *file);
+  // same, but the file is owned by the library and is closed during
+  // deletion
+  void trace_api_calls (const char *name);
 #endif
 
   //------------------------------------------------------------------------
@@ -860,6 +867,10 @@ public:
   //   ensure (VALID)
   //
   bool frozen (int lit) const;
+  //
+  //   require (READY)
+  //   ensure (STEADY)
+  //
   void freeze (int lit);
   void melt (int lit); // Also needs 'require (frozen (lit))'.
 
@@ -876,6 +887,9 @@ public:
 
   //------------------------------------------------------------------------
   // Force the default decision phase of a variable to a certain value.
+  //
+  //   require (READY || SOLVING)
+  //   ensure (STEADY || SOLVING)
   //
   void phase (int lit);
   void unphase (int lit);
@@ -998,6 +1012,7 @@ public:
   //   ensure (VALID)
   //
   bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_constraint (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
 
@@ -1134,6 +1149,8 @@ private:
   void trace_api_call (const char *, int, int) const;
   void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
+  void trace_api_call_large (const char *, int64_t) const;
+  void trace_api_call_large (const char *, const char *, int64_t) const;
 #endif
 
   void transition_to_steady_state ();
@@ -1234,64 +1251,10 @@ private:
   bool observed (int lit);
   bool is_witness (int lit);
 
-  friend struct VarsCall;
-  friend struct ActiveCall;
-  friend struct RedundantCall;
-  friend struct IrredundantCall;
-  friend struct FreezeCall;
-  friend struct FrozenCall;
-  friend struct MeltCall;
-  friend struct LimitCall;
-  friend struct OptimizeCall;
-  friend struct StatsCall;
-  friend struct ResizeCall;
-  friend struct DeclareMoreVariablesCall;
-  friend struct DeclareOneMoreVariableCall;
-  friend struct FixedCall;
-  friend struct PhaseCall;
-  friend struct UnPhaseCall;
-  friend struct ReserveCall;
-  friend struct IsDecisionCall;
-  friend struct CurrentValueCall;
-  friend struct LemmaCall;
-  friend struct DecideCall;
-  friend struct MockForceCall;
-  friend struct ObserveCall;
+  friend struct Call;
+  friend struct ReadSolutionCall;
   friend struct ObservedCall;
   friend struct IsWitnessCall;
-  friend struct UnObserveCall;
-  friend struct ResetObservedCall;
-  friend struct PropagateLemmaCall;
-  friend struct DisconnectCall;
-  friend struct CBDecideCall;
-  friend struct CBPropagateCall;
-  friend struct CBHasClauseCall;
-  friend struct CBAddClauseCall;
-  friend struct CBAddReasonCall;
-  friend struct CBCheckModelCall;
-  friend struct NotifyBatchAssignmentCall;
-  friend struct NotifyAssignmentCall;
-  friend struct NotifyBacktrackCall;
-  friend struct NotifyLevelCall;
-  friend struct CloseProofTraceCall;
-  friend struct FlushProofTraceCall;
-  friend struct TraceProofCall;
-  friend struct ConcludeCall;
-  friend struct FailedCall;
-  friend struct FlippableCall;
-  friend struct FlipCall;
-  friend struct ValCall;
-  friend struct LookaheadCall;
-  friend struct ResetAssumptionsCall;
-  friend struct ImpliedCall;
-  friend struct PropagateAssumptionsCall;
-  friend struct SimplifyCall;
-  friend struct SolveCall;
-  friend struct AssumeCall;
-  friend struct ConstrainCall;
-  friend struct AddCall;
-  friend struct ConfigureCall;
-  friend struct SetCall;
   friend class MockPropagator;
   friend class ReplayPropagator;
   friend struct ExtendMap;

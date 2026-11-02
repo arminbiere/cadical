@@ -5,12 +5,10 @@
 
 #include "exttoint.hpp"
 #include "range.hpp"
-#include "util.hpp"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -167,6 +165,7 @@ public:
   // larger than 'max_var' are not molten and can thus always be used in the
   // future.  Only needed to check and debug old style freeze semantics.
   //
+  bool checkfrozen;
   vector<bool> moltentab;
 
   //----------------------------------------------------------------------//
@@ -195,8 +194,18 @@ public:
   inline bool is_valid_input (int elit) {
     assert (elit);
     assert (elit != INT_MIN);
-    int eidx = abs (elit);
-    return eidx > max_var || !ervars[eidx];
+    size_t eidx = abs (elit);
+    return eidx > (size_t) max_var || !ervars[eidx];
+  }
+  inline bool check_frozen (int elit) {
+    if (!checkfrozen)
+      return true;
+    assert (elit);
+    assert (elit != INT_MIN);
+    size_t eidx = abs (elit);
+    if (eidx >= moltentab.size ())
+      return true;
+    return !moltentab[eidx];
   }
 
   inline int internal_lit (int elit) const {
@@ -431,7 +440,7 @@ public:
   void conclude_unknown ();
 
   /*----------------------------------------------------------------------*/
-  int lookahead ();
+  int lookahead (int &);
   CaDiCaL::CubesWithStatus generate_cubes (int, int);
 
   int fixed (int elit) const; // Implemented in 'internal.hpp'.

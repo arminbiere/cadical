@@ -340,7 +340,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         continue;
       }
       if (internal->terminated_asynchronously ())
-        return "parsing interrupted";
+        return "parsing interrupted by signal";
       const char *err = parse_lit (ch, lit, vars, strict);
       if (err == cube_token)
         PER ("two 'a' in a row");
@@ -402,7 +402,7 @@ const char *Parser::parse_solution_non_profiled () {
   int ch;
   for (;;) {
     if (internal->terminated_asynchronously ())
-      return "parsing solution interrupted";
+      return "parsing solution interrupted by signal";
     ch = parse_char ();
     if (ch == EOF)
       PER ("missing 's' line");

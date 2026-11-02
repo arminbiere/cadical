@@ -980,7 +980,7 @@ int App::main (int argc, char **argv) {
   solver->section ("shutting down");
   solver->message ("exit %d", res);
 #ifndef QUIET
-  if (!res && !get ("quiet")) {
+  if (!res && Signal::received () == SIGALRM && !solver->get ("quiet")) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"

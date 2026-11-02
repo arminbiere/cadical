@@ -26,9 +26,9 @@ namespace CaDiCaL {
 // restarts and instead rely on CDCL to do that for us. Another difference
 // is that we cannot flip assumption literals, which are all set on level 1.
 //
-// Compared to `walk_full_occs` which is the Kissat version, we use
-// `size_t` instead of unsigned because the only gain is the size of
-// the occurrences, but not in the information of the clauses.
+// Compared to Kissat's version, we use `size_t` instead of unsigned because
+// the only gain is the size of the occurrences, but not in the information
+// of the clauses.
 //
 // For ticks, we assume that the main array containing all clauses is
 // always in cache.

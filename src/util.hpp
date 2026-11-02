@@ -169,6 +169,21 @@ template <typename T> struct DeferDeleteArray {
   }
 };
 
+template <typename T> struct DeferCloseFile {
+  T *data;
+  DeferCloseFile (T *t) : data (t) {}
+  ~DeferCloseFile () {
+    if (data)
+      fclose (data);
+  }
+  void release () { data = nullptr; }
+  void free () {
+    if (data)
+      fclose (data);
+    data = nullptr;
+  }
+};
+
 template <typename T> struct DeferDeletePtr {
   T *data;
   DeferDeletePtr (T *t) : data (t) {}

@@ -12,7 +12,7 @@ struct Internal;
 struct sweep_proof_clause {
   unsigned sweep_id; // index for sweeper.clauses
   int64_t cad_id;    // cadical id
-  unsigned kit_id;   // kitten id
+  unsigned kit_id;   // citten id
   bool learned;
   std::vector<int> literals;
   std::vector<unsigned> chain; // lrat

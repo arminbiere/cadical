@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -705,7 +705,6 @@ void Internal::mark_eliminated_clauses_as_garbage (
 // Try to eliminate 'pivot' by bounded variable elimination.
 void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
                                           bool &deleted_binary_clause) {
-
   if (!active (pivot))
     return;
   assert (!frozen (pivot));
@@ -1056,12 +1055,12 @@ void Internal::init_citten () {
   if (!opts.elimdef)
     return;
   assert (!citten);
-  citten = KITTEN_NAMESPACE (kitten_init) ();
+  citten = citten_init ();
 }
 
 void Internal::reset_citten () {
   if (citten) {
-    KITTEN_NAMESPACE (kitten_release) (citten);
+    citten_release (citten);
     citten = 0;
   }
 }

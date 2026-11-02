@@ -1057,7 +1057,12 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   // This might be compiler dependent though. Crucial for correctness.
   //
   assert (c->bytes () == bytes);
-  LOG (c, "new pointer %p", (void *) c);
+#ifdef LOGGING
+  if (internal->opts.logpointer)
+    LOG (c, "new pointer %p", (void *) c);
+  else
+    LOG (c, "new");
+#endif
 
   if (internal->proof)
     internal->proof->add_derived_clause (internal->clause_id, false, clause,
@@ -7900,7 +7905,6 @@ void Closure::extract_gates () {
     assert (mu2_ids.empty ());
     assert (mu4_ids.empty ());
   }
-
   extract_xor_gates ();
   assert (internal->unsat || lrat_chain.empty ());
   assert (internal->unsat || chain.empty ());

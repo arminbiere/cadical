@@ -8,12 +8,16 @@
 namespace CaDiCaL {
 
 External::External (Internal *i)
-    : internal (i), max_var (0), vsize (0), extended (false), concluded (false), 
-      terminator (0), learner (0), fixed_listener (0), propagator (0), 
-      solution (0), vars (max_var) {
+    : internal (i), max_var (0), vsize (0), extended (false),
+      concluded (false), terminator (0), learner (0), fixed_listener (0),
+      propagator (0), trace_api_file (0), solution (0), vars (max_var) {
   assert (internal);
   assert (!internal->external);
   internal->external = this;
+  e2i.limit_to_check = internal->opts.varinitswitch;
+  e2i.internal = internal;
+  e2i.incremental_scaling = internal->opts.varswitchscale;
+  checkfrozen = internal->opts.checkfrozen;
 }
 
 External::~External () {
@@ -87,6 +91,9 @@ void External::reserve (int new_max_var) {
     ext_flags.push_back (0);
     ervars.push_back (0);
   }
+  if (checkfrozen)
+    if (new_max_var >= (int64_t) moltentab.size ())
+      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (internal->i2e.size () == (size_t) internal->max_var + 1);
   assert (eidx == (size_t) new_max_var + 1);
   max_var = new_max_var;
@@ -106,9 +113,6 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  if (internal->opts.checkfrozen)
-    if (new_max_var >= (int64_t) moltentab.size ())
-      moltentab.resize (1 + (size_t) new_max_var, false);
   assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
 }
 
@@ -125,8 +129,18 @@ void External::reset_concluded () {
 }
 
 void External::reset_constraint () {
-  constraint.clear ();
-  internal->reset_constraint ();
+  if (constraint.empty ()) {
+    // nothing do to
+  } else if (constraint.back ()) {
+    LOG ("the constraint was not finished");
+    // the constraint was not imported yet and thus not finalized, so
+    // just dropping it
+    constraint.clear ();
+    internal->constraint.clear ();
+  } else {
+    constraint.clear ();
+    internal->reset_constraint ();
+  }
 }
 
 void External::reset_extended () {
@@ -176,7 +190,7 @@ int External::internalize (int elit, bool extension) {
       if (elit < 0)
         ilit = -ilit;
     }
-    if (internal->opts.checkfrozen) {
+    if (checkfrozen) {
       assert (eidx < (int64_t) moltentab.size ());
       if (moltentab[eidx])
         FATAL ("can not reuse molten literal %d", eidx);
@@ -193,7 +207,7 @@ int External::internalize (int elit, bool extension) {
     if (extension)
       f.elim = false;
     if (!marked (tainted, elit) && marked (witness, -elit)) {
-      assert (!internal->opts.checkfrozen);
+      assert (!checkfrozen);
       LOG ("marking tainted %d", elit);
       mark (tainted, elit); 
     }
@@ -347,8 +361,9 @@ bool External::failed_constraint () {
 void External::phase (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
-  // this test is a bit stupid, it is triggereing an assertion, but we we
-  // could simply add thos to the other if...
+  // this test is a bit stupid,
+  // it is triggering an assertion, but we
+  // could simply add those to the other if...
   if (std::abs (elit) > max_var) {
     reset_extended ();
   }
@@ -398,9 +413,6 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  REQUIRE (eidx > max_var ||
-               (!marked (witness, elit) && !marked (witness, -elit)),
-           "Only clean variables are allowed to be observed.");
   // if (eidx <= max_var &&
   //     (marked (witness, elit) || marked (witness, -elit))) {
   //   LOG ("Error, only clean variables are allowed to become observed.");
@@ -547,24 +559,24 @@ bool External::is_decision (int elit) {
   int eidx = abs (elit);
   if (eidx > max_var)
     return false;
-
-  int ilit = internalize (elit);
+  int ilit = internal_lit (elit);
+  if (!ilit)
+    return false;
   return internal->is_decision (ilit);
 }
+
 signed char External::current_val (int elit) {
   assert (observed (elit));
-  // assert (elit < e2i.size ());
-  int ilit = e2i[abs (elit)];
+  int ilit = internalize (elit);
   assert (ilit);
-  if (elit < 0)
-    ilit = -ilit;
   signed char res = internal->val (ilit);
   return res;
 }
 
 bool External::force_unassign (int elit) {
-  const int eidx = abs (elit);
-  const int iidx = e2i[eidx];
+  assert (observed (elit));
+  const int iidx = internalize (elit);
+  assert (iidx);
   if (!internal->val (iidx))
     return true;
   while (internal->val (iidx)) {
@@ -673,9 +685,9 @@ void External::check_solve_result (int res) {
 // for checking the deprecated 'freeze' semantics.
 
 void External::update_molten_literals () {
-  if (!internal->opts.checkfrozen)
+  if (!checkfrozen)
     return;
-  assert ((size_t) max_var + 1 == moltentab.size ());
+  assert (!max_var || (size_t) max_var + 1 == moltentab.size ());
 #ifdef LOGGING
   int registered = 0, molten = 0;
 #endif
@@ -711,14 +723,16 @@ int External::solve (bool preprocess_only) {
 
 void External::terminate () { internal->terminate (); }
 
-int External::lookahead () {
+int External::lookahead (int &lit) {
   reset_extended ();
   update_molten_literals ();
-  int ilit = internal->lookahead ();
+  int ilit = 0;
+  int res = internal->lookahead (ilit);
   const int elit =
       (ilit && ilit != INT_MIN) ? internal->externalize (ilit) : 0;
   LOG ("lookahead internal %d external %d", ilit, elit);
-  return elit;
+  lit = elit;
+  return res;
 }
 
 CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
@@ -732,7 +746,7 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
     MSG ("lookahead internal %d external %d", ilit, elit);
     return elit;
   };
-  auto externalize_map = [this, externalize] (std::vector<int> cube) {
+  auto externalize_map = [this, externalize] (std::vector<int> &cube) {
     (void) this;
     MSG ("Cube : ");
     std::for_each (begin (cube), end (cube), externalize);

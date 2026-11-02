@@ -59,7 +59,7 @@ u  vivified tier1 clauses
 v  vivified tier2 clauses
 w  vivified tier3 clauses
 x  vivified irredundant clauses
-=  sweeping to find equivalences using Kitten
+=  sweeping to find equivalences using Citten
 f  factor (BVA)
 
 The order of the list follows the occurrences of 'report' in the source

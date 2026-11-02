@@ -7,55 +7,75 @@
 //      length 21,  (Always/!0/verbose/never), (relative/percent/MACRO)
 #ifndef NTRACING
 #define CADICAL_API_STATISTICS \
-  STATISTIC (api_init,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_reset,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_vars,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_var,           3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_vars,          3, NOTHING, 0, 0) \
-  STATISTIC (api_resize,                3, NOTHING, 0, 0) \
-  STATISTIC (api_set,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_limit,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_configure,             3, NOTHING, 0, 0) \
-  STATISTIC (api_add,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_constrain,             3, NOTHING, 0, 0) \
-  STATISTIC (api_assume,                3, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead,             3, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead_cubes,       3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_assumptions,     3, NOTHING, 0, 0) \
-  STATISTIC (api_propagate_assumptions, 3, NOTHING, 0, 0) \
-  STATISTIC (api_implied,               3, NOTHING, 0, 0) \
-  STATISTIC (api_solve,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_simplify,              3, NOTHING, 0, 0) \
-  STATISTIC (api_flip,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_flippable,             3, NOTHING, 0, 0) \
-  STATISTIC (api_failed,                3, NOTHING, 0, 0) \
-  STATISTIC (api_constraint_failed,     3, NOTHING, 0, 0) \
-  STATISTIC (api_fixed,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_phase,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_unphase,               3, NOTHING, 0, 0) \
-  STATISTIC (api_active,                3, NOTHING, 0, 0) \
-  STATISTIC (api_redundant,             3, NOTHING, 0, 0) \
-  STATISTIC (api_irredundant,           3, NOTHING, 0, 0) \
-  STATISTIC (api_freeze,                3, NOTHING, 0, 0) \
-  STATISTIC (api_melt,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_frozen,                3, NOTHING, 0, 0) \
-  STATISTIC (api_trace_proof,           3, NOTHING, 0, 0) \
-  STATISTIC (api_flush_proof_trace,     3, NOTHING, 0, 0) \
-  STATISTIC (api_close_proof_trace,     3, NOTHING, 0, 0) \
-  STATISTIC (api_conclude,              3, NOTHING, 0, 0) \
-  STATISTIC (api_stats,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_resources,             3, NOTHING, 0, 0) \
-  STATISTIC (api_dump,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_observed,              3, NOTHING, 0, 0) \
-  STATISTIC (api_is_decision,           3, NOTHING, 0, 0) \
-  STATISTIC (api_connect,               3, NOTHING, 0, 0) \
-  STATISTIC (api_disconnect,            3, NOTHING, 0, 0) \
-  STATISTIC (api_observe,               3, NOTHING, 0, 0) \
-  STATISTIC (api_unobserve,             3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
-  STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
-  STATISTIC (api_is_witness,            3, NOTHING, 0, 0) \
-  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0)
+  STATISTIC (api_init,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_reset,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_vars,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_declare_var,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_declare_vars,                         4, NOTHING, 0, 0) \
+  STATISTIC (api_resize,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_set,                                  4, NOTHING, 0, 0) \
+  STATISTIC (api_set_long_option,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_optimize,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_limit,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_configure,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_add,                                  4, NOTHING, 0, 0) \
+  STATISTIC (api_constrain,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_assume,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_lookahead,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_lookahead_cubes,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_reset_assumptions,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_propagate_assumptions,                4, NOTHING, 0, 0) \
+  STATISTIC (api_implied,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_solve,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_simplify,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_flip,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_flippable,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_failed,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_constraint_failed,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_fixed,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_phase,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_unphase,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_active,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_redundant,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_irredundant,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_freeze,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_melt,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_frozen,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_trace_proof,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_flush_proof_trace,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_close_proof_trace,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_conclude,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_stats,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_resources,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_dump,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_observed,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_is_decision,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_propagator,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_propagator,                4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_proof_tracer,                 4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_proof_tracer,              4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_fixed_listener,               4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_fixed_listener,            4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_learner,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_learner,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_terminator,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_terminator,                4, NOTHING, 0, 0) \
+  STATISTIC (api_observe,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_unobserve,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_reset_observed,                       4, NOTHING, 0, 0) \
+  STATISTIC (api_force_backtrack,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_is_witness,                           4, NOTHING, 0, 0) \
+  STATISTIC (api_force_unassign,                       4, NOTHING, 0, 0) \
+  STATISTIC (api_read_dimacs,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_read_solution,                        4, NOTHING, 0, 0) \
+  STATISTIC (api_write_dimacs,                         4, NOTHING, 0, 0) \
+  STATISTIC (api_write_extension,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_copy,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_clauses,                     4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_constraint,                  4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_witness_forward,             4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_witness_backward,            4, NOTHING, 0, 0) \
+
 
 #else
 #define CADICAL_API_STATISTICS
@@ -173,6 +193,8 @@
   STATISTIC (extended,               1, relative, "per", weakened) \
   STATISTIC (extend_clauses_blocked, 2, relative, "per", weakened) \
   STATISTIC (extend_clauses_read,    2, relative, "per", weakened) \
+  STATISTIC (exttointchecked,        3, relative, "per", searches) \
+  STATISTIC (exttointswitched,       3, relative, "per", exttointchecked) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
   STATISTIC (factor_added_literals,  2, relative, "per", factored) \
   STATISTIC (factored,               1, percent, "%", vars) \

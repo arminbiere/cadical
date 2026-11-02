@@ -103,16 +103,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
     assert (subsuming->size == 2);
     LOG (subsuming,
          "binary subsuming clause was already deleted, so undeleting");
-    subsuming->garbage = false;
-    subsuming->glue = 1;
-    ++stats.clauses_now_total;
-    if (subsuming->redundant)
-      stats.clauses_now_red++;
-    else
-      stats.clauses_now_irr++,
-          stats.irredundant_literals += subsuming->size;
-    stats.garbage_literals -= subsuming->size;
-    --stats.garbage_clauses;
+    undelete_clause (subsuming);
   }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
@@ -141,6 +132,18 @@ inline void Internal::demote_clause (Clause *c) {
   stats.clauses_redundant++;
   c->glue = c->size - 1;
   // ... and keep 'stats.clauses'.
+}
+
+inline void Internal::undelete_clause (Clause *c) {
+  c->garbage = false;
+  c->glue = 1;
+  ++stats.clauses_now_total;
+  if (c->redundant)
+    stats.clauses_now_red++;
+  else
+    stats.clauses_now_irr++, stats.irredundant_literals += c->size;
+  stats.garbage_literals -= c->size;
+  --stats.garbage_clauses;
 }
 
 /*------------------------------------------------------------------------*/
@@ -631,6 +634,8 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
       if (reason != start && reason->redundant) {
         const int new_glue = recompute_glue (reason);
         promote_clause (reason, new_glue);
+      } else if (reason != start && reason->garbage) {
+        undelete_clause (reason);
       }
       if (subsumes) {
         assert (reason);
@@ -728,6 +733,8 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     if (reason != candidate && reason->redundant) {
       const int new_glue = recompute_glue (reason);
       promote_clause (reason, new_glue);
+    } else if (reason != candidate && reason->garbage) {
+      undelete_clause (reason);
     }
     if (subsumes) {
       assert (candidate != reason);
@@ -772,6 +779,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
 bool Internal::vivify_shrinkable (const std::vector<int> &sorted,
                                   Clause *conflict) {
 
+  LOG (conflict, "checking shrinkable");
   unsigned count_implied = 0;
   for (auto lit : sorted) {
     const signed char value = val (lit);
@@ -1139,6 +1147,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       promote_clause (c, new_glue);
       res = false;
     } else {
+      LOG (c, "vivify implied by irredundant clauses");
       mark_garbage (c);
       ++stats.vivify_implied;
       res = true;

@@ -40,6 +40,8 @@ public:
   bool operator() (int a, int b) { return a == b; }
 };
 
+struct Internal;
+
 // This class encapsulates the mapping from external literals to
 // internal literals.
 //
@@ -53,14 +55,17 @@ public:
 //
 struct ExtToInt {
 
+  Internal *internal;
   // are we using a hash-map or still a vector?
   bool use_hash_map = false;
   // hash-map mapping external 'idx' to internal 'ilit'
   hashmap<int, int, IntFirstHash, IntSecondHash, IntTumb, IntEqualTo> h_e2i;
   // vector mapping external 'idx' to internal 'ilit'
   array_hashmap vec_e2i;
-  int limit_to_check = 1e6; // limit to check when adding literals to switch
-                            // from vector to hashmap
+  int limit_to_check;      // limit to check when adding literals to switch
+                           // from vector to hashmap
+  int incremental_scaling; // geometric reason for increasing the limit to
+                           // check
 
   // returns the corresponding ilit or the default value.
   Key find_or_default (int key, int default_el) const {
@@ -83,6 +88,7 @@ struct ExtToInt {
   int operator[] (int i) {
     if (use_hash_map)
       return h_e2i[i];
+    assert (i > 0 && (size_t) i < vec_e2i.table.size ());
     return vec_e2i[i];
   }
 
@@ -90,22 +96,29 @@ struct ExtToInt {
   void update (int i, int j) {
     if (use_hash_map)
       h_e2i.update (i, j);
-    return vec_e2i.update (i, j);
+    else
+      vec_e2i.update (i, j);
   }
 
   // insert the elit mapping it to the ilit j.
   void insert (int i, int j) {
     if (use_hash_map)
-      h_e2i.insert (i, j);
+      return h_e2i.insert (i, j);
+
     if (i > limit_to_check) {
       // ensure that we do not test too often
       // when adding literals one-by-one.
-      if (limit_to_check <= std::numeric_limits<int>::max () / 2)
-        limit_to_check *= 2;
+      if (limit_to_check <= std::numeric_limits<int>::max () / 100)
+        limit_to_check += (incremental_scaling * limit_to_check) / 100;
       else
         limit_to_check = std::numeric_limits<int>::max ();
+      assert (limit_to_check);
       if (vec_e2i.table.size ()) {
         maybe_compress (vec_e2i.table.size () - 1);
+        if (use_hash_map)
+          return h_e2i.insert (i, j);
+        else
+          return vec_e2i.insert (i, j);
       } else {
         use_hash_map = true;
         erase_vector (vec_e2i.table);

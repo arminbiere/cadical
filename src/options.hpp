@@ -94,9 +94,9 @@ OPTION( elimbackward,         1,  0,  1,0,0,1, "eager backward subsumption") \
 OPTION( elimboundmax,        16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,         0, -1,2e6,0,0,1, "minimum elimination bound") \
 OPTION( elimclslim,         1e2,  2,2e9,2,0,1, "resolvent size limit") \
-OPTION( elimdef,              0,  0,  1,0,0,1, "mine definitions with kitten") \
+OPTION( elimdef,              0,  0,  1,0,0,1, "mine definitions with citten") \
 OPTION( elimdefcores,         1,  1,100,0,0,1, "number of unsat cores") \
-OPTION( elimdefticks,       2e5,  0,2e9,1,0,1, "kitten ticks limit") \
+OPTION( elimdefticks,       2e5,  0,2e9,1,0,1, "citten ticks limit") \
 OPTION( elimeffort,         1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( elimequivs,           1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimfactor,           1,  0,  1,0,0,1, "eliminate extension variables") \
@@ -224,7 +224,7 @@ OPTION( restartreusetrail,    1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,           0,  0,  2,0,0,1, "restore all clauses (2=really)") \
 OPTION( restorecompact,       0,  0,  1,0,0,1, "compact witness order stack after restoring") \
 OPTION( restoredefraglim,    25,  0,100,0,0,1, "defragment when fragmented data is more than percent of the total size") \
-OPTION( restoreflush,         0,  0,  1,0,0,1, "remove satisfied clauses") \
+OPTION( restoreflush,         0,  0,  0,0,0,1, "remove satisfied clauses (unsound)") \
 OPTION( score,                1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,        950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,                 0,  0,2e9,0,0,1, "random seed") \
@@ -237,7 +237,7 @@ OPTION( shufflescores,        1,  0,  1,0,0,1, "shuffle variable scores") \
 OPTION( stabilize,            1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizeinit,      1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,        0,  0,  1,0,0,1, "only stabilizing phases") \
-OPTION( stats,                1, -5,  4,0,0,1, "adjust statistics printing (also depends on 'verbose')") \
+OPTION( stats,                1, -5,  5,0,0,1, "adjust statistics printing (also depends on 'verbose')") \
 OPTION( stubbornIOfocused,    0,  0,  1,0,0,1, "force phases to I/O in focused mode every once in a while (requires rephase==2)") \
 OPTION( subsume,              1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,      1e4,  0,2e9,1,0,1, "watch list length limit") \
@@ -278,9 +278,11 @@ OPTION( transredeffort,     1e2,  1,1e5,1,0,1, "relative efficiency per mille") 
 OPTION( transredmaxeff,     1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,       0,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( varindexorder,        0,  0,  1,0,0,1, "use literals name given as (DIMACS) input") \
+OPTION( varinitswitch,      1e6,  1,2e9,0,0,1, "check if you need to go from a vector from variables to a hash table") \
 OPTION( varkeepname,          0,  0,  1,0,0,1, "attempt to use the same internal and external name (debug purpose only)") \
 OPTION( varprioritizefirst,   1,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( varprioritizeswap,    0,  0,  1,0,0,1, "reverse VMTF variable ordering (reverse of varindexorder)") \
+OPTION( varswitchscale,      20,  1,100,0,0,1, "geometric reason in percent for rechecking switch (see varinitswitch)") \
 QUTOPT( verbose,              0,  0,  4,0,0,0, "more verbose messages") \
 OPTION( veripb,               0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
 OPTION( vivify,               1,  0,  1,0,1,1, "vivification") \
@@ -302,10 +304,10 @@ OPTION( vivifytier2eff,       2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,          1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,       1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,                 1,  0,  1,0,0,1, "enable random walks") \
+OPTION( walkalgo,             1,  0,  1,1,0,1, "0 = single watched, 1 = ddfw") \
 OPTION( walkbinarylimit,     31,  0, 31,0,0,1, "literal bits limit for inlining [debug only]") \
 OPTION( walkddfwstrat,        4,  0,  4,1,0,1, "ddfw weight strategy [0=yalin-itl,1=yalin=ite,2=yalin-ith,3=ddfw,4=tassat") \
 OPTION( walkeffort,          80,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkfullocc,          2,  0,  2,1,0,1, "0 = single watched, 1 = Kissat watched, 2 = ddfw") \
 OPTION( walkmaxeff,         1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,           0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walkmineffinit,     1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \

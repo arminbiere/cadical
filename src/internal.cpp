@@ -44,8 +44,8 @@ Internal::Internal ()
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
-  // In a previous version we used local automatic allocated 'Clause' on the
-  // stack, which became incompatible with several compilers (see the
+  // In a previous version we used local automatic allocated 'Clause' on
+  // the stack, which became incompatible with several compilers (see the
   // discussion on flexible array member in 'Clause.cpp').
 
   size_t bytes = Clause::bytes (2);
@@ -213,7 +213,8 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
-        // First integer is the presence-flag (even if the clause is empty)
+        // First integer is the presence-flag (even if the clause is
+        // empty)
         external->forgettable_original[id] = {1};
 
         for (auto const &elit : external->eclause)
@@ -427,8 +428,6 @@ int Internal::propagate_assumptions () {
 
 void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
 
   size_t trail_limit = trail.size ();
   if (level > last_assumption_level)
@@ -797,11 +796,6 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
 
   if (opts.fastelim)
     elimfast ();
-
-    // if (opts.fastelim)
-    //  elimfast ();
-    // if (opts.condition)
-    // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
@@ -926,9 +920,7 @@ int Internal::local_search_round (int round) {
     limit = LONG_MAX;
 
   int res;
-  if (opts.walkfullocc == 1)
-    res = walk_full_occs_round (limit, true);
-  else if (opts.walkfullocc == 2)
+  if (opts.walkalgo == 1)
     res = walk_ddfw_round (limit, true);
   else
     res = walk_round (limit, true);
@@ -1114,11 +1106,13 @@ int Internal::restore_clauses () {
   return res;
 }
 
-int Internal::lookahead () {
+int Internal::lookahead (int &lit) {
   assert (clause.empty ());
   PROFILE_SCOPE (lookahead);
   assert (!lookingahead);
   lookingahead = true;
+  if (proof)
+    proof->solve_query ();
   activating_all_new_imported_literals ();
   if (external_prop) {
     if (level) {
@@ -1129,16 +1123,24 @@ int Internal::lookahead () {
     LOG ("external notifications are turned off during preprocessing.");
     private_steps = true;
   }
-  int tmp = already_solved ();
-  if (!tmp)
-    tmp = restore_clauses ();
-  int res = 0;
-  if (!tmp)
-    res = lookahead_probing ();
-  if (res == INT_MIN)
-    res = 0;
+  int res = already_solved ();
+  if (!res)
+    res = restore_clauses ();
+  if (unsat) // restore_clauses only returns 20 if the propagation returns
+             // unsat
+    res = 20;
+  if (!res)
+    lit = lookahead_probing ();
+  else if (res == 20)
+    lit = INT_MIN;
+  if (lit == INT_MIN) {
+    assert (unsat || unsat_constraint);
+    res = 20;
+    lit = 0;
+  } else
+    assert (!unsat && !unsat_constraint);
   reset_solving ();
-  report_solving (tmp);
+  report_solving (res);
   assert (lookingahead);
   lookingahead = false;
   PROFILE_SCOPE_EARLY_EXIT (lookahead);
@@ -1187,8 +1189,8 @@ void Internal::finalize (int res) {
         continue;
       proof->finalize_unit (id, lit);
     }
-    // See the discussion in 'propagate' on why garbage binary clauses stick
-    // around.
+    // See the discussion in 'propagate' on why garbage binary clauses
+    // stick around.
     for (const auto &c : clauses)
       if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);
@@ -1306,12 +1308,13 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
 }
 
 void Internal::declare_variable (int ilit) {
-  reserve_vars (ilit);
-  assert ((size_t) ilit < vsize);
-  if (ilit >= max_var) {
-    stats.vars_unused += (ilit - max_var);
-    stats.vars_inactive += (ilit - max_var);
-    max_var = ilit;
+  int iidx = abs (ilit);
+  reserve_vars (iidx);
+  assert ((size_t) iidx < vsize);
+  if (iidx >= max_var) {
+    stats.vars_unused += (iidx - max_var);
+    stats.vars_inactive += (iidx - max_var);
+    max_var = iidx;
   }
   Flags &f = internal->flags (ilit);
   if (f.declared ())

@@ -92,7 +92,10 @@ void Internal::print_tier_usage_statistics () {
     const std::string mode = stable ? "stable" : "focused";
     const size_t tier1 = internal->tier1[stable];
     const size_t tier2 = internal->tier2[stable];
-    if (tier1 > tier2 && opts.reducetier1glue > opts.reducetier2glue) {
+    if (tier1 > tier2) {
+      // TODO: this assertion is not general enough
+      // assert (opts.reducetier1glue > opts.reducetier2glue ||
+      //        opts.tier1minglue > opts.reducetier2glue);
       MSG ("tier1 > tier 2 due to the options, giving up");
       break;
     }

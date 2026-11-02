@@ -396,12 +396,14 @@ int Internal::lookahead_probing () {
     PHASE ("lookahead-probe-round", stats.probingrounds,
            "found %" PRId64 " hyper binary resolvents", hbrs);
 
-  MSG ("lookahead literal %d with %d\n", res, max_hbrs);
+  MSG ("lookahead literal %d with %d", res, max_hbrs);
 
   return res;
 }
 
 CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
+  if (proof)
+    proof->solve_query ();
   if (!active () || depth == 0) {
     CubesWithStatus cubes;
     cubes.status = 0;
@@ -420,7 +422,7 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   if (res == 0)
     res = restore_clauses ();
   if (unsat)
-    res = 10;
+    res = 20;
   if (res != 0)
     res = solve (true);
   if (res != 0) {

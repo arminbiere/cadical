@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "util.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -394,8 +395,11 @@ File *File::read (Internal *internal, const char *path) {
 
   if (!file)
     return 0;
-
-  return new File (internal, false, close_input, 0, file, path);
+  DeferCloseFile<FILE> delete_file ((FILE *) file);
+  File *internal_file =
+      new File (internal, false, close_input, 0, file, path);
+  delete_file.release ();
+  return internal_file;
 }
 
 File *File::write (Internal *internal, const char *path) {
@@ -416,8 +420,13 @@ File *File::write (Internal *internal, const char *path) {
 
   if (!file)
     return 0;
+  DeferCloseFile<FILE> delete_file ((FILE *) file);
 
-  return new File (internal, true, close_output, child_pid, file, path);
+  File *internal_file =
+      new File (internal, true, close_output, child_pid, file, path);
+  delete_file.release ();
+
+  return internal_file;
 }
 
 void File::close (bool print) {

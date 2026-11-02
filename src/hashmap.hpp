@@ -249,7 +249,10 @@ class array_hashmap {
 public:
   std::vector<Element> table;
 
-  void non_resizing_insert (Key k, Element el) { table[k] = el; }
+  void non_resizing_insert (Key k, Element el) {
+    assert ((size_t) k < table.size ());
+    table[k] = el;
+  }
 
 public:
   std::pair<Key, Element> find (Key k) const {

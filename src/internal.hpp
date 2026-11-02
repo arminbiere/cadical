@@ -107,7 +107,7 @@ extern "C" {
 
 // c headers
 extern "C" {
-#include "kitten.h"
+#include "citten.h"
 }
 /*------------------------------------------------------------------------*/
 
@@ -118,7 +118,6 @@ using namespace std;
 struct Coveror;
 struct External;
 struct Walker_DDFW;
-struct WalkerFO;
 struct Walker;
 class Tracer;
 class FileTracer;
@@ -290,7 +289,7 @@ struct Internal {
   vector<int>
       imports; // impported literals (ordered by order of appearance)
 
-  kitten *citten;
+  struct citten *citten;
 
   size_t num_assigned; // check for satisfied
 
@@ -716,6 +715,7 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0, int64_t new_id = 0);
   void promote_clause (Clause *, int new_glue);
+  void undelete_clause (Clause *);
   void promote_clause_glue_only (Clause *, int new_glue);
   void make_irredundant (Clause *);
   size_t shrink_clause (Clause *, int new_size);
@@ -811,7 +811,6 @@ struct Internal {
   void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
-  void bump_clause2 (Clause *);
   void clear_unit_analyzed_literals ();
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
@@ -1259,7 +1258,7 @@ struct Internal {
   void find_gate_clauses (Eliminator &, int pivot);
   void unmark_gate_clauses (Eliminator &);
 
-  // mine definitions for kitten in 'definition.cpp'
+  // mine definitions for citten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
   void init_citten ();
@@ -1299,8 +1298,9 @@ struct Internal {
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
-  void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
-  bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
+  void sweep_check_counts (int except = 0);
+  void sweep_set_citten_ticks_limit (Sweeper &sweeper);
+  bool citten_ticks_limit_hit (Sweeper &sweeper, const char *when);
   void init_sweeper (Sweeper &sweeper);
   void release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);
@@ -1449,12 +1449,6 @@ struct Internal {
                      ClauseOrBinary::clause_or_binary::TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
-
-  int walk_full_occs_round (int64_t limit, bool prev);
-  void walk_full_occs ();
-  void walk_full_occs_save_minimum (WalkerFO &);
-  void make_clauses_along_occurrences (WalkerFO &walker, int lit);
-  void make_clauses_along_unsatisfied (WalkerFO &walker, int lit);
 
   int walk_ddfw_round (int64_t limit, bool prev);
   void walk_ddfw ();
@@ -1616,7 +1610,7 @@ struct Internal {
   void finalize (int);
 
   //
-  int lookahead ();
+  int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();
@@ -1920,9 +1914,10 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // First way of asynchronous termination is through 'terminate' which sets
-  // the 'termination_forced' flag directly.  The second way is through a
-  // call back to a 'terminator' if it is non-zero, which however is costly.
+  // First way of asynchronous termination is through 'terminate' or
+  // 'catch_signal' which sets the 'termination_forced' flag directly.
+  // The second way is through a call back to a 'terminator' if it is
+  // non-zero, which however is costly.
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");
