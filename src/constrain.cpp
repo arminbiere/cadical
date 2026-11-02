@@ -194,6 +194,7 @@ void Internal::reset_constraint () {
   constraint_vars.clear ();
   constraint_ids.clear ();
   constraint_fail.clear ();
+  constraint_fixed.clear ();
   get_kitten_statistics (constraint_cat);
   KITTEN_NAMESPACE (kitten_release) (constraint_cat);
   constraints_without_assumptions = 0;
