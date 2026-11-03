@@ -123,21 +123,15 @@ static void log_api_call (Internal *internal, const char *name,
                tout.api_code (), name, a1, a2, tout.log_code (), s);
 }
 
-#ifndef NTRACING
-
 static void log_api_call_large (Internal *internal, const char *name,
                                 const char *a1, int64_t a2, const char *s) {
   Logger::log (internal, "API call %s'%s (\"%s\", %" PRId64 ")'%s %s",
                tout.api_code (), name, a1, a2, tout.log_code (), s);
 }
 
-#endif
-
 /*------------------------------------------------------------------------*/
 
 // We factored out API call begin/end logging and use overloaded functions.
-
-#ifndef NTRACING
 
 static void log_api_call_begin (Internal *internal, const char *name) {
   Logger::log_empty_line (internal);
@@ -149,8 +143,6 @@ static void log_api_call_begin (Internal *internal, const char *name,
   Logger::log_empty_line (internal);
   log_api_call (internal, name, arg, "started");
 }
-
-#endif
 
 static void log_api_call_begin (Internal *internal, const char *name,
                                 int arg, int b) {
@@ -164,8 +156,6 @@ static void log_api_call_begin (Internal *internal, const char *name,
   log_api_call (internal, name, arg, "started");
 }
 
-#ifndef NTRACING
-
 static void log_api_call_begin (Internal *internal, const char *name,
                                 const char *arg1, int arg2) {
   Logger::log_empty_line (internal);
@@ -177,8 +167,6 @@ static void log_api_call_begin_large (Internal *internal, const char *name,
   Logger::log_empty_line (internal);
   log_api_call_large (internal, name, arg1, arg2, "started");
 }
-
-#endif
 
 /*------------------------------------------------------------------------*/
 
