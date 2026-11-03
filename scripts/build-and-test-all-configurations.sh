@@ -319,6 +319,9 @@ else
   cecho "starting with non-default configuration $begin (and then wrapping around)"
 fi
 
+cecho "cleaning up"
+make clean >/dev/null 2>&1
+
 i=$begin
 while [ $built_and_tested -lt $configurations ]
 do
