@@ -209,7 +209,7 @@ int External::internalize (int elit, bool extension) {
     if (!marked (tainted, elit) && marked (witness, -elit)) {
       assert (!checkfrozen);
       LOG ("marking tainted %d", elit);
-      mark (tainted, elit); 
+      mark (tainted, elit);
     }
   } else
     ilit = 0;
