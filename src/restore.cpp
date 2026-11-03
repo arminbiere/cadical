@@ -3,24 +3,22 @@
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
-
 // In incremental solving after a first call to 'solve' has finished and
 // before calling the internal 'solve' again incrementally we have to
 // restore clauses which have the negation of a literal as a witness literal
-// on the extension stack, which was added as original literal in a new
+// in the extension data, which was added as original literal in a new
 // clause or in an assumption.  This procedure has to be applied
 // recursively, i.e., the literals of restored clauses are treated in the
 // same way as literals of a new original clause.
 //
 // To figure out whether literals are such witnesses we have a 'witness'
-// bit for each external literal, which is set in 'block', 'elim', and
-// 'decompose' if a clause is pushed on the extension stack.  The witness
-// bits are recomputed after restoring clauses.
-//
+// bit for each external literal, which is set when weakening a clause.
+// The witness bits are recomputed while restoring clauses.
+
 // We further mark in the external solver newly internalized external
 // literals in 'add' and 'assume' since the last call to 'solve' as tainted
-// if they occur negated as a witness literal on the extension stack.  Then
-// we go through the extension stack and restore all clauses which have a
+// if they occur negated as a witness literal in the extension data. Then
+// we go through the extension data and restore all clauses which have a
 // tainted literal (and its negation a marked as witness).
 //
 // Since the API contract disallows to call 'val' and 'failed' in an
@@ -44,30 +42,73 @@ namespace CaDiCaL {
 // default anyhow.
 //
 // See our SAT'19 paper [FazekasBiereScholl-SAT'19] for more details.
-
+//
 /*------------------------------------------------------------------------*/
+static constexpr uint32_t CLAUSE_SMALL = 1u << 31;
+static constexpr uint32_t EMBEDDED     = 1u << 30;
+static constexpr uint32_t ID_LONG      = 1u << 29;
+static constexpr uint32_t SIZE_MASK    = (1u << 29) - 1;
 
-void External::restore_clause (const vector<int>::const_iterator &begin,
-                               const vector<int>::const_iterator &end,
-                               const int64_t id) {
-  LOG (begin, end, "restoring external clause[%" PRId64 "]", id);
+static inline void decode_size_field (const int size_field, bool &wit_embedded, 
+                               bool &id_long, unsigned &other_lits_size) {
+  assert (size_field);
+
+  const uint32_t encoded = static_cast<uint32_t> (size_field);
+  const bool clause_small = encoded & CLAUSE_SMALL;
+
+  wit_embedded = clause_small && (encoded & EMBEDDED);
+  id_long = !clause_small || (encoded & ID_LONG);
+  other_lits_size = clause_small ? (encoded & SIZE_MASK) : encoded;
+}
+
+static inline int64_t decode_id (vector<int>::const_iterator p, const bool id_long) {
+  if (!id_long)
+    return static_cast<uint32_t> (*(p + 1));
+  const uint64_t upper = static_cast<uint32_t> (*(p + 1));
+  const uint64_t lower = static_cast<uint32_t> (*(p + 2));
+  return static_cast<int64_t> ((upper << 32) | lower);
+}
+
+/*------------------------------------------------------------------------*/ 
+void External::restore_clause (vector<int>::const_iterator begin,
+                               vector<int>::const_iterator end,
+                               const int64_t id,
+                               const int ewit, const int blit) {
+  LOG (begin, end, 
+    "restoring external clause[%" PRId64 "]", id);
+  
   assert (eclause.empty ());
   assert (id);
-  for (auto p = begin; p != end; p++) {
-    eclause.push_back (*p);
+
+  auto restore_lit = [this] (int elit) {
+    eclause.push_back (elit);
+
     if (internal->proof && internal->lrat) {
-      const auto &elit = *p;
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
-      const int64_t id = ext_units[eidx];
+      const int64_t unit_id = ext_units[eidx];
       bool added = ext_flags[abs (elit)];
-      if (id && !added) {
+      if (unit_id && !added) {
         ext_flags[abs (elit)] = true;
-        internal->lrat_chain.push_back (id);
+        internal->lrat_chain.push_back (unit_id);
       }
     }
-    int ilit = internalize (*p);
-    internal->add_original_lit (ilit), internal->stats.restored_literals++;
+
+    const int ilit = internalize (elit);
+    internal->add_original_lit (ilit);
+    internal->stats.restored_literals++;
+  };
+
+  for (auto p = begin; p != end; p++) {
+    restore_lit (*p);
+  }
+  if (blit) {
+    LOG ("adding blocking literal (external %d) back to the clause", blit);
+    restore_lit (blit);
+  }
+  if (ewit) {
+    LOG ("adding witness (external %d) back to the clause", ewit);
+    restore_lit (ewit);
   }
   if (internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
@@ -79,19 +120,149 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   internal->stats.restored_clauses++;
 }
 
-/*------------------------------------------------------------------------*/
+bool External::restore_cube_stack (uint32_t ss_idx, 
+  vector<bool> &skipped_witness, RestoreStats &clauses) {
+  auto q = clause_data.begin () + ss_idx;
+  bool restore_clauses = false;
 
-void External::restore_clauses () {
+  while (*q) {
+    const int ewit = *q++;
+    if (marked (tainted, -ewit))
+      restore_clauses = true;
+  }
+  while (*q) {
+    q++;
+  }
+  q++; // Skip cube terminator
+  if (!restore_clauses && !(internal->opts.restoreall == 2)) {
+    LOG ("untainted and not forced to restore all clauses.");
+    // now also mark witnesses as skipped.
+    q = clause_data.begin () + ss_idx;
+    while (*q) {
+      const int ewit = *q++;
+      if (!marked (skipped_witness, ewit))
+        mark (skipped_witness, ewit);
+    }
+    return false;
+  }
+  
+  while (*q != 0) {
+    clauses.total++;
+    bool wit_embedded, id_long; 
+    unsigned other_lits_size;
+    decode_size_field (*q, wit_embedded, id_long, other_lits_size);
+    assert (!wit_embedded);
+    
+    int64_t id = decode_id (q, id_long);
+    LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
 
-  assert (internal->opts.restoreall == 2 || !tainted.empty ());
+    auto lit = q + (id_long ? 3 : 2); // es (idu) idl l1 
+    auto begin = lit;
+    auto end = lit + other_lits_size;
+    int satisfied = 0;
+    while (lit != end) {
+      if (!satisfied && fixed (*lit) > 0)
+        satisfied = *lit;
+      ++lit;
+    }
+    if (satisfied && !internal->opts.restoreflush) {
+      LOG (begin, end, 
+        "forced to not remove %d satisfied", satisfied);
+      satisfied = 0;
+    }
+    if (satisfied) {
+      clauses.satisfied++;
+    } else {
+      clauses.restored++;
+      restore_clause (begin, end, id, 0, 0);
+    }
+    
+    q += 1 + (id_long ? 2 : 1) + other_lits_size;
+  }
+  fragmented_clause_data += q - (clause_data.begin () + ss_idx) + 1;
+  return true;
+}
 
+void External::defragment_clause_data () {
+  LOG ("defragmenting clause data of %zu elements", clause_data.size ());
+
+  size_t write = 0;
+
+  for (auto p = witness_data.begin (); p != witness_data.end (); ++p) {
+    WitnessEntry &entry = *p;
+    const int blit = entry.blit;
+    const uint64_t idx = entry.idx;
+    
+    if (!blit) {
+      assert (!entry.ewit); // ewit
+      auto begin = clause_data.begin () + idx;
+      auto end = begin;
+      // Skip the witness cube and its terminating zero.
+      while (*end)
+        ++end;
+      ++end;
+
+      // Skip all clause records until the final terminating zero.
+      while (*end) {
+        bool wit_embedded, id_long;
+        unsigned other_lits_size;
+        decode_size_field (*end, wit_embedded, id_long, other_lits_size);
+        assert (!wit_embedded);
+
+        end += 1 + other_lits_size + (id_long ? 2 : 1);
+      }
+      ++end; // Include the final terminating zero.
+      const size_t stack_size = end - begin;
+
+      assert (idx + stack_size <= clause_data.size ());
+
+      // Update the cube stack index.
+      entry.idx = write;
+
+      // Move the complete shared stack.
+      if (write != idx) {
+        std::memmove (clause_data.data () + write,
+                      clause_data.data() + idx,
+                      stack_size * sizeof (int));
+      }
+      write += stack_size;
+      continue;
+    }
+    assert (entry.ewit);
+    
+
+    bool wit_embedded, id_long;
+    unsigned other_lits_size;
+    decode_size_field (clause_data[idx], wit_embedded, id_long, other_lits_size);
+
+    const size_t record_size = 1 + other_lits_size + (id_long ? 2 : 1);
+
+    assert (idx + record_size <= clause_data.size ());
+
+    // Update the index in the witness entry
+    entry.idx = write;
+
+    // Move the record to its compacted position.
+    if (write != idx) {
+      std::memmove (clause_data.data () + write, 
+                    clause_data.data () + idx,
+                    record_size * sizeof (int));
+    }
+    write += record_size;
+  }
+
+  clause_data.resize (write);
+  shrink_vector (clause_data);
+  fragmented_clause_data = 0;
+
+  LOG ("defragmented clause data to %zu elements", clause_data.size ());
+}
+
+void External::restore () {
   PROFILE_SCOPE (restore);
   internal->stats.restorations++;
 
-  struct {
-    int64_t weakened, satisfied, restored, removed;
-  } clauses;
-  memset (&clauses, 0, sizeof clauses);
+  RestoreStats clauses = {};
 
   if (internal->opts.restoreall && tainted.empty ())
     PHASE ("restore", internal->stats.restorations,
@@ -109,119 +280,119 @@ void External::restore_clauses () {
            percent (numtainted, 2u * max_var));
   }
 #endif
+// --------------------------------------------------------
+  if (tainted.empty () && internal->opts.restoreall != 2)
+    return;
+  
+  vector<bool> skipped_witness; // implies that the witness will still exist afterwards.
 
-  auto end_of_extension = extension.end ();
-  auto p = extension.begin (), q = p;
+  auto read = witness_data.begin ();
+  auto write = witness_data.begin (); 
+  auto end = witness_data.end ();
 
-  // Go over all witness labelled clauses on the extension stack, restore
-  // those necessary, remove restored and flush satisfied clauses.
-  //
-  while (p != end_of_extension) {
+  while (read != end) {
+    const WitnessEntry &entry = *read++;
+    const int ewit = entry.ewit;
+    const int blit = entry.blit;
+    const uint64_t idx = entry.idx;
 
-    clauses.weakened++;
+    if (!blit) {
+      if (!restore_cube_stack (idx, skipped_witness, clauses)) {
+        *write++ = entry;
+      }
+      continue;
+    } 
 
-    assert (!*p);
-    const auto saved = q; // Save old start.
-    *q++ = *p++;          // Copy zero '0'.
+    assert (ewit);
+    
+    clauses.total++;
 
-    // Copy witness part and try to find a tainted witness literal in it.
-    //
-    int tlit = 0; // Negation tainted.
-    int elit;
-    //
-    assert (p != end_of_extension);
-    //
-    while ((elit = *q++ = *p++)) {
+    // restore the corresponding clause
+    if (internal->opts.restoreall == 2 || marked (tainted, -ewit)) { 
+      
+      bool wit_embedded, id_long;
+      unsigned other_lits_size;
 
-      if (marked (tainted, -elit)) {
-        tlit = elit;
-        LOG ("negation of witness literal %d tainted", tlit);
+      // Now restore the next clause
+      auto p = clause_data.begin () + idx;
+      decode_size_field (*p, wit_embedded, id_long, other_lits_size);
+
+      int64_t id = decode_id (p, id_long);
+      LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
+
+      auto lit = p + (id_long ? 3 : 2);
+      auto begin = lit;
+      auto end_of_lits = lit + other_lits_size;
+      int satisfied = 0;
+      while (lit != end_of_lits) {
+        if (!satisfied && fixed (*lit) > 0)
+          satisfied = *lit;
+        ++lit;
       }
 
-      assert (p != end_of_extension);
-    }
+      if (!satisfied && wit_embedded) {
+        if (fixed (ewit) > 0)
+          satisfied = ewit;
+      }
 
-    // now copy the id of the clause
-    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) * (p + 1);
-    LOG ("id is %" PRId64, id);
-    *q++ = *p++;
-    *q++ = *p++;
-    assert (id);
-    assert (!*p);
-    *q++ = *p++;
-
-    // Now find 'end_of_clause' (clause starts at 'p') and at the same time
-    // figure out whether the clause is actually root level satisfied.
-    //
-    int satisfied = 0;
-    auto end_of_clause = p;
-    while (end_of_clause != end_of_extension && (elit = *end_of_clause)) {
-      if (!satisfied && fixed (elit) > 0)
-        satisfied = elit;
-      end_of_clause++;
-    }
-    assert (id);
-
-    // Do not apply our 'FLUSH' rule to remove satisfied (implied) clauses
-    // if the corresponding option is set simply by resetting 'satisfied'.
-    //
-    if (satisfied && !internal->opts.restoreflush) {
-      LOG (p, end_of_clause, "forced to not remove %d satisfied",
-           satisfied);
-      satisfied = 0;
-    }
-
-    if (satisfied || tlit || internal->opts.restoreall) {
+      if (satisfied && !internal->opts.restoreflush) {
+        LOG (begin, end_of_lits,
+            "forced to not remove %d satisfied", satisfied);
+        satisfied = 0;
+      }
 
       if (satisfied) {
-        LOG (p, end_of_clause,
-             "flushing implied clause satisfied by %d from extension stack",
-             satisfied);
         clauses.satisfied++;
       } else {
-        restore_clause (p, end_of_clause, id); // Might taint literals.
         clauses.restored++;
+        restore_clause (begin, end_of_lits, id, ewit, blit);
+        fragmented_clause_data += 1 + other_lits_size + (id_long ? 2 : 1);
       }
-
-      clauses.removed++;
-      p = end_of_clause;
-      q = saved;
-
-    } else {
-
-      LOG (p, end_of_clause, "keeping clause on extension stack");
-
-      while (p != end_of_clause) // Copy clause too.
-        *q++ = *p++;
+      
+      continue;
     }
+
+    if (ewit) {
+      if (!marked (skipped_witness, ewit))
+        mark (skipped_witness, ewit); 
+    }
+    *write++ = entry;
   }
 
-  extension.resize (q - extension.begin ());
-  shrink_vector (extension);
+  witness_data.resize (write - witness_data.begin ());
+  shrink_vector (witness_data);
+
+  witness = std::move (skipped_witness);
+
+  if (100 * fragmented_clause_data >
+      internal->opts.restoredefraglim * clause_data.size ()) {
+    internal->stats.restore_defrags++;
+    defragment_clause_data ();
+  }
 
 #ifndef QUIET
   if (clauses.satisfied)
     PHASE ("restore", internal->stats.restorations,
            "removed %" PRId64 " satisfied %.0f%% of %" PRId64
-           " weakened clauses",
-           clauses.satisfied, percent (clauses.satisfied, clauses.weakened),
-           clauses.weakened);
+           " clauses",
+           clauses.satisfied, percent (clauses.satisfied, clauses.total),
+           clauses.total);
   else
     PHASE ("restore", internal->stats.restorations,
            "no satisfied clause removed out of %" PRId64
-           " weakened clauses",
-           clauses.weakened);
+           " clauses",
+           clauses.total);
 
   if (clauses.restored)
     PHASE ("restore", internal->stats.restorations,
            "restored %" PRId64 " clauses %.0f%% out of %" PRId64
-           " weakened clauses",
-           clauses.restored, percent (clauses.restored, clauses.weakened),
-           clauses.weakened);
+           " clauses",
+           clauses.restored, percent (clauses.restored, clauses.total),
+           clauses.total);
   else
     PHASE ("restore", internal->stats.restorations,
-           "no clause restored out of %" PRId64 " weakened clauses",
-           clauses.weakened);
+           "no clause restored out of %" PRId64 " clauses",
+           clauses.total);
   {
     unsigned numtainted = 0;
     for (const auto &b : tainted)
@@ -232,34 +403,10 @@ void External::restore_clauses () {
            "finishing with %u tainted literals %.0f%%", numtainted,
            percent (numtainted, 2u * max_var));
   }
-
 #endif
-  LOG ("extension stack clean");
-  tainted.clear ();
 
-  // Finally recompute the witness bits.
-  //
-  witness.clear ();
-  const auto begin_of_extension = extension.begin ();
-  p = extension.end ();
-  while (p != begin_of_extension) {
-    while (*--p)
-      assert (p != begin_of_extension);
-    int elit;
-    assert (p != begin_of_extension);
-    --p;
-    assert (p != begin_of_extension);
-    assert (*p || *(p - 1));
-    --p;
-    assert (p != begin_of_extension);
-    assert (!*p);
-    --p;
-    assert (p != begin_of_extension);
-    while ((elit = *--p)) {
-      mark (witness, elit);
-      assert (p != begin_of_extension);
-    }
-  }
-}
+  tainted.clear ();
+  tainted.shrink_to_fit ();
+} 
 
 } // namespace CaDiCaL

@@ -784,14 +784,18 @@ long Internal::condition_round (long delta) {
       // TODO find a way to shrink the autarky part or some other way to
       // avoid pushing too many literals on the extension stack.
       //
-      external->push_zero_on_extension_stack ();
+      vector<int> wits;
       for (const auto &lit : trail)
-        if (is_autarky_literal (lit))
-          external->push_witness_literal_on_extension_stack (lit);
+          if (is_autarky_literal (lit))
+            wits.push_back (lit);
       if (proof)
         proof->weaken_minus (c);
-      external->push_clause_on_extension_stack (c);
+      
+      external->create_cube_stack (wits);
+      external->push_cube_clause (c);
+      external->terminate_cube_stack ();
 
+      wits.clear ();
       mark_garbage (c);
 
       stats.conditioned_assign += remain.assigned;

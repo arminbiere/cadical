@@ -61,8 +61,6 @@ class WitnessIterator;
 
 /*------------------------------------------------------------------------*/
 
-/*------------------------------------------------------------------------*/
-
 struct External {
 
   /*==== start of state ==================================================*/
@@ -95,9 +93,19 @@ public:
 
   bool extended; // Have been extended.
   bool concluded;
-  vector<int> extension; // Solution reconstruction extension stack.
 
-  vector<bool> witness; // Literal witness on extension stack.
+  size_t fragmented_clause_data = 0;
+  vector<int> clause_data;
+
+  struct WitnessEntry {
+    int ewit;
+    int blit;
+    uint64_t idx;
+  };
+
+  vector<WitnessEntry> witness_data;
+
+  vector<bool> witness; // Non-emptyness flag for witness stacks
   vector<bool> tainted; // Literal tainted in adding literals.
 
   vector<bool> ervars; // Variables added through Extended Resolution.
@@ -203,30 +211,35 @@ public:
     return e2i.find_or_default (elit, 0);
   }
   /*----------------------------------------------------------------------*/
-
-  // The following five functions push individual literals or clauses on the
-  // extension stack.  They all take internal literals as argument, and map
-  // them back to external literals first, before pushing them on the stack.
-
-  void push_zero_on_extension_stack ();
-
-  // Our general version of extension stacks always pushes a set of witness
-  // literals (for variable elimination the literal of the eliminated
-  // literal and for blocked clauses the blocking literal) followed by all
-  // the clause literals starting with and separated by zero.
-  //
-  void push_clause_literal_on_extension_stack (int ilit);
-  void push_witness_literal_on_extension_stack (int ilit);
-
-  void push_clause_on_extension_stack (Clause *);
-  void push_clause_on_extension_stack (Clause *, int witness);
-  void push_binary_clause_on_extension_stack (int64_t id, int witness,
+  void push_clause_on_extension (int iwit, Clause *);
+  void push_clause_on_extension (const int64_t id, int iwit, 
+                                       const vector<int> &c);
+  void push_binary_clause_on_extension (int64_t id, int iwit,
                                               int other);
+  void push_external_clause_on_extension (const vector<int> &c, 
+                                            const vector<int> &w, int64_t id);
+  /* ------------------------------------------------------------------------ */
+  void create_cube_stack (const vector<int> &iwit_cube);
+  void push_cube_clause (Clause *c);
+  void terminate_cube_stack ();
+
+  void create_cube_stack_and_push_external_clause ( const vector<int> &clause, 
+    const vector<int> &ewit_cube, int64_t id);
+  /* ------------------------------------------------------------------------ */
+  void push_external_clause_and_witness_on_extension (
+      const vector<int> &clause, const vector<int> &witness, int64_t id);
+  /* ------------------------------------------------------------------------ */
+  struct ExtendStats {
+    int64_t extension_size, updated, flipped, extend_blocked, clauses_read;
+  };
+
+  void extend_cube_stack (uint32_t ss_idx, ExtendStats &stats);
 
   // The main 'extend' function which extends an internal assignment to an
-  // external assignment using the extension stack (and sets 'extended').
+  // external assignment using the witness stacks (and sets 'extended').
   //
   void extend ();
+
   void conclude_sat ();
 
   /*----------------------------------------------------------------------*/
@@ -260,18 +273,21 @@ public:
   }
 
   /*----------------------------------------------------------------------*/
+  struct RestoreStats {
+    int64_t total, satisfied, restored;
+  };
 
-  void push_external_clause_and_witness_on_extension_stack (
-      const vector<int> &clause, const vector<int> &witness, int64_t id);
+  void defragment_clause_data ();
 
-  void push_id_on_extension_stack (int64_t id);
+  void restore_clause (vector<int>::const_iterator begin, 
+                       vector<int>::const_iterator end,
+                       const int64_t id,
+                       const int ewit, const int blit);
+  
+  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses, 
+                           RestoreStats &clauses);
 
-  // Restore a clause, which was pushed on the extension stack.
-  void restore_clause (const vector<int>::const_iterator &begin,
-                       const vector<int>::const_iterator &end,
-                       const int64_t id);
-
-  void restore_clauses ();
+  void restore ();
 
   bool is_witness (int);
   /*----------------------------------------------------------------------*/
@@ -441,6 +457,7 @@ public:
 
   bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
   bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
+  bool traverse_cube_stack (WitnessIterator &it, uint32_t ss_idx);
   bool traverse_witnesses_backward (WitnessIterator &);
   bool traverse_witnesses_forward (WitnessIterator &);
 

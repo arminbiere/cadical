@@ -189,8 +189,10 @@
   STATISTIC (eliminate_tried_res,    2, relative, "per", eliminate_tried) \
   STATISTIC (eliminate_xor,          2, percent, "%", eliminate_gates) \
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
+  STATISTIC (extensions,             1, percent, "%", searches) \
   STATISTIC (extended,               1, relative, "per", weakened) \
-  STATISTIC (extensions,             1, relative, "per", searches) \
+  STATISTIC (extend_clauses_blocked, 2, relative, "per", weakened) \
+  STATISTIC (extend_clauses_read,    2, relative, "per", weakened) \
   STATISTIC (exttointchecked,        3, relative, "per", searches) \
   STATISTIC (exttointswitched,       3, relative, "per", exttointchecked) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
@@ -277,6 +279,7 @@
   STATISTIC (restorations,           1, relative, "per", searches) \
   STATISTIC (restored_clauses,       1, relative, "per", restorations) \
   STATISTIC (restored_literals,      2, relative, "per", restored_clauses) \
+  STATISTIC (restore_defrags,        2, percent, "%", restorations) \
   STATISTIC (reused,                 1, relative, "per", restart) \
   STATISTIC (reused_levels,          2, relative, "per", reused) \
   STATISTIC (reused_stable,          2, relative, "per", reused) \
@@ -421,7 +424,8 @@
   METRIC (walk_warmup_dummy,         2, relative, "per", walk_warmup) \
   METRIC (walk_warmup_propagate,     2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
-  STATISTIC (weakened_lengths,       2, relative, "per", weakened)
+  STATISTIC (weakened_cube_cls,      2, percent, "%", weakened) \
+  STATISTIC (weakened_lengths,       2, relative, "per", weakened) \
 
 // clang-format on
 
