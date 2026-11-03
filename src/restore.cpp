@@ -3,7 +3,6 @@
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
-// REVIEW: ...
 // In incremental solving after a first call to 'solve' has finished and
 // before calling the internal 'solve' again incrementally we have to
 // restore clauses which have the negation of a literal as a witness literal
@@ -47,8 +46,8 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 static constexpr uint32_t CLAUSE_SMALL = 1u << 31;
 static constexpr uint32_t EMBEDDED     = 1u << 30;
-static constexpr uint32_t ID_LONG     = 1u << 29;
-static constexpr uint32_t SIZE_MASK   = (1u << 29) - 1;
+static constexpr uint32_t ID_LONG      = 1u << 29;
+static constexpr uint32_t SIZE_MASK    = (1u << 29) - 1;
 
 static inline void decode_size_field (const int size_field, bool &wit_embedded, 
                                bool &id_long, unsigned &other_lits_size) {
@@ -121,7 +120,8 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
-bool External::restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witness, RestoreStats &clauses) {
+bool External::restore_cube_stack (uint32_t ss_idx, 
+  vector<bool> &skipped_witness, RestoreStats &clauses) {
   auto q = clause_data.begin () + ss_idx;
   bool restore_clauses = false;
 

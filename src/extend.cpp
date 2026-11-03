@@ -9,8 +9,8 @@
 //
 // For clauses with a single witness literal, we separate the witness 
 // information from the clause data. Restoration and extension are then driven
-// by the 'witness_data' stack, which stores three integers per record:
-//    wit | blit |idx
+// by the 'witness_data' stack, which stores:
+//    wit | blit | idx
 // Here, 'wit' is the witness literal, 'blit' is a blocking literal, and 'idx'
 // is the index of the first element of the corresponding clause record in the
 // 'clause_data' stack.

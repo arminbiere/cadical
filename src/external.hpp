@@ -94,7 +94,6 @@ public:
   bool extended; // Have been extended.
   bool concluded;
 
-
   size_t fragmented_clause_data = 0;
   vector<int> clause_data;
 
@@ -285,7 +284,8 @@ public:
                        const int64_t id,
                        const int ewit, const int blit);
   
-  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses, RestoreStats &clauses);
+  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses, 
+                           RestoreStats &clauses);
 
   void restore ();
 
