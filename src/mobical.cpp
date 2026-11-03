@@ -340,7 +340,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0){};
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
 };
 
 class Mopts {
@@ -590,6 +590,97 @@ enum CallType : uint64_t {
 
   INVALID_TYPE, // keep this last
 };
+
+static const char *ct_to_str (CallType type) {
+  // clang-format off
+  return (type == INIT ? "INIT"
+       : (type == RESET ? "RESET"
+       : (type == SET ? "SET"
+       : (type == CONFIGURE ? "CONFIGURE"
+       : (type == PRINT_OPTIONS ? "PRINT_OPTIONS"
+       : (type == VARS ? "VARS"
+       : (type == ACTIVE ? "ACTIVE"
+       : (type == REDUNDANT ? "REDUNDANT"
+       : (type == IRREDUNDANT ? "IRREDUNDANT"
+       : (type == RESIZE ? "RESIZE"
+       : (type == DECLARE ? "DECLARE"
+       : (type == DECLARE_VARS ? "DECLARE_VARS"
+       : (type == PHASE ? "PHASE"
+       : (type == UNPHASE ? "UNPHASE"
+       : (type == ADD ? "ADD"
+       : (type == ASSUME ? "ASSUME"
+       : (type == CONSTRAIN ? "CONSTRAIN"
+       : (type == RESET_ASSUMPTIONS ? "RESET_ASSUMPTIONS"
+       : (type == SOLVE ? "SOLVE"
+       : (type == SIMPLIFY ? "SIMPLIFY"
+       : (type == LOOKAHEAD ? "LOOKAHEAD"
+       : (type == CUBING ? "CUBING"
+       : (type == PROPAGATE ? "PROPAGATE"
+       : (type == VAL ? "VAL"
+       : (type == FLIP ? "FLIP"
+       : (type == FLIPPABLE ? "FLIPPABLE"
+       : (type == FAILED ? "FAILED"
+       : (type == FIXED ? "FIXED"
+       : (type == IMPLIED ? "IMPLIED"
+       : (type == FREEZE ? "FREEZE"
+       : (type == FROZEN ? "FROZEN"
+       : (type == MELT ? "MELT"
+       : (type == LIMIT ? "LIMIT"
+       : (type == OPTIMIZE ? "OPTIMIZE"
+       : (type == DUMP ? "DUMP"
+       : (type == STATS ? "STATS"
+       : (type == CONNECT ? "CONNECT"
+       : (type == OBSERVE ? "OBSERVE"
+       : (type == UNOBSERVE ? "UNOBSERVE"
+       : (type == RESET_OBSERVED ? "RESET_OBSERVED"
+       : (type == IS_DECISION ? "IS_DECISION"
+       : (type == IS_WITNESS ? "IS_WITNESS"
+       : (type == OBSERVED ? "OBSERVED"
+       : (type == FORCE_BACKTRACK ? "FORCE_BACKTRACK"
+       : (type == FORCE_UNASSIGN ? "FORCE_UNASSIGN"
+       : (type == LEMMA ? "LEMMA"
+       : (type == DECIDE ? "DECIDE"
+       : (type == FORCE ? "FORCE"
+       : (type == CB_DECIDE ? "CB_DECIDE"
+       : (type == CB_PROPAGATE ? "CB_PROPAGATE"
+       : (type == CB_HAS_CLAUSE ? "CB_HAS_CLAUSE"
+       : (type == CB_ADD_CLAUSE ? "CB_ADD_CLAUSE"
+       : (type == CB_ADD_REASON ? "CB_ADD_REASON"
+       : (type == CB_CHECK_MODEL ? "CB_CHECK_MODEL"
+       : (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
+       : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
+       : (type == NOTIFY_LEVEL ? "NOTIFY_LEVEL"
+       : (type == CONCLUDE ? "CONCLUDE"
+       : (type == DISCONNECT ? "DISCONNECT"
+       : (type == TRACEPROOF ? "TRACEPROOF"
+       : (type == FLUSHPROOFTRACE ? "FLUSHPROOFTRACE"
+       : (type == CLOSEPROOFTRACE ? "CLOSEPROOFTRACE"
+#ifdef MOBICAL_MEMORY
+       : (type == MAXALLOC ? "MAXALLOC"
+       : (type == LEAKALLOC ? "LEAKALLOC"
+#endif
+#ifdef MOBICAL_TERMINATE
+       : (type == TERMINATE ? "TERMINATE"
+#endif
+       : (type == TRAVERSE_CLAUSES ? "TRAVERSE_CLAUSES"
+       : (type == TRAVERSE_CONSTRAINT ? "TRAVERSE_CONSTRAINT"
+       : (type == TRAVERSE_WITNESSES_BACKWARD ? "TRAVERSE_WITNESSES_BACKWARD"
+       : (type == TRAVERSE_WITNESSES_FORWARD ? "TRAVERSE_WITNESSES_FORWARD"
+       : (type == READ_DIMACS ? "READ_DIMACS"
+       : (type == READ_SOLUTION ? "READ_SOLUTION"
+       : (type == WRITE_DIMACS ? "WRITE_DIMACS"
+       : (type == WRITE_EXTENSION ? "WRITE_EXTENSION"
+       : (type == COPY ? "COPY"
+       : "INVALID_TYPE")))))))))))
+#ifdef MOBICAL_MEMORY
+       ))
+#endif
+#ifdef MOBICAL_TERMINATE
+       )
+#endif
+       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+  // clang-format on
+}
 
 struct Shared {
   int64_t call_type_executed[CallType::INVALID_TYPE];
@@ -1447,97 +1538,6 @@ enum MockForceType {
   LAST_MOCK_FORCE_TYPE,
 };
 
-static const char *ct_to_str (CallType type) {
-  // clang-format off
-  return (type == INIT ? "INIT"
-       : (type == RESET ? "RESET" 
-       : (type == SET ? "SET"
-       : (type == CONFIGURE ? "CONFIGURE"
-       : (type == PRINT_OPTIONS ? "PRINT_OPTIONS"
-       : (type == VARS ? "VARS"
-       : (type == ACTIVE ? "ACTIVE"
-       : (type == REDUNDANT ? "REDUNDANT"
-       : (type == IRREDUNDANT ? "IRREDUNDANT"
-       : (type == RESIZE ? "RESIZE"
-       : (type == DECLARE ? "DECLARE"
-       : (type == DECLARE_VARS ? "DECLARE_VARS"
-       : (type == PHASE ? "PHASE"
-       : (type == UNPHASE ? "UNPHASE"
-       : (type == ADD ? "ADD"
-       : (type == ASSUME ? "ASSUME"
-       : (type == CONSTRAIN ? "CONSTRAIN"
-       : (type == RESET_ASSUMPTIONS ? "RESET_ASSUMPTIONS"
-       : (type == SOLVE ? "SOLVE"
-       : (type == SIMPLIFY ? "SIMPLIFY"
-       : (type == LOOKAHEAD ? "LOOKAHEAD"
-       : (type == CUBING ? "CUBING"
-       : (type == PROPAGATE ? "PROPAGATE"
-       : (type == VAL ? "VAL"
-       : (type == FLIP ? "FLIP"
-       : (type == FLIPPABLE ? "FLIPPABLE"
-       : (type == FAILED ? "FAILED"
-       : (type == FIXED ? "FIXED"
-       : (type == IMPLIED ? "IMPLIED"
-       : (type == FREEZE ? "FREEZE"
-       : (type == FROZEN ? "FROZEN"
-       : (type == MELT ? "MELT"
-       : (type == LIMIT ? "LIMIT"
-       : (type == OPTIMIZE ? "OPTIMIZE"
-       : (type == DUMP ? "DUMP"
-       : (type == STATS ? "STATS"
-       : (type == CONNECT ? "CONNECT"
-       : (type == OBSERVE ? "OBSERVE"
-       : (type == UNOBSERVE ? "UNOBSERVE"
-       : (type == RESET_OBSERVED ? "RESET_OBSERVED"
-       : (type == IS_DECISION ? "IS_DECISION"
-       : (type == IS_WITNESS ? "IS_WITNESS"
-       : (type == OBSERVED ? "OBSERVED"
-       : (type == FORCE_BACKTRACK ? "FORCE_BACKTRACK"
-       : (type == FORCE_UNASSIGN ? "FORCE_UNASSIGN"
-       : (type == LEMMA ? "LEMMA"
-       : (type == DECIDE ? "DECIDE"
-       : (type == FORCE ? "FORCE"
-       : (type == CB_DECIDE ? "CB_DECIDE"
-       : (type == CB_PROPAGATE ? "CB_PROPAGATE"
-       : (type == CB_HAS_CLAUSE ? "CB_HAS_CLAUSE"
-       : (type == CB_ADD_CLAUSE ? "CB_ADD_CLAUSE"
-       : (type == CB_ADD_REASON ? "CB_ADD_REASON"
-       : (type == CB_CHECK_MODEL ? "CB_CHECK_MODEL"
-       : (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
-       : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
-       : (type == NOTIFY_LEVEL ? "NOTIFY_LEVEL"
-       : (type == CONCLUDE ? "CONCLUDE"
-       : (type == DISCONNECT ? "DISCONNECT"
-       : (type == TRACEPROOF ? "TRACEPROOF"
-       : (type == FLUSHPROOFTRACE ? "FLUSHPROOFTRACE"
-       : (type == CLOSEPROOFTRACE ? "CLOSEPROOFTRACE"
-#ifdef MOBICAL_MEMORY
-       : (type == MAXALLOC ? "MAXALLOC"
-       : (type == LEAKALLOC ? "LEAKALLOC"
-#endif
-#ifdef MOBICAL_TERMINATE
-       : (type == TERMINATE ? "TERMINATE"
-#endif
-       : (type == TRAVERSE_CLAUSES ? "TRAVERSE_CLAUSES"
-       : (type == TRAVERSE_CONSTRAINT ? "TRAVERSE_CONSTRAINT"
-       : (type == TRAVERSE_WITNESSES_BACKWARD ? "TRAVERSE_WITNESSES_BACKWARD"
-       : (type == TRAVERSE_WITNESSES_FORWARD ? "TRAVERSE_WITNESSES_FORWARD"
-       : (type == READ_DIMACS ? "READ_DIMACS"
-       : (type == READ_SOLUTION ? "READ_SOLUTION"
-       : (type == WRITE_DIMACS ? "WRITE_DIMACS"
-       : (type == WRITE_EXTENSION ? "WRITE_EXTENSION"
-       : (type == COPY ? "COPY"
-       : "INVALID_TYPE")))))))))))
-#ifdef MOBICAL_MEMORY
-       ))
-#endif
-#ifdef MOBICAL_TERMINATE
-       )
-#endif
-       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
-  // clang-format on
-}
-
 #ifdef LOGGING
 static const char *mft_to_str (MockForceType type) {
   // clang-format off
@@ -1862,13 +1862,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d){};
+    Decisions (int l, int d) : lit (l), delay (d) {};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d){};
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {
@@ -5156,6 +5156,7 @@ public:
           assert (c->during_type () || c->always_type ());
           continue;
         }
+
 #ifdef MOBICAL_MEMORY
         if (c->type == CallType::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -5210,10 +5211,6 @@ public:
             mobical.shared->unsat++;
         } else
           c->execute (solver, extendmap);
-#ifndef NTRACING
-        if (c->type == CallType::INIT && trace_file != nullptr)
-          solver->trace_api_calls (trace_file);
-#endif
         if (c->type == CallType::CONNECT && mobical.donot.mock_propagator) {
           for (size_t j = i + 1; j < calls.size (); j++) {
             Call *next_c = calls[j];
@@ -5224,26 +5221,43 @@ public:
             next_c->execute (solver, extendmap, true);
           }
         }
-
-        // initialize options after INIT or CONFIGURE
-        if (c->type == CallType::INIT || c->type == CallType::CONFIGURE) {
+        // initialize logging, tracing and terminator AFTER executing INIT
+        if (c->type == CallType::INIT) {
+#ifdef LOGGING
+          if (mobical.add_set_log_to_true)
+            solver->set ("log", 1);
+#endif
+#ifndef NTRACING
+          if (trace_file != nullptr)
+            solver->trace_api_calls (trace_file);
+#endif
 #ifdef MOBICAL_TERMINATE
           // Connect terminator but never disconnect it
           // (might violate API contract on failed allocation).
           solver->connect_terminator (this);
 #endif
-          for (auto &o : mobical.mopts) {
-            if (o.fix (&mobical.mopts)) {
-              if (mobical.verbose) {
-                std::cout << "c [mobical] forcing option '";
-                std::cout << "set " << o.name << " "
-                          << o.val (&mobical.mopts);
-                std::cout << "'" << std::endl;
+        }
+
+        // initialize options after INIT or CONFIGURE (to force value back
+        // after a clashing configure call)
+        if (c->type == CallType::INIT || c->type == CallType::CONFIGURE) {
+          try {
+            for (auto &o : mobical.mopts) {
+              if (o.fix (&mobical.mopts)) {
+                if (mobical.verbose) {
+                  std::cout << "c [mobical] forcing option '";
+                  std::cout << "set " << o.name << " "
+                            << o.val (&mobical.mopts);
+                  std::cout << "'" << std::endl;
+                }
+                solver->set (o.name, o.val (&mobical.mopts));
+                if (!strcmp (o.name, "factorcheck"))
+                  extendmap->factor_check = o.val (&mobical.mopts);
               }
-              solver->set (o.name, o.val (&mobical.mopts));
-              if (!strcmp (o.name, "factorcheck"))
-                extendmap->factor_check = o.val (&mobical.mopts);
             }
+          } catch (const std::runtime_error &) {
+            mobical.warning ("could not set options after call %s",
+                             c->keyword ());
           }
         }
       } catch (const std::bad_alloc &e) {
@@ -5575,13 +5589,6 @@ int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
 
 void Trace::generate_options (Random &random, Size size) {
 
-#ifdef LOGGING
-  if (mobical.add_set_log_to_true)
-    push_back (new SetCall ("log", 1));
-#else
-  if (mobical.add_set_log_to_true)
-    mobical.warning ("ignoring log option");
-#endif
   // In 10% of the cases do not change any options.
   //
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_options)
@@ -9337,13 +9344,6 @@ void Reader::parse () {
       state = new_state;
       prev = c;
     }
-
-#ifdef LOGGING
-    if (!trace.calls.empty () &&
-        trace.calls.back ()->type == CallType::INIT &&
-        mobical.add_set_log_to_true)
-      trace.push_back (new SetCall ("log", 1));
-#endif
 
     if (c && mobical.add_dump_before_solve && c->process_type ())
       trace.push_back (new DumpCall ());
