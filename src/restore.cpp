@@ -252,6 +252,7 @@ void External::defragment_clause_data () {
   }
 
   clause_data.resize (write);
+  shrink_vector (clause_data);
   fragmented_clause_data = 0;
 
   LOG ("defragmented clause data to %zu elements", clause_data.size ());
