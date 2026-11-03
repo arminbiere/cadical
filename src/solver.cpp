@@ -411,6 +411,10 @@ static atomic<bool> tracing_api_calls_through_environment_variable_method{
   do { \
   } while (0)
 
+#define TRACE_LARGE(NAME, ...) \
+  do { \
+  } while (0)
+
 /*------------------------------------------------------------------------*/
 #endif
 /*------------------------------------------------------------------------*/
