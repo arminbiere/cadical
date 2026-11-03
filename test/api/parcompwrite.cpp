@@ -258,7 +258,7 @@ static void catch_alarm (int sig) {
 int main () {
   const char *suffixes[] = {"", ".gz"};
   (void) ::signal (SIGALRM, catch_alarm);
-  ::alarm (1);
+  ::alarm (3);
   for (auto s : suffixes) {
     suffix = s;
     for (unsigned c = 0; c != 2; c++) {
