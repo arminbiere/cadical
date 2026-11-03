@@ -401,6 +401,26 @@ static atomic<bool> tracing_api_calls_through_environment_variable_method{
     false};
 
 /*------------------------------------------------------------------------*/
+#elif LOGGING // NTRACING
+/*------------------------------------------------------------------------*/
+
+#define TRACE_LARGE(NAME, ...) \
+  do { \
+    /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
+    if ((internal == 0)) \
+      break; \
+    LOG_API_CALL_BEGIN_LARGE (__VA_ARGS__); \
+  } while (0)
+
+#define TRACE(NAME, ...) \
+  do { \
+    /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
+    if ((internal == 0)) \
+      break; \
+    LOG_API_CALL_BEGIN (__VA_ARGS__); \
+  } while (0)
+
+/*------------------------------------------------------------------------*/
 #else // NTRACING
 /*------------------------------------------------------------------------*/
 
