@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 
 namespace CaDiCaL {
 
@@ -1051,18 +1051,18 @@ void Internal::increase_elimination_bound () {
   report ('^');
 }
 
-void Internal::init_cat () {
+void Internal::init_citten () {
   if (!opts.elimdef)
     return;
-  assert (!cat);
-  cat = KITTEN_NAMESPACE (kitten_init) ();
+  assert (!citten);
+  citten = citten_init ();
 }
 
-void Internal::reset_cat () {
-  if (cat) {
-    get_kitten_statistics (cat);
-    KITTEN_NAMESPACE (kitten_release) (cat);
-    cat = 0;
+void Internal::reset_citten () {
+  if (citten) {
+    get_citten_statistics (citten);
+    citten_release (citten);
+    citten = 0;
   }
 }
 
@@ -1103,7 +1103,7 @@ void Internal::elim (bool update_limits) {
 
   reset_watches (); // saves lots of memory
 
-  init_cat ();
+  init_citten ();
 
   // Alternate one round of bounded variable elimination ('elim_round')
   // and subsumption ('subsume_round'), blocked ('block') and covered
@@ -1185,9 +1185,9 @@ void Internal::elim (bool update_limits) {
              stats.eliminate_complete + 1, lim.elimbound);
     }
 
-    reset_cat ();
+    reset_citten ();
   } catch (std::bad_alloc &exception) {
-    reset_cat ();
+    reset_citten ();
     throw exception;
   }
 

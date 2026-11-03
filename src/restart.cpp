@@ -126,12 +126,10 @@ int Internal::reuse_trail () {
     return level;
   int trivial_decisions =
       assumptions.size () + constraints_without_assumptions;
-  if (constraint_cat &&
-      KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11) {
+  if (constraint_cat && citten_status (constraint_cat) == 11) {
     LOG ("level %d < implicant %d?", level,
-         KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat));
-    trivial_decisions =
-        KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat);
+         citten_size_implicant (constraint_cat));
+    trivial_decisions = citten_size_implicant (constraint_cat);
   }
   int next_decision = next_decision_variable ();
   assert (1 <= next_decision);

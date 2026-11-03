@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 #include "options.hpp"
 
 namespace CaDiCaL {
@@ -25,7 +25,7 @@ void Internal::assume (int lit) {
   assumptions.push_back (lit);
   freeze (lit);
   if (constraint_cat)
-    KITTEN_NAMESPACE (kitten_assume_signed (constraint_cat, lit));
+    citten_assume_signed (constraint_cat, lit);
 }
 
 // for LRAT we implement recursive DFS, for non-LRAT use BFS.
@@ -95,7 +95,7 @@ static void traverse_constraint_core (void *state, unsigned id) {
   internal->mark_failed_constraint (id);
 }
 
-// extracts relevant learned clauses from kitten for drat proofs
+// extracts relevant learned clauses from citten for drat proofs
 //
 static void traverse_constraint_drat (void *state, unsigned id,
                                       bool learned, size_t size,
@@ -113,7 +113,7 @@ static void traverse_constraint_drat (void *state, unsigned id,
   assert (internal->proof);
   assert (!internal->lrat);
   assert (internal->lrat_chain.empty ());
-  /* not necessary anymore due to kitten having assumptions
+  /* not necessary anymore due to citten having assumptions
   for (auto &lit : internal->failing_assumptions)
     clause.push_back (internal->externalize (-lit));
     */
@@ -135,7 +135,7 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
   Internal *internal = (Internal *) state;
   if (!learned) {
     assert (id);
-    LOG ("original kitten[%d] = %d", ref, id);
+    LOG ("original citten[%d] = %d", ref, id);
     internal->constraint_refs[ref] = id;
     return;
   }
@@ -148,13 +148,13 @@ static void traverse_constraint_lrat (void *state, unsigned ref,
   assert (lrat_chain.empty ());
   for (size_t i = 0; i < chain_size; i++) {
     const unsigned kref = chain[i];
-    // kid is kitten internal representation,
+    // kid is citten internal representation,
     // not cadical representation. Mapping needed.
     assert (internal->constraint_refs.find (kref) !=
             internal->constraint_refs.end ());
     const unsigned cid = internal->constraint_refs[kref];
     assert (cid);
-    // TODO: mapping from intermediary kitten id to cadical id
+    // TODO: mapping from intermediary citten id to cadical id
     // would allow INT_MAX constraints (also see
     // comment in constrain.cpp)
     lrat_chain.push_back (cid);
@@ -331,16 +331,15 @@ void Internal::failing () {
   } else {
     assert (constraint_cat);
     // unsat_constraint
-    // analyze failing constraints with kitten
+    // analyze failing constraints with citten
     uint64_t learned;
     for (auto &lit : assumptions) {
-      if (KITTEN_NAMESPACE (kitten_failed_signed) (constraint_cat, lit))
+      if (citten_failed_signed (constraint_cat, lit))
         mark_failing_assumption (lit);
     }
-    KITTEN_NAMESPACE (kitten_compute_clausal_core) (constraint_cat,
-                                                    &learned);
-    KITTEN_NAMESPACE (kitten_traverse_core_ids) (constraint_cat, this,
-                                                 traverse_constraint_core);
+    citten_compute_clausal_core (constraint_cat, &learned);
+    citten_traverse_core_ids (constraint_cat, this,
+                              traverse_constraint_core);
     // assert (!conclusion.empty ()); breaks if two assumptions contradict
     if (proof) {
       if (conclusion.empty ()) {
@@ -395,12 +394,11 @@ void Internal::failing () {
         }
       } else if (lrat) {
         assert (constraint_refs.empty ());
-        KITTEN_NAMESPACE (kitten_trace_core) (constraint_cat, this,
-                                              traverse_constraint_lrat);
+        citten_trace_core (constraint_cat, this, traverse_constraint_lrat);
         constraint_refs.clear ();
       } else {
-        KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
-            constraint_cat, this, traverse_constraint_drat);
+        citten_traverse_core_clauses_with_id (constraint_cat, this,
+                                              traverse_constraint_drat);
       }
     }
   }

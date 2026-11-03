@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 #include "util.hpp"
 
 namespace CaDiCaL {
@@ -16,9 +16,9 @@ Sweeper::~Sweeper () { internal->release_sweeper (*this); }
 
 int Internal::sweep_solve () {
   PROFILE_SCOPE (sweepsolve);
-  KITTEN_NAMESPACE (kitten_randomize_phases) (cat);
+  citten_randomize_phases (citten);
   stats.sweep_solved++;
-  int res = KITTEN_NAMESPACE (kitten_solve) (cat);
+  int res = citten_solve (citten);
   if (res == 10)
     stats.sweep_solved_sat++;
   else if (res == 20)
@@ -30,7 +30,7 @@ int Internal::sweep_solve () {
 
 bool Internal::sweep_flip (int lit) {
   PROFILE_SCOPE (sweepflip);
-  bool res = KITTEN_NAMESPACE (kitten_flip_signed_literal) (cat, lit);
+  bool res = citten_flip_signed_literal (citten, lit);
   return res;
 }
 
@@ -56,13 +56,13 @@ void Internal::sweep_check_counts (int except) {
   (void) except;
 #endif
 }
-void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
+void Internal::sweep_set_citten_ticks_limit (Sweeper &sweeper) {
   uint64_t remaining = 0;
   const uint64_t current = sweeper.current_ticks;
   if (current < sweeper.limit.ticks)
     remaining = sweeper.limit.ticks - current;
-  LOG ("'kitten_ticks' remaining %" PRIu64, remaining);
-  KITTEN_NAMESPACE (kitten_set_ticks_limit) (cat, remaining);
+  LOG ("'citten_ticks' remaining %" PRIu64, remaining);
+  citten_set_ticks_limit (citten, remaining);
 }
 
 void Internal::sweep_update_noccs (Clause *c) {
@@ -212,11 +212,11 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
   work.clear ();
 }
 
-bool Internal::kitten_ticks_limit_hit (Sweeper &sweeper, const char *when) {
+bool Internal::citten_ticks_limit_hit (Sweeper &sweeper, const char *when) {
   const uint64_t current =
-      KITTEN_NAMESPACE (kitten_current_ticks) (cat) + sweeper.current_ticks;
+      citten_current_ticks (citten) + sweeper.current_ticks;
   if (current >= sweeper.limit.ticks) {
-    LOG ("'kitten_ticks' limit of %" PRIu64 " ticks hit after %" PRIu64
+    LOG ("'citten_ticks' limit of %" PRIu64 " ticks hit after %" PRIu64
          " ticks during %s",
          sweeper.limit.ticks, current, when);
     return true;
@@ -242,9 +242,9 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweeper.current_ticks = 2 * clauses.size ();
   sweeper.current_ticks +=
       2 + 2 * cache_lines (clauses.size (), sizeof (Clause *));
-  assert (!cat);
-  cat = KITTEN_NAMESPACE (kitten_init) ();
-  cat_clear_track_log_terminate ();
+  assert (!citten);
+  citten = citten_init ();
+  citten_clear_track_log_terminate ();
 
   sweep_dense_mode_and_watch_irredundant (); // full occurence list
 
@@ -302,11 +302,9 @@ void Internal::release_sweeper (Sweeper &sweeper) {
   for (unsigned i = 0; i < 2; i++)
     erase_vector (sweeper.core[i]);
 
-  if (cat) {
-    get_kitten_statistics (cat);
-    KITTEN_NAMESPACE (kitten_release) (cat);
-  }
-  cat = 0;
+  if (citten)
+    citten_release (citten);
+  citten = 0;
   stats.ticks_sweep += sweeper.current_ticks;
   stats.ticks += sweeper.current_ticks;
   return;
@@ -314,9 +312,9 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
 void Internal::clear_sweeper (Sweeper &sweeper) {
   LOG ("clearing sweeping environment");
-  sweeper.current_ticks += KITTEN_NAMESPACE (kitten_current_ticks) (cat);
+  sweeper.current_ticks += citten_current_ticks (citten);
 
-  cat_clear_track_log_terminate ();
+  citten_clear_track_log_terminate ();
   for (auto &idx : sweeper.vars) {
     assert (sweeper.depths[idx]);
     sweeper.depths[idx] = 0;
@@ -330,7 +328,7 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
   sweeper.backbone.clear ();
   sweeper.partition.clear ();
   sweeper.encoded = 0;
-  sweep_set_kitten_ticks_limit (sweeper);
+  sweep_set_citten_ticks_limit (sweeper);
 }
 
 int Internal::sweep_repr (Sweeper &sweeper, int lit) {
@@ -377,9 +375,8 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
   // assert (sweeper.clause.size () > 1);
   for (const auto &lit : sweeper.clause)
     add_literal_to_environment (sweeper, depth, lit);
-  KITTEN_NAMESPACE (cat_clause_with_id) (cat, sweeper.clauses.size (),
-                                         sweeper.clause.size (),
-                                         sweeper.clause.data ());
+  citten_clause_with_id (citten, sweeper.clauses.size (),
+                         sweeper.clause.size (), sweeper.clause.data ());
   sweeper.clause.clear ();
   if (opts.sweepcountbinary || sweeper.clause.size () > 2)
     sweeper.encoded++;
@@ -491,22 +488,21 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   core.push_back (pc);
 }
 
-static int cat_terminate (void *data) {
+static int citten_terminate (void *data) {
   return ((Internal *) data)->terminated_asynchronously ();
 }
 
 } // end extern C
 
-void Internal::cat_clear_track_log_terminate () {
-  assert (cat);
-  get_kitten_statistics (cat);
-  KITTEN_NAMESPACE (kitten_clear) (cat);
-  KITTEN_NAMESPACE (kitten_track_antecedents) (cat);
+void Internal::citten_clear_track_log_terminate () {
+  assert (citten);
+  citten_clear (citten);
+  citten_track_antecedents (citten);
   if (external->terminator)
-    KITTEN_NAMESPACE (kitten_set_terminator) (cat, internal, cat_terminate);
+    citten_set_terminator (citten, internal, citten_terminate);
 #ifdef LOGGING
   if (opts.log)
-    KITTEN_NAMESPACE (kitten_set_logging) (cat);
+    citten_set_logging (citten);
 #endif
 }
 
@@ -525,12 +521,12 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
 
     if (!pc.learned) {
       LOG (pc.literals,
-           "not adding already present core[%u] kitten[%u] clause",
+           "not adding already present core[%u] citten[%u] clause",
            core_idx, pc.kit_id);
       continue;
     }
 
-    LOG (pc.literals, "adding extracted core[%u] kitten[%u] lemma",
+    LOG (pc.literals, "adding extracted core[%u] citten[%u] lemma",
          core_idx, pc.kit_id);
 
     const unsigned new_size = pc.literals.size ();
@@ -620,13 +616,12 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
   assert (core == 0 || core == 1);
   assert (sweeper.core[core].empty ());
   sweeper.save = core;
-  KITTEN_NAMESPACE (kitten_compute_clausal_core) (cat, 0);
+  citten_compute_clausal_core (citten, 0);
   if (lrat)
-    KITTEN_NAMESPACE (kitten_trace_core) (cat, &sweeper,
-                                          save_core_clause_with_lrat);
+    citten_trace_core (citten, &sweeper, save_core_clause_with_lrat);
   else
-    KITTEN_NAMESPACE (kitten_traverse_core_clauses_with_id) (
-        cat, &sweeper, save_core_clause);
+    citten_traverse_core_clauses_with_id (citten, &sweeper,
+                                          save_core_clause);
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
@@ -666,8 +661,7 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
     assert (idx > 0);
     const int lit = idx;
     const int not_lit = -lit;
-    const signed char tmp =
-        KITTEN_NAMESPACE (kitten_signed_value) (cat, lit);
+    const signed char tmp = citten_signed_value (citten, lit);
     const int candidate = (tmp < 0) ? not_lit : lit;
     LOG ("sweeping candidate %d", candidate);
     sweeper.backbone.push_back (candidate);
@@ -703,8 +697,7 @@ void Internal::sweep_refine_partition (Sweeper &sweeper) {
         continue;
       if (val (other))
         continue;
-      signed char value =
-          KITTEN_NAMESPACE (kitten_signed_value) (cat, other);
+      signed char value = citten_signed_value (citten, other);
       if (!value)
         LOG ("dropping sub-solver unassigned %d", other);
       else if (value > 0) {
@@ -741,8 +734,7 @@ void Internal::sweep_refine_partition (Sweeper &sweeper) {
         continue;
       if (val (other))
         continue;
-      signed char value =
-          KITTEN_NAMESPACE (kitten_signed_value) (cat, other);
+      signed char value = citten_signed_value (citten, other);
       if (value < 0) {
         new_partition.push_back (other);
         assigned_false++;
@@ -780,7 +772,7 @@ void Internal::sweep_refine_backbone (Sweeper &sweeper) {
     const int lit = *p;
     if (val (lit))
       continue;
-    signed char value = KITTEN_NAMESPACE (kitten_signed_value) (cat, lit);
+    signed char value = citten_signed_value (citten, lit);
     if (!value)
       LOG ("dropping sub-solver unassigned %d", lit);
     else if (value > 0)
@@ -790,7 +782,7 @@ void Internal::sweep_refine_backbone (Sweeper &sweeper) {
 }
 
 void Internal::sweep_refine (Sweeper &sweeper) {
-  assert (KITTEN_NAMESPACE (kitten_status) (cat) == 10);
+  assert (citten_status (citten) == 10);
   if (sweeper.backbone.empty ())
     LOG ("no need to refine empty backbone candidates");
   else
@@ -806,7 +798,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
   if (!max_rounds)
     return;
   assert (sweeper.backbone.size ());
-  if (KITTEN_NAMESPACE (kitten_status) (cat) != 10)
+  if (citten_status (citten) != 10)
     return;
 #ifdef LOGGING
   unsigned total_flipped = 0;
@@ -845,7 +837,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
       break;
     if (terminated_asynchronously ())
       break;
-    if (kitten_ticks_limit_hit (sweeper, "backbone flipping"))
+    if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
     if (refine)
       sweep_refine (sweeper);
@@ -857,7 +849,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 bool Internal::sweep_extract_fixed (Sweeper &sweeper, int lit) {
   const int not_lit = -lit;
   stats.sweep_bb_solved++;
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, not_lit);
+  citten_assume_signed (citten, not_lit);
   int res = sweep_solve ();
   if (!res) {
     stats.sweep_bb_solved_to++;
@@ -872,7 +864,7 @@ bool Internal::sweep_extract_fixed (Sweeper &sweeper, int lit) {
 
 bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
   LOG ("trying backbone candidate %d", lit);
-  signed char value = KITTEN_NAMESPACE (kitten_fixed_signed) (cat, lit);
+  signed char value = citten_fixed_signed (citten, lit);
   if (value) {
     stats.sweep_bb_fixed++;
     assert (value > 0);
@@ -883,7 +875,7 @@ bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
     return false;
   }
 
-  int res = KITTEN_NAMESPACE (kitten_status) (cat);
+  int res = citten_status (citten);
   if (res != 10) {
     LOG ("not flipping due to status %d != 10", res);
   }
@@ -898,7 +890,7 @@ bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
   LOG ("flipping %d failed", lit);
   const int not_lit = -lit;
   stats.sweep_bb_solved++;
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, not_lit);
+  citten_assume_signed (citten, not_lit);
   res = sweep_solve ();
   if (res == 10) {
     LOG ("sweeping backbone candidate %d failed", lit);
@@ -1350,7 +1342,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
   if (!max_rounds)
     return;
   assert (sweeper.partition.size ());
-  if (KITTEN_NAMESPACE (kitten_status) (cat) != 10)
+  if (citten_status (citten) != 10)
     return;
 #ifdef LOGGING
   unsigned total_flipped = 0;
@@ -1375,7 +1367,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
         if (limit_hit) {
           *q++ = lit;
           continue;
-        } else if (kitten_ticks_limit_hit (sweeper, "partition flipping")) {
+        } else if (citten_ticks_limit_hit (sweeper, "partition flipping")) {
           *q++ = lit;
           limit_hit = true;
           continue;
@@ -1404,7 +1396,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
     LOG ("flipped %u equivalence candidates in round %u", flipped, round);
     if (terminated_asynchronously ())
       break;
-    if (kitten_ticks_limit_hit (sweeper, "partition flipping"))
+    if (citten_ticks_limit_hit (sweeper, "partition flipping"))
       break;
     if (refine)
       sweep_refine (sweeper);
@@ -1422,7 +1414,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   assert (end[-3] == lit);
   assert (end[-2] == other);
   const int third = (end - begin == 3) ? 0 : end[-4];
-  int res = KITTEN_NAMESPACE (kitten_status) (cat);
+  int res = citten_status (citten);
   if (res == 10) {
     stats.sweep_eq_flip++;
     if (sweep_flip (lit)) {
@@ -1485,8 +1477,8 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   const int not_other = -other;
   const int not_lit = -lit;
   LOG ("flipping %d and %d both failed", lit, other);
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, not_lit);
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, other);
+  citten_assume_signed (citten, not_lit);
+  citten_assume_signed (citten, other);
   stats.sweep_eq_solved++;
   res = sweep_solve ();
   if (res == 10) {
@@ -1506,8 +1498,8 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   save_core (sweeper, 0);
 
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, lit);
-  KITTEN_NAMESPACE (kitten_assume_signed) (cat, not_other);
+  citten_assume_signed (citten, lit);
+  citten_assume_signed (citten, not_other);
   res = sweep_solve ();
   stats.sweep_eq_solved++;
   if (res == 10) {
@@ -1539,7 +1531,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   }
   LOG ("sweep equivalence %d = %d", lit, other);
 
-  // If kitten behaves as expected, the two binaries of the equivalence
+  // If citten behaves as expected, the two binaries of the equivalence
   // should be stored at sweeper.core[i].back () for i in {0, 1}.
   // We pick the smaller absolute valued literal as representative and
   // store the equivalence .
@@ -1693,13 +1685,13 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     PROFILE_SCOPE (sweepbackbone);
     while (sweeper.backbone.size ()) {
       if (unsat || terminated_asynchronously () ||
-          kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
+          citten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
         goto DONE;
       }
       flip_backbone_literals (sweeper);
       if (terminated_asynchronously () ||
-          kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
+          citten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
         goto DONE;
       }
@@ -1729,13 +1721,13 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     PROFILE_SCOPE (sweepequivalences);
     while (sweeper.partition.size ()) {
       if (unsat || terminated_asynchronously () ||
-          kitten_ticks_limit_hit (sweeper, "partition refinement")) {
+          citten_ticks_limit_hit (sweeper, "partition refinement")) {
         limit_reached = true;
         goto DONE;
       }
       flip_partition_literals (sweeper);
       if (terminated_asynchronously () ||
-          kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
+          citten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
         goto DONE;
       }
@@ -1981,7 +1973,7 @@ bool Internal::sweep () {
     sweeper->limit.ticks = INT64_MAX;
   else
     sweeper->limit.ticks = tickslimit - stats.ticks_sweep;
-  sweep_set_kitten_ticks_limit (*sweeper);
+  sweep_set_citten_ticks_limit (*sweeper);
   const unsigned scheduled = schedule_sweeping (*sweeper);
   uint64_t swept = 0, limit = 10;
   for (;;) {
@@ -1989,7 +1981,7 @@ bool Internal::sweep () {
       break;
     if (terminated_asynchronously ())
       break;
-    if (kitten_ticks_limit_hit (*sweeper, "sweeping loop"))
+    if (citten_ticks_limit_hit (*sweeper, "sweeping loop"))
       break;
     int idx = next_scheduled (*sweeper);
     if (idx == 0)

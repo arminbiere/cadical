@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 #include "profile.hpp"
 
 namespace CaDiCaL {
@@ -255,12 +255,10 @@ bool Internal::is_assumption_level (size_t level) {
 }
 bool Internal::is_constraint_level (size_t level) {
   assert (constraints_without_assumptions <= constraint_vars.size ());
-  if (constraint_cat &&
-      KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11) {
+  if (constraint_cat && citten_status (constraint_cat) == 11) {
     // LOG ("level %zd < implicant %d?", level,
-    // KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat));
-    return level <
-           KITTEN_NAMESPACE (kitten_size_implicant) (constraint_cat);
+    // citten_size_implicant (constraint_cat));
+    return level < citten_size_implicant (constraint_cat);
   }
   // LOG ("level %zd < assumptions %zd + constraints %zd?", level,
   // assumptions.size (), constraints_without_assumptions);
@@ -271,7 +269,7 @@ int Internal::decide_assumption () {
   assert (is_assumption_level (level));
   int res = 0;
   if (constraint_cat) {
-    int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
+    int cat_res = citten_status (constraint_cat);
     if (!cat_res) {
       stats.constraints_solved++;
       if (!unit_constraint_vars && opts.constrainteager) {
@@ -281,9 +279,9 @@ int Internal::decide_assumption () {
       }
       PROFILE_SCOPE (constraintssolve);
       if (opts.constraintprime == 2)
-        cat_res = KITTEN_NAMESPACE (kitten_solve_prime) (constraint_cat);
+        cat_res = citten_solve_prime (constraint_cat);
       else
-        cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+        cat_res = citten_solve (constraint_cat);
       report ('a'); // TODO: maybe only verbose
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
       if (cat_res == 20)
@@ -292,7 +290,7 @@ int Internal::decide_assumption () {
         stats.constraints_sat++;
       else if (cat_res == 11)
         stats.constraints_prime++;
-      else // kitten was terminated
+      else // citten was terminated
         assert (terminated_asynchronously ());
     }
     if (cat_res == 20) { // unsat
@@ -315,30 +313,29 @@ int Internal::decide_assumption () {
       notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
-      assert (!constraint_cat || KITTEN_NAMESPACE (kitten_signed_value) (
-                                     constraint_cat, lit) > 0);
+      assert (!constraint_cat ||
+              citten_signed_value (constraint_cat, lit) > 0);
       search_assume_decision (lit);
     }
   }
   return res;
 }
 
-// check for falsified literals with respect to kitten trail
+// check for falsified literals with respect to citten trail
 bool Internal::compute_diverged_constraint () {
   PROFILE_SCOPE (constraintsdiverge);
   assert (constraint_unsat.empty ());
   bool backtracked = false;
   for (auto &lit : constraint_vars) {
-    const auto tmp_kit =
-        KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
+    const auto tmp_kit = citten_signed_value (constraint_cat, lit);
     const auto tmp_cad = val (lit);
     if (!tmp_cad)
       continue;
     if (tmp_kit == tmp_cad)
       continue;
     if (!tmp_kit && is_decision (lit)) {
-      assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
-      LOG ("backtracking decision %d (not part of kitten implicant)", lit);
+      assert (citten_status (constraint_cat) == 11);
+      LOG ("backtracking decision %d (not part of citten implicant)", lit);
       backtrack (var (lit).level - 1);
       backtracked = true;
       continue;
@@ -347,10 +344,8 @@ bool Internal::compute_diverged_constraint () {
       continue;
     assert (tmp_kit);
     assert (tmp_kit == -tmp_cad);
-    if (opts.constraintflip &&
-        KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 10 &&
-        KITTEN_NAMESPACE (kitten_flip_signed_literal) (constraint_cat,
-                                                       lit)) {
+    if (opts.constraintflip && citten_status (constraint_cat) == 10 &&
+        citten_flip_signed_literal (constraint_cat, lit)) {
       stats.constraints_flipped++;
       continue;
     }
@@ -374,7 +369,7 @@ bool Internal::compute_diverged_constraint () {
     if (val (min) > 0)
       failed = -failed;
     analyze_failing_constraint (failed);
-    // Kitten might fix the conflict by changing other parts of the
+    // citten might fix the conflict by changing other parts of the
     // model so backtracking eagerly is not beneficial
     /*
     if (var (min).level)
@@ -435,7 +430,7 @@ void Internal::eager_constraint_units () {
       clause.clear ();
       lrat_chain.clear ();
     }
-    KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, lit);
+    citten_unit_with_id (constraint_cat, id, lit);
   }
   constraint_fixed.clear ();
 }
@@ -443,7 +438,7 @@ void Internal::eager_constraint_units () {
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
-  int cat_res = KITTEN_NAMESPACE (kitten_status) (constraint_cat);
+  int cat_res = citten_status (constraint_cat);
   int res = 0;
   if (!cat_res) {
     // sort constraint_vars according to current decision heuristic
@@ -462,12 +457,12 @@ int Internal::decide_constraint () {
       PROFILE_SCOPE_EARLY_EXIT (constraintssort)
       last_constraint_idx = 0;
     }
-    // bump kitten (after sorting)
+    // bump citten (after sorting)
     if (opts.constraintbump == 2) {
       PROFILE_SCOPE (constraintsbump)
       for (auto cv = constraint_vars.rbegin ();
            cv != constraint_vars.rend (); cv++) {
-        KITTEN_NAMESPACE (kitten_bump_signed_literal (constraint_cat, *cv));
+        citten_bump_signed_literal (constraint_cat, *cv);
       }
       PROFILE_SCOPE_EARLY_EXIT (constraintsbump)
     }
@@ -479,9 +474,9 @@ int Internal::decide_constraint () {
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
     if (opts.constraintprime == 2)
-      cat_res = KITTEN_NAMESPACE (kitten_solve_prime) (constraint_cat);
+      cat_res = citten_solve_prime (constraint_cat);
     else
-      cat_res = KITTEN_NAMESPACE (kitten_solve) (constraint_cat);
+      cat_res = citten_solve (constraint_cat);
     report ('a'); // TODO: maybe only verbose
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
     if (cat_res == 20)
@@ -489,26 +484,26 @@ int Internal::decide_constraint () {
     else if (cat_res == 10) {
       stats.constraints_sat++;
       if (opts.constraintprime == 1) {
-        LOG ("computing kitten prime implicant");
+        LOG ("computing citten prime implicant");
         PROFILE_SCOPE (constraintsprime);
-        KITTEN_NAMESPACE (kitten_compute_prime_implicant) (constraint_cat);
+        citten_compute_prime_implicant (constraint_cat);
         PROFILE_SCOPE_EARLY_EXIT (constraintsprime);
         stats.constraints_prime++;
       }
-      // compute conflicts between current trail and kitten model
+      // compute conflicts between current trail and citten model
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
         return 0;
       }
     } else if (cat_res == 11) {
       stats.constraints_prime++;
-      // compute conflicts between current trail and kitten model
+      // compute conflicts between current trail and citten model
       if (compute_diverged_constraint ()) {
         stats.constraints_diverged++;
         return 0;
       }
     } else {
-      // Kitten was terminated
+      // citten was terminated
       assert (terminated_asynchronously ());
       return 0;
     }
@@ -527,7 +522,7 @@ int Internal::decide_constraint () {
   else {
     PROFILE_SCOPE (constraintsdecide)
     assert (cat_res == 10 || cat_res == 11);
-    LOG ("using kitten model");
+    LOG ("using citten model");
     bool all_constraints_assigned = true;
     bool pseudo_level =
         (size_t) level > assumptions.size () && !control[level].decision;
@@ -549,8 +544,8 @@ int Internal::decide_constraint () {
         idx = last_constraint_idx;
     } else if (false && cat_res == 11) {
       assert (opts.constraintprime);
-      const int last_decision = KITTEN_NAMESPACE (
-          kitten_next_signed_implicant (constraint_cat, idx++));
+      const int last_decision =
+          citten_next_signed_implicant (constraint_cat, idx++);
       if (val (last_decision) && var (last_decision).level == level &&
           is_decision (last_decision))
         idx = last_constraint_idx;
@@ -561,8 +556,7 @@ int Internal::decide_constraint () {
         break;
       }
       if (cat_res == 11) {
-        lit = KITTEN_NAMESPACE (
-            kitten_next_signed_implicant (constraint_cat, idx++));
+        lit = citten_next_signed_implicant (constraint_cat, idx++);
         if (!lit) {
           LOG ("all implicant literals assigned");
           break;
@@ -573,12 +567,11 @@ int Internal::decide_constraint () {
         lit = constraint_vars[idx++];
       }
       LOG ("next constraint literal %s", LOGLIT (lit));
-      const signed char tmp =
-          KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat, lit);
+      const signed char tmp = citten_signed_value (constraint_cat, lit);
       // Ignore redundant variables.
       // assert (!tmp);
       if (!tmp) {
-        assert (KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 11);
+        assert (citten_status (constraint_cat) == 11);
         continue;
       }
       assert (tmp);
@@ -597,19 +590,18 @@ int Internal::decide_constraint () {
         LOG ("constraint literal %d already satisfied", lit);
         continue;
       } else if (opts.constraintflip &&
-                 KITTEN_NAMESPACE (kitten_status) (constraint_cat) == 10 &&
-                 KITTEN_NAMESPACE (kitten_flip_signed_literal) (
-                     constraint_cat, lit)) {
+                 citten_status (constraint_cat) == 10 &&
+                 citten_flip_signed_literal (constraint_cat, lit)) {
         stats.constraints_flipped++;
       } else if (is_decision (lit)) {
-        // happens if we have to recompute kitten model
+        // happens if we have to recompute citten model
         // TODO: should be caught by 'compute_diverged_constraint'
         assert (false);
         all_constraints_assigned = false;
         backtrack (var (lit).level - 1);
         break;
       } else {
-        // this requires that the trail satisfies the current kitten
+        // this requires that the trail satisfies the current citten
         // model, otherwise 'analyze_failing_constraint' might generate a
         // useless clause, leading to a potential infinite loop.
         assert (tmp_lit == -tmp);
@@ -618,7 +610,7 @@ int Internal::decide_constraint () {
         if (tmp_lit > 0)
           failed = -failed;
         analyze_failing_constraint (failed);
-        // Kitten might fix the conflict by changing other parts of the
+        // citten might fix the conflict by changing other parts of the
         // model so backtracking eagerly is not beneficial
         /*
         if (var (lit).level)

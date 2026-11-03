@@ -76,8 +76,8 @@ void check_test_case (const std::vector<int> &constrain,
       // checking that we do not return anything from the constrain
       for (auto const &lit : implicants) {
         for (auto const &lit2 : constrain)
-	  assert (lit != lit2), (void) lit, (void) lit2;
-        }
+          assert (lit != lit2), (void) lit, (void) lit2;
+      }
     }
     // Check that every propagation holds
     for (auto const &lit : implicants) {

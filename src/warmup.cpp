@@ -229,7 +229,7 @@ int Internal::warmup_decide_assumptions () {
   } else if (is_constraint_level (level)) {
     assert (false); // not supported for now with constraints.
   } else {
-    // TODO: do constraints with kitten or just don't do walk
+    // TODO: do constraints with citten or just don't do walk
     assert (false);
   }
   if (res)

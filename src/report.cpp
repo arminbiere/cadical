@@ -16,7 +16,7 @@ namespace CaDiCaL {
 
 The 'reports' are shown as 'c <char> ...' with '<char>' as follows:
 
-a  solved kitten constraints
+a  solved citten constraints
 i  propagated learned unit clause
 O  backtracked after phases reset to original phase
 F  backtracked after flipping phases
@@ -60,7 +60,7 @@ u  vivified tier1 clauses
 v  vivified tier2 clauses
 w  vivified tier3 clauses
 x  vivified irredundant clauses
-=  sweeping to find equivalences using Kitten
+=  sweeping to find equivalences using Citten
 f  factor (BVA)
 
 The order of the list follows the occurrences of 'report' in the source

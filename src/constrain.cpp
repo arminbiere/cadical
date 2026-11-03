@@ -1,5 +1,5 @@
+#include "citten.h"
 #include "internal.hpp"
-#include "kitten.h"
 #include "profile.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -14,20 +14,19 @@ static int cat_terminate (void *data) {
 
 void Internal::init_constraint_cat () {
   assert (!constraint_cat);
-  constraint_cat = KITTEN_NAMESPACE (kitten_init) ();
+  constraint_cat = citten_init ();
 #ifdef LOGGING
   if (opts.log)
-    KITTEN_NAMESPACE (kitten_set_logging) (constraint_cat);
+    citten_set_logging (constraint_cat);
 #endif
   if (external->terminator)
-    KITTEN_NAMESPACE (kitten_set_terminator) (constraint_cat, internal,
-                                              cat_terminate);
-  KITTEN_NAMESPACE (kitten_track_antecedents) (constraint_cat);
-  KITTEN_NAMESPACE (kitten_keep_assumptions) (constraint_cat);
+    citten_set_terminator (constraint_cat, internal, cat_terminate);
+  citten_track_antecedents (constraint_cat);
+  citten_keep_assumptions (constraint_cat);
   // size_t idx = 0;
   for (auto &other : assumptions) {
-    LOG ("kitten assume %s", LOGLIT (other));
-    KITTEN_NAMESPACE (kitten_assume_signed) (constraint_cat, other);
+    LOG ("citten assume %s", LOGLIT (other));
+    citten_assume_signed (constraint_cat, other);
   }
 }
 
@@ -113,8 +112,8 @@ void Internal::constrain (int lit, int64_t ext_id) {
       lrat_chain.clear ();
     }
   }
-  // TODO: relies on int_id < INT_MAX. This is a hard limit for kitten,
-  // but mapping the ids again, before adding them to kitten would get
+  // TODO: relies on int_id < INT_MAX. This is a hard limit for citten,
+  // but mapping the ids again, before adding them to citten would get
   // rid of the dependence on the 'clause_id' counter and would allow
   // adding INT_MAX constraints per query (instead of INT_MAX - clause_id).
   assert (int_id < INT_MAX);
@@ -143,14 +142,12 @@ void Internal::constrain (int lit, int64_t ext_id) {
           constraints_without_assumptions++;
       }
     }
-    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, int_id,
-                                           constraint_tmp.size (),
-                                           constraint_tmp.data ());
+    citten_clause_with_id (constraint_cat, int_id, constraint_tmp.size (),
+                           constraint_tmp.data ());
     if (opts.constraintphase == 2) {
       PROFILE_SCOPE (constraintsphase);
       for (auto &lit : constraint_tmp) {
-        KITTEN_NAMESPACE (
-            kitten_phase_signed_literal (constraint_cat, lit));
+        citten_phase_signed_literal (constraint_cat, lit);
       }
     }
     // constraints.push_back (0);
@@ -195,8 +192,8 @@ void Internal::reset_constraint () {
   constraint_ids.clear ();
   constraint_fail.clear ();
   constraint_fixed.clear ();
-  get_kitten_statistics (constraint_cat);
-  KITTEN_NAMESPACE (kitten_release) (constraint_cat);
+  get_citten_statistics (constraint_cat);
+  citten_release (constraint_cat);
   constraints_without_assumptions = 0;
   constraint_cat = 0;
   unsat_constraint = 0;
@@ -251,7 +248,7 @@ void Internal::analyze_failing_constraint (int failed) {
       proof->add_assumption_clause (id, -failed, lrat_chain, false);
     lrat_chain.clear ();
 
-    KITTEN_NAMESPACE (cat_unit_with_id) (constraint_cat, id, -failed);
+    citten_unit_with_id (constraint_cat, id, -failed);
     return;
   }
 
@@ -267,8 +264,7 @@ void Internal::analyze_failing_constraint (int failed) {
     g.seen = true;
     analyzed.push_back (-failed);
     clause.push_back (-failed);
-    assert (KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat,
-                                                    failed) > 0);
+    assert (citten_signed_value (constraint_cat, failed) > 0);
     assert (w.reason);
     assert (w.reason != external_reason);
     for (const auto &other : *w.reason) {
@@ -326,8 +322,7 @@ void Internal::analyze_failing_constraint (int failed) {
       } else {
         assert (assumed (lit) || constrained (lit));
         LOG ("failed assumption %d", lit);
-        assert (KITTEN_NAMESPACE (kitten_signed_value) (constraint_cat,
-                                                        lit) > 0);
+        assert (citten_signed_value (constraint_cat, lit) > 0);
         clause.push_back (-lit);
       }
     }
@@ -346,7 +341,7 @@ void Internal::analyze_failing_constraint (int failed) {
     // of variables nor clauses necessary.  But we still want to check
     // correctness of the claim that the determined subset of failing
     // assumptions are a high-level core or equivalently their negations
-    // form a unit-implied clause. Finally add the clause to kitten.
+    // form a unit-implied clause. Finally add the clause to citten.
     //
     const int64_t id = ++clause_id;
     if (proof) {
@@ -354,21 +349,19 @@ void Internal::analyze_failing_constraint (int failed) {
       // not using constraints
       proof->add_assumption_clause (id, clause, lrat_chain, false);
     }
-    // TODO: bump kitten
+    // TODO: bump citten
     if (opts.constraintbump == 1 || opts.constraintphase) {
       PROFILE_SCOPE (constraintsphase);
       for (auto &lit : clause) {
         if (opts.constraintbump)
-          KITTEN_NAMESPACE (
-              kitten_bump_signed_literal (constraint_cat, lit));
+          citten_bump_signed_literal (constraint_cat, lit);
         if (opts.constraintphase)
-          KITTEN_NAMESPACE (
-              kitten_phase_signed_literal (constraint_cat, lit));
+          citten_phase_signed_literal (constraint_cat, lit);
       }
       PROFILE_SCOPE_EARLY_EXIT (constraintsphase);
     }
-    KITTEN_NAMESPACE (cat_clause_with_id) (constraint_cat, id,
-                                           clause.size (), clause.data ());
+    citten_clause_with_id (constraint_cat, id, clause.size (),
+                           clause.data ());
     lrat_chain.clear ();
     clause.clear ();
   }

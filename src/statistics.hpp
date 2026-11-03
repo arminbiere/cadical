@@ -81,20 +81,20 @@
 #define CADICAL_API_STATISTICS
 #endif
 
-#define KITTEN_STATISTICS \
-  STATISTIC (kitten_flip         ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_flipped      ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_sat          ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_solved       ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_conflicts    ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_decisions    ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_implicant    ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_bumped       ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_phase        ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_propagations ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_ticks        ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_unknown      ,   3, NOTHING, 0, 0) \
-  STATISTIC (kitten_unsat        ,   3, NOTHING, 0, 0) 
+#define CITTEN_STATISTICS \
+  STATISTIC (citten_flip         ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_flipped      ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_sat          ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_solved       ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_conflicts    ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_decisions    ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_implicant    ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_bumped       ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_phase        ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_propagations ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_ticks        ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_unknown      ,   3, NOTHING, 0, 0) \
+  STATISTIC (citten_unsat        ,   3, NOTHING, 0, 0) 
 
 #define CADICAL_STATISTICS \
   CADICAL_API_STATISTICS \
@@ -109,6 +109,7 @@
   STATISTIC (blocked_pure_literals,  2, percent, "%",   vars) \
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
+  CITTEN_STATISTICS \
   STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
      METRIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
      METRIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
@@ -256,7 +257,6 @@
   STATISTIC (instantiate_tried,      2, relative, "per", instantiations) \
   STATISTIC (instantiations,         1, INTERVAL, "", interval) \
   STATISTIC (irredundant_literals,   3, NOTHING, 0, 0) \
-  KITTEN_STATISTICS \
   STATISTIC (learned_binaries,       2, percent, "%", learned_clauses) \
   STATISTIC (learned_clauses,        2, percent, "%", clauses) \
   STATISTIC (learned_literals,       2, relative, "per", learned_clauses) \

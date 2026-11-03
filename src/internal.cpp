@@ -1,6 +1,6 @@
 #include "internal.hpp"
+#include "citten.h"
 #include "flags.hpp"
-#include "kitten.h"
 #include "statistics.hpp"
 
 namespace CaDiCaL {
@@ -30,8 +30,8 @@ Internal::Internal ()
       best_assigned (0), target_assigned (0), no_conflict_until (0),
       constraints_without_assumptions (0), last_constraint_idx (0),
       unit_constraint_vars (false), randomized_deciding (false),
-      constraint_cat (nullptr), cat (nullptr), num_assigned (0), proof (0),
-      opts (this),
+      constraint_cat (nullptr), citten (nullptr), num_assigned (0),
+      proof (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -77,15 +77,15 @@ Internal::~Internal () {
     delete[] vals;
   }
   if (constraint_cat) {
-    get_kitten_statistics (constraint_cat);
-    KITTEN_NAMESPACE (kitten_release (constraint_cat));
+    get_citten_statistics (constraint_cat);
+    citten_release (constraint_cat);
   }
 }
 
-void Internal::get_kitten_statistics (kitten *kitten) {
-  auto *kitten_stats = KITTEN_NAMESPACE (kitten_get_statistics) (kitten);
-#define STATISTIC(NAME, ...) stats.NAME += kitten_stats->NAME;
-  KITTEN_STATISTICS
+void Internal::get_citten_statistics (struct citten *citten) {
+  auto *citten_stats = citten_get_statistics (citten);
+#define STATISTIC(NAME, ...) stats.NAME += citten_stats->NAME;
+  CITTEN_STATISTICS
 #undef STATISTIC
 }
 
