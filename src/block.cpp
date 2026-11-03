@@ -273,7 +273,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_witness_stack (lit, c);
+    external->push_clause_on_extension (lit, c);
     stats.blocked_pure_clauses++;
     mark_garbage (c);
 #ifdef LOGGING
@@ -409,7 +409,7 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_witness_stack (lit, c);
+    external->push_clause_on_extension (lit, c);
     blocker.reschedule.push_back (c);
     mark_garbage (c);
     j--;
@@ -625,7 +625,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_witness_stack (lit, c);
+    external->push_clause_on_extension (lit, c);
     blocker.reschedule.push_back (c);
     mark_garbage (c);
   }

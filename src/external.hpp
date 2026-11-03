@@ -211,12 +211,12 @@ public:
     return e2i.find_or_default (elit, 0);
   }
   /*----------------------------------------------------------------------*/
-  void push_clause_on_witness_stack (int iwit, Clause *);
-  void push_clause_on_witness_stack (const int64_t id, int iwit, 
+  void push_clause_on_extension (int iwit, Clause *);
+  void push_clause_on_extension (const int64_t id, int iwit, 
                                        const vector<int> &c);
-  void push_binary_clause_on_witness_stack (int64_t id, int iwit,
+  void push_binary_clause_on_extension (int64_t id, int iwit,
                                               int other);
-  void push_external_clause_on_witness_stack (const vector<int> &c, 
+  void push_external_clause_on_extension (const vector<int> &c, 
                                             const vector<int> &w, int64_t id);
   /* ------------------------------------------------------------------------ */
   void create_cube_stack (const vector<int> &iwit_cube);

@@ -944,7 +944,7 @@ int64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit,
     proof->add_derived_clause (id, false, clause, lrat_chain);
     proof->weaken_minus (id, clause);
   }
-  external->push_binary_clause_on_witness_stack (id, lit, other);
+  external->push_binary_clause_on_extension (id, lit, other);
   for (auto &tracer : tracers) {
     if (externalize (lit) < 0)
       break;

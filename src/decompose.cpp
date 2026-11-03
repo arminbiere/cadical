@@ -459,7 +459,7 @@ bool Internal::decompose_round () {
         proof->add_derived_clause (id1, false, clause, lrat_chain);
         proof->weaken_minus (id1, clause);
       }
-      external->push_binary_clause_on_witness_stack (id1, -idx, other);
+      external->push_binary_clause_on_extension (id1, -idx, other);
     }
     assert (id1);
 
@@ -494,7 +494,7 @@ bool Internal::decompose_round () {
         proof->add_derived_clause (id2, false, clause, lrat_chain);
         proof->weaken_minus (id2, clause);
       }
-      external->push_binary_clause_on_witness_stack (id2, idx, -other);
+      external->push_binary_clause_on_extension (id2, idx, -other);
     }
     assert (id2);
     decompose_ids[vlit (idx)] = id2;

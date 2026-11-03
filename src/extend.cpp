@@ -71,7 +71,7 @@ static inline int64_t decode_id (vector<int>::const_iterator p, const bool id_lo
   return static_cast<int64_t> ((upper << 32) | lower);
 }
 
-void External::push_clause_on_witness_stack (int iwit, Clause *c) {
+void External::push_clause_on_extension (int iwit, Clause *c) {
   assert (iwit);
   LOG (c, "pushing on witness data");
   
@@ -149,7 +149,7 @@ void External::push_clause_on_witness_stack (int iwit, Clause *c) {
   witness_data.push_back ({ewit, blit, idx});
 }
 
-void External::push_clause_on_witness_stack (const int64_t id, int iwit, const vector<int> &c) {
+void External::push_clause_on_extension (const int64_t id, int iwit, const vector<int> &c) {
   assert (iwit);
   assert (id > 0);
   assert (c.size ());
@@ -231,7 +231,7 @@ void External::push_clause_on_witness_stack (const int64_t id, int iwit, const v
   witness_data.push_back ({ewit, blit, idx});
 }
 
-void External::push_binary_clause_on_witness_stack (int64_t id, int iwit, 
+void External::push_binary_clause_on_extension (int64_t id, int iwit, 
                                                       int other) {
   LOG ("pushing on witness data binary clause[%" PRId64 "] %d %d", 
     id, other, iwit);
@@ -258,7 +258,7 @@ void External::push_binary_clause_on_witness_stack (int64_t id, int iwit,
     clause_data.push_back (static_cast<int> (idl));
   }
 
-  // No literal will be pushed. Both literals are on witness_order.
+  // No literal will be pushed. Both literals are on witness_data.
 
   uint32_t updated_size = 0;
   updated_size |= EMBEDDED;
@@ -423,7 +423,7 @@ void External::create_cube_stack_and_push_external_clause (
   witness_data.push_back ({0, 0, cube_idx});
 }
 
-void External::push_external_clause_on_witness_stack (
+void External::push_external_clause_on_extension (
     const vector<int> &c,
     const vector<int> &w, int64_t id) {  
   assert (id);
@@ -519,7 +519,7 @@ void External::push_external_clause_and_witness_on_extension (
   const vector<int> &c, const vector<int> &w, int64_t id) {
   assert (id);
   if (w.size () == 1) 
-    push_external_clause_on_witness_stack (c, w, id);
+    push_external_clause_on_extension (c, w, id);
   else
     create_cube_stack_and_push_external_clause (c, w, id);
 }
