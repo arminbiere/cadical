@@ -311,7 +311,7 @@ void External::push_cube_clause (Clause *c) {
   const unsigned size = c->size;
 
   internal->stats.weakened++;
-  internal->stats.weakened_cube++;
+  internal->stats.weakened_cube_cls++;
   internal->stats.weakened_lengths += size;
 
   clause_data.push_back (0); // Will be updated in the end.

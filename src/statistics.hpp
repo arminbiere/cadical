@@ -189,7 +189,7 @@
   STATISTIC (eliminate_tried_res,    2, relative, "per", eliminate_tried) \
   STATISTIC (eliminate_xor,          2, percent, "%", eliminate_gates) \
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
-  STATISTIC (extensions,             1, relative, "per", searches) \
+  STATISTIC (extensions,             1, percent, "%", searches) \
   STATISTIC (extended,               1, relative, "per", weakened) \
   STATISTIC (extend_clauses_blocked, 2, relative, "per", weakened) \
   STATISTIC (extend_clauses_read,    2, relative, "per", weakened) \
@@ -424,7 +424,7 @@
   METRIC (walk_warmup_dummy,         2, relative, "per", walk_warmup) \
   METRIC (walk_warmup_propagate,     2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
-  STATISTIC (weakened_cube,          2, percent, "%", weakened) \
+  STATISTIC (weakened_cube_cls,      2, percent, "%", weakened) \
   STATISTIC (weakened_lengths,       2, relative, "per", weakened) \
 
 // clang-format on

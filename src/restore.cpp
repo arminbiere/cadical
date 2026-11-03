@@ -6,14 +6,14 @@ namespace CaDiCaL {
 // In incremental solving after a first call to 'solve' has finished and
 // before calling the internal 'solve' again incrementally we have to
 // restore clauses which have the negation of a literal as a witness literal
-// on the witness stacks, which was added as original literal in a new
+// in the extension data, which was added as original literal in a new
 // clause or in an assumption.  This procedure has to be applied
 // recursively, i.e., the literals of restored clauses are treated in the
 // same way as literals of a new original clause.
 //
 // To figure out whether literals are such witnesses we have a 'witness'
 // bit for each external literal, which is set when weakening a clause.
-// The witness bits are recomputed after restoring clauses.
+// The witness bits are recomputed while restoring clauses.
 
 // We further mark in the external solver newly internalized external
 // literals in 'add' and 'assume' since the last call to 'solve' as tainted

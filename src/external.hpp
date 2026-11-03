@@ -226,7 +226,7 @@ public:
   void create_cube_stack_and_push_external_clause ( const vector<int> &clause, 
     const vector<int> &ewit_cube, int64_t id);
   /* ------------------------------------------------------------------------ */
-    void push_external_clause_and_witness_on_extension (
+  void push_external_clause_and_witness_on_extension (
       const vector<int> &clause, const vector<int> &witness, int64_t id);
   /* ------------------------------------------------------------------------ */
   struct ExtendStats {

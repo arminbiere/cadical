@@ -70,7 +70,7 @@ struct Internal;
   PROFILE (elim, 2) \
   PROFILE (factor, 2) \
   PROFILE (fastelim, 2) \
-  PROFILE (extend, 2) \
+  PROFILE (extend, 3) \
   PROFILE (extract, 3) \
   PROFILE (extractands, 4) \
   PROFILE (extractbinaries, 4) \
@@ -104,7 +104,6 @@ struct Internal;
   PROFILE (subsume, 2) \
   PROFILE (ternary, 2) \
   PROFILE (transred, 3) \
-  PROFILE (traversewitness, 3) \
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \
   PROFILE (walk, 2) \

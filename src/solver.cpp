@@ -1947,7 +1947,7 @@ struct WitnessWriter : public WitnessIterator {
     return true;
   }
 };
-// TODO: this needs updating to work with new reconstruction structure.
+
 const char *Solver::write_extension (const char *path) {
   TRACE (write_extension, "write_extension", path);
   REQUIRE_VALID_STATE ();
