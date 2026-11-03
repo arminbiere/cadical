@@ -658,7 +658,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
         proof->weaken_minus (c);
       if (c->size == 2)
         deleted_binary_clause = true;
-      external->push_clause_on_extension_stack (c, pivot);
+      external->push_clause_on_extension (pivot, c);
 #ifndef NDEBUG
       pushed++;
 #endif
@@ -682,7 +682,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
         proof->weaken_minus (d);
       if (d->size == 2)
         deleted_binary_clause = true;
-      external->push_clause_on_extension_stack (d, -pivot);
+      external->push_clause_on_extension (-pivot, d);
 #ifndef NDEBUG
       pushed++;
 #endif

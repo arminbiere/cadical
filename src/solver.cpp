@@ -434,6 +434,10 @@ static atomic<bool> tracing_api_calls_through_environment_variable_method{
   do { \
   } while (0)
 
+#define TRACE_LARGE(NAME, ...) \
+  do { \
+  } while (0)
+
 /*------------------------------------------------------------------------*/
 #endif
 /*------------------------------------------------------------------------*/
@@ -2022,7 +2026,7 @@ struct WitnessCopier : public WitnessIterator {
 public:
   WitnessCopier (External *d) : dst (d) {}
   bool witness (const vector<int> &c, const vector<int> &w, int64_t id) {
-    dst->push_external_clause_and_witness_on_extension_stack (c, w, id);
+    dst->push_external_clause_and_witness_on_extension (c, w, id);
     return true;
   }
 };
