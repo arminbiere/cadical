@@ -1,4 +1,4 @@
-static const char *version = "0.2.1-rc2";
+static const char *version = "0.2.1-rc3";
 
 // clang-format off
 
@@ -15,7 +15,7 @@ static const char * usage =
 #ifdef LOGGING
 "  -l | --log      print all messages including logging messages\n"
 #endif
-"  -q | --quiet    be quiet and do not print any messages\n"
+"  -q | --quiet    be quiet and do not print any messages\n" 
 "  -s | --strict   expect strict resolution chain format\n"
 "  -t | --track    track more detailed addition and deletion information\n"
 "  -v | --verbose  enable verbose messages\n"
@@ -298,9 +298,9 @@ static char *next_pretty_buffer () {
 
 static const char *pretty_bytes (size_t bytes) {
   char *buffer = next_pretty_buffer ();
-  double kb = bytes / (double) (1u << 10);
-  double mb = bytes / (double) (1u << 20);
-  double gb = bytes / (double) (1u << 30);
+  double kb = bytes / (double)(1u << 10);
+  double mb = bytes / (double)(1u << 20);
+  double gb = bytes / (double)(1u << 30);
   if (kb < 1)
     snprintf (buffer, size_pretty_buffer, "%zu bytes", bytes);
   else if (mb < 1)
@@ -328,7 +328,7 @@ static const char *pretty_bytes (size_t bytes) {
 // after a given number of allocated bytes specified through the environment
 // variable 'LRAT_TRIM_ALLOCATION_LIMIT'.
 
-#define size_allocation_lines ((size_t) (1u << 12))
+#define size_allocation_lines ((size_t)(1u << 12))
 
 static size_t allocation_lines[size_allocation_lines];
 static bool allocation_limit_set;
@@ -339,7 +339,7 @@ static bool check_allocation (size_t line, size_t bytes) {
   assert (bytes);
   if (!allocation_limit_set) {
     const char *env = getenv ("LRAT_TRIM_ALLOCATION_LIMIT");
-    allocation_limit = env ? atol (env) : ~(size_t) 0;
+    allocation_limit = env ? atol (env) : ~(size_t)0;
     printf ("c COVERED allocated bytes limit %zu\n", allocation_limit);
     allocation_limit_set = true;
   }
@@ -421,7 +421,7 @@ static void *coverage_realloc (size_t line, void *p, size_t bytes) {
 
 #define ADJUST(MAP, N) \
   do { \
-    size_t NEEDED_SIZE = (size_t) (N) + 1; \
+    size_t NEEDED_SIZE = (size_t)(N) + 1; \
     size_t OLD_SIZE = SIZE (MAP); \
     if (OLD_SIZE >= NEEDED_SIZE) \
       break; \
@@ -438,7 +438,7 @@ static void *coverage_realloc (size_t line, void *p, size_t bytes) {
         die ("out-of-memory resizing '" #MAP "' map"); \
       size_t OLD_BYTES = OLD_SIZE * sizeof *(MAP).begin; \
       size_t DELTA_BYTES = NEW_BYTES - OLD_BYTES; \
-      memset ((char *) NEW_BEGIN + OLD_BYTES, 0, DELTA_BYTES); \
+      memset ((char *)NEW_BEGIN + OLD_BYTES, 0, DELTA_BYTES); \
     } else { \
       assert (!OLD_BEGIN); \
       NEW_BEGIN = calloc (NEW_SIZE, sizeof *(MAP).begin); \
@@ -695,7 +695,7 @@ static inline void write_unsigned (unsigned u) {
 
 static inline void write_signed (int i) {
   assert (i != INT_MIN);
-  write_unsigned ((i < 0) + 2 * (unsigned) abs (i));
+  write_unsigned ((i < 0) + 2 * (unsigned)abs (i));
 }
 
 static inline void write_ascii (unsigned char)
@@ -761,7 +761,7 @@ static inline void write_size_t (size_t i) {
 static double process_time (void) {
   struct rusage u;
   double res;
-  (void) getrusage (RUSAGE_SELF, &u);
+  (void)getrusage (RUSAGE_SELF, &u);
   res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
   return res;
@@ -776,19 +776,18 @@ static double real_time (void) {
 }
 
 static size_t maximum_resident_set_size (void) {
-  size_t res = 0;
   struct rusage u;
-  if (!getrusage (RUSAGE_SELF, &u)) {
-    res = (size_t) u.ru_maxrss;
+  if (getrusage (RUSAGE_SELF, &u))
+    return 0;
+  size_t res = u.ru_maxrss;
 #ifndef __APPLE__
-    res <<= 10;
+  res <<= 10;
 #endif
-  }
   return res;
 }
 
 static double mega_bytes (void) {
-  return maximum_resident_set_size () / (double) (1 << 20);
+  return maximum_resident_set_size () / (double)(1 << 20);
 }
 
 static double average (double a, double b) { return b ? a / b : 0; }
@@ -880,6 +879,15 @@ static void mark_used_literals (int *literals) {
     // SIZE_MAX is at least 65535, which should be enough.
     if (*count != SIZE_MAX)
       (*count)++;
+  }
+}
+
+static void unmark_used_literals (int *literals) {
+  for (int *l = literals, lit; (lit = *l); l++) {
+    size_t *count = &COUNT (lit);
+    assert (*count);
+    if (*count != SIZE_MAX)
+      (*count)--;
   }
 }
 
@@ -1255,19 +1263,21 @@ static inline bool is_original_clause (int id) {
          abs_id < first_clause_added_in_proof;
 }
 
-// Apparently the hot-spot of the parser is checking the loop condition for
-// integer parsing which reads the next character from an input file and
-// then asks 'isdigit' whether the integer parsed at this point should be
-// extended by another digit or the first character (space or new-line)
+// Apparently the hot-spot of the parser is checking the loop condition
+// for integer parsing which reads the next character from an input file
+// and then asks 'isdigit' whether the integer parsed at this point should
+// be extended by another digit or the first character (space or new-line)
 // after the integer has been reached.  It seems that the claimed fast
-// 'isdigit' from 'libc', which we assume is implemented by a table look-up,
-// prevents some local compiler optimization as soon the character reading
-// code is also inlined (which even for 'getc_unlocked' happened).
+// 'isdigit' from 'libc', which we assume is implemented by a table
+// look-up, prevents some local compiler optimization as soon the
+// character reading code is also inlined (which even for 'getc_unlocked'
+// happened).
 
-// Using the good old range based checked (assuming an ASCII encoding) seems
-// to help the compiler to produce better code (around 5% faster).
+// Using the good old range based checked (assuming an ASCII encoding)
+// seems to help the compiler to produce better code (around 5% faster).
 
-// We use 'ISDIGIT' instead of 'isdigit' as the later can itself be a macro.
+// We use 'ISDIGIT' instead of 'isdigit' as the later can itself be a
+// macro.
 
 #define ISDIGIT faster_than_default_isdigit
 
@@ -1278,12 +1288,12 @@ static inline bool faster_than_default_isdigit (int ch) {
   return '0' <= ch && ch <= '9';
 }
 
-// If the user does have huge integers (larger than 'INT_MAX') in proofs we
-// still want to print those integers in the triggered error message.  This
-// function takes the integer 'n' parsed so far and the digit 'ch'
+// If the user does have huge integers (larger than 'INT_MAX') in proofs
+// we still want to print those integers in the triggered error message.
+// This function takes the integer 'n' parsed so far and the digit 'ch'
 // triggering the overflow as argument and then continues reading digits
-// from the input file (for a while) and prints the complete parsed integer
-// string to a statically allocated buffer which is returned.
+// from the input file (for a while) and prints the complete parsed
+// integer string to a statically allocated buffer which is returned.
 
 static const char *exceeds_int_max (int n, int ch) {
   static char buffer[32];
@@ -1588,6 +1598,8 @@ static void delete_antecedent (int other, bool binary, size_t info) {
     if (!relax || other < SIZE (clauses.literals)) {
 
       int **l = &ACCESS (clauses.literals, other);
+      if (status > 0 && !norat && (checking || is_original_clause (other)))
+        unmark_used_literals (*l);
       free (*l);
       *l = 0;
     }
@@ -1623,13 +1635,14 @@ static void parse_proof () {
     if (isprint (ch))
       prr ("unexpected first character '%c'", ch);
     else
-      prr ("unexpected first byte '0x%02x'", (unsigned) ch);
+      prr ("unexpected first byte '0x%02x'", (unsigned)ch);
   }
 
-  // To track in the binary proof format we use byte offsets instead of line
-  // numbers.  This information is used in debugging and error messages and
-  // 'trick' is used to tell this difference (using 'byte' vs. 'line').  For
-  // the binary format we also do not have deletion line identifiers.
+  // To track in the binary proof format we use byte offsets instead of
+  // line numbers.  This information is used in debugging and error
+  // messages and 'trick' is used to tell this difference (using 'byte'
+  // vs. 'line').  For the binary format we also do not have deletion line
+  // identifiers.
 
   const bool binary = input.binary;
 
@@ -1674,7 +1687,7 @@ static void parse_proof () {
         if (uid & 1)
           prr ("negative identifier in clause addition");
         uid >>= 1;
-        if (uid > (unsigned) INT_MAX)
+        if (uid > (unsigned)INT_MAX)
           prr ("clause identifier %u too large", uid);
         id = uid;
         dbg ("parsed clause identifier %d at byte %zu", id, info);
