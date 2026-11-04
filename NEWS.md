@@ -1,4 +1,4 @@
-Version 3.0.X
+Version 3.1.0
 -------------
 
 User Facing Changes:
@@ -54,11 +54,11 @@ New and Improved Techniques:
 - Improved performance of congruence closure thanks to a new hash
   table instead of relying on the C++ standard one.
 
-- Improved BVA, now includes XOR and ITE factorization and considers
-  learned clauses.
+- Improved BVA (`factor`), now includes XOR and ITE factorization
+  (`factorxor[ite]`) and considers learned clauses (`factorredundant`).
 
 - New DDFW algorithm for walking. Also removed the walk based on full
-- occurrences presented at POS'26, due to its limited effect.
+  occurrences presented at POS'26, due to its limited effect.
 
 - Equivalent literals substitution (`decompose`) now also works on frozen
   literals: those literals are replaced (but are kept via binary clauses).

@@ -5795,7 +5795,7 @@ void Trace::generate_limits (Random &random) {
     push_back (random,
                new LimitCall ("localsearch", random.pick_int (0, 1)));
   if (random.generate_double () < 0.02)
-    push_back (random, new OptimizeCall (random.pick_int (0, 31)));
+    push_back (random, new OptimizeCall (random.pick_int (-31, 31)));
 }
 
 /*------------------------------------------------------------------------*/
@@ -6456,7 +6456,7 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::OPTIMIZE): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (1, 31);
+    const int size = random.pick_int (-31, 31);
     push_back (new OptimizeCall (size));
     break;
   }
@@ -7951,7 +7951,7 @@ bool Trace::reduce_values (int expected) {
         else
           continue;
       } else if (c->type == CallType::OPTIMIZE) {
-        lo = 0, hi = 9;
+        lo = -31, hi = c->val;
 #ifdef MOBICAL_TERMINATE
       } else if (c->type == CallType::TERMINATE) {
         lo = 0, hi = c->val;
@@ -8407,7 +8407,7 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "optimize")) {
       if (!first)
         error ("argument to 'optimize' missing");
-      if (!parse_int_str (first, val) || val < 0 || val > 31)
+      if (!parse_int_str (first, val) || val < -31 || val > 31)
         error ("invalid argument '%s' to 'optimize'", first);
       c = new OptimizeCall (val);
     } else if (!strcmp (keyword, "vars")) {

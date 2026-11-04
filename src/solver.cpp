@@ -682,7 +682,7 @@ bool Solver::set (const char *arg, int val) {
 }
 
 bool Solver::set_long_option (const char *arg) {
-  TRACE (set_long_option, "set_long_option", arg);
+  LOG_API_CALL_BEGIN ("set_long_option", arg);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only set option '%s' right after initialization", arg);
@@ -1631,7 +1631,7 @@ void Solver::resources () {
 
 const char *Solver::read_dimacs (File *file, int &vars, int strict,
                                  bool *incremental, vector<int> *cubes) {
-  TRACE (read_dimacs, "read_dimacs", file->name (), strict);
+  // TRACE (read_dimacs, "read_dimacs", file->name (), strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1643,7 +1643,7 @@ const char *Solver::read_dimacs (File *file, int &vars, int strict,
 
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict) {
-  TRACE (read_dimacs, "read_dimacs", name, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1660,7 +1660,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 }
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
-  TRACE (read_dimacs, "read_dimacs", path, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1680,7 +1680,7 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict, bool &incremental,
                                  vector<int> &cubes) {
-  TRACE (read_dimacs, "read_dimacs", name, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1699,7 +1699,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict,
                                  bool &incremental, vector<int> &cubes) {
-  TRACE (read_dimacs, "read_dimacs", path, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");

@@ -289,7 +289,7 @@ void Options::optimize (int val) {
     OPTIONS
 #undef OPTION
     if (increased)
-      MSG ("optimization mode '-O%d' increased %u limits", val, increased);
+      MSG ("optimization mode '-O%d' decreased %u limits", val, increased);
     return;
   }
 
