@@ -745,7 +745,7 @@ bool Internal::block () {
   if (terminated_asynchronously ())
     return false;
 
-  // TODO: Our current algorithm for producing the necessary clauses on the
+  // Our current algorithm for producing the necessary clauses on the
   // reconstruction stack for extending the witness requires a blocked
   // literal addition step which (empirically) conflicts with flushing
   // during restoring clauses (similar to cover).
