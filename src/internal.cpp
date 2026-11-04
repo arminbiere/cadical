@@ -1089,7 +1089,7 @@ void Internal::reset_solving () {
 
 int Internal::restore_clauses () {
   int res = 0;
-  if (opts.restoreall <= 1 && external->tainted.empty ()) {
+  if (!opts.restoreall && external->tainted.empty ()) {
     LOG ("no tainted literals and nothing to restore");
     report ('*');
   } else {

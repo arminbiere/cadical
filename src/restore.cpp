@@ -120,9 +120,9 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
-bool External::restore_cube_stack (uint32_t ss_idx, 
+bool External::restore_cube_stack (uint32_t idx, 
   vector<bool> &skipped_witness, RestoreStats &clauses) {
-  auto q = clause_data.begin () + ss_idx;
+  auto q = clause_data.begin () + idx;
   bool restore_clauses = false;
 
   while (*q) {
@@ -134,10 +134,10 @@ bool External::restore_cube_stack (uint32_t ss_idx,
     q++;
   }
   q++; // Skip cube terminator
-  if (!restore_clauses && !(internal->opts.restoreall == 2)) {
+  if (!restore_clauses && !internal->opts.restoreall) {
     LOG ("untainted and not forced to restore all clauses.");
     // now also mark witnesses as skipped.
-    q = clause_data.begin () + ss_idx;
+    q = clause_data.begin () + idx;
     while (*q) {
       const int ewit = *q++;
       if (!marked (skipped_witness, ewit))
@@ -156,30 +156,14 @@ bool External::restore_cube_stack (uint32_t ss_idx,
     int64_t id = decode_id (q, id_long);
     LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
 
-    auto lit = q + (id_long ? 3 : 2); // es (idu) idl l1 
-    auto begin = lit;
-    auto end = lit + other_lits_size;
-    int satisfied = 0;
-    while (lit != end) {
-      if (!satisfied && fixed (*lit) > 0)
-        satisfied = *lit;
-      ++lit;
-    }
-    if (satisfied && !internal->opts.restoreflush) {
-      LOG (begin, end, 
-        "forced to not remove %d satisfied", satisfied);
-      satisfied = 0;
-    }
-    if (satisfied) {
-      clauses.satisfied++;
-    } else {
-      clauses.restored++;
-      restore_clause (begin, end, id, 0, 0);
-    }
+    auto begin = q + (id_long ? 3 : 2);
+    auto end = begin + other_lits_size;  
+    clauses.restored++;
+    restore_clause (begin, end, id, 0, 0);
     
     q += 1 + (id_long ? 2 : 1) + other_lits_size;
   }
-  fragmented_clause_data += q - (clause_data.begin () + ss_idx) + 1;
+  fragmented_clause_data += q - (clause_data.begin () + idx) + 1;
   return true;
 }
 
@@ -259,6 +243,9 @@ void External::defragment_clause_data () {
 }
 
 void External::restore () {
+
+  assert (internal->opts.restoreall || !tainted.empty ());
+
   PROFILE_SCOPE (restore);
   internal->stats.restorations++;
 
@@ -281,9 +268,6 @@ void External::restore () {
   }
 #endif
 
-  if (tainted.empty () && internal->opts.restoreall != 2)
-    return;
-  
   vector<bool> skipped_witness; // For recomputing the witness bits.
 
   auto read = witness_data.begin ();
@@ -308,7 +292,7 @@ void External::restore () {
     clauses.total++;
 
     // restore the corresponding clause
-    if (internal->opts.restoreall == 2 || marked (tainted, -ewit)) {
+    if (internal->opts.restoreall || marked (tainted, -ewit)) {
       
       bool wit_embedded, id_long;
       unsigned other_lits_size;

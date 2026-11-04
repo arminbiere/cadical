@@ -673,8 +673,8 @@ bool Internal::cover () {
   // infrequent (one out of half billion mobical test cases) but as the two
   // regression traces show, does happen. Thus we disable the combination.
   //
-  if (opts.restoreflush)
-    return false;
+  // if (opts.restoreflush)
+  //   return false;
 
   MODE_SCOPE_SIMPLIFY (COVER);
   PROFILE_SCOPE_SIMPLIFY (cover);
