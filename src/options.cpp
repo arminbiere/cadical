@@ -135,7 +135,7 @@ Options::Options (Internal *s) : internal (s) {
     /* the following assertion we did not first get the name and */ \
     /* instead used 'table[i].name' for accessing it. */ \
     const char *name = table[i].name; \
-    assert (!name || !strcmp (name, #N)); \
+    assert (!name || !strcmp (name, #N)), (void) name; \
     table[i].init (#N, V, L, H, O, P, D); \
     prev = #N; \
     i++; \
