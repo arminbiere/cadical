@@ -200,7 +200,7 @@ OPTION( randecint,          500,  0,2e9,0,0,1, "random conflict length") \
 OPTION( randeclength,        10,  1,1e9,0,0,1, "length random decisions phases") \
 OPTION( randecstable,         0,  0,  1,0,0,1, "random decisions in stable mode") \
 OPTION( realtime,             0,  0,  1,0,0,0, "real instead of process time") \
-OPTION( recomputetier,        1,  0,  1,0,0,1, "recompute tiers") \
+OPTION( recomputetier,        1,  0,  2,0,0,1, "recompute tiers (1=heuristic cutoff for glue re-computation)") \
 OPTION( reduce,               1,  0,  1,0,0,1, "reduce useless clauses") \
 OPTION( reduceinit,         300,  1,1e6,0,0,1, "initial interval") \
 OPTION( reduceint,           25,  2,1e6,0,0,1, "reduce interval") \
