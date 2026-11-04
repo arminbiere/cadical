@@ -1,5 +1,4 @@
 0 init
-set restoreflush 1
 set cover 1
 1 set deduplicate 0
 2 set elimocclim 0
