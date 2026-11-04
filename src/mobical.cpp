@@ -52,7 +52,7 @@ static const char *USAGE =
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
-"  --violate         generate contract violations (implies '-f')\n"
+"  --violate         generate contract violations (implies '--do-not-shrink-contracts')\n"
 "\n"
 "Then '<mode>' is one of these\n"
 "\n"
@@ -81,21 +81,23 @@ static const char *USAGE =
 "\n"
 "  --do-not-fork     execute all tests in main process directly\n"
 "\n"
-"In order to replay a trace which violates an API contract use\n"
+"Enforce API contracts on parsing\n"
 "\n"
-"  -f | --do-not-enforce[-contracts]\n"
+"  -f | --enforce[-contracts]\n"
 "\n"
 "Replay and record traces more faithfully with the following options\n"
 "\n"
 "  --replay                  '--do-not-mock-propagator', '--do-not-extend-map', \n"
-"                            and '--do-not-enforce-contracts' (no shrinking)\n"
+"                            and '--do-not-catch' (and --do-not-shrink-at-all)\n"
 "  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
 "  --do-not-extend-map       trust variable names in trace\n"
+#ifdef EXCEPTIONS
+"  --do-not-catch            do not catch API contract violation exceptions\n"
+#else
+"  --do-not-catch            do not catch basic API contract violations\n"
+#endif
 #ifndef NTRACING
 "  --trace                   trace calls to <output> instead of copying\n"
-#endif
-#ifdef EXCEPTIONS
-"  --do-not-catch            do not catch API contract violation exception\n"
 #endif
 "\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
@@ -135,6 +137,9 @@ static const char *USAGE =
 "  --do-not-shrink-variables\n"
 "  --do-not-shrink-options\n"
 "  --do-not-shrink-propagator\n"
+"\n"
+"Disable grammar-aware shrinking (can lead to contract violations):"
+"  --do-not-shrink-contracts\n"
 "\n"
 "The following options change certain parts of trace generation,\n"
 "with '<r>' between 0-1000 the probability to generate these.\n"
@@ -276,6 +281,7 @@ struct Force {
   Size size = NOSIZE;
   int phases = -1;
   bool violate = false;
+  bool contracts = false;
 };
 
 // Options to shrink traces.
@@ -291,20 +297,18 @@ struct DoNot {
     bool basic = false;      // shrink other basic calls            'b'
     bool options = false;    // shrink option calls                 'o'
     bool propagator = false; // shrink propagator calls             'e'
-  } shrink;                  //
-  bool disable = false;      // try to eagerly disable all options  'd'
-  bool map = false;          // do not map variable indices         'm'
-  bool reduce = false;       // reduce option values                'r'
-  bool execute = false;      // do not execute trace
-  bool fork = false;         // do not fork sub-process
-  bool enforce = false;      // do not enforce contracts on read trace
+    bool contracts = false;
+  } shrink;             //
+  bool disable = false; // try to eagerly disable all options  'd'
+  bool map = false;     // do not map variable indices         'm'
+  bool reduce = false;  // reduce option values                'r'
+  bool execute = false; // do not execute trace
+  bool fork = false;    // do not fork sub-process
   bool seeds = false;
   bool extend_map = false;      // do not map variables
   bool mock_propagator = false; // do not use mock propagator
   bool ignore_resource_limits = false;
-#ifdef EXCEPTIONS
-  bool catching;
-#endif
+  bool catching = false;
 };
 
 /*------------------------------------------------------------------------*/
@@ -1155,8 +1159,10 @@ void Mobical::warning (const char *fmt, ...) {
 //
 //   CONFIG* (BEFORE* [ PROCESS DURING* AFTER* ] )* [ RESET ]
 //
-// If traces are read then they are checked to have this structure.  We
-// check that 'ADD' sequences terminate by adding zero literal before
+// If traces are read then they are checked to have this structure.
+// If the trace does not conform to the structure, it produces warnings,
+// which can be turned into errors through '--enforce-contracts'.
+// We check that 'ADD' sequences terminate by adding zero literal before
 // another call is made ('ASSUME|ALWAYS|SOLVE|SIMPLIFY|LOOKAHEAD').
 //
 // Furthermore the execution engine (both for read and generated traces)
@@ -1167,7 +1173,7 @@ void Mobical::warning (const char *fmt, ...) {
 // If the user wants to understand why a trace obtained through
 // 'CADICAL_API_TRACE' is violating an API contract, then these checks
 // are problematic and can be disabled by using the command line option
-// '--do-not-enforce-contracts'.
+// '--do-not-catch[-violations]'.
 //
 // Note that our model based tester is actually more restrictive and does
 // not produce all these possible call sequences. For instance it first
@@ -1479,9 +1485,7 @@ struct Call {
       std::cout << "'" << std::endl;
     }
   }
-#ifdef EXCEPTIONS
   virtual bool catching () { return !mobical.donot.catching; }
-#endif
 };
 
 /*------------------------------------------------------------------------*/
@@ -2041,8 +2045,8 @@ public:
       MLOG ("ignore tainted " << lit << std::endl);
       return false;
     }
-    assert (mobical.donot.enforce || !value_map[lit]);
-    assert (mobical.donot.enforce || !s->external->observed (lit));
+    assert (mobical.donot.catching || !value_map[lit]);
+    assert (mobical.donot.catching || !s->external->observed (lit));
     MLOG ("adding observed " << lit << std::endl);
     s->add_observed_var (lit);
     observed_map[abs (lit)] = true;
@@ -2055,7 +2059,7 @@ public:
       return;
     }
     observed_map.erase (abs (lit));
-    assert (mobical.donot.enforce || s->external->observed (lit));
+    assert (mobical.donot.catching || s->external->observed (lit));
     auto it =
         std::find (observed_fixed.begin (), observed_fixed.end (), lit);
     if (it != observed_fixed.end ())
@@ -3964,7 +3968,7 @@ struct ImpliedCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->implied (entrailed);
         else if (s->state () == State::SATISFIED ||
                  s->state () == State::INCONCLUSIVE)
@@ -4111,7 +4115,7 @@ struct ValCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->val (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->val (map_arg (s, extendmap, false));
@@ -4138,7 +4142,7 @@ struct FlipCall : public Call {
       rp->push_action (this);
     } else {
 #ifdef EXCEPTIONS
-      if (catching ()) {
+      if (!catching ()) {
         try {
           res = s->flip (map_arg (s, extendmap, false));
         } catch (std::runtime_error &) {
@@ -4147,7 +4151,7 @@ struct FlipCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->flip (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flip (map_arg (s, extendmap, false));
@@ -4183,7 +4187,7 @@ struct FlippableCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->flippable (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flippable (map_arg (s, extendmap, false));
@@ -4246,7 +4250,7 @@ struct FailedCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->failed (map_arg (s, extendmap, false));
         else if (s->state () == UNSATISFIED)
           res = s->failed (map_arg (s, extendmap, false));
@@ -4281,7 +4285,7 @@ struct ConcludeCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->conclude ();
         else if (s->state () == UNSATISFIED || s->state () == SATISFIED ||
                  s->state () == INCONCLUSIVE)
@@ -4344,7 +4348,7 @@ struct MeltCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->melt (map_arg (s, extendmap));
         else if (s->frozen (map_arg (s, extendmap)))
           s->melt (map_arg (s, extendmap));
@@ -7419,7 +7423,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           continue;
         Segment &s = segments[i];
         for (size_t j = s.lo; j < s.hi; j++)
-          if (mobical.donot.enforce || !calls[j]->matching_type ())
+          if (mobical.donot.shrink.contracts || !calls[j]->matching_type ())
             ignore[j] = true;
       }
       Trace tmp;
@@ -7457,7 +7461,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         continue;
       Segment &s = segments[i];
       for (size_t j = s.lo; j < s.hi; j++)
-        if (mobical.donot.enforce || !calls[j]->matching_type ())
+        if (mobical.donot.shrink.contracts || !calls[j]->matching_type ())
           ignore[j] = true;
     }
     size_t j = 0;
@@ -7569,7 +7573,7 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7606,7 +7610,7 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7632,7 +7636,7 @@ bool Trace::shrink_clauses (int expected) {
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7654,7 +7658,7 @@ bool Trace::shrink_literals (int expected) {
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7775,7 +7779,7 @@ bool Trace::shrink_basic (int expected) {
     if (l == first_init)
       continue;
     Call *c = calls[l];
-    if (!mobical.donot.enforce && !c->basic_type ())
+    if (!mobical.donot.shrink.contracts && !c->basic_type ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -8259,7 +8263,7 @@ void Reader::parse () {
   CallType adding = CallType::INIT;
   int64_t large_val = 0;
   Call *prev = 0;
-  const bool enforce = !mobical.donot.enforce;
+  const bool enforce = mobical.force.contracts;
   Call *before_trigger = 0;
   bool connected = 0;
   char line[80];
@@ -8362,14 +8366,15 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "set")) {
       if (!first)
         error ("first argument to 'set' missing");
-      if (enforce && !Solver::is_valid_option ((first))) {
+      if (!Solver::is_valid_option ((first))) {
 #ifndef LOGGING
         if (!strcmp (first, "log"))
           mobical.warning ("ignoring non-existing option name 'log' "
                            "(compiled without '-DLOGGING')");
-        else
+        else if (enforce)
 #endif
           error ("non-existing option name '%s'", first);
+        mobical.warning ("non-existing option name '%s'", first);
       }
       if (!second)
         error ("second argument to 'set' missing");
@@ -8379,8 +8384,11 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "configure")) {
       if (!first)
         error ("first argument to 'configure' missing");
-      if (enforce && !Solver::is_valid_configuration (first))
-        error ("non-existing configuration '%s'", first);
+      if (!Solver::is_valid_configuration (first)) {
+        if (enforce)
+          error ("non-existing configuration '%s'", first);
+        mobical.warning ("non-existing configuration '%s'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'configure'", second);
       c = new ConfigureCall (first);
@@ -8453,8 +8461,11 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'add'", first);
       if (second)
         error ("additional argument '%s' to 'add'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'add'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'add'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'add'", lit);
+      }
       adding = lit ? CallType::ADD : CallType::INIT;
       c = new AddCall (lit);
     } else if (!strcmp (keyword, "constrain")) {
@@ -8464,8 +8475,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'constrain'", first);
       if (second)
         error ("additional argument '%s' to 'constrain'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'constrain'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'constrain'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'constrain'",
+                         lit);
+      }
       adding = lit ? CallType::CONSTRAIN : CallType::INIT;
       c = new ConstrainCall (lit);
     } else if (!strcmp (keyword, "connect")) {
@@ -8474,41 +8489,32 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "connect_fixed_listener")) {
       if (enforce)
-        error (
-            "'connect_fixed_listener' not supported (try '-f' to execute "
-            "regardless)");
+        error ("'connect_fixed_listener' not supported");
       mobical.warning ("ignoring 'connect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "disconnect_fixed_listener")) {
       if (enforce)
-        error ("'disconnect_fixed_listener' not supported (try '-f' to "
-               "execute "
-               "regardless)");
+        error ("'disconnect_fixed_listener' not supported");
       mobical.warning ("ignoring 'disconnect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "connect_proof_tracer")) {
       if (enforce)
-        error ("'connect_proof_tracer' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'connect_proof_tracer' not supported");
       mobical.warning ("ignoring 'connect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "disconnect_proof_tracer")) {
       if (enforce)
-        error (
-            "'disconnect_proof_tracer' not supported (try '-f' to execute "
-            "regardless)");
+        error ("'disconnect_proof_tracer' not supported");
       mobical.warning ("ignoring 'disconnect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "connect_learner")) {
       if (enforce)
-        error ("'connect_learner' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'connect_learner' not supported");
       mobical.warning ("ignoring 'connect_learner'");
       continue;
     } else if (!strcmp (keyword, "disconnect_learner")) {
       if (enforce)
-        error ("'disconnect_learner' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'disconnect_learner' not supported");
       mobical.warning ("ignoring 'disconnect_learner'");
       continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
@@ -8528,8 +8534,11 @@ void Reader::parse () {
         error ("argument to 'observed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'observed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'observed'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'observed'", first);
+        mobical.warning ("invalid argument '%s' to 'observed'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'observed'", second);
       c = new ObservedCall (lit);
@@ -8538,8 +8547,11 @@ void Reader::parse () {
         error ("argument to 'is_witness' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'is_witness'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'is_witness'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'is_witness'", first);
+        mobical.warning ("invalid argument '%s' to 'is_witness'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'is_witness'", second);
       c = new IsWitnessCall (lit);
@@ -8548,8 +8560,11 @@ void Reader::parse () {
         error ("argument to 'observe' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'observe'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'observe'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'observe'", first);
+        mobical.warning ("invalid argument '%s' to 'observe'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'observe'", second);
       c = new ObserveCall (lit);
@@ -8558,8 +8573,11 @@ void Reader::parse () {
         error ("argument to 'unobserve' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'unobserve'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'unobserve'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'unobserve'", first);
+        mobical.warning ("invalid argument '%s' to 'unobserve'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'unobserve'", second);
       c = new UnObserveCall (lit);
@@ -8570,8 +8588,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'lemma'", first);
       if (lit && second)
         error ("additional argument '%s' to 'lemma'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'lemma'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'lemma'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'lemma'",
+                         lit);
+      }
       adding = lit ? CallType::LEMMA : CallType::INIT;
       LemmaType tmpt = LAZY;
       int tmp = 0;
@@ -8579,9 +8601,9 @@ void Reader::parse () {
         if (!parse_int_str (second, tmp))
           error ("invalid argument '%s' to 'lemma %d'", lit, second);
         tmpt = static_cast<LemmaType> (tmp);
-        if (enforce && static_cast<int> (tmpt) != tmp)
+        if (static_cast<int> (tmpt) != tmp)
           error ("invalid argument '%s' to 'lemma %d'", second, lit);
-        if (enforce && tmp == LAST_LEMMA_TYPE)
+        if (tmp == LAST_LEMMA_TYPE)
           error ("invalid argument '%s' to 'lemma %d'", second, lit);
       }
       val = 0;
@@ -8599,8 +8621,12 @@ void Reader::parse () {
         error ("argument to 'force' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'force'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'force'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'force'",
+                         lit);
+      }
       MockForceType tmpt;
       int tmp = 0;
       if (!second)
@@ -8608,9 +8634,9 @@ void Reader::parse () {
       if (!parse_int_str (second, tmp))
         error ("invalid second argument '%s' to 'force %d'", lit, second);
       tmpt = static_cast<MockForceType> (tmp);
-      if (enforce && static_cast<int> (tmpt) != tmp)
+      if (static_cast<int> (tmpt) != tmp)
         error ("invalid argument '%s' to 'force %d'", second, lit);
-      if (enforce && tmp == LAST_MOCK_FORCE_TYPE)
+      if (tmp == LAST_MOCK_FORCE_TYPE)
         error ("invalid argument '%s' to 'force %d'", second, lit);
       if (!third)
         error ("third argument to 'force %d %s' missing", lit, second);
@@ -8626,8 +8652,12 @@ void Reader::parse () {
         error ("argument to 'decide' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'decide'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'decide'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'decide'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'decide'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'decide %d' missing", lit);
       if (!parse_int_str (second, val))
@@ -8641,10 +8671,15 @@ void Reader::parse () {
         error ("argument to 'notify_assignment' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'notify_assignment'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'notify_assignment'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'notify_assignment'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'notify_assignment'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'notify_assignment %d'", second,
                lit);
@@ -8657,7 +8692,7 @@ void Reader::parse () {
         error ("argument to 'notify_assignment_batch' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_assignment_batch'", first);
-      if (enforce && val <= 0)
+      if (val <= 0)
         error ("invalid value '%d' as argument to "
                "'notify_assignment_batch'",
                val);
@@ -8674,7 +8709,7 @@ void Reader::parse () {
         error ("argument to 'notify_backtrack' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_backtrack'", first);
-      if (enforce && val < 0)
+      if (val < 0)
         error ("invalid level '%d' as argument to "
                "'notify_backtrack'",
                val);
@@ -8693,7 +8728,7 @@ void Reader::parse () {
         error ("invalid argument '%s' to "
                "'notify_new_decision_level'",
                first);
-      if (enforce && val < 0)
+      if (val < 0)
         error ("invalid level '%d' as argument to "
                "'notify_new_decision_level'",
                val);
@@ -8710,8 +8745,12 @@ void Reader::parse () {
         error ("argument to 'cb_propagate' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_propagate'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+        mobical.warning (
+            "invalid literal '%d' as argument to 'cb_propagate'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'cb_propagate %d'", second,
                lit);
@@ -8725,8 +8764,12 @@ void Reader::parse () {
         error ("argument to 'cb_decide' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_decide'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'cb_decide'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'cb_decide'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'cb_decide'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'cb_decide %d'", second, lit);
       if (!mobical.donot.mock_propagator)
@@ -8739,8 +8782,12 @@ void Reader::parse () {
         error ("argument to 'is_decision' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'is_decision'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'is_decision'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'is_decision'", lit);
+        mobical.warning (
+            "invalid literal '%d' as argument to 'is_decision'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'is_decision %d'", second, lit);
       c = new IsDecisionCall (lit);
@@ -8749,10 +8796,18 @@ void Reader::parse () {
         error ("argument to 'force_backtrack' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_backtrack'", first);
-      if (enforce && lit < 0)
-        error ("invalid literal '%d' as argument to "
-               "'force_backtrack'",
-               lit);
+      if (lit < 0) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'force_backtrack'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'force_backtrack'",
+                         lit);
+      }
+      error ("invalid literal '%d' as argument to "
+             "'force_backtrack'",
+             lit);
       if (second)
         error ("additional argument '%s' to 'force_backtrack %d'", second,
                lit);
@@ -8762,10 +8817,15 @@ void Reader::parse () {
         error ("argument to 'force_unassign' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_unassign'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'force_unassign'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'force_unassign'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'force_unassign'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'force_unassign %d'", second,
                lit);
@@ -8776,10 +8836,15 @@ void Reader::parse () {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_add_reason_clause_lit'",
                first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_reason_clause_lit'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_reason_clause_lit'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_reason_clause_lit'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'cb_add_reason_clause_lit %d' "
                "missing",
@@ -8788,10 +8853,15 @@ void Reader::parse () {
         error ("invalid second argument '%s' to "
                "'cb_add_reason_clause_lit'",
                second);
-      if (enforce && val == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_reason_clause_lit %d'",
-               val, lit);
+      if (val == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_reason_clause_lit %d'",
+                 val, lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_reason_clause_lit %d'",
+                         val, lit);
+      }
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_add_reason_clause_lit' without "
                "'--do-not-mock-propagator'");
@@ -8803,10 +8873,15 @@ void Reader::parse () {
         error ("invalid argument '%s' to "
                "'cb_add_external_clause_lit'",
                first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_external_clause_lit'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_external_clause_lit'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_external_clause_lit'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to "
                "'cb_add_external_clause_lit %d'",
@@ -8820,19 +8895,29 @@ void Reader::parse () {
         error ("argument to 'cb_has_external_clause' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_has_external_clause'", first);
-      if (enforce && lit != 0 && lit != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_has_external_clause'",
-               lit);
+      if (lit != 0 && lit != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_has_external_clause'",
+                 lit);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_has_external_clause'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'cb_has_external_clause' "
                "missing");
       if (!parse_int_str (second, val))
         error ("invalid argument '%s' to 'cb_has_external_clause'", second);
-      if (enforce && val != 0 && val != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_has_external_clause'",
-               val);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_has_external_clause'",
+                 val);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_has_external_clause'",
+                         val);
+      }
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_has_external_clause' without "
                "'--do-not-mock-propagator'");
@@ -8842,10 +8927,15 @@ void Reader::parse () {
         error ("argument to 'cb_check_found_model' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'cb_check_found_model'", first);
-      if (enforce && val != 0 && val != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_check_found_model'",
-               val);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_check_found_model'",
+                 val);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_check_found_model'",
+                         val);
+      }
       if (second)
         error ("additional argument '%s' to "
                "'cb_check_found_model %d'",
@@ -8862,8 +8952,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'assume'", first);
       if (second)
         error ("additional argument '%s' to 'assume'", second);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'assume'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'assume'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'assume'",
+                         lit);
+      }
       c = new AssumeCall (lit);
     } else if (!strcmp (keyword, "solve")) {
       if (first && !parse_int_str (first, lit))
@@ -8912,8 +9006,11 @@ void Reader::parse () {
         error ("first argument to 'val' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'val'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'val'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'val'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'val'", lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'val'", second);
       if (second && val != -1 && val != 0 && val != 1)
@@ -8927,8 +9024,11 @@ void Reader::parse () {
         error ("first argument to 'flip' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'flip'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'flip'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'flip'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'flip'", lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'flip'", second);
       if (second && val != 0 && val != 1)
@@ -8942,8 +9042,12 @@ void Reader::parse () {
         error ("first argument to 'flippable' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'flippable'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'flippable'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'flippable'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'flippable'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'flippable'", second);
       if (second && val != 0 && val != 1)
@@ -8957,8 +9061,12 @@ void Reader::parse () {
         error ("first argument to 'fixed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'fixed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'fixed'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'fixed'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'fixed'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'fixed'", second);
       if (second && val != -1 && val != 0 && val != 1)
@@ -8972,8 +9080,12 @@ void Reader::parse () {
         error ("first argument to 'failed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'failed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d 'as argument to 'failed'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d 'as argument to 'failed'", lit);
+        mobical.warning ("invalid literal '%d 'as argument to 'failed'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'failed'", second);
       if (second && val != 0 && val != -1)
@@ -8991,8 +9103,11 @@ void Reader::parse () {
         error ("argument to 'freeze' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'freeze'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal %d as argument to 'freeze'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal %d as argument to 'freeze'", lit);
+        mobical.warning ("invalid literal %d as argument to 'freeze'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'freeze'", second);
       c = new FreezeCall (lit);
@@ -9001,8 +9116,11 @@ void Reader::parse () {
         error ("argument to 'melt' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'melt'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'melt'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'melt'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'melt'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'melt'", second);
       c = new MeltCall (lit);
@@ -9063,8 +9181,12 @@ void Reader::parse () {
         error ("second argument to 'write_dimacs' missing");
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'write_dimacs'", second);
-      if (enforce && val == INT_MIN)
-        error ("invalid second argument '%s' to 'write_dimacs'", second);
+      if (val == INT_MIN) {
+        if (enforce)
+          error ("invalid second argument '%s' to 'write_dimacs'", second);
+        mobical.warning ("invalid second argument '%s' to 'write_dimacs'",
+                         second);
+      }
       c = new WriteDimacsCall (first, val);
     } else if (!strcmp (keyword, "read_dimacs")) {
       if (!first)
@@ -9073,8 +9195,13 @@ void Reader::parse () {
         error ("second argument to 'read_dimacs' missing");
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'read_dimacs'", second);
-      if (enforce && !(val == 0 || val == 1))
-        error ("non-boolean second argument '%s' to 'read_dimacs'", second);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("non-boolean second argument '%s' to 'read_dimacs'",
+                 second);
+        mobical.warning (
+            "non-boolean second argument '%s' to 'read_dimacs'", second);
+      }
       c = new ReadDimacsCall (first, val);
     } else if (!strcmp (keyword, "write_extension")) {
       if (!first)
@@ -9165,14 +9292,12 @@ void Reader::parse () {
       c = new DeclareOneMoreVariableCall ();
     } else {
       if (enforce)
-        error ("invalid keyword '%s' (try '-f' to execute regardless)",
-               keyword);
-      mobical.warning ("ignoring invalid keyword '%s' (due to '-f')",
-                       keyword);
+        error ("invalid keyword '%s'", keyword);
+      mobical.warning ("ignoring invalid keyword '%s'", keyword);
       continue;
     }
 
-    if (enforce && third && !third_argument) {
+    if (third && !third_argument) {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
 
@@ -9509,10 +9634,9 @@ int Mobical::main (int argc, char **argv) {
       donot.execute = true;
     else if (!strcmp (argv[i], "--do-not-fork"))
       donot.fork = true;
-    else if (!strcmp (argv[i], "-f") ||
-             !strcmp (argv[i], "--do-not-enforce") ||
-             !strcmp (argv[i], "--do-not-enforce-contracts"))
-      donot.enforce = true;
+    else if (!strcmp (argv[i], "-f") || !strcmp (argv[i], "--enforce") ||
+             !strcmp (argv[i], "--enforce-contracts"))
+      force.contracts = true;
     else if (!strcmp (argv[i], "--no-seeds"))
       donot.seeds = true;
     else if (!strcmp (argv[i], "--no-summary"))
@@ -9520,9 +9644,9 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--summary"))
       summary = 1;
     else if (!strcmp (argv[i], "--replay")) {
-      donot.enforce = true;
       donot.extend_map = true;
       donot.mock_propagator = true;
+      donot.catching = true;
       donot.shrink.atall = true;
     } else if (!strcmp (argv[i], "--trace")) {
 #ifdef NTRACING
@@ -9531,11 +9655,7 @@ int Mobical::main (int argc, char **argv) {
       tracing = 1;
       donot.shrink.atall = true;
     } else if (!strcmp (argv[i], "--do-not-catch")) {
-#ifndef EXCEPTIONS
-      die ("compile with 'EXCEPTIONS'");
-#else
       donot.catching = true;
-#endif
     } else if (!strcmp (argv[i], "--do-not-extend-map"))
       donot.extend_map = true;
     else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
@@ -9547,6 +9667,8 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--do-not-add-options") ||
              !strcmp (argv[i], "--do-not-add-options-before-shrinking"))
       donot.add = true;
+    else if (!strcmp (argv[i], "--do-not-shrink-contracts"))
+      donot.shrink.contracts = true;
     else if (!strcmp (argv[i], "--do-not-shrink-phases"))
       donot.shrink.phases = true;
     else if (!strcmp (argv[i], "--do-not-shrink-clauses"))
@@ -9585,7 +9707,7 @@ int Mobical::main (int argc, char **argv) {
                "'-DEXCEPTIONS' to catch them instead)");
 #endif
       force.violate = true;
-      donot.enforce = true;
+      donot.shrink.contracts = true;
     } else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
       add_set_log_to_true = true;
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
@@ -10189,15 +10311,9 @@ int Mobical::main (int argc, char **argv) {
   if (tracing && donot.execute)
     die ("can not combine '--tracing' with '--do-not-execute'");
 
-  /*
-  if (!input_path && donot.enforce)
-    die ("can not use '--do-not-enforce-contracts' without "
+  if (!input_path && force.contracts)
+    die ("can not use '--enforce-contracts' without "
          "'<input>'");
-
-  if (output_path && donot.enforce)
-    die ("can not use '--do-not-enforce-contracts' "
-         "with both '<input>' and '<output>'");
-         */
 
   if (!input_path && mobical.donot.mock_propagator)
     die ("can not use '--do-not-mock-propagator' without <input>");
