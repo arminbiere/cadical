@@ -4142,7 +4142,7 @@ struct FlipCall : public Call {
       rp->push_action (this);
     } else {
 #ifdef EXCEPTIONS
-      if (!catching ()) {
+      if (catching ()) {
         try {
           res = s->flip (map_arg (s, extendmap, false));
         } catch (std::runtime_error &) {
@@ -8805,9 +8805,6 @@ void Reader::parse () {
                          "'force_backtrack'",
                          lit);
       }
-      error ("invalid literal '%d' as argument to "
-             "'force_backtrack'",
-             lit);
       if (second)
         error ("additional argument '%s' to 'force_backtrack %d'", second,
                lit);
