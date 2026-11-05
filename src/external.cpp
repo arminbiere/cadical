@@ -79,7 +79,7 @@ void External::reserve (int new_max_var) {
   reserve_at_least (internal->i2e, new_max_var + 1);
   if (!max_var) {
     assert (e2i.empty ());
-    if (internal->lrat  || internal->frat) {
+    if (internal->lrat || internal->frat) {
       ext_units.push_back (0);
       ext_units.push_back (0);
     }
@@ -121,7 +121,8 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  assert ((!internal->lrat && !internal->frat) || ext_units.size () == (size_t) new_max_var * 2 + 2);
+  assert ((!internal->lrat && !internal->frat) ||
+          ext_units.size () == (size_t) new_max_var * 2 + 2);
 }
 
 /*------------------------------------------------------------------------*/
@@ -736,6 +737,7 @@ int External::lookahead (int &lit) {
   update_molten_literals ();
   int ilit = 0;
   int res = internal->lookahead (ilit);
+  check_solve_result (res);
   const int elit =
       (ilit && ilit != INT_MIN) ? internal->externalize (ilit) : 0;
   LOG ("lookahead internal %d external %d", ilit, elit);
@@ -747,8 +749,9 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth,
                                                    int min_depth = 0) {
   reset_extended ();
   update_molten_literals ();
+  auto cubes = internal->solve_and_generate_cubes (depth, min_depth);
   reset_limits ();
-  auto cubes = internal->generate_cubes (depth, min_depth);
+  check_solve_result (cubes.status);
   auto externalize = [this] (int ilit) {
     const int elit = ilit ? internal->externalize (ilit) : 0;
     MSG ("lookahead internal %d external %d", ilit, elit);

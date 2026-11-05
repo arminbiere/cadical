@@ -888,7 +888,7 @@ int Solver::lookahead () {
 }
 
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
-  TRACE (lookahead_cubes, "lookahead_cubes");
+  TRACE (generate_cubes, "generate_cubes", depth, min_depth);
   REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
@@ -906,8 +906,7 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
     STATE (UNSATISFIED);
   else
     STATE (INCONCLUSIVE);
-  LOG_API_CALL_RETURNS ("lookahead_cubes", cubes2.status);
-  LOG_API_CALL_END ("lookahead_cubes");
+  LOG_API_CALL_RETURNS ("generate_cubes", cubes2.status);
   return cubes2;
 }
 

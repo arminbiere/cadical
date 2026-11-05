@@ -22,7 +22,7 @@
   STATISTIC (api_constrain,                            4, NOTHING, 0, 0) \
   STATISTIC (api_assume,                               4, NOTHING, 0, 0) \
   STATISTIC (api_lookahead,                            4, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead_cubes,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_generate_cubes,                       4, NOTHING, 0, 0) \
   STATISTIC (api_reset_assumptions,                    4, NOTHING, 0, 0) \
   STATISTIC (api_propagate_assumptions,                4, NOTHING, 0, 0) \
   STATISTIC (api_implied,                              4, NOTHING, 0, 0) \

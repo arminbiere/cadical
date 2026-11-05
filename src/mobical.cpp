@@ -4076,23 +4076,31 @@ struct LookaheadCall : public Call {
 };
 
 struct CubingCall : public Call {
-  CubingCall (int r = 1) : Call (CUBING, 0, r) {}
+  CubingCall (int depth, int min_depth) : Call (CUBING, depth, min_depth) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
 #ifdef EXCEPTIONS
     if (catching ()) {
       try {
-        res = s->lookahead ();
+        (void) s->generate_cubes (arg, res);
       } catch (std::runtime_error &) {
         caught ();
       }
-    } else
+    } else {
 #endif
-      (void) s->generate_cubes (arg);
+      if (!catching ())
+        (void) s->generate_cubes (arg, res);
+      else if (s->state () != SATISFIED && s->state () != UNSATISFIED)
+        (void) s->generate_cubes (arg, res);
+      else
+        caught ();
+#ifdef EXCEPTIONS
+    }
+#endif
   }
-  void print (ostream &o) { o << keyword () << ' ' << res; }
-  Call *copy () { return new CubingCall (res); }
-  const char *keyword () { return "cubing"; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
+  Call *copy () { return new CubingCall (arg, res); }
+  const char *keyword () { return "generate_cubes"; }
 };
 
 struct ValCall : public Call {
@@ -6227,7 +6235,8 @@ void Trace::generate_process (Random &random) {
     push_back (random, new SolveCall ());
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
-    push_back (random, new CubingCall (depth));
+    const int min_depth = random.pick_int (0, 10);
+    push_back (random, new CubingCall (depth, min_depth));
   } else if (fraction > 0.9) {
     push_back (random, new LookaheadCall ());
   } else if (fraction > 0.8) {
@@ -6379,7 +6388,9 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::CUBING): {
-    push_back (new CubingCall ());
+    const int depth = random.pick_int (0, 10);
+    const int min_depth = random.pick_int (0, 10);
+    push_back (new CubingCall (depth, min_depth));
     break;
   }
   case (CallType::PROPAGATE): {
@@ -8992,11 +9003,17 @@ void Reader::parse () {
       else
         c = new LookaheadCall ();
       solved++;
-    } else if (!strcmp (keyword, "cubing")) {
-      if (first && !parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'cubing'", first);
-      assert (!second);
-      c = new CubingCall (lit);
+    } else if (!strcmp (keyword, "generate_cubes")) {
+      if (!first)
+        error ("argument to 'generate_cubes' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'generate_cubes'", first);
+      if (!second)
+        error ("second argument to 'generate_cubes %s' missing", first);
+      if (!parse_int_str (second, val))
+        error ("invalid argument '%s' to 'generate_cubes %s'", second,
+               first);
+      c = new CubingCall (lit, val);
       solved++;
     } else if (!strcmp (keyword, "val")) {
       if (!first)

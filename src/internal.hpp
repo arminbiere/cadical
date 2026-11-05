@@ -1611,6 +1611,7 @@ struct Internal {
   //
   int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
+  CubesWithStatus solve_and_generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();
   int lookahead_next_probe ();
