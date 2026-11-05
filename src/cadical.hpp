@@ -1029,7 +1029,7 @@ public:
   //
   // Returns zero if successful and otherwise an error message.
   //
-  //   require (VALID)
+  //   require (CONFIGURING)
   //   ensure (VALID)
   //
   const char *read_dimacs (FILE *file, const char *name, int &vars,

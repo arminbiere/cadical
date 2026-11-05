@@ -248,7 +248,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::reserve_ids (int number) {
+void Internal::reserve_ids (int64_t number) {
   // return;
   LOG ("reserving %d ids", number);
   assert (number >= 0);

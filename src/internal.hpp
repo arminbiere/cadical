@@ -364,7 +364,7 @@ struct Internal {
   void finish_added_clause_with_id (int64_t id, bool restore = false);
 
   // Reserve ids for original clauses to produce lrat
-  void reserve_ids (int number);
+  void reserve_ids (int64_t number);
 
   // Enlarge tables.
   //

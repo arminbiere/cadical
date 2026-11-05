@@ -1634,6 +1634,7 @@ const char *Solver::read_dimacs (File *file, int &vars, int strict,
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
+  transition_to_steady_state ();
   Parser *parser = new Parser (this, file, incremental, cubes);
   const char *err = parser->parse_dimacs (vars, strict);
   delete parser;
