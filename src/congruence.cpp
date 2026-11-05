@@ -3106,8 +3106,6 @@ Clause *Closure::add_binary_clause (int a, int b) {
   const bool already_sorted = internal->vlit (a) < internal->vlit (b);
   binaries.push_back (CompactBinary (res, res->id, already_sorted ? a : b,
                                      already_sorted ? b : a));
-  if (!full_watching)
-    new_unwatched_binary_clauses.push_back (res);
   LOG (res, "learning clause");
   internal->clause.clear ();
   if (internal->lrat) {
@@ -5098,7 +5096,6 @@ void Closure::reset_extraction () {
     return;
   }
 
-  new_unwatched_binary_clauses.clear ();
   internal->clear_watches ();
   internal->connect_watches ();
 }
@@ -8013,8 +8010,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     }
     reconnect = true;
   }
-  assert (closure->new_unwatched_binary_clauses.empty () ||
-          internal->terminated_asynchronously ());
   delete_closure.free ();
   if (reconnect) {
     internal->clear_watches ();

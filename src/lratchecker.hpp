@@ -22,10 +22,10 @@ struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
   int64_t id;              // id of clause
-  bool garbage;            // for garbage clauses
   unsigned size;
   bool used;
   bool tautological;
+  bool garbage;            // for garbage clauses
   int literals[1]; // 'literals' of length 'size'
 };
 

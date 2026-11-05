@@ -213,9 +213,11 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
+        // initialize the vector to the correct size directly
+        external->forgettable_original[id].reserve (1 + external->eclause.size ());
         // First integer is the presence-flag (even if the clause is
         // empty)
-        external->forgettable_original[id] = {1};
+        external->forgettable_original[id].push_back(1);
 
         for (auto const &elit : external->eclause)
           external->forgettable_original[id].push_back (elit);

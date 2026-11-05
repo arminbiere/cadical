@@ -71,24 +71,32 @@ int External::declare_var (int new_var, bool extension) {
 void External::reserve (int new_max_var) {
   assert (max_var < new_max_var);
   internal->reserve_vars (new_max_var);
-  reserve_at_least (ext_units, 2 * new_max_var + 2);
+  if (internal->lrat || internal->frat)
+    reserve_at_least (ext_units, 2 * new_max_var + 2);
+  if (internal->lrat)
+    reserve_at_least (ext_flags, new_max_var + 1);
   reserve_at_least (ervars, new_max_var + 1);
-  reserve_at_least (ext_flags, new_max_var + 1);
   reserve_at_least (internal->i2e, new_max_var + 1);
   if (!max_var) {
     assert (e2i.empty ());
-    ext_units.push_back (0);
-    ext_units.push_back (0);
-    ext_flags.push_back (0);
+    if (internal->lrat  || internal->frat) {
+      ext_units.push_back (0);
+      ext_units.push_back (0);
+    }
+    if (internal->lrat)
+      ext_flags.push_back (0);
     ervars.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
   }
   unsigned eidx;
   for (eidx = max_var + 1u; eidx <= (unsigned) new_max_var; eidx++) {
-    ext_units.push_back (0);
-    ext_units.push_back (0);
-    ext_flags.push_back (0);
+    if (internal->lrat || internal->frat) {
+      ext_units.push_back (0);
+      ext_units.push_back (0);
+    }
+    if (internal->lrat)
+      ext_flags.push_back (0);
     ervars.push_back (0);
   }
   if (checkfrozen)
@@ -113,7 +121,7 @@ void External::init (int new_max_var, bool extension) {
   reserve (new_max_var);
 
   declare_var (new_max_var, extension);
-  assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
+  assert ((!internal->lrat && !internal->frat) || ext_units.size () == (size_t) new_max_var * 2 + 2);
 }
 
 /*------------------------------------------------------------------------*/

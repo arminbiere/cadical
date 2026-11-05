@@ -1420,8 +1420,11 @@ void Internal::mark_garbage_external_forgettable (int64_t id) {
 
   LOG (external->forgettable_original[id],
        "forgettable external lemma is deleted:");
-  // Mark as removed by flipping the first flag to false.
-  external->forgettable_original[id][0] = 0;
+  if (opts.checkfailed) {
+    // Mark as removed by flipping the first flag to false.
+    external->forgettable_original[id][0] = 0;
+  } else
+    external->forgettable_original.erase (id);
 }
 
 /*----------------------------------------------------------------------------*/
