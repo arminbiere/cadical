@@ -1452,6 +1452,8 @@ struct Call {
       return arg;
     if (!lit_type ())
       return arg;
+    if (arg == INT_MIN)
+      return arg;
     if (extendmap_type ())
       extend_map_to (s, extendmap);
     return extendmap->map_arg (s, arg, declare_new_var);
@@ -9315,6 +9317,9 @@ void Reader::parse () {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
 
+    // This checks the legal structure of traces described above.
+    //
+    // Forst
     if (state == CallState::INITSTATE && !c->init_type ()) {
       if (enforce)
         error ("first call has to be an 'init', 'max_alloc', "
@@ -9322,15 +9327,16 @@ void Reader::parse () {
                " or 'terminate' call");
       mobical.warning ("first call is not 'init', implicitly adding");
       trace.push_back (new InitCall ());
+      state = CallState::CONFIG;
+    }
+    if (state == CallState::RESETSTATE) {
+      if (enforce)
+        error ("'%s' after 'reset'", c->keyword ());
+      mobical.warning ("skipping '%s' after 'reset'", c->keyword ());
+      continue;
     }
 
-    // This checks the legal structure of traces described above.
-    //
-    if (enforce) {
-
-      if (state == CallState::RESETSTATE)
-        error ("'%s' after 'reset'", c->keyword ());
-
+    if (enforce)
       if (adding != CallType::INIT && c->type != adding &&
           c->type != CallType::RESET &&
           ((adding == CallType::ADD && c->type != CallType::RESIZE &&
@@ -9341,168 +9347,166 @@ void Reader::parse () {
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
 
-      CallState new_state = state;
+    CallState new_state = state;
 
-      switch (c->type) {
+    switch (c->type) {
 
-      case CallType::INIT:
-        if (state != CallState::INITSTATE)
-          error ("invalid second 'init' call");
-        new_state = CallState::CONFIG;
-        break;
+    case CallType::INIT:
+      if (enforce && state != CallState::INITSTATE)
+        error ("invalid second 'init' call");
+      new_state = CallState::CONFIG;
+      break;
 
-      case CallType::SET:
-      case CallType::CONFIGURE:
-        if (!solved && state == CallState::BEFORE) {
-          assert (before_trigger);
-          error ("'%s' can only be called after 'init' before "
-                 "'%s %d'",
-                 c->keyword (), before_trigger->keyword (),
-                 before_trigger->arg);
-        } else if (state != CallState::CONFIG)
-          error ("'%s' can only be called right after 'init'",
-                 c->keyword ());
-        assert (new_state == CallState::CONFIG);
-        break;
+    case CallType::SET:
+    case CallType::CONFIGURE:
+      if (enforce && !solved && state == CallState::BEFORE) {
+        assert (before_trigger);
+        error ("'%s' can only be called after 'init' before "
+               "'%s %d'",
+               c->keyword (), before_trigger->keyword (),
+               before_trigger->arg);
+      } else if (enforce && state != CallState::CONFIG)
+        error ("'%s' can only be called right after 'init'", c->keyword ());
+      assert (new_state == CallState::CONFIG);
+      break;
 
-      case CallType::ADD:
-      case CallType::ASSUME:
-        if (state != CallState::BEFORE)
-          before_trigger = c;
-        new_state = CallState::BEFORE;
-        break;
+    case CallType::ADD:
+    case CallType::ASSUME:
+      if (state != CallState::BEFORE)
+        before_trigger = c;
+      new_state = CallState::BEFORE;
+      break;
 
-      case CallType::LEMMA:
-      case CallType::FORCE:
-      case CallType::DECIDE:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        break;
+    case CallType::LEMMA:
+    case CallType::FORCE:
+    case CallType::DECIDE:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      break;
 
-      case CallType::OBSERVE:
-      case CallType::UNOBSERVE:
-      case CallType::RESET_OBSERVED:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        new_state = CallState::ALWAYS;
-        break;
+    case CallType::OBSERVE:
+    case CallType::UNOBSERVE:
+    case CallType::RESET_OBSERVED:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      new_state = CallState::ALWAYS;
+      break;
 
-      case CallType::VAL:
-      case CallType::FLIP:
-      case CallType::FLIPPABLE:
-      case CallType::FAILED:
-      case CallType::CONCLUDE:
-        if (!solved &&
-            (state == CallState::CONFIG || state == CallState::BEFORE))
-          error ("'%s' can only be called after 'solve'", c->keyword ());
-        if (solved && state == CallState::BEFORE) {
-          assert (before_trigger);
-          error ("'%s' only valid after last 'solve' and before "
-                 "'%s %d'",
-                 c->keyword (), before_trigger->keyword (),
-                 before_trigger->arg);
-        }
-        /*
-        assert (state == CallType::SOLVE || state ==
-        CallType::SIMPLIFY || state == CallType::LOOKAHEAD ||
-        state
-        == CallType::CUBING
-        || state == CallType::PROPAGATE || state ==
-        CallType::OBSERVE
-        || state == CallType::DURING || state == CallType::AFTER);
-                */
-        new_state = CallState::AFTER;
-        break;
+    case CallType::VAL:
+    case CallType::FLIP:
+    case CallType::FLIPPABLE:
+    case CallType::FAILED:
+    case CallType::CONCLUDE:
+      if (enforce && !solved &&
+          (state == CallState::CONFIG || state == CallState::BEFORE))
+        error ("'%s' can only be called after 'solve'", c->keyword ());
+      if (enforce && solved && state == CallState::BEFORE) {
+        assert (before_trigger);
+        error ("'%s' only valid after last 'solve' and before "
+               "'%s %d'",
+               c->keyword (), before_trigger->keyword (),
+               before_trigger->arg);
+      }
+      /*
+      assert (state == CallType::SOLVE || state ==
+      CallType::SIMPLIFY || state == CallType::LOOKAHEAD ||
+      state
+      == CallType::CUBING
+      || state == CallType::PROPAGATE || state ==
+      CallType::OBSERVE
+      || state == CallType::DURING || state == CallType::AFTER);
+              */
+      new_state = CallState::AFTER;
+      break;
 
-      case CallType::DISCONNECT:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        connected = false;
-        new_state = CallState::ALWAYS;
-        break;
+    case CallType::DISCONNECT:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      connected = false;
+      new_state = CallState::ALWAYS;
+      break;
 
-      case CallType::CONNECT:
-        if (connected)
-          error ("call 'disconnect' before call 'connect' again");
-        connected = true;
-        new_state = CallState::ALWAYS;
-        break;
+    case CallType::CONNECT:
+      if (enforce && connected)
+        error ("call 'disconnect' before call 'connect' again");
+      connected = true;
+      new_state = CallState::ALWAYS;
+      break;
 
-      case CallType::SOLVE:
-      case CallType::SIMPLIFY:
-      case CallType::LOOKAHEAD:
-      case CallType::CUBING:
-      case CallType::PROPAGATE:
-        new_state = CallState::DURING;
-        break;
-      case CallType::RESET:
-        new_state = CallState::RESETSTATE;
-        break;
+    case CallType::SOLVE:
+    case CallType::SIMPLIFY:
+    case CallType::LOOKAHEAD:
+    case CallType::CUBING:
+    case CallType::PROPAGATE:
+      new_state = CallState::DURING;
+      break;
+    case CallType::RESET:
+      new_state = CallState::RESETSTATE;
+      break;
 
-      case CallType::PRINT_OPTIONS:
-      case CallType::VARS:
-      case CallType::ACTIVE:
-      case CallType::REDUNDANT:
-      case CallType::IRREDUNDANT:
-      case CallType::RESIZE:
-      case CallType::DECLARE:
-      case CallType::DECLARE_VARS:
-      case CallType::PHASE:
-      case CallType::UNPHASE:
-      case CallType::CONSTRAIN:
-      case CallType::RESET_ASSUMPTIONS:
-      case CallType::FIXED:
-      case CallType::IMPLIED:
-      case CallType::FREEZE:
-      case CallType::FROZEN:
-      case CallType::MELT:
-      case CallType::LIMIT:
-      case CallType::OPTIMIZE:
-      case CallType::DUMP:
-      case CallType::STATS:
-      case CallType::IS_DECISION:
-      case CallType::IS_WITNESS:
-      case CallType::OBSERVED:
-      case CallType::FORCE_BACKTRACK:
-      case CallType::FORCE_UNASSIGN:
-      case CallType::CB_DECIDE:
-      case CallType::CB_PROPAGATE:
-      case CallType::CB_HAS_CLAUSE:
-      case CallType::CB_ADD_CLAUSE:
-      case CallType::CB_ADD_REASON:
-      case CallType::CB_CHECK_MODEL:
-      case CallType::NOTIFY_ASSIGNMENT:
-      case CallType::NOTIFY_BACKTRACK:
-      case CallType::NOTIFY_LEVEL:
-      case CallType::TRACEPROOF:
-      case CallType::FLUSHPROOFTRACE:
-      case CallType::CLOSEPROOFTRACE:
-      case CallType::TRAVERSE_CLAUSES:
-      case CallType::TRAVERSE_CONSTRAINT:
-      case CallType::TRAVERSE_WITNESSES_BACKWARD:
-      case CallType::TRAVERSE_WITNESSES_FORWARD:
-      case CallType::READ_DIMACS:
-      case CallType::READ_SOLUTION:
-      case CallType::WRITE_DIMACS:
-      case CallType::WRITE_EXTENSION:
-      case CallType::COPY:
-      case CallType::INVALID_TYPE:
+    case CallType::PRINT_OPTIONS:
+    case CallType::VARS:
+    case CallType::ACTIVE:
+    case CallType::REDUNDANT:
+    case CallType::IRREDUNDANT:
+    case CallType::RESIZE:
+    case CallType::DECLARE:
+    case CallType::DECLARE_VARS:
+    case CallType::PHASE:
+    case CallType::UNPHASE:
+    case CallType::CONSTRAIN:
+    case CallType::RESET_ASSUMPTIONS:
+    case CallType::FIXED:
+    case CallType::IMPLIED:
+    case CallType::FREEZE:
+    case CallType::FROZEN:
+    case CallType::MELT:
+    case CallType::LIMIT:
+    case CallType::OPTIMIZE:
+    case CallType::DUMP:
+    case CallType::STATS:
+    case CallType::IS_DECISION:
+    case CallType::IS_WITNESS:
+    case CallType::OBSERVED:
+    case CallType::FORCE_BACKTRACK:
+    case CallType::FORCE_UNASSIGN:
+    case CallType::CB_DECIDE:
+    case CallType::CB_PROPAGATE:
+    case CallType::CB_HAS_CLAUSE:
+    case CallType::CB_ADD_CLAUSE:
+    case CallType::CB_ADD_REASON:
+    case CallType::CB_CHECK_MODEL:
+    case CallType::NOTIFY_ASSIGNMENT:
+    case CallType::NOTIFY_BACKTRACK:
+    case CallType::NOTIFY_LEVEL:
+    case CallType::TRACEPROOF:
+    case CallType::FLUSHPROOFTRACE:
+    case CallType::CLOSEPROOFTRACE:
+    case CallType::TRAVERSE_CLAUSES:
+    case CallType::TRAVERSE_CONSTRAINT:
+    case CallType::TRAVERSE_WITNESSES_BACKWARD:
+    case CallType::TRAVERSE_WITNESSES_FORWARD:
+    case CallType::READ_DIMACS:
+    case CallType::READ_SOLUTION:
+    case CallType::WRITE_DIMACS:
+    case CallType::WRITE_EXTENSION:
+    case CallType::COPY:
+    case CallType::INVALID_TYPE:
 #ifdef MOBICAL_TERMINATE
-      case CallType::TERMINATE:
+    case CallType::TERMINATE:
 #endif
 #ifdef MOBICAL_MEMORY
-      case CallType::LEAKALLOC:
-      case CallType::MAXALLOC:
+    case CallType::LEAKALLOC:
+    case CallType::MAXALLOC:
 #endif
-        break;
-      }
-
-      if (mobical.add_print_options && state == CallState::CONFIG &&
-          new_state != CallState::CONFIG)
-        trace.push_back (new PrintOptionsCall);
-      state = new_state;
-      prev = c;
+      break;
     }
+
+    if (mobical.add_print_options && state == CallState::CONFIG &&
+        new_state != CallState::CONFIG)
+      trace.push_back (new PrintOptionsCall);
+    state = new_state;
+    prev = c;
 
     if (c && mobical.add_dump_before_solve && c->process_type ())
       trace.push_back (new DumpCall ());
