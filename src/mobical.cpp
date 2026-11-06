@@ -9315,13 +9315,18 @@ void Reader::parse () {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
 
-    // This checks the legal structure of traces described above.
-    //
-    if (enforce) {
-      if (state == CallState::INITSTATE && !c->init_type ())
+    if (state == CallState::INITSTATE && !c->init_type ()) {
+      if (enforce)
         error ("first call has to be an 'init', 'max_alloc', "
                "'leak_alloc'"
                " or 'terminate' call");
+      mobical.warning ("first call is not 'init', implicitly adding");
+      trace.push_back (new InitCall ());
+    }
+
+    // This checks the legal structure of traces described above.
+    //
+    if (enforce) {
 
       if (state == CallState::RESETSTATE)
         error ("'%s' after 'reset'", c->keyword ());
