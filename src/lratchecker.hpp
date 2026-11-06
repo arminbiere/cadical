@@ -25,7 +25,7 @@ struct LratCheckerClause {
   unsigned size;
   bool used;
   bool tautological;
-  bool garbage;            // for garbage clauses
+  bool garbage;    // for garbage clauses
   int literals[1]; // 'literals' of length 'size'
 };
 
@@ -92,9 +92,9 @@ class LratChecker : public StatTracer {
   LratCheckerClause *new_clause ();
   void delete_clause (LratCheckerClause *);
 
-  bool check (std::vector<int64_t>);            // check RUP
-  bool check_resolution (std::vector<int64_t>); // check resolution
-  bool check_blocked (std::vector<int64_t>);    // check ER
+  bool check (const std::vector<int64_t> &);            // check RUP
+  bool check_resolution (const std::vector<int64_t> &); // check resolution
+  bool check_blocked (const std::vector<int64_t> &);    // check ER
 
   struct {
 
