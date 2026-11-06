@@ -250,7 +250,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
 
 void Internal::reserve_ids (int64_t number) {
   // return;
-  LOG ("reserving %d ids", number);
+  LOG ("reserving %" PRId64 " ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;

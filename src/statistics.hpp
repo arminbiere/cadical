@@ -10,6 +10,7 @@
   STATISTIC (api_init,                                 4, NOTHING, 0, 0) \
   STATISTIC (api_reset,                                4, NOTHING, 0, 0) \
   STATISTIC (api_vars,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_val,                                  4, NOTHING, 0, 0) \
   STATISTIC (api_declare_var,                          4, NOTHING, 0, 0) \
   STATISTIC (api_declare_vars,                         4, NOTHING, 0, 0) \
   STATISTIC (api_resize,                               4, NOTHING, 0, 0) \

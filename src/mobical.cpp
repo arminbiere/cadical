@@ -1613,7 +1613,7 @@ public:
     assert (!c->executed);
     c->executed = true;
     RLOGE ("notify_new_decision_level",
-           " " << c->val - 1 << " -> " << c->val);
+           " (" << c->val - 1 << " -> " << c->val << ")");
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -2614,7 +2614,7 @@ public:
     // Calls to solver that might force it to backtrack.
     get_force (MF_NOTIFY_ASSIGNMENT);
     MLOGE ("notify_assignments(" << lits.size () << ")",
-           " (level " << observed_trail.size () << ")");
+           " (level " << observed_trail.size () - 1 << ")");
   }
 
   void notify_new_decision_level () override {
@@ -2627,8 +2627,8 @@ public:
     // Calls to solver that might force it to backtrack.
     get_force (MF_NOTIFY_NEW_DECISION_LEVEL);
     MLOGE ("notify_new_decision_level",
-           " (" << observed_trail.size () - 1 << " -> "
-                << observed_trail.size () << ")");
+           " (" << observed_trail.size () - 2 << " -> "
+                << observed_trail.size () - 1 << ")");
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -5128,7 +5128,8 @@ public:
       try {
         // They are (ideally) are executed already
         if (c->executed) {
-          assert (c->during_type () || c->always_type ());
+          assert (c->during_type () || c->always_type () ||
+                  mobical.donot.catching);
           continue;
         }
 
@@ -5191,7 +5192,8 @@ public:
             Call *next_c = calls[j];
             if (next_c->type == CallType::RESET)
               break;
-            if (next_c->type == CallType::DISCONNECT)
+            if (next_c->type == CallType::DISCONNECT &&
+                !mobical.donot.catching)
               break;
             next_c->execute (solver, extendmap, true);
           }
@@ -9367,7 +9369,7 @@ void Reader::parse () {
                before_trigger->arg);
       } else if (enforce && state != CallState::CONFIG)
         error ("'%s' can only be called right after 'init'", c->keyword ());
-      assert (new_state == CallState::CONFIG);
+      assert (!enforce || new_state == CallState::CONFIG);
       break;
 
     case CallType::ADD:
