@@ -542,7 +542,7 @@ int App::main (int argc, char **argv) {
       else if (conflict_limit_specified)
         APPERR ("multiple conflict limits '-c %s' and '-c %s'",
                 conflict_limit_specified, argv[i]);
-      else if (!parse_int_str (argv[i], conflict_limit))
+      else if (!parse_int_str (argv[i], conflict_limit, true))
         APPERR ("invalid argument in '-c %s'", argv[i]);
       else if (conflict_limit < 0)
         APPERR ("invalid conflict limit");
@@ -554,7 +554,7 @@ int App::main (int argc, char **argv) {
       else if (decision_limit_specified)
         APPERR ("multiple decision limits '-d %s' and '-d %s'",
                 decision_limit_specified, argv[i]);
-      else if (!parse_int_str (argv[i], decision_limit))
+      else if (!parse_int_str (argv[i], decision_limit, true))
         APPERR ("invalid argument in '-d %s'", argv[i]);
       else if (decision_limit < 0)
         APPERR ("invalid decision limit");
@@ -568,7 +568,7 @@ int App::main (int argc, char **argv) {
       else if (time_limit_specified)
         APPERR ("multiple time limit '-t %s' and '-t %s'",
                 time_limit_specified, argv[i]);
-      else if (!parse_int_str (argv[i], time_limit))
+      else if (!parse_int_str (argv[i], time_limit, true))
         APPERR ("invalid argument in '-d %s'", argv[i]);
       else if (time_limit < 0)
         APPERR ("invalid time limit");
@@ -600,7 +600,7 @@ int App::main (int argc, char **argv) {
         APPERR ("multiple optimization options '%s' and '%s'",
                 optimization_specified, argv[i]);
       optimization_specified = argv[i];
-      if (!parse_int_str (argv[i] + 2, optimize))
+      if (!parse_int_str (argv[i] + 2, optimize, true))
         APPERR ("invalid optimization option '%s'", argv[i]);
       if (optimize < -31 || optimize > 31)
         APPERR ("invalid argument in '%s' (expected '-31..31')", argv[i]);
@@ -609,7 +609,7 @@ int App::main (int argc, char **argv) {
         APPERR ("multiple preprocessing options '%s' and '%s'",
                 preprocessing_specified, argv[i]);
       preprocessing_specified = argv[i];
-      if (!parse_int_str (argv[i] + 2, preprocessing))
+      if (!parse_int_str (argv[i] + 2, preprocessing, true))
         APPERR ("invalid preprocessing option '%s'", argv[i]);
       if (preprocessing < 0)
         APPERR ("invalid argument in '%s' (expected non-negative number)",
@@ -619,7 +619,7 @@ int App::main (int argc, char **argv) {
         APPERR ("multiple local search options '%s' and '%s'",
                 localsearch_specified, argv[i]);
       localsearch_specified = argv[i];
-      if (!parse_int_str (argv[i] + 2, localsearch))
+      if (!parse_int_str (argv[i] + 2, localsearch, true))
         APPERR ("invalid local search option '%s'", argv[i]);
       if (localsearch < 0)
         APPERR ("invalid argument in '%s' (expected non-negative number)",

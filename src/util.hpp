@@ -39,7 +39,7 @@ bool has_prefix (const char *str, const char *prefix);
 // The function returns true if parsing is successful and then also sets
 // the second argument to the parsed value.
 
-bool parse_int_str (const char *str, int &);
+bool parse_int_str (const char *str, int &, bool cut_to_fit = false);
 bool parse_int64_str (const char *str, int64_t &);
 
 /*------------------------------------------------------------------------*/

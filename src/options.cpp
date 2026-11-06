@@ -70,7 +70,7 @@ bool Options::parse_long_option (const char *arg, string &name, int &val) {
     val = !has_no_prefix;
   else {
     const char *val_str = name.c_str () + pos + 1;
-    if (!parse_int_str (val_str, val))
+    if (!parse_int_str (val_str, val, true))
       return false;
   }
   return true;
@@ -92,7 +92,7 @@ void Options::initialize_from_environment (int &val, const char *name,
   const char *val_str = getenv (key);
   if (!val_str)
     return;
-  if (!parse_int_str (val_str, val))
+  if (!parse_int_str (val_str, val, true))
     return;
   if (val < L)
     val = L;
