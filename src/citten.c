@@ -1187,6 +1187,7 @@ void completely_backtrack_to_root_level (citten *citten) {
     unassign (citten, values, lit);
   }
   CLEAR_STACK (*trail);
+  /*
   for (all_stack (unsigned, ref, *units)) {
     klause *c = dereference_klause (citten, ref);
     assert (c->size == 1);
@@ -1196,6 +1197,7 @@ void completely_backtrack_to_root_level (citten *citten) {
       continue;
     unassign (citten, values, unit);
   }
+  */
   citten->propagated = 0;
   citten->level = 0;
   check_queue (citten);
@@ -1651,8 +1653,10 @@ static int propagate_units (citten *citten) {
     ROG (ref, "propagating unit");
     const unsigned unit = c->lits[0];
     const value value = values[unit];
-    if (value > 0)
+    if (value > 0) {
+      PUSH_STACK (citten->trail, unit);
       continue;
+    }
     if (value < 0) {
       inconsistent (citten, ref);
       return 20;

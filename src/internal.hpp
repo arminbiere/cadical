@@ -280,6 +280,7 @@ struct Internal {
   vector<int> failing_assumptions;
   size_t constraints_without_assumptions;
   size_t last_constraint_idx;
+  size_t size_implicant;
   bool unit_constraint_vars;
   unordered_map<int64_t, bool> constraint_fail; // failing constraints
   unordered_map<int64_t, int> constraint_ids; // indeces of the constraints

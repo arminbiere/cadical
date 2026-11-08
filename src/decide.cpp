@@ -1,6 +1,7 @@
 #include "citten.h"
 #include "internal.hpp"
 #include "profile.hpp"
+#include <cstdint>
 
 namespace CaDiCaL {
 
@@ -258,7 +259,7 @@ bool Internal::is_constraint_level (size_t level) {
   if (constraint_cat && citten_status (constraint_cat) == 11) {
     // LOG ("level %zd < implicant %d?", level,
     // citten_size_implicant (constraint_cat));
-    return level < citten_size_implicant (constraint_cat);
+    return level < size_implicant;
   }
   // LOG ("level %zd < assumptions %zd + constraints %zd?", level,
   // assumptions.size (), constraints_without_assumptions);
@@ -278,9 +279,11 @@ int Internal::decide_assumption () {
         PROFILE_SCOPE_EARLY_EXIT (constraintseager);
       }
       PROFILE_SCOPE (constraintssolve);
-      if (opts.constraintprime == 2)
+      if (opts.constraintprime == 2) {
         cat_res = citten_solve_prime (constraint_cat);
-      else
+        if (cat_res == 11)
+          size_implicant = citten_size_implicant (constraint_cat);
+      } else
         cat_res = citten_solve (constraint_cat);
       report ('a'); // TODO: maybe only verbose
       PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
@@ -382,15 +385,16 @@ bool Internal::compute_diverged_constraint () {
 
 struct bigger_queue {
 
-  Internal *internal;
+  // Internal *internal;
+  const std::vector<int64_t> &btab;
 
-  bigger_queue (Internal *i) : internal (i) {}
+  bigger_queue (Internal *i) : btab (i->btab) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < internal->btab.size ());
-    assert (b > 0), assert (abs (b) < internal->btab.size ());
-    const unsigned s = internal->btab[a];
-    const unsigned t = internal->btab[b];
+    assert (a > 0), assert (abs (a) < btab.size ());
+    assert (b > 0), assert (abs (b) < btab.size ());
+    const unsigned s = btab[a];
+    const unsigned t = btab[b];
     assert (s != t);
     return s > t;
   }
@@ -398,15 +402,16 @@ struct bigger_queue {
 
 struct bigger_score {
 
-  Internal *internal;
+  // Internal *internal;
+  const std::vector<double> &stab;
 
-  bigger_score (Internal *i) : internal (i) {}
+  bigger_score (Internal *i) : stab (i->stab) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < internal->stab.size ());
-    assert (b > 0), assert (abs (b) < internal->stab.size ());
-    const unsigned s = internal->stab[a];
-    const unsigned t = internal->stab[b];
+    assert (a > 0), assert (abs (a) < stab.size ());
+    assert (b > 0), assert (abs (b) < stab.size ());
+    const unsigned s = stab[a];
+    const unsigned t = stab[b];
     if (s == t)
       return a > b;
     return s > t;
@@ -473,9 +478,11 @@ int Internal::decide_constraint () {
     }
     stats.constraints_solved++;
     PROFILE_SCOPE (constraintssolve);
-    if (opts.constraintprime == 2)
+    if (opts.constraintprime == 2) {
       cat_res = citten_solve_prime (constraint_cat);
-    else
+      if (cat_res == 11)
+        size_implicant = citten_size_implicant (constraint_cat);
+    } else
       cat_res = citten_solve (constraint_cat);
     report ('a'); // TODO: maybe only verbose
     PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
@@ -488,6 +495,7 @@ int Internal::decide_constraint () {
         PROFILE_SCOPE (constraintsprime);
         citten_compute_prime_implicant (constraint_cat);
         PROFILE_SCOPE_EARLY_EXIT (constraintsprime);
+        size_implicant = citten_size_implicant (constraint_cat);
         stats.constraints_prime++;
       }
       // compute conflicts between current trail and citten model

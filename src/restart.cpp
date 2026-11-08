@@ -127,9 +127,9 @@ int Internal::reuse_trail () {
   int trivial_decisions =
       assumptions.size () + constraints_without_assumptions;
   if (constraint_cat && citten_status (constraint_cat) == 11) {
-    LOG ("level %d < implicant %d?", level,
-         citten_size_implicant (constraint_cat));
-    trivial_decisions = citten_size_implicant (constraint_cat);
+    LOG ("level %d < implicant %d?", level, size_implicant);
+    assert (size_implicant == citten_size_implicant (constraint_cat));
+    trivial_decisions = size_implicant;
   }
   int next_decision = next_decision_variable ();
   assert (1 <= next_decision);

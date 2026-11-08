@@ -29,9 +29,9 @@ Internal::Internal ()
       probe_reason (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
       constraints_without_assumptions (0), last_constraint_idx (0),
-      unit_constraint_vars (false), randomized_deciding (false),
-      constraint_cat (nullptr), citten (nullptr), num_assigned (0),
-      proof (0), opts (this),
+      size_implicant (0), unit_constraint_vars (false),
+      randomized_deciding (false), constraint_cat (nullptr),
+      citten (nullptr), num_assigned (0), proof (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
