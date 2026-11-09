@@ -636,7 +636,6 @@ int Internal::decide_constraint () {
     */
     if (all_constraints_assigned) {
       last_constraint_idx = constraint_vars.size ();
-      stats.decisions++;
       LOG ("added pseudo decision level(s) due to constraints");
       new_trail_level (0);
       notify_decision ();
