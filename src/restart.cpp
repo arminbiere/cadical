@@ -122,15 +122,22 @@ bool Internal::restarting () {
 // no such decision exists top (in which case we do not reuse any level).
 
 int Internal::reuse_trail () {
-  if (!opts.restartreusetrail || is_constraint_level (level))
-    return level;
-  int trivial_decisions =
-      assumptions.size () + constraints_without_assumptions;
+  int trivial_decisions = assumptions.size ();
+  while (trivial_decisions < level) {
+    if (control[trivial_decisions + 1].decision)
+      break;
+    trivial_decisions++;
+  }
+  // + constraints_without_assumptions;
+  /*
   if (constraint_cat && citten_status (constraint_cat) == 11) {
     LOG ("level %d < implicant %zd?", level, size_implicant);
     assert (size_implicant == citten_size_implicant (constraint_cat));
     trivial_decisions = size_implicant;
   }
+  */
+  if (!opts.restartreusetrail)
+    return trivial_decisions;
   int next_decision = next_decision_variable ();
   assert (1 <= next_decision);
   int res = trivial_decisions;
