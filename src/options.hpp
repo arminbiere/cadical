@@ -222,7 +222,9 @@ OPTION( rephase,              1,  0,  2,0,0,1, "enable advanced phase heuristic 
 OPTION( rephaseint,         1e3,  1,2e9,0,0,1, "rephase interval") \
 OPTION( report,   reportdefault,  0,  1,0,0,1, "enable reporting") \
 OPTION( reportall,            0,  0,  1,0,0,1, "report even if not successful") \
+OPTION( reportheader,        19,  1,2e9,0,0,1, "print report explanation header") \
 OPTION( reportsolve,          0,  0,  1,0,0,1, "use solving not process time") \
+OPTION( reportsystem,         1,  0,  1,0,0,1, "report time and memory") \
 OPTION( restart,              1,  0,  1,0,0,1, "enable restarts") \
 OPTION( restartint,           2,  1,2e9,0,0,1, "restart interval") \
 OPTION( restartmarginfocused,10,  0, 25,0,0,1, "focused slow fast margin in percent") \
