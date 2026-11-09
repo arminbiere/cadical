@@ -1301,10 +1301,10 @@ void Internal::analyze () {
         glue--;
     }
 
-    if (old_glue >
-        glue) { // if had assumption levels counted in original glue
-      if (opts.glueassumptions) // add back one for all assumptions if
-                                // needed
+    if (old_glue > glue) {
+      // if assumption levels counted in original glue
+      // add back one for all assumptions if needed
+      if (opts.glueassumptions)
         glue++;
 
       if (glue < 1) // ensure positive glue
