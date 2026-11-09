@@ -28,40 +28,60 @@ void Internal::assume (int lit) {
     citten_assume_signed (constraint_cat, lit);
 }
 
-// for LRAT we implement recursive DFS, for non-LRAT use BFS.
-// TODO: maybe derecursify to avoid stack overflow
+// for LRAT we actually need to implement recursive DFS
+// for non-lrat use BFS. The DFS uses an explicit stack, since implication
+// chains can be long enough to overflow the call stack.
 //
 void Internal::assume_analyze_literal (int lit) {
-  assert (lit);
-  Flags &f = flags (lit);
-  if (f.seen)
-    return;
-  f.seen = true;
-  analyzed.push_back (lit);
-  Var &v = var (lit);
-  assert (val (lit) < 0);
-  if (v.reason == external_reason) {
-    v.reason = learn_external_reason_clause (-lit, 0, true);
-    assert (v.reason || !v.level);
-  }
-  assert (v.reason != external_reason);
-  if (!v.level) {
-    int64_t id = unit_id (-lit);
-    lrat_chain.push_back (id);
-    return;
-  }
-  if (v.reason) {
-    assert (v.level);
-    LOG (v.reason, "analyze reason");
-    for (const auto &other : *v.reason) {
-      assume_analyze_literal (other);
+  // Visits a literal before the literals of its reason and returns the
+  // reason if it still has to be analyzed.
+  const auto visit = [this] (int lit) -> Clause * {
+    assert (lit);
+    Flags &f = flags (lit);
+    if (f.seen)
+      return 0;
+    f.seen = true;
+    analyzed.push_back (lit);
+    Var &v = var (lit);
+    assert (val (lit) < 0);
+    if (v.reason == external_reason) {
+      v.reason = learn_external_reason_clause (-lit, 0, true);
+      assert (v.reason || !v.level);
     }
-    lrat_chain.push_back (v.reason->id);
+    assert (v.reason != external_reason);
+    if (!v.level) {
+      int64_t id = unit_id (-lit);
+      lrat_chain.push_back (id);
+      return 0;
+    }
+    if (v.reason) {
+      assert (v.level);
+      LOG (v.reason, "analyze reason");
+      return v.reason;
+    }
+    assert (assumed (-lit));
+    LOG ("failed assumption %d", -lit);
+    clause.push_back (lit);
+    return 0;
+  };
+  Clause *reason = visit (lit);
+  if (!reason)
     return;
+  // The reasons on the DFS path with the position of their next literal.
+  vector<pair<Clause *, int>> stack;
+  stack.push_back ({reason, 0});
+  while (!stack.empty ()) {
+    Clause *c = stack.back ().first;
+    const int i = stack.back ().second;
+    if (i < c->size) {
+      stack.back ().second = i + 1;
+      if (Clause *r = visit (c->literals[i]))
+        stack.push_back ({r, 0});
+    } else {
+      lrat_chain.push_back (c->id);
+      stack.pop_back ();
+    }
   }
-  assert (assumed (-lit));
-  LOG ("failed assumption %d", -lit);
-  clause.push_back (lit);
 }
 
 void Internal::assume_analyze_reason (int lit, Clause *reason) {

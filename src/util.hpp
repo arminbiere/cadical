@@ -39,7 +39,7 @@ bool has_prefix (const char *str, const char *prefix);
 // The function returns true if parsing is successful and then also sets
 // the second argument to the parsed value.
 
-bool parse_int_str (const char *str, int &);
+bool parse_int_str (const char *str, int &, bool cut_to_fit = false);
 bool parse_int64_str (const char *str, int64_t &);
 
 /*------------------------------------------------------------------------*/
@@ -101,9 +101,14 @@ template <class T> void erase_vector (std::vector<T> &v) {
 // excess memory not needed at the moment any more.
 
 template <class T> void shrink_vector (std::vector<T> &v) {
+#if 0
+  // TODO obsolete, starting with C++11 it seems.
   if (v.capacity () > v.size ()) {
     std::vector<T> (v).swap (v);
   }
+#else
+  v.shrink_to_fit ();
+#endif
   assert (v.capacity () == v.size ()); // not guaranteed though
 }
 

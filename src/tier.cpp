@@ -112,7 +112,7 @@ void Internal::print_tier_usage_statistics () {
 
     uint64_t accumulated_middle = 0;
     int glue_digits = 1, clauses_digits = 1;
-    for (unsigned glue = 0; glue <= stats.used[stable].size (); glue++) {
+    for (unsigned glue = 0; glue < stats.used[stable].size (); glue++) {
       if (glue < tier1)
         continue;
       uint64_t used = stats.used[stable][glue];
@@ -138,7 +138,7 @@ void Internal::print_tier_usage_statistics () {
     accumulated_middle = 0;
     uint64_t accumulated = 0;
     std::string output;
-    for (unsigned glue = 0; glue <= stats.used[stable].size (); glue++) {
+    for (unsigned glue = 0; glue < stats.used[stable].size (); glue++) {
       uint64_t used = stats.used[stable][glue];
       accumulated += used;
       if (glue < tier1)

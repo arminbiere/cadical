@@ -5,7 +5,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool parse_int_str (const char *val_str, int &val) {
+bool parse_int_str (const char *val_str, int &val, bool cut_to_fit) {
   if (!strcmp (val_str, "true"))
     val = 1;
   else if (!strcmp (val_str, "false"))
@@ -54,11 +54,17 @@ bool parse_int_str (const char *val_str, int &val) {
 
     if (sign < 0) {
       val64 = -val64;
-      if (val64 < INT_MIN)
+      if (val64 < INT_MIN) {
+        if (!cut_to_fit)
+          return false;
         val64 = INT_MIN;
+      }
     } else {
-      if (val64 > INT_MAX)
+      if (val64 > INT_MAX) {
+        if (!cut_to_fit)
+          return false;
         val64 = INT_MAX;
+      }
     }
 
     assert (INT_MIN <= val64);

@@ -23,11 +23,11 @@ struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
   int64_t id;              // id of clause
-  bool garbage;            // for garbage clauses
   unsigned size;
   bool used;
   bool tautological;
   bool temporary;
+  bool garbage;
   int literals[1]; // 'literals' of length 'size'
 };
 
@@ -100,10 +100,13 @@ class LratChecker : public StatTracer {
   void move_to_garbage (LratCheckerClause **);
   void delete_clause (LratCheckerClause *);
 
-  bool check (std::vector<int64_t>, bool use_tmp = false); // check RUP
-  bool check_resolution (std::vector<int64_t>,
-                         bool use_tmp = false); // check resolution
-  bool check_blocked (std::vector<int64_t>);    // check ER
+  // check RUP
+  bool check (const std::vector<int64_t> &, bool use_tmp = false);
+  // check resolution
+  bool check_resolution (const std::vector<int64_t> &,
+                         bool use_tmp = false);
+  // check ER
+  bool check_blocked (const std::vector<int64_t> &);
 
   struct {
 

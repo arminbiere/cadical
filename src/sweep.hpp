@@ -44,8 +44,6 @@ struct Sweeper {
   unsigned save;
   std::vector<int> vars;
   std::vector<Clause *> clauses;
-  std::vector<sweep_blocked_clause> blocked_clauses;
-  std::vector<int> blockable;
   std::vector<int> clause;
   std::vector<int> propagate;
   std::vector<int> backbone;

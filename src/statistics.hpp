@@ -10,6 +10,7 @@
   STATISTIC (api_init,                                 4, NOTHING, 0, 0) \
   STATISTIC (api_reset,                                4, NOTHING, 0, 0) \
   STATISTIC (api_vars,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_val,                                  4, NOTHING, 0, 0) \
   STATISTIC (api_declare_var,                          4, NOTHING, 0, 0) \
   STATISTIC (api_declare_vars,                         4, NOTHING, 0, 0) \
   STATISTIC (api_resize,                               4, NOTHING, 0, 0) \
@@ -22,7 +23,7 @@
   STATISTIC (api_constrain,                            4, NOTHING, 0, 0) \
   STATISTIC (api_assume,                               4, NOTHING, 0, 0) \
   STATISTIC (api_lookahead,                            4, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead_cubes,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_generate_cubes,                       4, NOTHING, 0, 0) \
   STATISTIC (api_reset_assumptions,                    4, NOTHING, 0, 0) \
   STATISTIC (api_propagate_assumptions,                4, NOTHING, 0, 0) \
   STATISTIC (api_implied,                              4, NOTHING, 0, 0) \
@@ -221,8 +222,8 @@
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
   STATISTIC (extensions,             1, percent, "%", searches) \
   STATISTIC (extended,               1, relative, "per", weakened) \
-  STATISTIC (extend_clauses_blocked, 2, relative, "per", weakened) \
-  STATISTIC (extend_clauses_read,    2, relative, "per", weakened) \
+  STATISTIC (extend_clause_blocked,  2, relative, "per", weakened) \
+  STATISTIC (extend_clause_read,     2, relative, "per", weakened) \
   STATISTIC (exttointchecked,        3, relative, "per", searches) \
   STATISTIC (exttointswitched,       3, relative, "per", exttointchecked) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
@@ -455,7 +456,7 @@
      METRIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
   STATISTIC (weakened_cube_cls,      2, percent, "%", weakened) \
-  STATISTIC (weakened_lengths,       2, relative, "per", weakened) \
+  STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 
 // clang-format on
 

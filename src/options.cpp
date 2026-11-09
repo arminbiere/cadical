@@ -26,8 +26,7 @@ int Options::reportdefault;
 // not require that the 'Options' constructor was called.
 
 Option Options::table[] = {
-#define OPTION(N, V, L, H, O, P, R, D) \
-  {#N, (int) V, (int) L, (int) H, (int) O, (bool) P, D},
+#define OPTION(N, V, L, H, O, P, R, D) Option (#N, V, L, H, O, P, D),
     OPTIONS
 #undef OPTION
 };
@@ -71,7 +70,7 @@ bool Options::parse_long_option (const char *arg, string &name, int &val) {
     val = !has_no_prefix;
   else {
     const char *val_str = name.c_str () + pos + 1;
-    if (!parse_int_str (val_str, val))
+    if (!parse_int_str (val_str, val, true))
       return false;
   }
   return true;
@@ -93,7 +92,7 @@ void Options::initialize_from_environment (int &val, const char *name,
   const char *val_str = getenv (key);
   if (!val_str)
     return;
-  if (!parse_int_str (val_str, val))
+  if (!parse_int_str (val_str, val, true))
     return;
   if (val < L)
     val = L;
@@ -123,12 +122,21 @@ Options::Options (Internal *s) : internal (s) {
     N = (int) (V); \
     assert (&val (i) == &N); \
     /* The order of initializing static data is undefined and thus */ \
-    /* it might be the case that the 'table' is not initialized yet. */ \
-    /* Thus this construction just reinitializes the table too even */ \
-    /* though it might not be necessary. */ \
-    assert (!table[i].name || !strcmp (table[i].name, #N)); \
-    table[i] = {#N,        (int) (V),  (int) (L), (int) (H), \
-                (int) (O), (bool) (P), D}; \
+    /* it might be the case that the 'table' is not initialized yet, */ \
+    /* particularly if we have a static 'Solver' instance somewhere. */ \
+    /* Thus this constructor just reinitializes the table too even */ \
+    /* though it might not be necessary. However with newer compilers */ \
+    /* (such as gcc 15.2 on Ubuntu 26.04) parallel initialization */ \
+    /* of non-static solver instances in different threads lead to */ \
+    /* the issue that assigning 'table[i]' with a compound on the right */ \
+    /* is not atomic and in particular for some compiler settings */ \
+    /* could result in the table entry to be first zeroed out before */ \
+    /* being set which lead to a race on using 'table[i].name' as in */ \
+    /* the following assertion we did not first get the name and */ \
+    /* instead used 'table[i].name' for accessing it. */ \
+    const char *name = table[i].name; \
+    assert (!name || !strcmp (name, #N)), (void) name; \
+    table[i].init (#N, V, L, H, O, P, D); \
     prev = #N; \
     i++; \
   } while (0);
@@ -289,7 +297,7 @@ void Options::optimize (int val) {
     OPTIONS
 #undef OPTION
     if (increased)
-      MSG ("optimization mode '-O%d' increased %u limits", val, increased);
+      MSG ("optimization mode '-O%d' decreased %u limits", val, increased);
     return;
   }
 

@@ -241,7 +241,6 @@ struct Internal {
   vector<int64_t> btab;         // enqueue time stamps for queue
   vector<int64_t> gtab;         // time stamp table to recompute glue
   vector<Occs> otab;            // table of occurrences for all literals
-  vector<Occs> rtab;            // table of redundant occurrences
   vector<int> ptab;             // table for caching probing attempts
   vector<uint64_t> ntab;        // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
@@ -377,7 +376,7 @@ struct Internal {
   void finish_added_clause_with_id (int64_t id, bool restore = false);
 
   // Reserve ids for original clauses to produce lrat
-  void reserve_ids (int number);
+  void reserve_ids (int64_t number);
 
   // Enlarge tables.
   //
@@ -1638,6 +1637,7 @@ struct Internal {
   //
   int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
+  CubesWithStatus solve_and_generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();
   int lookahead_next_probe ();

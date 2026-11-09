@@ -417,7 +417,8 @@ bool Internal::decompose_round () {
   vector<int64_t> decompose_ids;
   vector<Clause *> frozen_binary_reasons;
   const size_t size = 2 * (1 + (size_t) max_var);
-  decompose_ids.resize (size);
+  if (proof)
+    decompose_ids.resize (size);
 
   for (auto idx : vars) {
     if (!substituted)
@@ -462,8 +463,8 @@ bool Internal::decompose_round () {
       external->push_binary_clause_on_extension (id1, -idx, other);
     }
     assert (id1);
-
-    decompose_ids[vlit (-idx)] = id1;
+    if (proof)
+      decompose_ids[vlit (-idx)] = id1;
 
     lrat_chain.clear ();
     clause.clear ();
@@ -497,13 +498,13 @@ bool Internal::decompose_round () {
       external->push_binary_clause_on_extension (id2, idx, -other);
     }
     assert (id2);
-    decompose_ids[vlit (idx)] = id2;
+    if (proof)
+      decompose_ids[vlit (idx)] = id2;
     for (auto &tracer : tracers) {
       const int eidx = externalize (idx);
       const int eother = externalize (other);
       tracer->notify_equivalence (eidx, eother);
     }
-
     clause.clear ();
     lrat_chain.clear ();
   }

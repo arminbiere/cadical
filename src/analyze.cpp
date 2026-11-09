@@ -244,13 +244,15 @@ inline void Internal::bump_clause (Clause *c) {
   if (!c->redundant)
     return;
   const int tier_limit = min (tier1[true], tier1[false]);
-  if (!opts.recomputetier && c->glue <= tier_limit)
-    return;
-  if (opts.recomputetier < 2 && c->glue <= (tier_limit + 1) / 2)
-    return;
-  int new_glue = recompute_glue (c);
-  if (new_glue < c->glue)
-    promote_clause (c, new_glue);
+  const bool recompute =
+      opts.recomputetier > 1 ||
+      (opts.recomputetier == 1 && c->glue > (tier_limit + 1) / 2) ||
+      (!opts.recomputetier && c->glue > tier_limit);
+  if (recompute) {
+    int new_glue = recompute_glue (c);
+    if (new_glue < c->glue)
+      promote_clause (c, new_glue);
+  }
 
   const size_t glue =
       std::min ((size_t) c->glue, stats.used[stable].size () - 1);

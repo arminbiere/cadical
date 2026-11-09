@@ -714,14 +714,14 @@ msg "... '$build/makefile'"
 
 #--------------------------------------------------------------------------#
 
-if [ -f $src/makefile ]
+if [ -f "$src/makefile" ]
 then
   msg "removing '$src/makefile'"
-  rm -f $src/makefile
+  rm -f "$src/makefile"
 fi
 
 msg "linking '$root/makefile'"
-ln -s $root/makefile $src/makefile
+ln -s "$root/makefile" "$src/makefile"
 
 #--------------------------------------------------------------------------#
 

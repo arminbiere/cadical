@@ -242,7 +242,7 @@ void LratChecker::insert () {
 /*------------------------------------------------------------------------*/
 
 // "strict" resolution check instead of rup check
-bool LratChecker::check_resolution (vector<int64_t> proof_chain,
+bool LratChecker::check_resolution (const vector<int64_t> &proof_chain,
                                     bool use_tmp) {
   if (proof_chain.empty ()) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
@@ -318,7 +318,7 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain,
 
 /*------------------------------------------------------------------------*/
 
-bool LratChecker::check (vector<int64_t> proof_chain, bool use_tmp) {
+bool LratChecker::check (const vector<int64_t> &proof_chain, bool use_tmp) {
   LOG (imported_clause, "LRAT CHECKER checking clause[%" PRId64 "]",
        last_id);
   stats.checks++;
@@ -411,7 +411,7 @@ bool LratChecker::check (vector<int64_t> proof_chain, bool use_tmp) {
   return true;
 }
 
-bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
+bool LratChecker::check_blocked (const vector<int64_t> &proof_chain) {
   for (const auto &lit : imported_clause) {
     checked_lit (-lit) = true;
     mark (-lit) = true;

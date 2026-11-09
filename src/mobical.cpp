@@ -52,7 +52,7 @@ static const char *USAGE =
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
-"  --violate         generate contract violations (implies '-f')\n"
+"  --violate         generate contract violations (implies '--do-not-shrink-contracts')\n"
 "\n"
 "Then '<mode>' is one of these\n"
 "\n"
@@ -81,21 +81,23 @@ static const char *USAGE =
 "\n"
 "  --do-not-fork     execute all tests in main process directly\n"
 "\n"
-"In order to replay a trace which violates an API contract use\n"
+"Enforce API contracts on parsing\n"
 "\n"
-"  -f | --do-not-enforce[-contracts]\n"
+"  -f | --enforce[-contracts]\n"
 "\n"
 "Replay and record traces more faithfully with the following options\n"
 "\n"
 "  --replay                  '--do-not-mock-propagator', '--do-not-extend-map', \n"
-"                            and '--do-not-enforce-contracts' (no shrinking)\n"
+"                            and '--do-not-catch' (and --do-not-shrink-at-all)\n"
 "  --do-not-mock-propagator  replay-propagator and '--do-not-shrink-at-all'\n"
 "  --do-not-extend-map       trust variable names in trace\n"
+#ifdef EXCEPTIONS
+"  --do-not-catch            do not catch API contract violation exceptions\n"
+#else
+"  --do-not-catch            do not catch basic API contract violations\n"
+#endif
 #ifndef NTRACING
 "  --trace                   trace calls to <output> instead of copying\n"
-#endif
-#ifdef EXCEPTIONS
-"  --do-not-catch            do not catch API contract violation exception\n"
 #endif
 "\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
@@ -135,6 +137,9 @@ static const char *USAGE =
 "  --do-not-shrink-variables\n"
 "  --do-not-shrink-options\n"
 "  --do-not-shrink-propagator\n"
+"\n"
+"Disable grammar-aware shrinking (can lead to contract violations):"
+"  --do-not-shrink-contracts\n"
 "\n"
 "The following options change certain parts of trace generation,\n"
 "with '<r>' between 0-1000 the probability to generate these.\n"
@@ -276,6 +281,7 @@ struct Force {
   Size size = NOSIZE;
   int phases = -1;
   bool violate = false;
+  bool contracts = false;
 };
 
 // Options to shrink traces.
@@ -291,20 +297,18 @@ struct DoNot {
     bool basic = false;      // shrink other basic calls            'b'
     bool options = false;    // shrink option calls                 'o'
     bool propagator = false; // shrink propagator calls             'e'
-  } shrink;                  //
-  bool disable = false;      // try to eagerly disable all options  'd'
-  bool map = false;          // do not map variable indices         'm'
-  bool reduce = false;       // reduce option values                'r'
-  bool execute = false;      // do not execute trace
-  bool fork = false;         // do not fork sub-process
-  bool enforce = false;      // do not enforce contracts on read trace
+    bool contracts = false;
+  } shrink;             //
+  bool disable = false; // try to eagerly disable all options  'd'
+  bool map = false;     // do not map variable indices         'm'
+  bool reduce = false;  // reduce option values                'r'
+  bool execute = false; // do not execute trace
+  bool fork = false;    // do not fork sub-process
   bool seeds = false;
   bool extend_map = false;      // do not map variables
   bool mock_propagator = false; // do not use mock propagator
   bool ignore_resource_limits = false;
-#ifdef EXCEPTIONS
-  bool catching;
-#endif
+  bool catching = false;
 };
 
 /*------------------------------------------------------------------------*/
@@ -340,7 +344,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0){};
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
 };
 
 class Mopts {
@@ -590,6 +594,120 @@ enum CallType : uint64_t {
 
   INVALID_TYPE, // keep this last
 };
+
+// NOT_BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, PROCESS
+// BEFORE, MATCHING, CONFIG, EXTENDMAP, CLAUSAL, ALWAYS, INIT
+// clang-format off
+#define ALL_CALL_TYPE_CASES \
+  CALL_TYPE_CASE (INIT                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1) \
+  CALL_TYPE_CASE (RESET                      , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (SET                        , 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CONFIGURE                  , 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (PRINT_OPTIONS              , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (VARS                       , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (ACTIVE                     , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (REDUNDANT                  , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (IRREDUNDANT                , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (RESIZE                     , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (DECLARE                    , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (DECLARE_VARS               , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (PHASE                      , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0) \
+  CALL_TYPE_CASE (UNPHASE                    , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0) \
+  CALL_TYPE_CASE (ADD                        , 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0) \
+  CALL_TYPE_CASE (ASSUME                     , 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0) \
+  CALL_TYPE_CASE (CONSTRAIN                  , 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0) \
+  CALL_TYPE_CASE (RESET_ASSUMPTIONS          , 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (SOLVE                      , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (SIMPLIFY                   , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (LOOKAHEAD                  , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CUBING                     , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (PROPAGATE                  , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CONCLUDE                   , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (VAL                        , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FLIP                       , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FLIPPABLE                  , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FAILED                     , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FIXED                      , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (IMPLIED                    , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FREEZE                     , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0) \
+  CALL_TYPE_CASE (FROZEN                     , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (MELT                       , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (LIMIT                      , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (OPTIMIZE                   , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (DUMP                       , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (STATS                      , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (CONNECT                    , 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (DISCONNECT                 , 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (OBSERVE                    , 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (UNOBSERVE                  , 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (RESET_OBSERVED             , 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (IS_DECISION                , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (IS_WITNESS                 , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (OBSERVED                   , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (FORCE_BACKTRACK            , 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FORCE_UNASSIGN             , 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (LEMMA                      , 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0) \
+  CALL_TYPE_CASE (DECIDE                     , 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FORCE                      , 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_DECIDE                  , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_PROPAGATE               , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_HAS_CLAUSE              , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_ADD_CLAUSE              , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_ADD_REASON              , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CB_CHECK_MODEL             , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (NOTIFY_ASSIGNMENT          , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (NOTIFY_BACKTRACK           , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (NOTIFY_LEVEL               , 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (TRACEPROOF                 , 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (FLUSHPROOFTRACE            , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (CLOSEPROOFTRACE            , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (TRAVERSE_CLAUSES           , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (TRAVERSE_CONSTRAINT        , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (TRAVERSE_WITNESSES_BACKWARD, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (TRAVERSE_WITNESSES_FORWARD , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (READ_DIMACS                , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (READ_SOLUTION              , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (WRITE_DIMACS               , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (WRITE_EXTENSION            , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (COPY                       , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+
+// clang-format on
+#ifdef MOBICAL_TERMINATE
+#define TERMINATE_TYPE \
+  CALL_TYPE_CASE (TERMINATE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1)
+
+#else
+#define TERMINATE_TYPE
+#endif
+#ifdef MOBICAL_MEMORY
+#define MEMORY_TYPE \
+  CALL_TYPE_CASE (LEAKALLOC, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1) \
+  CALL_TYPE_CASE (MAXALLOC, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1)
+
+#else
+#define MEMORY_TYPE
+#endif
+
+#define INVALID_CALL_TYPE \
+  CALL_TYPE_CASE (INVALID_TYPE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
+  default:
+
+static const char *ct_to_str (CallType type) {
+#define CALL_TYPE_CASE(NAME, ...) \
+  case (NAME): \
+    return #NAME;
+
+  switch (type) {
+    MEMORY_TYPE
+    TERMINATE_TYPE
+    ALL_CALL_TYPE_CASES
+    INVALID_CALL_TYPE
+    return "";
+  }
+#undef CALL_TYPE_CASE
+}
+
+// ----------------------------------------------------------------
 
 struct Shared {
   int64_t call_type_executed[CallType::INVALID_TYPE];
@@ -1041,8 +1159,10 @@ void Mobical::warning (const char *fmt, ...) {
 //
 //   CONFIG* (BEFORE* [ PROCESS DURING* AFTER* ] )* [ RESET ]
 //
-// If traces are read then they are checked to have this structure.  We
-// check that 'ADD' sequences terminate by adding zero literal before
+// If traces are read then they are checked to have this structure.
+// If the trace does not conform to the structure, it produces warnings,
+// which can be turned into errors through '--enforce-contracts'.
+// We check that 'ADD' sequences terminate by adding zero literal before
 // another call is made ('ASSUME|ALWAYS|SOLVE|SIMPLIFY|LOOKAHEAD').
 //
 // Furthermore the execution engine (both for read and generated traces)
@@ -1053,7 +1173,7 @@ void Mobical::warning (const char *fmt, ...) {
 // If the user wants to understand why a trace obtained through
 // 'CADICAL_API_TRACE' is violating an API contract, then these checks
 // are problematic and can be disabled by using the command line option
-// '--do-not-enforce-contracts'.
+// '--do-not-catch[-violations]'.
 //
 // Note that our model based tester is actually more restrictive and does
 // not produce all these possible call sequences. For instance it first
@@ -1083,292 +1203,230 @@ struct Call {
       free (name);
   }
 
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return BASIC;
   virtual bool basic_type () {
     switch (type) {
-#ifdef MOBICAL_TERMINATE
-    case (CallType::TERMINATE):
-#endif
-#ifdef MOBICAL_MEMORY
-    case (CallType::LEAKALLOC):
-    case (CallType::MAXALLOC):
-#endif
-    case (CallType::TRACEPROOF):
-    case (CallType::CONFIGURE):
-    case (CallType::PRINT_OPTIONS):
-    case (CallType::ASSUME):
-    case (CallType::SOLVE):
-    case (CallType::SIMPLIFY):
-    case (CallType::LOOKAHEAD):
-    case (CallType::CUBING):
-    case (CallType::PROPAGATE):
-    case (CallType::VARS):
-    case (CallType::ACTIVE):
-    case (CallType::REDUNDANT):
-    case (CallType::IRREDUNDANT):
-    case (CallType::RESIZE):
-    case (CallType::DECLARE):
-    case (CallType::DECLARE_VARS):
-    case (CallType::VAL):
-    case (CallType::FLIP):
-    case (CallType::FLIPPABLE):
-    case (CallType::FIXED):
-    case (CallType::FAILED):
-    case (CallType::FROZEN):
-    case (CallType::CONCLUDE):
-    case (CallType::FREEZE):
-    case (CallType::MELT):
-    case (CallType::PHASE):
-    case (CallType::UNPHASE):
-    case (CallType::LIMIT):
-    case (CallType::OPTIMIZE):
-    case (CallType::RESET_OBSERVED):
-    case (CallType::IS_WITNESS):
-    case (CallType::DECIDE):
-    case (CallType::FORCE):
-    case (CallType::FORCE_BACKTRACK):
-    case (CallType::FORCE_UNASSIGN):
-    case (CallType::RESET_ASSUMPTIONS):
-    case (CallType::OBSERVE):
-    case (CallType::OBSERVED):
-    case (CallType::UNOBSERVE):
-    case (CallType::IS_DECISION):
-    case (CallType::IMPLIED):
-    case (CallType::TRAVERSE_CLAUSES):
-    case (CallType::TRAVERSE_CONSTRAINT):
-    case (CallType::TRAVERSE_WITNESSES_BACKWARD):
-    case (CallType::TRAVERSE_WITNESSES_FORWARD):
-    case (CallType::READ_DIMACS):
-    case (CallType::READ_SOLUTION):
-    case (CallType::WRITE_DIMACS):
-    case (CallType::WRITE_EXTENSION):
-    case (CallType::COPY):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      MEMORY_TYPE
+      TERMINATE_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return LIT;
   virtual bool lit_type () {
     switch (type) {
-    case (CallType::PHASE):
-    case (CallType::UNPHASE):
-    case (CallType::ADD):
-    case (CallType::ASSUME):
-    case (CallType::VAL):
-    case (CallType::FLIP):
-    case (CallType::FLIPPABLE):
-    case (CallType::FAILED):
-    case (CallType::FIXED):
-    case (CallType::FREEZE):
-    case (CallType::FROZEN):
-    case (CallType::MELT):
-    case (CallType::CONSTRAIN):
-    case (CallType::UNOBSERVE):
-    case (CallType::OBSERVE):
-    case (CallType::LEMMA):
-    case (CallType::DECIDE):
-    case (CallType::FORCE):
-    case (CallType::FORCE_UNASSIGN):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return MOCK;
   virtual bool mock_type () {
     switch (type) {
-    case (CallType::LEMMA):
-    case (CallType::DECIDE):
-    case (CallType::FORCE):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return REPLAY;
   virtual bool replay_type () {
     switch (type) {
-    case (CallType::CB_DECIDE):
-    case (CallType::CB_PROPAGATE):
-    case (CallType::CB_HAS_CLAUSE):
-    case (CallType::CB_ADD_CLAUSE):
-    case (CallType::CB_ADD_REASON):
-    case (CallType::CB_CHECK_MODEL):
-    case (CallType::NOTIFY_ASSIGNMENT):
-    case (CallType::NOTIFY_BACKTRACK):
-    case (CallType::NOTIFY_LEVEL):
-    case (CallType::FORCE_BACKTRACK):
-    case (CallType::FORCE_UNASSIGN):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return OBSERVE;
   virtual bool observe_type () {
     switch (type) {
-    case (CallType::OBSERVE):
-    case (CallType::UNOBSERVE):
-    case (CallType::RESET_OBSERVED):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
   virtual bool propagator_type () {
     return replay_type () || mock_type () || observe_type ();
   }
-  virtual bool during_type () { return mock_type () || propagator_type (); }
+  virtual bool during_type () { return propagator_type (); }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return INIT;
   virtual bool init_type () {
     switch (type) {
-#ifdef MOBICAL_TERMINATE
-    case (CallType::TERMINATE):
-#endif
-#ifdef MOBICAL_MEMORY
-    case (CallType::LEAKALLOC):
-    case (CallType::MAXALLOC):
-#endif
-    case (CallType::INIT):
-      return true;
-    default:
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      ALL_CALL_TYPE_CASES
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return ALWAYS;
   virtual bool always_type () {
     switch (type) {
-    case (CallType::PRINT_OPTIONS):
-    case (CallType::ACTIVE):
-    case (CallType::VARS):
-    case (CallType::REDUNDANT):
-    case (CallType::IRREDUNDANT):
-    case (CallType::FREEZE):
-    case (CallType::FROZEN):
-    case (CallType::MELT):
-    case (CallType::LIMIT):
-    case (CallType::OPTIMIZE):
-    case (CallType::DUMP):
-    case (CallType::STATS):
-    case (CallType::RESIZE):
-    case (CallType::FIXED):
-    case (CallType::PHASE):
-    case (CallType::UNPHASE):
-    case (CallType::OBSERVE):
-    case (CallType::UNOBSERVE):
-    case (CallType::OBSERVED):
-    case (CallType::IS_WITNESS):
-    case (CallType::RESET_OBSERVED):
-    case (CallType::IS_DECISION):
-    case (CallType::DECLARE):
-    case (CallType::DECLARE_VARS):
-    case (CallType::TRAVERSE_CLAUSES):
-    case (CallType::TRAVERSE_CONSTRAINT):
-    case (CallType::TRAVERSE_WITNESSES_BACKWARD):
-    case (CallType::TRAVERSE_WITNESSES_FORWARD):
-    case (CallType::READ_DIMACS):
-    case (CallType::READ_SOLUTION):
-    case (CallType::WRITE_DIMACS):
-    case (CallType::WRITE_EXTENSION):
-    case (CallType::COPY):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    assert (!EXTENDMAP || lit_type ()); \
+    return EXTENDMAP;
   // lit_type calls that can declare variables
   virtual bool extendmap_type () {
     switch (type) {
-    case (CallType::PHASE):
-    case (CallType::UNPHASE):
-    case (CallType::ADD):
-    case (CallType::ASSUME):
-    case (CallType::FREEZE):
-    case (CallType::CONSTRAIN):
-      assert (lit_type ());
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    assert (!CLAUSAL || lit_type ()); \
+    return CLAUSAL;
   virtual bool clausal_type () {
     switch (type) {
-    case (CallType::LEMMA):
-    case (CallType::CONSTRAIN):
-    case (CallType::ADD):
-      assert (lit_type ());
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return CONFIG;
   virtual bool config_type () {
     if (always_type ())
       return true;
     switch (type) {
-#ifdef MOBICAL_TERMINATE
-    case (CallType::TERMINATE):
-#endif
-#ifdef MOBICAL_MEMORY
-    case (CallType::LEAKALLOC):
-    case (CallType::MAXALLOC):
-#endif
-    case (CallType::INIT):
-    case (CallType::SET):
-    case (CallType::CONFIGURE):
-    case (CallType::TRACEPROOF):
-      return true;
-    default:
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      ALL_CALL_TYPE_CASES
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return MATCHING;
   virtual bool matching_type () {
     switch (type) {
-    case (CallType::CONNECT):
-    case (CallType::DISCONNECT):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return BEFORE;
   virtual bool before_type () {
     if (always_type ())
       return true;
     switch (type) {
-    case (CallType::ADD):
-    case (CallType::CONSTRAIN):
-    case (CallType::ASSUME):
-    case (CallType::DISCONNECT):
-    case (CallType::CONNECT):
-    case (CallType::RESET_ASSUMPTIONS):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return PROCESS;
   virtual bool process_type () {
     switch (type) {
-    case (CallType::SOLVE):
-    case (CallType::SIMPLIFY):
-    case (CallType::LOOKAHEAD):
-    case (CallType::CUBING):
-    case (CallType::PROPAGATE):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+#undef CALL_TYPE_CASE
+#define CALL_TYPE_CASE(TYPE, BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, \
+                       PROCESS, BEFORE, MATCHING, CONFIG, EXTENDMAP, \
+                       CLAUSAL, ALWAYS, INIT) \
+  case (TYPE): \
+    return AFTER;
   virtual bool after_type () {
     if (always_type ())
       return true;
     switch (type) {
-    case (CallType::VAL):
-    case (CallType::FLIP):
-    case (CallType::FLIPPABLE):
-    case (CallType::FAILED):
-    case (CallType::CONCLUDE):
-    case (CallType::IMPLIED):
-    case (CallType::FLUSHPROOFTRACE):
-    case (CallType::CLOSEPROOFTRACE):
-      return true;
-    default:
+      ALL_CALL_TYPE_CASES
+      TERMINATE_TYPE
+      MEMORY_TYPE
+      INVALID_CALL_TYPE
       return false;
     }
   }
+
+#undef CALL_TYPE_CASE
 
   // extend the size of `extendmap` by `arg` new variables.
   virtual void extend_map_by (Solver *&s, ExtendMap *&extendmap, int arg) {
@@ -1393,6 +1451,8 @@ struct Call {
     if (mobical.donot.extend_map)
       return arg;
     if (!lit_type ())
+      return arg;
+    if (arg == INT_MIN)
       return arg;
     if (extendmap_type ())
       extend_map_to (s, extendmap);
@@ -1427,9 +1487,7 @@ struct Call {
       std::cout << "'" << std::endl;
     }
   }
-#ifdef EXCEPTIONS
   virtual bool catching () { return !mobical.donot.catching; }
-#endif
 };
 
 /*------------------------------------------------------------------------*/
@@ -1446,97 +1504,6 @@ enum MockForceType {
   MF_CB_ADD_REASON_CLAUSE_LIT,
   LAST_MOCK_FORCE_TYPE,
 };
-
-static const char *ct_to_str (CallType type) {
-  // clang-format off
-  return (type == INIT ? "INIT"
-       : (type == RESET ? "RESET" 
-       : (type == SET ? "SET"
-       : (type == CONFIGURE ? "CONFIGURE"
-       : (type == PRINT_OPTIONS ? "PRINT_OPTIONS"
-       : (type == VARS ? "VARS"
-       : (type == ACTIVE ? "ACTIVE"
-       : (type == REDUNDANT ? "REDUNDANT"
-       : (type == IRREDUNDANT ? "IRREDUNDANT"
-       : (type == RESIZE ? "RESIZE"
-       : (type == DECLARE ? "DECLARE"
-       : (type == DECLARE_VARS ? "DECLARE_VARS"
-       : (type == PHASE ? "PHASE"
-       : (type == UNPHASE ? "UNPHASE"
-       : (type == ADD ? "ADD"
-       : (type == ASSUME ? "ASSUME"
-       : (type == CONSTRAIN ? "CONSTRAIN"
-       : (type == RESET_ASSUMPTIONS ? "RESET_ASSUMPTIONS"
-       : (type == SOLVE ? "SOLVE"
-       : (type == SIMPLIFY ? "SIMPLIFY"
-       : (type == LOOKAHEAD ? "LOOKAHEAD"
-       : (type == CUBING ? "CUBING"
-       : (type == PROPAGATE ? "PROPAGATE"
-       : (type == VAL ? "VAL"
-       : (type == FLIP ? "FLIP"
-       : (type == FLIPPABLE ? "FLIPPABLE"
-       : (type == FAILED ? "FAILED"
-       : (type == FIXED ? "FIXED"
-       : (type == IMPLIED ? "IMPLIED"
-       : (type == FREEZE ? "FREEZE"
-       : (type == FROZEN ? "FROZEN"
-       : (type == MELT ? "MELT"
-       : (type == LIMIT ? "LIMIT"
-       : (type == OPTIMIZE ? "OPTIMIZE"
-       : (type == DUMP ? "DUMP"
-       : (type == STATS ? "STATS"
-       : (type == CONNECT ? "CONNECT"
-       : (type == OBSERVE ? "OBSERVE"
-       : (type == UNOBSERVE ? "UNOBSERVE"
-       : (type == RESET_OBSERVED ? "RESET_OBSERVED"
-       : (type == IS_DECISION ? "IS_DECISION"
-       : (type == IS_WITNESS ? "IS_WITNESS"
-       : (type == OBSERVED ? "OBSERVED"
-       : (type == FORCE_BACKTRACK ? "FORCE_BACKTRACK"
-       : (type == FORCE_UNASSIGN ? "FORCE_UNASSIGN"
-       : (type == LEMMA ? "LEMMA"
-       : (type == DECIDE ? "DECIDE"
-       : (type == FORCE ? "FORCE"
-       : (type == CB_DECIDE ? "CB_DECIDE"
-       : (type == CB_PROPAGATE ? "CB_PROPAGATE"
-       : (type == CB_HAS_CLAUSE ? "CB_HAS_CLAUSE"
-       : (type == CB_ADD_CLAUSE ? "CB_ADD_CLAUSE"
-       : (type == CB_ADD_REASON ? "CB_ADD_REASON"
-       : (type == CB_CHECK_MODEL ? "CB_CHECK_MODEL"
-       : (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
-       : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
-       : (type == NOTIFY_LEVEL ? "NOTIFY_LEVEL"
-       : (type == CONCLUDE ? "CONCLUDE"
-       : (type == DISCONNECT ? "DISCONNECT"
-       : (type == TRACEPROOF ? "TRACEPROOF"
-       : (type == FLUSHPROOFTRACE ? "FLUSHPROOFTRACE"
-       : (type == CLOSEPROOFTRACE ? "CLOSEPROOFTRACE"
-#ifdef MOBICAL_MEMORY
-       : (type == MAXALLOC ? "MAXALLOC"
-       : (type == LEAKALLOC ? "LEAKALLOC"
-#endif
-#ifdef MOBICAL_TERMINATE
-       : (type == TERMINATE ? "TERMINATE"
-#endif
-       : (type == TRAVERSE_CLAUSES ? "TRAVERSE_CLAUSES"
-       : (type == TRAVERSE_CONSTRAINT ? "TRAVERSE_CONSTRAINT"
-       : (type == TRAVERSE_WITNESSES_BACKWARD ? "TRAVERSE_WITNESSES_BACKWARD"
-       : (type == TRAVERSE_WITNESSES_FORWARD ? "TRAVERSE_WITNESSES_FORWARD"
-       : (type == READ_DIMACS ? "READ_DIMACS"
-       : (type == READ_SOLUTION ? "READ_SOLUTION"
-       : (type == WRITE_DIMACS ? "WRITE_DIMACS"
-       : (type == WRITE_EXTENSION ? "WRITE_EXTENSION"
-       : (type == COPY ? "COPY"
-       : "INVALID_TYPE")))))))))))
-#ifdef MOBICAL_MEMORY
-       ))
-#endif
-#ifdef MOBICAL_TERMINATE
-       )
-#endif
-       ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
-  // clang-format on
-}
 
 #ifdef LOGGING
 static const char *mft_to_str (MockForceType type) {
@@ -1646,7 +1613,7 @@ public:
     assert (!c->executed);
     c->executed = true;
     RLOGE ("notify_new_decision_level",
-           " " << c->val - 1 << " -> " << c->val);
+           " (" << c->val - 1 << " -> " << c->val << ")");
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -1862,13 +1829,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d){};
+    Decisions (int l, int d) : lit (l), delay (d) {};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d){};
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {
@@ -2080,8 +2047,8 @@ public:
       MLOG ("ignore tainted " << lit << std::endl);
       return false;
     }
-    assert (mobical.donot.enforce || !value_map[lit]);
-    assert (mobical.donot.enforce || !s->external->observed (lit));
+    assert (mobical.donot.catching || !value_map[lit]);
+    assert (mobical.donot.catching || !s->external->observed (lit));
     MLOG ("adding observed " << lit << std::endl);
     s->add_observed_var (lit);
     observed_map[abs (lit)] = true;
@@ -2094,7 +2061,7 @@ public:
       return;
     }
     observed_map.erase (abs (lit));
-    assert (mobical.donot.enforce || s->external->observed (lit));
+    assert (mobical.donot.catching || s->external->observed (lit));
     auto it =
         std::find (observed_fixed.begin (), observed_fixed.end (), lit);
     if (it != observed_fixed.end ())
@@ -2647,7 +2614,7 @@ public:
     // Calls to solver that might force it to backtrack.
     get_force (MF_NOTIFY_ASSIGNMENT);
     MLOGE ("notify_assignments(" << lits.size () << ")",
-           " (level " << observed_trail.size () << ")");
+           " (level " << observed_trail.size () - 1 << ")");
   }
 
   void notify_new_decision_level () override {
@@ -2660,8 +2627,8 @@ public:
     // Calls to solver that might force it to backtrack.
     get_force (MF_NOTIFY_NEW_DECISION_LEVEL);
     MLOGE ("notify_new_decision_level",
-           " (" << observed_trail.size () - 1 << " -> "
-                << observed_trail.size () << ")");
+           " (" << observed_trail.size () - 2 << " -> "
+                << observed_trail.size () - 1 << ")");
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -4003,7 +3970,7 @@ struct ImpliedCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->implied (entrailed);
         else if (s->state () == State::SATISFIED ||
                  s->state () == State::INCONCLUSIVE)
@@ -4111,23 +4078,31 @@ struct LookaheadCall : public Call {
 };
 
 struct CubingCall : public Call {
-  CubingCall (int r = 1) : Call (CUBING, 0, r) {}
+  CubingCall (int depth, int min_depth) : Call (CUBING, depth, min_depth) {}
   void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
     Call::execute (s, extendmap, delay);
 #ifdef EXCEPTIONS
     if (catching ()) {
       try {
-        res = s->lookahead ();
+        (void) s->generate_cubes (arg, res);
       } catch (std::runtime_error &) {
         caught ();
       }
-    } else
+    } else {
 #endif
-      (void) s->generate_cubes (arg);
+      if (!catching ())
+        (void) s->generate_cubes (arg, res);
+      else if (s->state () != SATISFIED && s->state () != UNSATISFIED)
+        (void) s->generate_cubes (arg, res);
+      else
+        caught ();
+#ifdef EXCEPTIONS
+    }
+#endif
   }
-  void print (ostream &o) { o << keyword () << ' ' << res; }
-  Call *copy () { return new CubingCall (res); }
-  const char *keyword () { return "cubing"; }
+  void print (ostream &o) { o << keyword () << ' ' << arg << ' ' << res; }
+  Call *copy () { return new CubingCall (arg, res); }
+  const char *keyword () { return "generate_cubes"; }
 };
 
 struct ValCall : public Call {
@@ -4150,7 +4125,7 @@ struct ValCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->val (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->val (map_arg (s, extendmap, false));
@@ -4186,7 +4161,7 @@ struct FlipCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->flip (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flip (map_arg (s, extendmap, false));
@@ -4222,7 +4197,7 @@ struct FlippableCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->flippable (map_arg (s, extendmap, false));
         else if (s->state () == SATISFIED)
           res = s->flippable (map_arg (s, extendmap, false));
@@ -4285,7 +4260,7 @@ struct FailedCall : public Call {
       } else {
 #endif
         res = 0;
-        if (mobical.donot.enforce)
+        if (!catching ())
           res = s->failed (map_arg (s, extendmap, false));
         else if (s->state () == UNSATISFIED)
           res = s->failed (map_arg (s, extendmap, false));
@@ -4320,7 +4295,7 @@ struct ConcludeCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->conclude ();
         else if (s->state () == UNSATISFIED || s->state () == SATISFIED ||
                  s->state () == INCONCLUSIVE)
@@ -4383,7 +4358,7 @@ struct MeltCall : public Call {
         }
       } else {
 #endif
-        if (mobical.donot.enforce)
+        if (!catching ())
           s->melt (map_arg (s, extendmap));
         else if (s->frozen (map_arg (s, extendmap)))
           s->melt (map_arg (s, extendmap));
@@ -5153,9 +5128,11 @@ public:
       try {
         // They are (ideally) are executed already
         if (c->executed) {
-          assert (c->during_type () || c->always_type ());
+          assert (c->during_type () || c->always_type () ||
+                  mobical.donot.catching);
           continue;
         }
+
 #ifdef MOBICAL_MEMORY
         if (c->type == CallType::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -5210,40 +5187,54 @@ public:
             mobical.shared->unsat++;
         } else
           c->execute (solver, extendmap);
-#ifndef NTRACING
-        if (c->type == CallType::INIT && trace_file != nullptr)
-          solver->trace_api_calls (trace_file);
-#endif
         if (c->type == CallType::CONNECT && mobical.donot.mock_propagator) {
           for (size_t j = i + 1; j < calls.size (); j++) {
             Call *next_c = calls[j];
             if (next_c->type == CallType::RESET)
               break;
-            if (next_c->type == CallType::DISCONNECT)
+            if (next_c->type == CallType::DISCONNECT &&
+                !mobical.donot.catching)
               break;
             next_c->execute (solver, extendmap, true);
           }
         }
-
-        // initialize options after INIT or CONFIGURE
-        if (c->type == CallType::INIT || c->type == CallType::CONFIGURE) {
+        // initialize logging, tracing and terminator AFTER executing INIT
+        if (c->type == CallType::INIT) {
+#ifdef LOGGING
+          if (mobical.add_set_log_to_true)
+            solver->set ("log", 1);
+#endif
+#ifndef NTRACING
+          if (trace_file != nullptr)
+            solver->trace_api_calls (trace_file);
+#endif
 #ifdef MOBICAL_TERMINATE
           // Connect terminator but never disconnect it
           // (might violate API contract on failed allocation).
           solver->connect_terminator (this);
 #endif
-          for (auto &o : mobical.mopts) {
-            if (o.fix (&mobical.mopts)) {
-              if (mobical.verbose) {
-                std::cout << "c [mobical] forcing option '";
-                std::cout << "set " << o.name << " "
-                          << o.val (&mobical.mopts);
-                std::cout << "'" << std::endl;
+        }
+
+        // initialize options after INIT or CONFIGURE (to force value back
+        // after a clashing configure call)
+        if (c->type == CallType::INIT || c->type == CallType::CONFIGURE) {
+          try {
+            for (auto &o : mobical.mopts) {
+              if (o.fix (&mobical.mopts)) {
+                if (mobical.verbose) {
+                  std::cout << "c [mobical] forcing option '";
+                  std::cout << "set " << o.name << " "
+                            << o.val (&mobical.mopts);
+                  std::cout << "'" << std::endl;
+                }
+                solver->set (o.name, o.val (&mobical.mopts));
+                if (!strcmp (o.name, "factorcheck"))
+                  extendmap->factor_check = o.val (&mobical.mopts);
               }
-              solver->set (o.name, o.val (&mobical.mopts));
-              if (!strcmp (o.name, "factorcheck"))
-                extendmap->factor_check = o.val (&mobical.mopts);
             }
+          } catch (const std::runtime_error &) {
+            mobical.warning ("could not set options after call %s",
+                             c->keyword ());
           }
         }
       } catch (const std::bad_alloc &e) {
@@ -5575,13 +5566,6 @@ int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
 
 void Trace::generate_options (Random &random, Size size) {
 
-#ifdef LOGGING
-  if (mobical.add_set_log_to_true)
-    push_back (new SetCall ("log", 1));
-#else
-  if (mobical.add_set_log_to_true)
-    mobical.warning ("ignoring log option");
-#endif
   // In 10% of the cases do not change any options.
   //
   if (random.pick_int (0, 999) >= mobical.tracegen.generate_options)
@@ -5823,7 +5807,7 @@ void Trace::generate_limits (Random &random) {
     push_back (random,
                new LimitCall ("localsearch", random.pick_int (0, 1)));
   if (random.generate_double () < 0.02)
-    push_back (random, new OptimizeCall (random.pick_int (0, 31)));
+    push_back (random, new OptimizeCall (random.pick_int (-31, 31)));
 }
 
 /*------------------------------------------------------------------------*/
@@ -6252,7 +6236,8 @@ void Trace::generate_process (Random &random) {
     push_back (random, new SolveCall ());
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
-    push_back (random, new CubingCall (depth));
+    const int min_depth = random.pick_int (0, 10);
+    push_back (random, new CubingCall (depth, min_depth));
   } else if (fraction > 0.9) {
     push_back (random, new LookaheadCall ());
   } else if (fraction > 0.8) {
@@ -6404,7 +6389,9 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::CUBING): {
-    push_back (new CubingCall ());
+    const int depth = random.pick_int (0, 10);
+    const int min_depth = random.pick_int (0, 10);
+    push_back (new CubingCall (depth, min_depth));
     break;
   }
   case (CallType::PROPAGATE): {
@@ -6481,7 +6468,7 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::OPTIMIZE): {
     // TODO: what max size makes sense?
-    const int size = random.pick_int (1, 31);
+    const int size = random.pick_int (-31, 31);
     push_back (new OptimizeCall (size));
     break;
   }
@@ -7450,7 +7437,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           continue;
         Segment &s = segments[i];
         for (size_t j = s.lo; j < s.hi; j++)
-          if (mobical.donot.enforce || !calls[j]->matching_type ())
+          if (mobical.donot.shrink.contracts || !calls[j]->matching_type ())
             ignore[j] = true;
       }
       Trace tmp;
@@ -7488,7 +7475,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         continue;
       Segment &s = segments[i];
       for (size_t j = s.lo; j < s.hi; j++)
-        if (mobical.donot.enforce || !calls[j]->matching_type ())
+        if (mobical.donot.shrink.contracts || !calls[j]->matching_type ())
           ignore[j] = true;
     }
     size_t j = 0;
@@ -7600,7 +7587,7 @@ void Mobical::notify (Trace &trace, signed char ch) {
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7637,7 +7624,7 @@ bool Trace::shrink_phases (int expected) {
 bool Trace::shrink_clauses (int expected) {
   if (mobical.donot.shrink.clauses)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7663,7 +7650,7 @@ bool Trace::shrink_clauses (int expected) {
 bool Trace::shrink_literals (int expected) {
   if (mobical.donot.shrink.literals)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7685,7 +7672,7 @@ bool Trace::shrink_literals (int expected) {
 bool Trace::shrink_propagator (int expected) {
   if (mobical.donot.shrink.propagator)
     return false;
-  if (mobical.donot.enforce)
+  if (mobical.donot.shrink.contracts)
     return false;
   if (Signal::interrupted ())
     return false;
@@ -7806,7 +7793,7 @@ bool Trace::shrink_basic (int expected) {
     if (l == first_init)
       continue;
     Call *c = calls[l];
-    if (!mobical.donot.enforce && !c->basic_type ())
+    if (!mobical.donot.shrink.contracts && !c->basic_type ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -7978,7 +7965,7 @@ bool Trace::reduce_values (int expected) {
         else
           continue;
       } else if (c->type == CallType::OPTIMIZE) {
-        lo = 0, hi = 9;
+        lo = -31, hi = c->val;
 #ifdef MOBICAL_TERMINATE
       } else if (c->type == CallType::TERMINATE) {
         lo = 0, hi = c->val;
@@ -8290,7 +8277,7 @@ void Reader::parse () {
   CallType adding = CallType::INIT;
   int64_t large_val = 0;
   Call *prev = 0;
-  const bool enforce = !mobical.donot.enforce;
+  const bool enforce = mobical.force.contracts;
   Call *before_trigger = 0;
   bool connected = 0;
   char line[80];
@@ -8393,14 +8380,15 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "set")) {
       if (!first)
         error ("first argument to 'set' missing");
-      if (enforce && !Solver::is_valid_option ((first))) {
+      if (!Solver::is_valid_option ((first))) {
 #ifndef LOGGING
         if (!strcmp (first, "log"))
           mobical.warning ("ignoring non-existing option name 'log' "
                            "(compiled without '-DLOGGING')");
-        else
+        else if (enforce)
 #endif
           error ("non-existing option name '%s'", first);
+        mobical.warning ("non-existing option name '%s'", first);
       }
       if (!second)
         error ("second argument to 'set' missing");
@@ -8410,8 +8398,11 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "configure")) {
       if (!first)
         error ("first argument to 'configure' missing");
-      if (enforce && !Solver::is_valid_configuration (first))
-        error ("non-existing configuration '%s'", first);
+      if (!Solver::is_valid_configuration (first)) {
+        if (enforce)
+          error ("non-existing configuration '%s'", first);
+        mobical.warning ("non-existing configuration '%s'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'configure'", second);
       c = new ConfigureCall (first);
@@ -8430,7 +8421,7 @@ void Reader::parse () {
     } else if (!strcmp (keyword, "optimize")) {
       if (!first)
         error ("argument to 'optimize' missing");
-      if (!parse_int_str (first, val) || val < 0 || val > 31)
+      if (!parse_int_str (first, val) || val < -31 || val > 31)
         error ("invalid argument '%s' to 'optimize'", first);
       c = new OptimizeCall (val);
     } else if (!strcmp (keyword, "vars")) {
@@ -8484,8 +8475,11 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'add'", first);
       if (second)
         error ("additional argument '%s' to 'add'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'add'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'add'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'add'", lit);
+      }
       adding = lit ? CallType::ADD : CallType::INIT;
       c = new AddCall (lit);
     } else if (!strcmp (keyword, "constrain")) {
@@ -8495,8 +8489,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'constrain'", first);
       if (second)
         error ("additional argument '%s' to 'constrain'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'constrain'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'constrain'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'constrain'",
+                         lit);
+      }
       adding = lit ? CallType::CONSTRAIN : CallType::INIT;
       c = new ConstrainCall (lit);
     } else if (!strcmp (keyword, "connect")) {
@@ -8505,41 +8503,32 @@ void Reader::parse () {
       c = new DisconnectCall ();
     } else if (!strcmp (keyword, "connect_fixed_listener")) {
       if (enforce)
-        error (
-            "'connect_fixed_listener' not supported (try '-f' to execute "
-            "regardless)");
+        error ("'connect_fixed_listener' not supported");
       mobical.warning ("ignoring 'connect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "disconnect_fixed_listener")) {
       if (enforce)
-        error ("'disconnect_fixed_listener' not supported (try '-f' to "
-               "execute "
-               "regardless)");
+        error ("'disconnect_fixed_listener' not supported");
       mobical.warning ("ignoring 'disconnect_fixed_listener'");
       continue;
     } else if (!strcmp (keyword, "connect_proof_tracer")) {
       if (enforce)
-        error ("'connect_proof_tracer' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'connect_proof_tracer' not supported");
       mobical.warning ("ignoring 'connect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "disconnect_proof_tracer")) {
       if (enforce)
-        error (
-            "'disconnect_proof_tracer' not supported (try '-f' to execute "
-            "regardless)");
+        error ("'disconnect_proof_tracer' not supported");
       mobical.warning ("ignoring 'disconnect_proof_tracer'");
       continue;
     } else if (!strcmp (keyword, "connect_learner")) {
       if (enforce)
-        error ("'connect_learner' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'connect_learner' not supported");
       mobical.warning ("ignoring 'connect_learner'");
       continue;
     } else if (!strcmp (keyword, "disconnect_learner")) {
       if (enforce)
-        error ("'disconnect_learner' not supported (try '-f' to execute "
-               "regardless)");
+        error ("'disconnect_learner' not supported");
       mobical.warning ("ignoring 'disconnect_learner'");
       continue;
     } else if (!strcmp (keyword, "connect_external_propagator")) {
@@ -8559,8 +8548,11 @@ void Reader::parse () {
         error ("argument to 'observed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'observed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'observed'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'observed'", first);
+        mobical.warning ("invalid argument '%s' to 'observed'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'observed'", second);
       c = new ObservedCall (lit);
@@ -8569,8 +8561,11 @@ void Reader::parse () {
         error ("argument to 'is_witness' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'is_witness'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'is_witness'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'is_witness'", first);
+        mobical.warning ("invalid argument '%s' to 'is_witness'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'is_witness'", second);
       c = new IsWitnessCall (lit);
@@ -8579,8 +8574,11 @@ void Reader::parse () {
         error ("argument to 'observe' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'observe'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'observe'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'observe'", first);
+        mobical.warning ("invalid argument '%s' to 'observe'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'observe'", second);
       c = new ObserveCall (lit);
@@ -8589,8 +8587,11 @@ void Reader::parse () {
         error ("argument to 'unobserve' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'unobserve'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid argument '%s' to 'unobserve'", first);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid argument '%s' to 'unobserve'", first);
+        mobical.warning ("invalid argument '%s' to 'unobserve'", first);
+      }
       if (second)
         error ("additional argument '%s' to 'unobserve'", second);
       c = new UnObserveCall (lit);
@@ -8601,8 +8602,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'lemma'", first);
       if (lit && second)
         error ("additional argument '%s' to 'lemma'", second);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'lemma'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'lemma'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'lemma'",
+                         lit);
+      }
       adding = lit ? CallType::LEMMA : CallType::INIT;
       LemmaType tmpt = LAZY;
       int tmp = 0;
@@ -8610,9 +8615,9 @@ void Reader::parse () {
         if (!parse_int_str (second, tmp))
           error ("invalid argument '%s' to 'lemma %d'", lit, second);
         tmpt = static_cast<LemmaType> (tmp);
-        if (enforce && static_cast<int> (tmpt) != tmp)
+        if (static_cast<int> (tmpt) != tmp)
           error ("invalid argument '%s' to 'lemma %d'", second, lit);
-        if (enforce && tmp == LAST_LEMMA_TYPE)
+        if (tmp == LAST_LEMMA_TYPE)
           error ("invalid argument '%s' to 'lemma %d'", second, lit);
       }
       val = 0;
@@ -8630,8 +8635,12 @@ void Reader::parse () {
         error ("argument to 'force' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'force'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'force'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'force'",
+                         lit);
+      }
       MockForceType tmpt;
       int tmp = 0;
       if (!second)
@@ -8639,9 +8648,9 @@ void Reader::parse () {
       if (!parse_int_str (second, tmp))
         error ("invalid second argument '%s' to 'force %d'", lit, second);
       tmpt = static_cast<MockForceType> (tmp);
-      if (enforce && static_cast<int> (tmpt) != tmp)
+      if (static_cast<int> (tmpt) != tmp)
         error ("invalid argument '%s' to 'force %d'", second, lit);
-      if (enforce && tmp == LAST_MOCK_FORCE_TYPE)
+      if (tmp == LAST_MOCK_FORCE_TYPE)
         error ("invalid argument '%s' to 'force %d'", second, lit);
       if (!third)
         error ("third argument to 'force %d %s' missing", lit, second);
@@ -8657,8 +8666,12 @@ void Reader::parse () {
         error ("argument to 'decide' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'decide'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'decide'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'decide'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'decide'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'decide %d' missing", lit);
       if (!parse_int_str (second, val))
@@ -8672,10 +8685,15 @@ void Reader::parse () {
         error ("argument to 'notify_assignment' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'notify_assignment'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'notify_assignment'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'notify_assignment'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'notify_assignment'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'notify_assignment %d'", second,
                lit);
@@ -8688,7 +8706,7 @@ void Reader::parse () {
         error ("argument to 'notify_assignment_batch' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_assignment_batch'", first);
-      if (enforce && val <= 0)
+      if (val <= 0)
         error ("invalid value '%d' as argument to "
                "'notify_assignment_batch'",
                val);
@@ -8705,7 +8723,7 @@ void Reader::parse () {
         error ("argument to 'notify_backtrack' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'notify_backtrack'", first);
-      if (enforce && val < 0)
+      if (val < 0)
         error ("invalid level '%d' as argument to "
                "'notify_backtrack'",
                val);
@@ -8724,7 +8742,7 @@ void Reader::parse () {
         error ("invalid argument '%s' to "
                "'notify_new_decision_level'",
                first);
-      if (enforce && val < 0)
+      if (val < 0)
         error ("invalid level '%d' as argument to "
                "'notify_new_decision_level'",
                val);
@@ -8741,8 +8759,12 @@ void Reader::parse () {
         error ("argument to 'cb_propagate' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_propagate'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'cb_propagate'", lit);
+        mobical.warning (
+            "invalid literal '%d' as argument to 'cb_propagate'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'cb_propagate %d'", second,
                lit);
@@ -8756,8 +8778,12 @@ void Reader::parse () {
         error ("argument to 'cb_decide' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_decide'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'cb_decide'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'cb_decide'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'cb_decide'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'cb_decide %d'", second, lit);
       if (!mobical.donot.mock_propagator)
@@ -8770,8 +8796,12 @@ void Reader::parse () {
         error ("argument to 'is_decision' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'is_decision'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'is_decision'", lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'is_decision'", lit);
+        mobical.warning (
+            "invalid literal '%d' as argument to 'is_decision'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'is_decision %d'", second, lit);
       c = new IsDecisionCall (lit);
@@ -8780,10 +8810,15 @@ void Reader::parse () {
         error ("argument to 'force_backtrack' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_backtrack'", first);
-      if (enforce && lit < 0)
-        error ("invalid literal '%d' as argument to "
-               "'force_backtrack'",
-               lit);
+      if (lit < 0) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'force_backtrack'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'force_backtrack'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'force_backtrack %d'", second,
                lit);
@@ -8793,10 +8828,15 @@ void Reader::parse () {
         error ("argument to 'force_unassign' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'force_unassign'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'force_unassign'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'force_unassign'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'force_unassign'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to 'force_unassign %d'", second,
                lit);
@@ -8807,10 +8847,15 @@ void Reader::parse () {
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_add_reason_clause_lit'",
                first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_reason_clause_lit'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_reason_clause_lit'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_reason_clause_lit'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'cb_add_reason_clause_lit %d' "
                "missing",
@@ -8819,10 +8864,15 @@ void Reader::parse () {
         error ("invalid second argument '%s' to "
                "'cb_add_reason_clause_lit'",
                second);
-      if (enforce && val == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_reason_clause_lit %d'",
-               val, lit);
+      if (val == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_reason_clause_lit %d'",
+                 val, lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_reason_clause_lit %d'",
+                         val, lit);
+      }
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_add_reason_clause_lit' without "
                "'--do-not-mock-propagator'");
@@ -8834,10 +8884,15 @@ void Reader::parse () {
         error ("invalid argument '%s' to "
                "'cb_add_external_clause_lit'",
                first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to "
-               "'cb_add_external_clause_lit'",
-               lit);
+      if (lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to "
+                 "'cb_add_external_clause_lit'",
+                 lit);
+        mobical.warning ("invalid literal '%d' as argument to "
+                         "'cb_add_external_clause_lit'",
+                         lit);
+      }
       if (second)
         error ("additional argument '%s' to "
                "'cb_add_external_clause_lit %d'",
@@ -8851,19 +8906,29 @@ void Reader::parse () {
         error ("argument to 'cb_has_external_clause' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'cb_has_external_clause'", first);
-      if (enforce && lit != 0 && lit != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_has_external_clause'",
-               lit);
+      if (lit != 0 && lit != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_has_external_clause'",
+                 lit);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_has_external_clause'",
+                         lit);
+      }
       if (!second)
         error ("second argument to 'cb_has_external_clause' "
                "missing");
       if (!parse_int_str (second, val))
         error ("invalid argument '%s' to 'cb_has_external_clause'", second);
-      if (enforce && val != 0 && val != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_has_external_clause'",
-               val);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_has_external_clause'",
+                 val);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_has_external_clause'",
+                         val);
+      }
       if (!mobical.donot.mock_propagator)
         error ("cannot execute 'cb_has_external_clause' without "
                "'--do-not-mock-propagator'");
@@ -8873,10 +8938,15 @@ void Reader::parse () {
         error ("argument to 'cb_check_found_model' missing");
       if (!parse_int_str (first, val))
         error ("invalid argument '%s' to 'cb_check_found_model'", first);
-      if (enforce && val != 0 && val != 1)
-        error ("invalid literal '%d' as argument to "
-               "'cb_check_found_model'",
-               val);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("invalid value '%d' as argument to "
+                 "'cb_check_found_model'",
+                 val);
+        mobical.warning ("invalid value '%d' as argument to "
+                         "'cb_check_found_model'",
+                         val);
+      }
       if (second)
         error ("additional argument '%s' to "
                "'cb_check_found_model %d'",
@@ -8893,8 +8963,12 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'assume'", first);
       if (second)
         error ("additional argument '%s' to 'assume'", second);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'assume'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'assume'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'assume'",
+                         lit);
+      }
       c = new AssumeCall (lit);
     } else if (!strcmp (keyword, "solve")) {
       if (first && !parse_int_str (first, lit))
@@ -8932,19 +9006,28 @@ void Reader::parse () {
       else
         c = new LookaheadCall ();
       solved++;
-    } else if (!strcmp (keyword, "cubing")) {
-      if (first && !parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'cubing'", first);
-      assert (!second);
-      c = new CubingCall (lit);
+    } else if (!strcmp (keyword, "generate_cubes")) {
+      if (!first)
+        error ("argument to 'generate_cubes' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'generate_cubes'", first);
+      if (!second)
+        error ("second argument to 'generate_cubes %s' missing", first);
+      if (!parse_int_str (second, val))
+        error ("invalid argument '%s' to 'generate_cubes %s'", second,
+               first);
+      c = new CubingCall (lit, val);
       solved++;
     } else if (!strcmp (keyword, "val")) {
       if (!first)
         error ("first argument to 'val' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'val'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'val'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'val'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'val'", lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'val'", second);
       if (second && val != -1 && val != 0 && val != 1)
@@ -8958,8 +9041,11 @@ void Reader::parse () {
         error ("first argument to 'flip' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'flip'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'flip'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'flip'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'flip'", lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'flip'", second);
       if (second && val != 0 && val != 1)
@@ -8973,8 +9059,12 @@ void Reader::parse () {
         error ("first argument to 'flippable' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'flippable'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'flippable'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'flippable'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'flippable'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'flippable'", second);
       if (second && val != 0 && val != 1)
@@ -8988,8 +9078,12 @@ void Reader::parse () {
         error ("first argument to 'fixed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'fixed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'fixed'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'fixed'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'fixed'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'fixed'", second);
       if (second && val != -1 && val != 0 && val != 1)
@@ -9003,8 +9097,12 @@ void Reader::parse () {
         error ("first argument to 'failed' missing");
       if (!parse_int_str (first, lit))
         error ("invalid first argument '%s' to 'failed'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d 'as argument to 'failed'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d 'as argument to 'failed'", lit);
+        mobical.warning ("invalid literal '%d 'as argument to 'failed'",
+                         lit);
+      }
       if (second && !parse_int_str (second, val))
         error ("invalid second argument '%s' to 'failed'", second);
       if (second && val != 0 && val != -1)
@@ -9022,8 +9120,11 @@ void Reader::parse () {
         error ("argument to 'freeze' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'freeze'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal %d as argument to 'freeze'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal %d as argument to 'freeze'", lit);
+        mobical.warning ("invalid literal %d as argument to 'freeze'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'freeze'", second);
       c = new FreezeCall (lit);
@@ -9032,8 +9133,11 @@ void Reader::parse () {
         error ("argument to 'melt' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'melt'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'melt'", lit);
+      if (!lit || lit == INT_MIN) {
+        if (enforce)
+          error ("invalid literal '%d' as argument to 'melt'", lit);
+        mobical.warning ("invalid literal '%d' as argument to 'melt'", lit);
+      }
       if (second)
         error ("additional argument '%s' to 'melt'", second);
       c = new MeltCall (lit);
@@ -9094,8 +9198,12 @@ void Reader::parse () {
         error ("second argument to 'write_dimacs' missing");
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'write_dimacs'", second);
-      if (enforce && val == INT_MIN)
-        error ("invalid second argument '%s' to 'write_dimacs'", second);
+      if (val == INT_MIN) {
+        if (enforce)
+          error ("invalid second argument '%s' to 'write_dimacs'", second);
+        mobical.warning ("invalid second argument '%s' to 'write_dimacs'",
+                         second);
+      }
       c = new WriteDimacsCall (first, val);
     } else if (!strcmp (keyword, "read_dimacs")) {
       if (!first)
@@ -9104,8 +9212,13 @@ void Reader::parse () {
         error ("second argument to 'read_dimacs' missing");
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'read_dimacs'", second);
-      if (enforce && !(val == 0 || val == 1))
-        error ("non-boolean second argument '%s' to 'read_dimacs'", second);
+      if (val != 0 && val != 1) {
+        if (enforce)
+          error ("non-boolean second argument '%s' to 'read_dimacs'",
+                 second);
+        mobical.warning (
+            "non-boolean second argument '%s' to 'read_dimacs'", second);
+      }
       c = new ReadDimacsCall (first, val);
     } else if (!strcmp (keyword, "write_extension")) {
       if (!first)
@@ -9196,28 +9309,35 @@ void Reader::parse () {
       c = new DeclareOneMoreVariableCall ();
     } else {
       if (enforce)
-        error ("invalid keyword '%s' (try '-f' to execute regardless)",
-               keyword);
-      mobical.warning ("ignoring invalid keyword '%s' (due to '-f')",
-                       keyword);
+        error ("invalid keyword '%s'", keyword);
+      mobical.warning ("ignoring invalid keyword '%s'", keyword);
       continue;
     }
 
-    if (enforce && third && !third_argument) {
+    if (third && !third_argument) {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
 
     // This checks the legal structure of traces described above.
     //
-    if (enforce) {
-      if (state == CallState::INITSTATE && !c->init_type ())
+    // Forst
+    if (state == CallState::INITSTATE && !c->init_type ()) {
+      if (enforce)
         error ("first call has to be an 'init', 'max_alloc', "
                "'leak_alloc'"
                " or 'terminate' call");
-
-      if (state == CallState::RESETSTATE)
+      mobical.warning ("first call is not 'init', implicitly adding");
+      trace.push_back (new InitCall ());
+      state = CallState::CONFIG;
+    }
+    if (state == CallState::RESETSTATE) {
+      if (enforce)
         error ("'%s' after 'reset'", c->keyword ());
+      mobical.warning ("skipping '%s' after 'reset'", c->keyword ());
+      continue;
+    }
 
+    if (enforce)
       if (adding != CallType::INIT && c->type != adding &&
           c->type != CallType::RESET &&
           ((adding == CallType::ADD && c->type != CallType::RESIZE &&
@@ -9228,121 +9348,166 @@ void Reader::parse () {
         error ("'%s' after '%s %d' without '%s 0'", c->keyword (),
                prev->keyword (), prev->arg, prev->keyword ());
 
-      CallState new_state = state;
+    CallState new_state = state;
 
-      switch (c->type) {
+    switch (c->type) {
 
-      case CallType::INIT:
-        if (state != CallState::INITSTATE)
-          error ("invalid second 'init' call");
-        new_state = CallState::CONFIG;
-        break;
+    case CallType::INIT:
+      if (enforce && state != CallState::INITSTATE)
+        error ("invalid second 'init' call");
+      new_state = CallState::CONFIG;
+      break;
 
-      case CallType::SET:
-      case CallType::CONFIGURE:
-        if (!solved && state == CallState::BEFORE) {
-          assert (before_trigger);
-          error ("'%s' can only be called after 'init' before "
-                 "'%s %d'",
-                 c->keyword (), before_trigger->keyword (),
-                 before_trigger->arg);
-        } else if (state != CallState::CONFIG)
-          error ("'%s' can only be called right after 'init'",
-                 c->keyword ());
-        assert (new_state == CallState::CONFIG);
-        break;
+    case CallType::SET:
+    case CallType::CONFIGURE:
+      if (enforce && !solved && state == CallState::BEFORE) {
+        assert (before_trigger);
+        error ("'%s' can only be called after 'init' before "
+               "'%s %d'",
+               c->keyword (), before_trigger->keyword (),
+               before_trigger->arg);
+      } else if (enforce && state != CallState::CONFIG)
+        error ("'%s' can only be called right after 'init'", c->keyword ());
+      assert (!enforce || new_state == CallState::CONFIG);
+      break;
 
-      case CallType::ADD:
-      case CallType::ASSUME:
-        if (state != CallState::BEFORE)
-          before_trigger = c;
-        new_state = CallState::BEFORE;
-        break;
+    case CallType::ADD:
+    case CallType::ASSUME:
+      if (state != CallState::BEFORE)
+        before_trigger = c;
+      new_state = CallState::BEFORE;
+      break;
 
-      case CallType::LEMMA:
-      case CallType::FORCE:
-      case CallType::DECIDE:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        break;
+    case CallType::LEMMA:
+    case CallType::FORCE:
+    case CallType::DECIDE:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      break;
 
-      case CallType::OBSERVE:
-      case CallType::UNOBSERVE:
-      case CallType::RESET_OBSERVED:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        new_state = CallState::ALWAYS;
-        break;
+    case CallType::OBSERVE:
+    case CallType::UNOBSERVE:
+    case CallType::RESET_OBSERVED:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      new_state = CallState::ALWAYS;
+      break;
 
-      case CallType::VAL:
-      case CallType::FLIP:
-      case CallType::FLIPPABLE:
-      case CallType::FAILED:
-      case CallType::CONCLUDE:
-        if (!solved &&
-            (state == CallState::CONFIG || state == CallState::BEFORE))
-          error ("'%s' can only be called after 'solve'", c->keyword ());
-        if (solved && state == CallState::BEFORE) {
-          assert (before_trigger);
-          error ("'%s' only valid after last 'solve' and before "
-                 "'%s %d'",
-                 c->keyword (), before_trigger->keyword (),
-                 before_trigger->arg);
-        }
-        /*
-        assert (state == CallType::SOLVE || state ==
-        CallType::SIMPLIFY || state == CallType::LOOKAHEAD ||
-        state
-        == CallType::CUBING
-        || state == CallType::PROPAGATE || state ==
-        CallType::OBSERVE
-        || state == CallType::DURING || state == CallType::AFTER);
-                */
-        new_state = CallState::AFTER;
-        break;
-
-      case CallType::DISCONNECT:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        connected = false;
-        new_state = CallState::ALWAYS;
-        break;
-
-      case CallType::CONNECT:
-        if (connected)
-          error ("call 'disconnect' before call 'connect' again");
-        connected = true;
-        new_state = CallState::ALWAYS;
-        break;
-
-      case CallType::SOLVE:
-      case CallType::SIMPLIFY:
-      case CallType::LOOKAHEAD:
-      case CallType::CUBING:
-      case CallType::PROPAGATE:
-        new_state = CallState::DURING;
-        break;
-      case CallType::RESET:
-        new_state = CallState::RESETSTATE;
-        break;
-
-      default:
-        break;
+    case CallType::VAL:
+    case CallType::FLIP:
+    case CallType::FLIPPABLE:
+    case CallType::FAILED:
+    case CallType::CONCLUDE:
+      if (enforce && !solved &&
+          (state == CallState::CONFIG || state == CallState::BEFORE))
+        error ("'%s' can only be called after 'solve'", c->keyword ());
+      if (enforce && solved && state == CallState::BEFORE) {
+        assert (before_trigger);
+        error ("'%s' only valid after last 'solve' and before "
+               "'%s %d'",
+               c->keyword (), before_trigger->keyword (),
+               before_trigger->arg);
       }
+      /*
+      assert (state == CallType::SOLVE || state ==
+      CallType::SIMPLIFY || state == CallType::LOOKAHEAD ||
+      state
+      == CallType::CUBING
+      || state == CallType::PROPAGATE || state ==
+      CallType::OBSERVE
+      || state == CallType::DURING || state == CallType::AFTER);
+              */
+      new_state = CallState::AFTER;
+      break;
 
-      if (mobical.add_print_options && state == CallState::CONFIG &&
-          new_state != CallState::CONFIG)
-        trace.push_back (new PrintOptionsCall);
-      state = new_state;
-      prev = c;
+    case CallType::DISCONNECT:
+      if (enforce && !connected)
+        error ("'%s' can only be called after 'connect'", c->keyword ());
+      connected = false;
+      new_state = CallState::ALWAYS;
+      break;
+
+    case CallType::CONNECT:
+      if (enforce && connected)
+        error ("call 'disconnect' before call 'connect' again");
+      connected = true;
+      new_state = CallState::ALWAYS;
+      break;
+
+    case CallType::SOLVE:
+    case CallType::SIMPLIFY:
+    case CallType::LOOKAHEAD:
+    case CallType::CUBING:
+    case CallType::PROPAGATE:
+      new_state = CallState::DURING;
+      break;
+    case CallType::RESET:
+      new_state = CallState::RESETSTATE;
+      break;
+
+    case CallType::PRINT_OPTIONS:
+    case CallType::VARS:
+    case CallType::ACTIVE:
+    case CallType::REDUNDANT:
+    case CallType::IRREDUNDANT:
+    case CallType::RESIZE:
+    case CallType::DECLARE:
+    case CallType::DECLARE_VARS:
+    case CallType::PHASE:
+    case CallType::UNPHASE:
+    case CallType::CONSTRAIN:
+    case CallType::RESET_ASSUMPTIONS:
+    case CallType::FIXED:
+    case CallType::IMPLIED:
+    case CallType::FREEZE:
+    case CallType::FROZEN:
+    case CallType::MELT:
+    case CallType::LIMIT:
+    case CallType::OPTIMIZE:
+    case CallType::DUMP:
+    case CallType::STATS:
+    case CallType::IS_DECISION:
+    case CallType::IS_WITNESS:
+    case CallType::OBSERVED:
+    case CallType::FORCE_BACKTRACK:
+    case CallType::FORCE_UNASSIGN:
+    case CallType::CB_DECIDE:
+    case CallType::CB_PROPAGATE:
+    case CallType::CB_HAS_CLAUSE:
+    case CallType::CB_ADD_CLAUSE:
+    case CallType::CB_ADD_REASON:
+    case CallType::CB_CHECK_MODEL:
+    case CallType::NOTIFY_ASSIGNMENT:
+    case CallType::NOTIFY_BACKTRACK:
+    case CallType::NOTIFY_LEVEL:
+    case CallType::TRACEPROOF:
+    case CallType::FLUSHPROOFTRACE:
+    case CallType::CLOSEPROOFTRACE:
+    case CallType::TRAVERSE_CLAUSES:
+    case CallType::TRAVERSE_CONSTRAINT:
+    case CallType::TRAVERSE_WITNESSES_BACKWARD:
+    case CallType::TRAVERSE_WITNESSES_FORWARD:
+    case CallType::READ_DIMACS:
+    case CallType::READ_SOLUTION:
+    case CallType::WRITE_DIMACS:
+    case CallType::WRITE_EXTENSION:
+    case CallType::COPY:
+    case CallType::INVALID_TYPE:
+#ifdef MOBICAL_TERMINATE
+    case CallType::TERMINATE:
+#endif
+#ifdef MOBICAL_MEMORY
+    case CallType::LEAKALLOC:
+    case CallType::MAXALLOC:
+#endif
+      break;
     }
 
-#ifdef LOGGING
-    if (!trace.calls.empty () &&
-        trace.calls.back ()->type == CallType::INIT &&
-        mobical.add_set_log_to_true)
-      trace.push_back (new SetCall ("log", 1));
-#endif
+    if (mobical.add_print_options && state == CallState::CONFIG &&
+        new_state != CallState::CONFIG)
+      trace.push_back (new PrintOptionsCall);
+    state = new_state;
+    prev = c;
 
     if (c && mobical.add_dump_before_solve && c->process_type ())
       trace.push_back (new DumpCall ());
@@ -9493,10 +9658,9 @@ int Mobical::main (int argc, char **argv) {
       donot.execute = true;
     else if (!strcmp (argv[i], "--do-not-fork"))
       donot.fork = true;
-    else if (!strcmp (argv[i], "-f") ||
-             !strcmp (argv[i], "--do-not-enforce") ||
-             !strcmp (argv[i], "--do-not-enforce-contracts"))
-      donot.enforce = true;
+    else if (!strcmp (argv[i], "-f") || !strcmp (argv[i], "--enforce") ||
+             !strcmp (argv[i], "--enforce-contracts"))
+      force.contracts = true;
     else if (!strcmp (argv[i], "--no-seeds"))
       donot.seeds = true;
     else if (!strcmp (argv[i], "--no-summary"))
@@ -9504,9 +9668,9 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--summary"))
       summary = 1;
     else if (!strcmp (argv[i], "--replay")) {
-      donot.enforce = true;
       donot.extend_map = true;
       donot.mock_propagator = true;
+      donot.catching = true;
       donot.shrink.atall = true;
     } else if (!strcmp (argv[i], "--trace")) {
 #ifdef NTRACING
@@ -9515,11 +9679,7 @@ int Mobical::main (int argc, char **argv) {
       tracing = 1;
       donot.shrink.atall = true;
     } else if (!strcmp (argv[i], "--do-not-catch")) {
-#ifndef EXCEPTIONS
-      die ("compile with 'EXCEPTIONS'");
-#else
       donot.catching = true;
-#endif
     } else if (!strcmp (argv[i], "--do-not-extend-map"))
       donot.extend_map = true;
     else if (!strcmp (argv[i], "--do-not-mock-propagator")) {
@@ -9531,6 +9691,8 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--do-not-add-options") ||
              !strcmp (argv[i], "--do-not-add-options-before-shrinking"))
       donot.add = true;
+    else if (!strcmp (argv[i], "--do-not-shrink-contracts"))
+      donot.shrink.contracts = true;
     else if (!strcmp (argv[i], "--do-not-shrink-phases"))
       donot.shrink.phases = true;
     else if (!strcmp (argv[i], "--do-not-shrink-clauses"))
@@ -9569,7 +9731,7 @@ int Mobical::main (int argc, char **argv) {
                "'-DEXCEPTIONS' to catch them instead)");
 #endif
       force.violate = true;
-      donot.enforce = true;
+      donot.shrink.contracts = true;
     } else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
       add_set_log_to_true = true;
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
@@ -10173,15 +10335,9 @@ int Mobical::main (int argc, char **argv) {
   if (tracing && donot.execute)
     die ("can not combine '--tracing' with '--do-not-execute'");
 
-  /*
-  if (!input_path && donot.enforce)
-    die ("can not use '--do-not-enforce-contracts' without "
+  if (!input_path && force.contracts)
+    die ("can not use '--enforce-contracts' without "
          "'<input>'");
-
-  if (output_path && donot.enforce)
-    die ("can not use '--do-not-enforce-contracts' "
-         "with both '<input>' and '<output>'");
-         */
 
   if (!input_path && mobical.donot.mock_propagator)
     die ("can not use '--do-not-mock-propagator' without <input>");

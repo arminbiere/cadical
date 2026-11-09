@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "citten.h"
 #include "flags.hpp"
+#include "profile.hpp"
 #include "statistics.hpp"
 
 namespace CaDiCaL {
@@ -228,9 +229,12 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
+        // initialize the vector to the correct size directly
+        external->forgettable_original[id].reserve (
+            1 + external->eclause.size ());
         // First integer is the presence-flag (even if the clause is
         // empty)
-        external->forgettable_original[id] = {1};
+        external->forgettable_original[id].push_back (1);
 
         for (auto const &elit : external->eclause)
           external->forgettable_original[id].push_back (elit);
@@ -259,9 +263,9 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::reserve_ids (int number) {
+void Internal::reserve_ids (int64_t number) {
   // return;
-  LOG ("reserving %d ids", number);
+  LOG ("reserving %" PRId64 " ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
@@ -1106,7 +1110,7 @@ void Internal::reset_solving () {
 
 int Internal::restore_clauses () {
   int res = 0;
-  if (opts.restoreall <= 1 && external->tainted.empty ()) {
+  if (!opts.restoreall && external->tainted.empty ()) {
     LOG ("no tainted literals and nothing to restore");
     report ('*');
   } else {
@@ -1121,6 +1125,50 @@ int Internal::restore_clauses () {
     }
   }
   return res;
+}
+CubesWithStatus Internal::solve_and_generate_cubes (int depth,
+                                                    int min_depth) {
+
+  assert (clause.empty ());
+  PROFILE_SCOPE (lookahead);
+  assert (!lookingahead);
+  lookingahead = true;
+  if (proof)
+    proof->solve_query ();
+  activating_all_new_imported_literals ();
+  if (external_prop) {
+    if (level) {
+      // Combining lookahead with external propagator is limited
+      // Note that lookahead_probing (); would also force backtrack anyway
+      backtrack ();
+    }
+    LOG ("external notifications are turned off during preprocessing.");
+    private_steps = true;
+  }
+
+  CubesWithStatus cubes;
+  int res = already_solved ();
+  if (res == 0)
+    res = restore_clauses ();
+  if (unsat)
+    res = 20;
+  if (res != 0)
+    res = solve (true);
+  cubes.status = res;
+  if (!res)
+    cubes = generate_cubes (depth, min_depth);
+  lookingahead = false;
+  res = cubes.status;
+  finalize (res);
+  reset_solving ();
+  report_solving (res);
+  PROFILE_SCOPE_EARLY_EXIT (lookahead);
+  if (external_prop) {
+    private_steps = false;
+    LOG ("external notifications are turned back on.");
+    notify_assignments (); // In case fixed assignments were found.
+  }
+  return cubes;
 }
 
 int Internal::lookahead (int &lit) {
@@ -1156,6 +1204,7 @@ int Internal::lookahead (int &lit) {
     lit = 0;
   } else
     assert (!unsat && !unsat_constraint);
+  finalize (res);
   reset_solving ();
   report_solving (res);
   assert (lookingahead);

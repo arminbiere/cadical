@@ -712,8 +712,8 @@ void External::extend () {
     stats.clauses_read++;
   }
 
-  internal->stats.extend_clauses_blocked += stats.extend_blocked;
-  internal->stats.extend_clauses_read += stats.clauses_read;
+  internal->stats.extend_clause_blocked += stats.extend_blocked;
+  internal->stats.extend_clause_read += stats.clauses_read;
   PHASE ("extend", internal->stats.extensions,
          "extended through extension stack of size %" PRId64,
          stats.extension_size);

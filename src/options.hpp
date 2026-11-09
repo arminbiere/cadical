@@ -207,7 +207,7 @@ OPTION( randecint,          500,  0,2e9,0,0,1, "random conflict length") \
 OPTION( randeclength,        10,  1,1e9,0,0,1, "length random decisions phases") \
 OPTION( randecstable,         0,  0,  1,0,0,1, "random decisions in stable mode") \
 OPTION( realtime,             0,  0,  1,0,0,0, "real instead of process time") \
-OPTION( recomputetier,        1,  0,  2,0,0,1, "recompute tiers") \
+OPTION( recomputetier,        1,  0,  2,0,0,1, "recompute tiers (1=heuristic cutoff for glue re-computation)") \
 OPTION( reduce,               1,  0,  1,0,0,1, "reduce useless clauses") \
 OPTION( reduceinit,         300,  1,1e6,0,0,1, "initial interval") \
 OPTION( reduceint,           25,  2,1e6,0,0,1, "reduce interval") \
@@ -228,9 +228,8 @@ OPTION( restartint,           2,  1,2e9,0,0,1, "restart interval") \
 OPTION( restartmarginfocused,10,  0, 25,0,0,1, "focused slow fast margin in percent") \
 OPTION( restartmarginstable, 25,  0, 25,0,0,1, "stable slow fast margin in percent") \
 OPTION( restartreusetrail,    1,  0,  1,0,0,1, "enable trail reuse") \
-OPTION( restoreall,           0,  0,  2,0,0,1, "restore all clauses (2=really)") \
+OPTION( restoreall,           0,  0,  1,0,0,1, "restore all clauses") \
 OPTION( restoredefraglim,    25,  0,100,0,0,1, "defragment when fragmented data is more than percent of the total size") \
-OPTION( restoreflush,         0,  0,  0,0,0,1, "remove satisfied clauses (unsound)") \
 OPTION( score,                1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,        950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,                 0,  0,2e9,0,0,1, "random seed") \
@@ -362,6 +361,14 @@ struct Option {
   bool preprocessing;
   const char *description;
   int &val (Options *);
+  void init (const char *n, int v, int l, int h, bool o, bool p,
+             const char *d) {
+    name = n, def = v, lo = l, hi = h, optimizable = o, preprocessing = p,
+    description = d;
+  }
+  Option (const char *n, int v, int l, int h, bool o, bool p, const char *d)
+      : name (n), def (v), lo (l), hi (h), optimizable (o),
+        preprocessing (p), description (d) {}
 };
 
 /*------------------------------------------------------------------------*/
@@ -396,11 +403,12 @@ class Options {
 public:
   // For library usage we disable reporting by default while for the stand
   // alone SAT solver we enable it by default.  This default value has to
-  // be set before the constructor of 'Options' is called (which in turn is
-  // called from the constructor of 'Solver').  If we would simply overwrite
-  // its initial value while initializing the stand alone solver,  we will
-  // get that change of the default value (from 'false' to 'true') shown
-  // during calls to 'print ()', which is confusing to the user.
+  // be set before the constructor of 'Options' is called (which in turn
+  // is called from the constructor of 'Solver').  If we would simply
+  // overwrite its initial value while initializing the stand alone
+  // solver,  we will get that change of the default value (from 'false'
+  // to 'true') shown during calls to 'print ()', which is confusing to
+  // the user.
   //
 
 #ifdef NOPTIONS
@@ -412,8 +420,9 @@ public:
   Options (Internal *);
 
   // Makes options directly accessible, e.g., for instance declares the
-  // member 'int restart' here.  This will give fast access to option values
-  // internally in the solver and thus can also be used in tight loops.
+  // member 'int restart' here.  This will give fast access to option
+  // values internally in the solver and thus can also be used in tight
+  // loops.
   //
 private:
   int __start_of_options__; // Used by 'val' below.
@@ -432,23 +441,24 @@ public:
 
   // It would be more elegant to use an anonymous 'struct' of the actual
   // option values overlayed with an 'int values[number_of_options]' array
-  // but that is not proper ISO C++ and produces a warning.  Instead we use
-  // the following construction which relies on '__start_of_options__' and
-  // that the following options are really allocated directly after it.
+  // but that is not proper ISO C++ and produces a warning.  Instead we
+  // use the following construction which relies on '__start_of_options__'
+  // and that the following options are really allocated directly after
+  // it.
   //
   inline int &val (size_t idx) {
     assert (idx < number_of_options);
     return (&__start_of_options__ + 1)[idx];
   }
 
-  // With the following function we can get rather fast access to the option
-  // limits, the default value and the description.  The code uses binary
-  // search over the sorted option 'table'.  This static data is shared
-  // among different instances of the solver.  The actual current option
-  // values are here in the 'Options' class.  They can be accessed by the
-  // offset of the static options using 'Option::val' if you have an
-  // 'Option' or to have even faster access directly by the member function
-  // (the 'N' above, e.g., 'restart').
+  // With the following function we can get rather fast access to the
+  // option limits, the default value and the description.  The code uses
+  // binary search over the sorted option 'table'.  This static data is
+  // shared among different instances of the solver.  The actual current
+  // option values are here in the 'Options' class.  They can be accessed
+  // by the offset of the static options using 'Option::val' if you have
+  // an 'Option' or to have even faster access directly by the member
+  // function (the 'N' above, e.g., 'restart').
   //
   static Option *has (const char *name);
 

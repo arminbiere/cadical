@@ -284,6 +284,7 @@ static void log_api_call_returns (Internal *internal, const char *name,
       break; \
     log_api_call_begin_large (internal, __VA_ARGS__); \
   } while (0)
+
 #define LOG_API_CALL_BEGIN(...) \
   do { \
     if (!internal->opts.log) \
@@ -424,17 +425,34 @@ static atomic<bool> tracing_api_calls_through_environment_variable_method{
     false};
 
 /*------------------------------------------------------------------------*/
+#elif LOGGING // NTRACING
+/*------------------------------------------------------------------------*/
+
+#define TRACE_LARGE(NAME, ...) \
+  do { \
+    /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
+    if ((internal == 0)) \
+      break; \
+    LOG_API_CALL_BEGIN_LARGE (__VA_ARGS__); \
+  } while (0)
+
+#define TRACE(NAME, ...) \
+  do { \
+    /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
+    if ((internal == 0)) \
+      break; \
+    LOG_API_CALL_BEGIN (__VA_ARGS__); \
+  } while (0)
+
+/*------------------------------------------------------------------------*/
 #else // NTRACING
 /*------------------------------------------------------------------------*/
 
 #define TRACE(...) \
   do { \
   } while (0)
-#define TRACE_LARGE(...) \
-  do { \
-  } while (0)
 
-#define TRACE_LARGE(NAME, ...) \
+#define TRACE_LARGE(...) \
   do { \
   } while (0)
 
@@ -687,7 +705,7 @@ bool Solver::set (const char *arg, int val) {
 }
 
 bool Solver::set_long_option (const char *arg) {
-  TRACE (set_long_option, "set_long_option", arg);
+  LOG_API_CALL_BEGIN ("set_long_option", arg);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only set option '%s' right after initialization", arg);
@@ -894,7 +912,7 @@ int Solver::lookahead () {
 }
 
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
-  TRACE (lookahead_cubes, "lookahead_cubes");
+  TRACE (generate_cubes, "generate_cubes", depth, min_depth);
   REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
@@ -912,8 +930,7 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
     STATE (UNSATISFIED);
   else
     STATE (INCONCLUSIVE);
-  LOG_API_CALL_RETURNS ("lookahead_cubes", cubes2.status);
-  LOG_API_CALL_END ("lookahead_cubes");
+  LOG_API_CALL_RETURNS ("generate_cubes", cubes2.status);
   return cubes2;
 }
 
@@ -1041,9 +1058,8 @@ int Solver::simplify (int rounds) {
 
 int Solver::val (
     int lit, bool use_default_value_for_declared_but_not_used_variable) {
-  LOG_API_CALL_BEGIN (
-      "val", lit,
-      (int) use_default_value_for_declared_but_not_used_variable);
+  TRACE (val, "val", lit,
+         (int) use_default_value_for_declared_but_not_used_variable);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
@@ -1637,7 +1653,7 @@ void Solver::resources () {
 
 const char *Solver::read_dimacs (File *file, int &vars, int strict,
                                  bool *incremental, vector<int> *cubes) {
-  TRACE (read_dimacs, "read_dimacs", file->name (), strict);
+  // TRACE (read_dimacs, "read_dimacs", file->name (), strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1649,7 +1665,7 @@ const char *Solver::read_dimacs (File *file, int &vars, int strict,
 
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict) {
-  TRACE (read_dimacs, "read_dimacs", name, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1666,7 +1682,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 }
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
-  TRACE (read_dimacs, "read_dimacs", path, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1686,7 +1702,7 @@ const char *Solver::read_dimacs (const char *path, int &vars, int strict) {
 const char *Solver::read_dimacs (FILE *external_file, const char *name,
                                  int &vars, int strict, bool &incremental,
                                  vector<int> &cubes) {
-  TRACE (read_dimacs, "read_dimacs", name, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", name, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");
@@ -1705,7 +1721,7 @@ const char *Solver::read_dimacs (FILE *external_file, const char *name,
 
 const char *Solver::read_dimacs (const char *path, int &vars, int strict,
                                  bool &incremental, vector<int> &cubes) {
-  TRACE (read_dimacs, "read_dimacs", path, strict);
+  LOG_API_CALL_BEGIN ("read_dimacs", path, strict);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only read DIMACS file right after initialization");

@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <vector>
 
+namespace CaDiCaL {
+
 class Reap {
 public:
   Reap ();
@@ -24,5 +26,7 @@ private:
   unsigned max_bucket;
   std::vector<unsigned> buckets[33];
 };
+
+} // namespace CaDiCaL
 
 #endif

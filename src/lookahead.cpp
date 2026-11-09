@@ -369,7 +369,7 @@ int Internal::lookahead_probing () {
   reset_mode (PROBE);
 
   if (unsat) {
-    MSG ("probing derived empty clause");
+    MSG ("lookahead probing derived empty clause");
     res = INT_MIN;
   } else if (propagated < trail.size ()) {
     MSG ("probing produced %zd units",
@@ -402,8 +402,10 @@ int Internal::lookahead_probing () {
 }
 
 CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
-  if (proof)
-    proof->solve_query ();
+  MSG ("Generating cubes of depth %i", depth);
+
+  // presimplify required due to assumptions
+
   if (!active () || depth == 0) {
     CubesWithStatus cubes;
     cubes.status = 0;
@@ -411,37 +413,15 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
     return cubes;
   }
 
-  lookingahead = true;
-  PROFILE_SCOPE (lookahead);
-  MSG ("Generating cubes of depth %i", depth);
-
-  // presimplify required due to assumptions
-
-  termination_forced = false;
-  int res = already_solved ();
-  if (res == 0)
-    res = restore_clauses ();
-  if (unsat)
-    res = 20;
-  if (res != 0)
-    res = solve (true);
-  if (res != 0) {
-    MSG ("Solved during preprocessing");
-    CubesWithStatus cubes;
-    cubes.status = res;
-    lookingahead = false;
-    return cubes;
-  }
-
-  reset_limits ();
-  MSG ("generate cubes with %zu assumptions\n", assumptions.size ());
+  backtrack_without_updating_phases (0);
+  MSG ("generate cubes with %zu assumptions", assumptions.size ());
 
   assert (!constraint_cat);
   assert (ntab.empty ());
   std::vector<int> current_assumptions{assumptions};
   std::vector<std::vector<int>> cubes{{assumptions}};
   auto loccs{lookahead_populate_locc ()};
-  LOG ("loccs populated\n");
+  LOG ("loccs populated");
   assert (ntab.empty ());
 
   for (int i = 0; i < depth; ++i) {
@@ -457,21 +437,23 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
       for (auto lit : cubes2[j])
         assume (lit);
       restore_clauses ();
-      propagate ();
+      int trivial_unsat = propagate ();
       // preprocess_round(0); //uncomment maybe
 
       if (unsat) {
+        LOG ("global unsat");
+        break;
+      }
+      if (trivial_unsat) {
         LOG ("current cube is unsat; skipping");
-        unsat = false;
         continue;
       }
 
       int res = terminating_asked () ? lookahead_locc (loccs)
                                      : lookahead_probing ();
       if (unsat) {
-        LOG ("current cube is unsat; skipping");
-        unsat = false;
-        continue;
+        LOG ("global unsat");
+        break;
       }
 
       if (res == 0) {
@@ -501,8 +483,6 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
 
   for (auto lit : current_assumptions)
     assume (lit);
-
-  lookingahead = false;
 
   if (unsat) {
     LOG ("Solved during preprocessing");
