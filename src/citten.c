@@ -1185,7 +1185,6 @@ void completely_backtrack_to_root_level (citten *citten) {
   LOG ("completely backtracking to level 0");
   value *values = citten->values;
   unsigneds *trail = &citten->trail;
-  unsigneds *units = &citten->units;
 #ifndef NDEBUG
   kar *vars = citten->vars;
 #endif
@@ -1194,17 +1193,6 @@ void completely_backtrack_to_root_level (citten *citten) {
     unassign (citten, values, lit);
   }
   CLEAR_STACK (*trail);
-  /*
-  for (all_stack (unsigned, ref, *units)) {
-    klause *c = dereference_klause (citten, ref);
-    assert (c->size == 1);
-    const unsigned unit = c->lits[0];
-    const value value = values[unit];
-    if (value <= 0)
-      continue;
-    unassign (citten, values, unit);
-  }
-  */
   citten->propagated = 0;
   citten->level = 0;
   check_queue (citten);
