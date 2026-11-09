@@ -266,36 +266,48 @@ bool Internal::is_constraint_level (size_t level) {
   return level < assumptions.size () + constraints_without_assumptions;
 }
 
+struct bigger_queue {
+
+  // Internal *internal;
+  const std::vector<int64_t> &btab;
+
+  bigger_queue (Internal *i) : btab (i->btab) {}
+
+  bool operator() (int a, int b) {
+    assert (a > 0), assert (abs (a) < btab.size ());
+    assert (b > 0), assert (abs (b) < btab.size ());
+    const unsigned s = btab[a];
+    const unsigned t = btab[b];
+    assert (s != t);
+    return s > t;
+  }
+};
+
+struct bigger_score {
+
+  // Internal *internal;
+  const std::vector<double> &stab;
+
+  bigger_score (Internal *i) : stab (i->stab) {}
+
+  bool operator() (int a, int b) {
+    assert (a > 0), assert (abs (a) < stab.size ());
+    assert (b > 0), assert (abs (b) < stab.size ());
+    const unsigned s = stab[a];
+    const unsigned t = stab[b];
+    if (s == t)
+      return a > b;
+    return s > t;
+  }
+};
+
 int Internal::decide_assumption () {
   assert (is_assumption_level (level));
   int res = 0;
   if (constraint_cat) {
     int cat_res = citten_status (constraint_cat);
-    if (!cat_res) {
-      stats.constraints_solved++;
-      if (!unit_constraint_vars && opts.constrainteager) {
-        PROFILE_SCOPE (constraintseager);
-        eager_constraint_units ();
-        PROFILE_SCOPE_EARLY_EXIT (constraintseager);
-      }
-      PROFILE_SCOPE (constraintssolve);
-      if (opts.constraintprime == 2) {
-        cat_res = citten_solve_prime (constraint_cat);
-        if (cat_res == 11)
-          size_implicant = citten_size_implicant (constraint_cat);
-      } else
-        cat_res = citten_solve (constraint_cat);
-      report ('a'); // TODO: maybe only verbose
-      PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
-      if (cat_res == 20)
-        stats.constraints_unsat++;
-      else if (cat_res == 10)
-        stats.constraints_sat++;
-      else if (cat_res == 11)
-        stats.constraints_prime++;
-      else // citten was terminated
-        assert (terminated_asynchronously ());
-    }
+    if (!cat_res)
+      cat_res = constraints_solve ();
     if (cat_res == 20) { // unsat
       LOG ("constraints falsified");
       unsat_constraint = true;
@@ -325,7 +337,9 @@ int Internal::decide_assumption () {
 }
 
 // check for falsified literals with respect to citten trail
-bool Internal::compute_diverged_constraint () {
+bool Internal::compute_diverged_constraint (int res) {
+  if (res == 20)
+    return false;
   PROFILE_SCOPE (constraintsdiverge);
   assert (constraint_unsat.empty ());
   bool backtracked = false;
@@ -383,41 +397,6 @@ bool Internal::compute_diverged_constraint () {
   return true;
 }
 
-struct bigger_queue {
-
-  // Internal *internal;
-  const std::vector<int64_t> &btab;
-
-  bigger_queue (Internal *i) : btab (i->btab) {}
-
-  bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < btab.size ());
-    assert (b > 0), assert (abs (b) < btab.size ());
-    const unsigned s = btab[a];
-    const unsigned t = btab[b];
-    assert (s != t);
-    return s > t;
-  }
-};
-
-struct bigger_score {
-
-  // Internal *internal;
-  const std::vector<double> &stab;
-
-  bigger_score (Internal *i) : stab (i->stab) {}
-
-  bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < stab.size ());
-    assert (b > 0), assert (abs (b) < stab.size ());
-    const unsigned s = stab[a];
-    const unsigned t = stab[b];
-    if (s == t)
-      return a > b;
-    return s > t;
-  }
-};
-
 void Internal::eager_constraint_units () {
   unit_constraint_vars = true;
   for (auto &lit : constraint_fixed) {
@@ -440,79 +419,76 @@ void Internal::eager_constraint_units () {
   constraint_fixed.clear ();
 }
 
+int Internal::constraints_solve () {
+  int res = 0;
+  stats.constraints_solved++;
+  if (opts.constraintsort) {
+    PROFILE_SCOPE (constraintssort)
+    stats.constraints_sorted++;
+    if (use_scores ()) {
+      LOG ("sorting constraint variables based on scores");
+      sort (constraint_vars.begin (), constraint_vars.end (),
+            bigger_score (this));
+    } else {
+      LOG ("sorting constraint variables based on queue idx");
+      sort (constraint_vars.begin (), constraint_vars.end (),
+            bigger_queue (this));
+    }
+    PROFILE_SCOPE_EARLY_EXIT (constraintssort)
+    last_constraint_idx = 0;
+  }
+  // bump citten (after sorting)
+  if (opts.constraintbump == 2) {
+    PROFILE_SCOPE (constraintsbump)
+    for (auto cv = constraint_vars.rbegin (); cv != constraint_vars.rend ();
+         cv++) {
+      citten_bump_signed_literal (constraint_cat, *cv);
+    }
+    PROFILE_SCOPE_EARLY_EXIT (constraintsbump)
+  }
+  if (!unit_constraint_vars && opts.constrainteager) {
+    PROFILE_SCOPE (constraintseager);
+    eager_constraint_units ();
+    PROFILE_SCOPE_EARLY_EXIT (constraintseager);
+  }
+  PROFILE_SCOPE (constraintssolve);
+  if (opts.constraintprime == 2) {
+    res = citten_solve_prime (constraint_cat);
+    if (res == 11)
+      size_implicant = citten_size_implicant (constraint_cat);
+  } else {
+    res = citten_solve (constraint_cat);
+    if (res == 10 && opts.constraintprime == 1) {
+      LOG ("computing citten prime implicant");
+      PROFILE_SCOPE (constraintsprime);
+      citten_compute_prime_implicant (constraint_cat);
+      PROFILE_SCOPE_EARLY_EXIT (constraintsprime);
+      size_implicant = citten_size_implicant (constraint_cat);
+      stats.constraints_prime++;
+    }
+  }
+  report ('a'); // TODO: maybe only verbose
+  PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
+  if (res == 20)
+    stats.constraints_unsat++;
+  else if (res == 10)
+    stats.constraints_sat++;
+  else if (res == 11)
+    stats.constraints_prime++;
+  else // citten was terminated
+    assert (terminated_asynchronously ());
+  return res;
+}
+
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
   int cat_res = citten_status (constraint_cat);
   int res = 0;
   if (!cat_res) {
-    // sort constraint_vars according to current decision heuristic
-    if (opts.constraintsort) {
-      PROFILE_SCOPE (constraintssort)
-      stats.constraints_sorted++;
-      if (use_scores ()) {
-        LOG ("sorting constraint variables based on scores");
-        sort (constraint_vars.begin (), constraint_vars.end (),
-              bigger_score (this));
-      } else {
-        LOG ("sorting constraint variables based on queue idx");
-        sort (constraint_vars.begin (), constraint_vars.end (),
-              bigger_queue (this));
-      }
-      PROFILE_SCOPE_EARLY_EXIT (constraintssort)
-      last_constraint_idx = 0;
-    }
-    // bump citten (after sorting)
-    if (opts.constraintbump == 2) {
-      PROFILE_SCOPE (constraintsbump)
-      for (auto cv = constraint_vars.rbegin ();
-           cv != constraint_vars.rend (); cv++) {
-        citten_bump_signed_literal (constraint_cat, *cv);
-      }
-      PROFILE_SCOPE_EARLY_EXIT (constraintsbump)
-    }
-    if (!unit_constraint_vars && opts.constrainteager) {
-      PROFILE_SCOPE (constraintseager);
-      eager_constraint_units ();
-      PROFILE_SCOPE_EARLY_EXIT (constraintseager);
-    }
-    stats.constraints_solved++;
-    PROFILE_SCOPE (constraintssolve);
-    if (opts.constraintprime == 2) {
-      cat_res = citten_solve_prime (constraint_cat);
-      if (cat_res == 11)
-        size_implicant = citten_size_implicant (constraint_cat);
-    } else
-      cat_res = citten_solve (constraint_cat);
-    report ('a'); // TODO: maybe only verbose
-    PROFILE_SCOPE_EARLY_EXIT (constraintssolve);
-    if (cat_res == 20)
-      stats.constraints_unsat++;
-    else if (cat_res == 10) {
-      stats.constraints_sat++;
-      if (opts.constraintprime == 1) {
-        LOG ("computing citten prime implicant");
-        PROFILE_SCOPE (constraintsprime);
-        citten_compute_prime_implicant (constraint_cat);
-        PROFILE_SCOPE_EARLY_EXIT (constraintsprime);
-        size_implicant = citten_size_implicant (constraint_cat);
-        stats.constraints_prime++;
-      }
-      // compute conflicts between current trail and citten model
-      if (compute_diverged_constraint ()) {
-        stats.constraints_diverged++;
-        return 0;
-      }
-    } else if (cat_res == 11) {
-      stats.constraints_prime++;
-      // compute conflicts between current trail and citten model
-      if (compute_diverged_constraint ()) {
-        stats.constraints_diverged++;
-        return 0;
-      }
-    } else {
-      // citten was terminated
-      assert (terminated_asynchronously ());
+    cat_res = constraints_solve ();
+    if (compute_diverged_constraint (cat_res)) {
+      stats.constraints_diverged++;
       return 0;
     }
   }

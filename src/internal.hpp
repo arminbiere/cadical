@@ -1527,6 +1527,7 @@ struct Internal {
   // Add temporary clause as constraint.
   //
   void init_constraint_cat ();
+  int constraints_solve ();
   void constrain (int, int64_t); // Add literal to constraint.
   void mark_failed_constraint (int64_t);
   bool failed_constraint (int64_t id);
@@ -1577,7 +1578,7 @@ struct Internal {
   bool is_constraint_level (size_t);
   int decide_assumption (); // 0=decision, 20=failed
   int decide_constraint (); // 0=decision, 20=failed
-  bool compute_diverged_constraint ();
+  bool compute_diverged_constraint (int);
   int decide (); // 0=decision, 20=failed
 
   // Internal functions to enable explicit search limits.
