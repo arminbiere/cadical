@@ -33,6 +33,7 @@ struct citten_statistics {
 citten *citten_init (void);
 void citten_clear (citten *);
 void citten_release (citten *);
+void citten_restart (citten *);
 struct citten_statistics *citten_get_statistics (citten *);
 
 #ifdef LOGGING

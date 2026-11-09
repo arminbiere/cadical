@@ -1927,6 +1927,13 @@ void citten_binary (citten *citten, int a, int b) {
   citten_clause (citten, 2, clause);
 }
 
+void citten_restart (citten *citten) {
+  if (citten->status)
+    reset_incremental (citten);
+  else // if (citten->level)
+    completely_backtrack_to_root_level (citten);
+}
+
 int citten_solve (citten *citten) {
   REQUIRE_INITIALIZED ();
   if (citten->status)
