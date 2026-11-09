@@ -338,7 +338,7 @@ int Internal::decide_assumption () {
 
 // check for falsified literals with respect to citten trail
 bool Internal::compute_diverged_constraint (int res) {
-  if (res == 20)
+  if (res == 20 || !res)
     return false;
   PROFILE_SCOPE (constraintsdiverge);
   assert (constraint_unsat.empty ());
@@ -508,14 +508,15 @@ int Internal::decide_constraint () {
     assert (cat_res == 10 || cat_res == 11);
     LOG ("using citten model");
     bool all_constraints_assigned = true;
-    bool pseudo_level =
-        (size_t) level > assumptions.size () && !control[level].decision;
     // TODO: re-ordering based on decisions?
     // TODO: keep last constraint_var index to skip part of the loop.
     int lit = 0; //, last_lit;
     size_t idx = 0;
     assert (opts.constraintprime ||
             last_constraint_idx <= constraint_vars.size ());
+    /* TODO: this is buggy.
+    bool pseudo_level =
+      (size_t) level > assumptions.size () && !control[level].decision;
     if (false && cat_res == 10 &&
         last_constraint_idx == constraint_vars.size ()) {
       if (control[level].decision == 0)
@@ -534,7 +535,8 @@ int Internal::decide_constraint () {
           is_decision (last_decision))
         idx = last_constraint_idx;
     }
-    while (true || !pseudo_level) {
+    */
+    while (true) { // || !pseudo_level) {
       if (terminated_asynchronously ()) {
         all_constraints_assigned = false;
         break;
@@ -577,14 +579,8 @@ int Internal::decide_constraint () {
                  citten_status (constraint_cat) == 10 &&
                  citten_flip_signed_literal (constraint_cat, lit)) {
         stats.constraints_flipped++;
-      } else if (is_decision (lit)) {
-        // happens if we have to recompute citten model
-        // TODO: should be caught by 'compute_diverged_constraint'
-        assert (false);
-        all_constraints_assigned = false;
-        backtrack (var (lit).level - 1);
-        break;
       } else {
+        assert (!is_decision (lit));
         // this requires that the trail satisfies the current citten
         // model, otherwise 'analyze_failing_constraint' might generate a
         // useless clause, leading to a potential infinite loop.
