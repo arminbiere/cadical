@@ -175,6 +175,8 @@ void Internal::restart () {
     stats.restart_stable++;
   LOG ("restart %" PRId64 "", stats.restart);
   backtrack (reuse_trail ());
+  if (constraint_cat && is_constraint_level (level))
+    citten_restart (constraint_cat);
 
   lim.restart = stats.conflicts + opts.restartint;
   LOG ("new restart limit at %" PRId64 " conflicts", lim.restart);
