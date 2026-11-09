@@ -1261,6 +1261,8 @@ private:
   friend struct ReadSolutionCall;
   friend struct ObservedCall;
   friend struct IsWitnessCall;
+  friend struct LookaheadCall;
+  friend struct CubingCall;
   friend class MockPropagator;
   friend class ReplayPropagator;
   friend struct ExtendMap;

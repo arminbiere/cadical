@@ -130,7 +130,7 @@ void Internal::rephase () {
   bool single;
   char type;
 
-  const bool walking = opts.walk && !constraint_cat;
+  const bool walking = opts.walk; // && !constraint_cat;
 
   if (opts.stabilize && opts.stabilizeonly)
     single = true;

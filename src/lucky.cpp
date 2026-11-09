@@ -379,12 +379,12 @@ int Internal::backward_true_satisfiable () {
 
 int Internal::lucky_decide_assumptions () {
   assert (!level);
-  assert (!constraint_cat);
   LOG ("lucky decide assumptions");
   int res = 0;
   while (is_constraint_level (level)) {
     if (terminated_asynchronously ())
       return 0;
+    const int pre_level = level;
     res = decide ();
     if (res == 20) {
       marked_failed = false;
@@ -393,11 +393,13 @@ int Internal::lucky_decide_assumptions () {
     if (!propagate ()) {
       break;
     }
+    if (level <= pre_level)
+      break;
   }
 
-  if (conflict) {
+  if (!constraint_cat && conflict) {
     // analyze and learn from the conflict.
-    LOG (conflict, "setting assumption lead to conflict");
+    LOG (conflict, "setting assumptions lead to conflict");
     analyze_wrapper ();
     backtrack_without_updating_phases (0);
     assert (!conflict);
@@ -405,7 +407,7 @@ int Internal::lucky_decide_assumptions () {
     while (!res) {
       if (terminated_asynchronously ())
         return 0;
-      assert ((size_t) level <= assumptions.size ());
+      assert (is_constraint_level (level));
       if (unsat)
         res = 20;
       else if (!propagate ()) {
@@ -416,6 +418,14 @@ int Internal::lucky_decide_assumptions () {
     }
     assert (res == 20);
     return 20;
+  } else if (conflict) {
+    LOG (conflict, "setting assumptions lead to conflict");
+    analyze_wrapper ();
+    backtrack_without_updating_phases (0);
+    if (unsat)
+      return 20;
+    else if (!propagate ())
+      return 20;
   }
   return 0;
 }
@@ -485,11 +495,9 @@ int Internal::lucky_phases (bool update_limit) {
     return 0;
   if (!opts.luckyassumptions && !assumptions.empty ())
     return 0;
-  if (terminated_asynchronously ())
-    return 0;
-  // TODO: Some of the lucky assignments can also be found if there are
-  // constraint.
   if (constraint_cat)
+    return 0;
+  if (terminated_asynchronously ())
     return 0;
   // External propagator assumes a CDCL loop, so lucky is not tried here.
   if (external_prop)

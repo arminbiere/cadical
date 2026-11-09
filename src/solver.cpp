@@ -897,6 +897,8 @@ int Solver::lookahead () {
   REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
+  REQUIRE (!internal->constraint_cat,
+           "cannot combine lookahead with constraints");
   transition_to_steady_state ();
   STATE (SOLVING);
   int lit = 0;
@@ -916,6 +918,8 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
   REQUIRE_READY_STATE ();
   REQUIRE (state () != SATISFIED && state () != UNSATISFIED,
            "cannot call when the problem is already solved");
+  REQUIRE (!internal->constraint_cat,
+           "cannot combine generate_cubes with constraints");
   transition_to_steady_state ();
   STATE (SOLVING);
 

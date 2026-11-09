@@ -211,25 +211,10 @@ int Internal::warmup_decide_assumptions () {
   PROFILE_SCOPE (decide);
   int res = 0;
   if (is_assumption_level (level)) {
-    const int lit = assumptions[level];
-    assert (assumed (lit));
-    const signed char tmp = val (lit);
-    if (tmp < 0) {
-      LOG ("assumption %d falsified", lit);
-      res = 20;
-    } else if (tmp > 0) {
-      LOG ("assumption %d already satisfied", lit);
-      new_trail_level (0);
-      LOG ("added pseudo decision level");
-      notify_decision ();
-    } else {
-      LOG ("deciding assumption %d", lit);
-      search_assume_decision (lit);
-    }
+    res = decide_assumption ();
   } else if (is_constraint_level (level)) {
-    assert (false); // not supported for now with constraints.
+    res = decide_constraint ();
   } else {
-    // TODO: do constraints with citten or just don't do walk
     assert (false);
   }
   if (res)
@@ -241,7 +226,6 @@ void Internal::warmup_decide () {
   assert (!satisfied ());
   PROFILE_SCOPE (decide);
   assert ((size_t) level >= assumptions.size ());
-  assert (!constraint_cat);
   const bool target = (stable || opts.target == 2);
   stats.walk_warmup_decision++;
   int idx = next_decision_variable ();
@@ -256,12 +240,8 @@ int Internal::decide_and_propagate_all_assumptions (
     std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
-  assert (!constraint_cat);
   int res = 0;
-  int last_assumption_level = assumptions.size ();
-  if (!last_assumption_level)
-    return res;
-  while (!res) {
+  while (!res && is_constraint_level (level)) {
     if (unsat)
       res = 20;
     else if (unsat_constraint)
@@ -282,8 +262,6 @@ int Internal::decide_and_propagate_all_assumptions (
       }
       break;
     } else {
-      if (level >= last_assumption_level)
-        break;
       notify_assignments ();
       res = decide ();
     }
@@ -335,8 +313,7 @@ int Internal::warmup () {
   // at all (not even the `backtrack ()` at the end). Also, we cannot not
   // ignore conflicts at all, meaning that we cannot use our special
   // propagation function, even if it could counts ticks.
-  assert (!constraint_cat);
-  while (!res && !conflict && is_assumption_level (level) &&
+  while (!res && !conflict && is_constraint_level (level) &&
          num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);
     res = warmup_decide_assumptions ();

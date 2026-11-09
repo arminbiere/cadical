@@ -4069,7 +4069,14 @@ struct LookaheadCall : public Call {
         }
       } else
 #endif
+
+          if (!catching ())
         res = s->lookahead ();
+      else if (s->state () != SATISFIED && s->state () != UNSATISFIED &&
+               !s->internal->constraint_cat)
+        res = s->lookahead ();
+      else
+        caught ();
     }
   }
   void print (ostream &o) { o << keyword () << ' ' << res; }
@@ -4092,7 +4099,8 @@ struct CubingCall : public Call {
 #endif
       if (!catching ())
         (void) s->generate_cubes (arg, res);
-      else if (s->state () != SATISFIED && s->state () != UNSATISFIED)
+      else if (s->state () != SATISFIED && s->state () != UNSATISFIED &&
+               !s->internal->constraint_cat)
         (void) s->generate_cubes (arg, res);
       else
         caught ();

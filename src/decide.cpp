@@ -558,7 +558,7 @@ int Internal::decide_constraint () {
           is_decision (last_decision))
         idx = last_constraint_idx;
     }
-    while (!pseudo_level) {
+    while (true || !pseudo_level) {
       if (terminated_asynchronously ()) {
         all_constraints_assigned = false;
         break;
