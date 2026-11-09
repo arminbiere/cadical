@@ -153,6 +153,7 @@ struct citten {
   value *marks;
   value *values;
   bool *failed;
+  bool *original_units;
   unsigned char *phases;
   unsigned *import;
   katches *watches;
@@ -522,6 +523,7 @@ static void enlarge_internal (citten *citten, size_t lit) {
     RESIZE1 (citten->phases);
     RESIZE2 (citten->values);
     RESIZE2 (citten->failed);
+    RESIZE2 (citten->original_units);
     RESIZE1 (citten->vars);
     RESIZE1 (citten->links);
     RESIZE2 (citten->watches);
@@ -809,6 +811,8 @@ static inline void connect_new_klause (citten *citten, unsigned ref) {
       ROG (ref, "ignoring inconsistent empty");
   } else if (c->size == 1) {
     ROG (ref, "watching unit");
+    if (!is_learned_klause (c))
+      citten->original_units[c->lits[0]] = true;
     PUSH_STACK (citten->units, ref);
   } else {
     watch_klause (citten, c->lits[0], ref);
@@ -839,10 +843,10 @@ static void new_original_klause (citten *citten, unsigned id) {
   PUSH_STACK (*klauses, 0);
   for (all_stack (unsigned, lit, citten->klause))
     PUSH_STACK (*klauses, lit);
-  connect_new_klause (citten, res);
   citten->end_original_ref = SIZE_STACK (*klauses);
   citten->last_klause_decision = SIZE_STACK (*original_klause_refs);
   INC (original);
+  connect_new_klause (citten, res);
 }
 
 static void enlarge_external (citten *citten, size_t eidx) {
@@ -911,9 +915,9 @@ unsigned new_learned_klause (citten *citten) {
   if (aux)
     for (all_stack (unsigned, ref, citten->resolved))
       PUSH_STACK (*klauses, ref);
-  connect_new_klause (citten, res);
   citten->learned = true;
   INC (learned);
+  connect_new_klause (citten, res);
   return res;
 }
 
@@ -953,6 +957,8 @@ void citten_clear (citten *citten) {
     memset (citten->values, 0, lits);
   if (citten->failed)
     memset (citten->failed, 0, lits);
+  if (citten->original_units)
+    memset (citten->original_units, 0, lits);
   if (citten->vars)
     memset (citten->vars, 0, vars);
 
@@ -985,6 +991,7 @@ void citten_release (citten *citten) {
   DEALLOC (citten->phases, vars);
   DEALLOC (citten->values, lits);
   DEALLOC (citten->failed, lits);
+  DEALLOC (citten->original_units, lits);
   DEALLOC (citten->vars, vars);
   DEALLOC (citten->links, vars);
   DEALLOC (citten->watches, lits);
@@ -2029,8 +2036,12 @@ int citten_solve_prime (citten *citten) {
     // TODO: improve
     for (all_kits (lit)) {
       if (values[lit] > 0) {
-        LOG ("pushing prime %zd = %d", lit, export_literal (citten, lit));
-        PUSH_STACK (*prime, export_literal (citten, lit));
+        if (!citten->original_units[lit]) {
+          LOG ("pushing prime %zd = %d", lit, export_literal (citten, lit));
+          PUSH_STACK (*prime, export_literal (citten, lit));
+        } else
+          LOG ("not pushing original prime %zd = %d", lit,
+               export_literal (citten, lit));
       }
     }
   }
@@ -2568,8 +2579,12 @@ void citten_compute_prime_implicant (citten *citten) {
   // push on prime implicant stack.
   for (all_kits (lit)) {
     if (values[lit] > 0) {
-      LOG ("pushing prime %zd = %d", lit, export_literal (citten, lit));
-      PUSH_STACK (*prime, export_literal (citten, lit));
+      if (!citten->original_units[lit]) {
+        LOG ("pushing prime %zd = %d", lit, export_literal (citten, lit));
+        PUSH_STACK (*prime, export_literal (citten, lit));
+      } else
+        LOG ("not pushing original prime %zd = %d", lit,
+             export_literal (citten, lit));
     }
   }
   // TODO: check if we are able to use partial results (if limit_hit).
