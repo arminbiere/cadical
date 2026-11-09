@@ -80,6 +80,15 @@ New and Improved Techniques:
      of decision is controlled by `varprioritizefirst` (first imported variable
      = first decision).
 
+- Major improvements to mobical:
+
+  + Deterministic replaying of traces with user propagator.
+
+  + Statistic summary of mobical runs (`--summary`).
+
+  + API contract fuzzing with `./configure --except-contracts`
+    and `mobical --violate`.
+  
 Developer only:
 
 - We introduced two new options (`elimaggressiveGC` and `walkbinarylimit`) that
