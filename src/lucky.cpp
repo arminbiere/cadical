@@ -407,12 +407,12 @@ int Internal::lucky_decide_assumptions () {
     while (!res) {
       if (terminated_asynchronously ())
         return 0;
-      assert (is_constraint_level (level));
       if (unsat)
         res = 20;
       else if (!propagate ()) {
         analyze_wrapper ();
       } else {
+        assert (is_constraint_level (level));
         res = decide_wrapper ();
       }
     }
