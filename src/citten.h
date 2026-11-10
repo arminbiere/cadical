@@ -56,6 +56,7 @@ void citten_binary (citten *, int, int);
 void citten_clause (citten *, size_t size, int *);
 void citten_clause_with_id (citten *, unsigned id, size_t size, int *);
 void citten_unit_with_id (citten *, unsigned id, int);
+void citten_unit_with_id_ignore_prime (citten *, unsigned id, int);
 void citten_clause_with_id_and_exception (citten *, unsigned id,
                                           size_t size, const int *,
                                           unsigned except);

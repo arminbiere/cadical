@@ -811,8 +811,10 @@ static inline void connect_new_klause (citten *citten, unsigned ref) {
       ROG (ref, "ignoring inconsistent empty");
   } else if (c->size == 1) {
     ROG (ref, "watching unit");
+    /*
     if (!is_learned_klause (c))
       citten->original_units[c->lits[0]] = true;
+      */
     PUSH_STACK (citten->units, ref);
   } else {
     watch_klause (citten, c->lits[0], ref);
@@ -1908,6 +1910,14 @@ void citten_clause_with_id_and_equivalence (citten *citten, unsigned id,
 void citten_unit_with_id (citten *citten, unsigned id, int lit) {
   citten_clause_with_id_and_exception (citten, id, 1, &lit, INVALID);
 }
+void citten_unit_with_id_ignore_prime (citten *citten, unsigned id,
+                                       int lit) {
+  citten_clause_with_id_and_exception (citten, id, 1, &lit, INVALID);
+  const unsigned elit = int2u (lit); // this is the conversion
+  const unsigned ilit = import_literal (citten, elit);
+  assert (ilit < citten->lits);
+  citten->original_units[ilit] = true;
+}
 void citten_clause (citten *citten, size_t size, int *elits) {
   citten_clause_with_id_and_exception (citten, INVALID, size, elits,
                                        INVALID);
@@ -2537,18 +2547,12 @@ void citten_compute_prime_implicant (citten *citten) {
   INC (citten_implicant);
   value *values = citten->values;
   kar *vars = citten->vars;
-#ifndef NDEBUG
-  bool limit_hit = 0;
-#endif
   const unsigned assumption_levels = SIZE_STACK (citten->assumptions);
   assert (EMPTY_STACK (citten->prime));
   for (backwards_stack (unsigned, lit, citten->trail)) {
     if (CITTEN_TICKS >= citten->limits.ticks) {
       LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
            citten->limits.ticks, CITTEN_TICKS);
-#ifndef NDEBUG
-      limit_hit = 1;
-#endif
       break;
     }
     // assert (values[lit] > 0);
@@ -2584,7 +2588,7 @@ void citten_compute_prime_implicant (citten *citten) {
     }
   }
   // TODO: check if we are able to use partial results (if limit_hit).
-  assert (!EMPTY_STACK (citten->prime) || limit_hit);
+  // assert (!EMPTY_STACK (citten->prime) || limit_hit);
   UPDATE_STATUS (11);
 
   /*

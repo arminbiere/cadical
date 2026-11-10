@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 
@@ -95,6 +96,8 @@ bool Internal::restarting () {
     return false;
   if ((size_t) level < assumptions.size () + 2)
     return false;
+  if (is_constraint_level (level - 1))
+    return false;
   if (stabilizing () && opts.reluctant)
     return reluctant;
   if (stats.conflicts <= lim.restart)
@@ -128,14 +131,6 @@ int Internal::reuse_trail () {
       break;
     trivial_decisions++;
   }
-  // + constraints_without_assumptions;
-  /*
-  if (constraint_cat && citten_status (constraint_cat) == 11) {
-    LOG ("level %d < implicant %zd?", level, size_implicant);
-    assert (size_implicant == citten_size_implicant (constraint_cat));
-    trivial_decisions = size_implicant;
-  }
-  */
   if (!opts.restartreusetrail)
     return trivial_decisions;
   int next_decision = next_decision_variable ();
@@ -174,8 +169,10 @@ void Internal::restart () {
   if (stable)
     stats.restart_stable++;
   LOG ("restart %" PRId64 "", stats.restart);
-  backtrack (reuse_trail ());
-  if (constraint_cat && is_constraint_level (level))
+  const int backtrack_level = reuse_trail ();
+  backtrack (backtrack_level);
+  if (constraint_cat && is_constraint_level (level) &&
+      opts.constraintrestart)
     citten_restart (constraint_cat);
 
   lim.restart = stats.conflicts + opts.restartint;

@@ -132,6 +132,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
       // constraints.push_back (lit);
       stats.constraints_lit++;
       Flags &f = flags (lit);
+      assert (flags (lit).status != Flags::UNUSED);
       if (!f.constrained) {
         constraint_vars.push_back (abs (lit));
         stats.constraints_vars++;
@@ -360,8 +361,11 @@ void Internal::analyze_failing_constraint (int failed) {
       }
       PROFILE_SCOPE_EARLY_EXIT (constraintsphase);
     }
-    citten_clause_with_id (constraint_cat, id, clause.size (),
-                           clause.data ());
+    if (clause.size () == 1)
+      citten_unit_with_id_ignore_prime (constraint_cat, id, clause.back ());
+    else
+      citten_clause_with_id (constraint_cat, id, clause.size (),
+                             clause.data ());
     lrat_chain.clear ();
     clause.clear ();
   }
