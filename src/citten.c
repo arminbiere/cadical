@@ -2419,6 +2419,30 @@ signed char citten_fixed_signed (citten *citten, int elit) {
   return citten_fixed (citten, kelit);
 }
 
+signed char citten_implied (citten *citten, unsigned elit) {
+  REQUIRE_STATUS (10);
+  const unsigned eidx = elit / 2;
+  if (eidx >= citten->evars)
+    return 0;
+  unsigned iidx = citten->import[eidx];
+  if (!iidx)
+    return 0;
+  iidx--;
+  const unsigned ilit = 2 * iidx + (elit & 1);
+  signed char res = citten->values[ilit];
+  if (!res)
+    return 0;
+  kar *v = citten->vars + iidx;
+  if (v->level > SIZE_STACK (citten->assumptions))
+    return 0;
+  return res;
+}
+
+signed char citten_implied_signed (citten *citten, int signed_elit) {
+  unsigned elit = int2u (signed_elit);
+  return citten_implied (citten, elit);
+}
+
 bool citten_flip_literal (citten *citten, unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;

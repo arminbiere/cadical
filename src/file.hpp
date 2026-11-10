@@ -23,10 +23,10 @@
 
 namespace CaDiCaL {
 
-// Wraps a 'C' file 'FILE' with name and supports zipped reading and writing
-// through 'popen' using external helper tools.  Reading has line numbers.
-// Compression and decompression relies on external utilities, e.g., 'gzip',
-// 'bzip2', 'xz', and '7z', which should be in the 'PATH'.
+// Wraps a 'C' file 'FILE' with name and supports unzipped writing and both
+// unzipped and zipped reading through 'popen'.  Reading has line numbers.
+// Decompression relies on external utilities, e.g., 'gzip', 'bzip2', 'xz',
+// and '7z', which should be in the 'PATH'.
 
 struct Internal;
 
@@ -38,13 +38,13 @@ class File {
 #endif
 
   int close_file; // need to close file (1=fclose, 2=pclose, 3=pipe)
-  int child_pid;
+
   FILE *file;
   char *_name;
   uint64_t _lineno;
   uint64_t _bytes;
 
-  File (Internal *, bool, int, int, FILE *, const char *);
+  File (Internal *, bool, int, FILE *, const char *);
 
   static FILE *open_file (Internal *, const char *path, const char *mode);
   static FILE *read_file (Internal *, const char *path);
@@ -53,15 +53,8 @@ class File {
   static void split_str (const char *, std::vector<char *> &);
   static void delete_str_vector (std::vector<char *> &);
 
-  static FILE *open_pipe (Internal *, const char *fmt, const char *path,
-                          const char *mode);
   static FILE *read_pipe (Internal *, const char *fmt, const int *sig,
                           const char *path);
-#ifndef _WIN32
-  static FILE *write_pipe (Internal *, const char *fmt, const char *path,
-                           int &child_pid);
-#endif
-
 public:
   static char *find_program (const char *prg); // search in 'PATH'
   static bool exists (const char *path);       // file exists?

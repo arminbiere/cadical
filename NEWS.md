@@ -3,48 +3,60 @@ Version 3.1.0
 
 User Facing Changes:
 
+- We finally gave up on compressed compressed file writing as we were not able
+  to keep it working in a multi-threaded context in a portable way. Note, that
+  due to security issues we had to use a 'fork/exec' approach (for writing)
+  which is difficult to combine with multi-threading and signal handling.  On
+  MacOS it stopped earlier to work but now also on Ubuntu has issues and thus we
+  decided to remove that feature (and the corresponding test) completely.
+
 - Major rework of literal import, making it lazy everywhere. Unused variables
-  are not created anymore.
+  are not created anymore (more information below).
 
 - For models, CaDiCaL now outputs only the literals that are present
   in the problem. Use `modelalllits` to get all literals.
 
-- Improved walk with assumptions (literals propagated by the assumptions cannot
-  be flipped anymore). This means that lucky will now run if you have
-  assumptions. For many short calls, this can be prohibitive. Use
-  `--no-luckyassumptions`. To limit the effect, when lucky is not effective, it
-  will not be reused for the next `luckymininterval` conflicts (and then still
-  only at the beginning of the solve call). Set this option to 0, if you want to
-  make sure that lucky is executed in each 
+- Walk and lucky are now fully compatible with assumptions
+  (literals propagated by the assumptions cannot be flipped anymore).
 
-- Lucky is now also limited in its runtime (in number of ticks per clauses). Set
-  `luckylimitpercls` to a higher value if needed. This limit is mostly important
-  for some very large instances (like `baseballcover12with23_and2positions`) where
-  lucky has a prohibitive cost.
+- Lucky will now run if you have assumptions. For many short calls, this can be
+  prohibitive. Use `--no-luckyassumptions`. To limit the effect, when lucky is
+  not effective, it will not be reused for the next `luckymininterval`
+  conflicts (and then still only at the beginning of the solve call). Set this
+  option to 0, if you want to make sure that lucky is executed in each.
 
-- Fixed accidental deactivation of local search initially (off by
-  default, activation with `-L`), due to a ticks limit of 0. Only noticeable if
-  you run the solver with `-L1`.
+- Lucky is now also limited in its runtime (in number of ticks per clauses).
+  Set `luckylimitpercls` to a higher value if needed. This limit is mostly
+  important for some very large instances (like
+  `baseballcover12with23_and2positions`) where lucky has a prohibitive cost.
 
-- By default, all solver techniques support LRAT resolution checking
-  (enabling easy interpolation). Exceptions are `factor` which requires
-  LRAT with extended resolution (and therefore no interpolation) and
-  `cover`, `instantiate` and `vivifyinst` which all require less strict
-  LRAT checking where the antecedents subsume the learned clause.
+- Fixed accidental deactivation of local search initially (off by default,
+  activation with `-L`), due to a ticks limit of 0. Only noticeable if you run
+  the solver with `-L1`.
+
+- By default, all solver techniques support LRAT resolution checking (enabling
+  easy interpolation). Exceptions are `factor` which requires LRAT with
+  extended resolution (and therefore no interpolation) and `cover`,
+  `instantiate` and `vivifyinst` which all require less strict LRAT checking
+  where the antecedents subsume the learned clause.
 
 - Option '-O' accepts negative argument to decrease the amount of inprocessing.
   Before only positive value were supported. Value '0' has no effect.
 
-- The output of the statistics has changed. `stats` now has 3 values, 0 (few
-  statistics as previously), 1 (more statistics), 2 (all statistics, similar to
-  old default). Related to this, you can now deactivate some metrics with
-  `./configure --no-metrics`.
+- The output of the statistics has changed. `stats` now has multiple values, 0
+  (few statistics as previously), 1-3 (more statistics), 4 (all statistics,
+  similar to old default), 5 (statistics on API calls). Increasing verbosity
+  also increases the given `stats` value by that much.
+  Related to this, you can now deactivate some metrics with `./configure
+  --no-metrics`.
 
 - The `limit` and `ccadical_limit` API calls now takes a 64-bit integers as
   argument instead of int. Only ticks, conflicts, and decisions support integers
   larger than 32-bits. The options local search and preprocessing do not (by API
   contract).
 
+- The option `restoreflush` has been removed, as flushing root-level satisfied
+  clauses from the reconstruction stack is not generally correct.
 
 New and Improved Techniques:
 
@@ -73,13 +85,32 @@ New and Improved Techniques:
      operation like observe ()). This means that the behavior does not change
      anymore by calling resize with more variables than expected.
 
-   + Variable names do not have to kept anymore internally. There are 2 options
-     controlling the behavior: (i) `varindexorder` uses the order given by the
-     input with potentially a different name and (ii) `varkeepname` attempts to
-     keep the names given by the input (mostly useful for debugging). The order
-     of decision is controlled by `varprioritizefirst` (first imported variable
-     = first decision).
+   + Variable names do not have to be kept anymore internally. There are two
+     options controlling the behavior: (i) `varindexorder` uses the order given
+     by the input with potentially a different name and (ii) `varkeepname`
+     attempts to keep the names given by the input (mostly useful for
+     debugging). The order of decision is controlled by `varprioritizefirst`
+     (first imported variable = first decision).
 
+- Major rework of the reconstruction stack:
+  
+  + Improved performance of restoration and extension by separating clause data
+    from witness data.
+
+  + Multiple clauses can now share the same witness cube.
+
+  + Added the option `restoredefraglim` to control when clause data is 
+    defragmented.
+
+- Major improvements to mobical:
+
+  + Deterministic replaying of traces with user propagator.
+
+  + Statistic summary of mobical runs (`--summary`).
+
+  + API contract fuzzing with `./configure --except-contracts`
+    and `mobical --violate`.
+  
 Developer only:
 
 - We introduced two new options (`elimaggressiveGC` and `walkbinarylimit`) that

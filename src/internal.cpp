@@ -154,7 +154,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (stab, new_vsize);
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
-  if (external)
+  if (external->propagator)
     enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
