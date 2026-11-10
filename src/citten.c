@@ -1182,6 +1182,13 @@ static void backtrack (citten *citten, unsigned jump) {
   check_queue (citten);
 }
 
+static void reset_implicant (citten *citten) {
+  LOG ("resetting prime implicant");
+  CLEAR_STACK (citten->prime);
+  citten->last_klause_decision = SIZE_STACK (citten->original_klause_refs);
+  CLEAR_STACK (citten->klause_decision_control);
+}
+
 void completely_backtrack_to_root_level (citten *citten) {
   check_queue (citten);
   LOG ("completely backtracking to level 0");
@@ -1198,6 +1205,7 @@ void completely_backtrack_to_root_level (citten *citten) {
   citten->propagated = 0;
   citten->level = 0;
   check_queue (citten);
+  reset_implicant (citten);
 }
 
 static void analyze (citten *citten, unsigned conflict) {
@@ -1514,8 +1522,10 @@ static int decide_next_clause (citten *citten) {
     }
   }
 
-  if (!citten->unassigned)
+  if (!citten->unassigned) {
+    LOG ("no unassigned literal left");
     return 10;
+  }
 
   if (CITTEN_TICKS >= citten->limits.ticks) {
     LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
@@ -1539,9 +1549,10 @@ static int decide_next_clause (citten *citten) {
   kink *const links = citten->links;
   const unsigned *const okr_begin =
       BEGIN_STACK (citten->original_klause_refs);
-  while (*last_klause_decision) {
-    const unsigned kref = *(okr_begin + *--last_klause_decision);
+  while (decision == INVALID && *last_klause_decision) {
+    const unsigned kref = *(okr_begin + --*last_klause_decision);
     klause *c = dereference_klause (citten, kref);
+    ROG (kref, "trying to satisfy");
     assert (c->size >= 1);
     assert (!is_learned_klause (c));
     unsigned best = c->lits[0];
@@ -1563,8 +1574,10 @@ static int decide_next_clause (citten *citten) {
     }
     decision = best;
   }
-  if (decision == INVALID)
+  if (decision == INVALID) {
+    LOG ("all clauses satisfied");
     return 11;
+  }
   INC (citten_decisions);
   PUSH_STACK (*klause_decision_control, *last_klause_decision);
   citten->level++;
@@ -1708,13 +1721,6 @@ static void reset_core (citten *citten) {
   CLEAR_STACK (citten->core);
 }
 
-static void reset_implicant (citten *citten) {
-  LOG ("resetting prime implicant");
-  CLEAR_STACK (citten->prime);
-  citten->last_klause_decision = SIZE_STACK (citten->original_klause_refs);
-  CLEAR_STACK (citten->klause_decision_control);
-}
-
 static void reset_assumptions (citten *citten) {
   LOG ("reset %zu assumptions", SIZE_STACK (citten->assumptions));
   unsigned *q = BEGIN_STACK (citten->assumptions);
@@ -1744,7 +1750,6 @@ static void reset_incremental (citten *citten) {
     assert (citten->failing == INVALID);
   if (citten->status == 21)
     reset_core (citten);
-  reset_implicant (citten);
   UPDATE_STATUS (0);
 }
 
