@@ -268,16 +268,15 @@ bool Internal::is_constraint_level (size_t level) {
 
 struct bigger_queue {
 
-  // Internal *internal;
-  const std::vector<int64_t> &btab;
+  Internal *internal;
 
-  bigger_queue (Internal *i) : btab (i->btab) {}
+  bigger_queue (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < btab.size ());
-    assert (b > 0), assert (abs (b) < btab.size ());
-    const unsigned s = btab[a];
-    const unsigned t = btab[b];
+    assert (a > 0), assert (abs (a) < internal->btab.size ());
+    assert (b > 0), assert (abs (b) < internal->btab.size ());
+    const unsigned s = internal->btab[a];
+    const unsigned t = internal->btab[b];
     assert (s != t);
     return s > t;
   }
@@ -285,16 +284,15 @@ struct bigger_queue {
 
 struct bigger_score {
 
-  // Internal *internal;
-  const std::vector<double> &stab;
+  Internal *internal;
 
-  bigger_score (Internal *i) : stab (i->stab) {}
+  bigger_score (Internal *i) : internal (i) {}
 
   bool operator() (int a, int b) {
-    assert (a > 0), assert (abs (a) < stab.size ());
-    assert (b > 0), assert (abs (b) < stab.size ());
-    const unsigned s = stab[a];
-    const unsigned t = stab[b];
+    assert (a > 0), assert (abs (a) < internal->stab.size ());
+    assert (b > 0), assert (abs (b) < internal->stab.size ());
+    const double s = internal->stab[a];
+    const double t = internal->stab[b];
     if (s == t)
       return a > b;
     return s > t;
@@ -484,7 +482,6 @@ int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
   int cat_res = citten_status (constraint_cat);
-  int res = 0;
   if (!cat_res) {
     cat_res = constraints_solve ();
     if (compute_diverged_constraint (cat_res)) {
@@ -500,120 +497,114 @@ int Internal::decide_constraint () {
   if (cat_res == 20) { // unsat
     LOG ("constraints falsified");
     unsat_constraint = true;
-    res = 20;
+    return 20;
   } else if (!cat_res)
     return 0;
-  else {
-    PROFILE_SCOPE (constraintsdecide)
-    assert (cat_res == 10 || cat_res == 11);
-    LOG ("using citten model");
-    bool all_constraints_assigned = true;
-    // TODO: re-ordering based on decisions?
-    // TODO: keep last constraint_var index to skip part of the loop.
-    int lit = 0; //, last_lit;
-    size_t idx = 0;
-    assert (opts.constraintprime ||
-            last_constraint_idx <= constraint_vars.size ());
-    /* TODO: this is buggy.
-    bool pseudo_level =
-      (size_t) level > assumptions.size () && !control[level].decision;
-    if (false && cat_res == 10 &&
-        last_constraint_idx == constraint_vars.size ()) {
-      if (control[level].decision == 0)
-        idx = last_constraint_idx;
-    } else if (false && cat_res == 10) {
-      const int last_decision = constraint_vars[last_constraint_idx];
-      // TODO: this is not precise due to fake-decisions
-      if (val (last_decision) && var (last_decision).level == level &&
-          is_decision (last_decision))
-        idx = last_constraint_idx;
-    } else if (false && cat_res == 11) {
-      assert (opts.constraintprime);
-      const int last_decision =
-          citten_next_signed_implicant (constraint_cat, idx++);
-      if (val (last_decision) && var (last_decision).level == level &&
-          is_decision (last_decision))
-        idx = last_constraint_idx;
-    }
-    */
-    while (true) { // || !pseudo_level) {
-      if (terminated_asynchronously ()) {
-        all_constraints_assigned = false;
-        break;
-      }
-      if (cat_res == 11) {
-        lit = citten_next_signed_implicant (constraint_cat, idx++);
-        if (!lit) {
-          LOG ("all implicant literals assigned");
-          break;
-        }
-      } else {
-        if (idx >= constraint_vars.size ())
-          break;
-        lit = constraint_vars[idx++];
-      }
-      LOG ("next constraint literal %s", LOGLIT (lit));
-      const signed char tmp = citten_signed_value (constraint_cat, lit);
-      // Ignore redundant variables.
-      // assert (!tmp);
-      if (!tmp) {
-        assert (citten_status (constraint_cat) == 11);
-        continue;
-      }
-      assert (tmp);
-      const signed char tmp_lit = val (lit);
-      int decision = lit;
-      if (tmp < 0)
-        decision = -decision;
-      if (!tmp_lit) {
-        stats.constraints_decided++;
-        assert (!flags (decision).unused ());
-        search_assume_decision (decision);
-        last_constraint_idx = idx;
-        all_constraints_assigned = false;
-        break;
-      } else if (!tmp || tmp_lit == tmp) {
-        LOG ("constraint literal %d already satisfied", lit);
-        continue;
-      } else if (opts.constraintflip &&
-                 citten_status (constraint_cat) == 10 &&
-                 citten_flip_signed_literal (constraint_cat, lit)) {
-        stats.constraints_flipped++;
-      } else {
-        assert (!is_decision (lit));
-        // this requires that the trail satisfies the current citten
-        // model, otherwise 'analyze_failing_constraint' might generate a
-        // useless clause, leading to a potential infinite loop.
-        assert (tmp_lit == -tmp);
-        LOG ("constraint literal %d falsified", lit);
-        int failed = lit;
-        if (tmp_lit > 0)
-          failed = -failed;
-        analyze_failing_constraint (failed);
-        // citten might fix the conflict by changing other parts of the
-        // model so backtracking eagerly is not beneficial
-        /*
-        if (var (lit).level)
-          backtrack (var (lit).level - 1);
-          */
-        all_constraints_assigned = false;
-        PROFILE_SCOPE_EARLY_EXIT (constraintsdecide)
-        break;
-      }
-      idx++;
-    }
-    /*
-    assert (!constraint_vars[0]), assert (lit);
-    constraint_vars[0] = lit;
-    */
-    if (all_constraints_assigned) {
-      last_constraint_idx = constraint_vars.size ();
-      LOG ("added pseudo decision level(s) due to constraints");
-      new_trail_level (0);
-      notify_decision ();
-    }
+  PROFILE_SCOPE (constraintsdecide)
+  assert (cat_res == 10 || cat_res == 11);
+  LOG ("using citten model");
+  bool all_constraints_assigned = true;
+  // TODO: re-ordering based on decisions?
+  // TODO: keep last constraint_var index to skip part of the loop.
+  int lit = 0; //, last_lit;
+  size_t idx = 0;
+  assert (opts.constraintprime ||
+          last_constraint_idx <= constraint_vars.size ());
+  /* TODO: this is buggy.
+  bool pseudo_level =
+    (size_t) level > assumptions.size () && !control[level].decision;
+  if (false && cat_res == 10 &&
+      last_constraint_idx == constraint_vars.size ()) {
+    if (control[level].decision == 0)
+      idx = last_constraint_idx;
+  } else if (false && cat_res == 10) {
+    const int last_decision = constraint_vars[last_constraint_idx];
+    // TODO: this is not precise due to fake-decisions
+    if (val (last_decision) && var (last_decision).level == level &&
+        is_decision (last_decision))
+      idx = last_constraint_idx;
+  } else if (false && cat_res == 11) {
+    assert (opts.constraintprime);
+    const int last_decision =
+        citten_next_signed_implicant (constraint_cat, idx++);
+    if (val (last_decision) && var (last_decision).level == level &&
+        is_decision (last_decision))
+      idx = last_constraint_idx;
   }
-  return res;
+  */
+  while (true) { // || !pseudo_level) {
+    if (terminated_asynchronously ()) {
+      all_constraints_assigned = false;
+      break;
+    }
+    if (cat_res == 11) {
+      lit = citten_next_signed_implicant (constraint_cat, idx++);
+      if (!lit) {
+        LOG ("all implicant literals assigned");
+        break;
+      }
+    } else {
+      if (idx >= constraint_vars.size ())
+        break;
+      lit = constraint_vars[idx++];
+    }
+    LOG ("next constraint literal %s", LOGLIT (lit));
+    const signed char tmp = citten_signed_value (constraint_cat, lit);
+    // Ignore redundant variables.
+    // assert (!tmp);
+    if (!tmp) {
+      assert (citten_status (constraint_cat) == 11);
+      continue;
+    }
+    assert (tmp);
+    const signed char tmp_lit = val (lit);
+    int decision = lit;
+    if (tmp < 0)
+      decision = -decision;
+    if (!tmp_lit) {
+      stats.constraints_decided++;
+      assert (!flags (decision).unused ());
+      search_assume_decision (decision);
+      last_constraint_idx = idx;
+      all_constraints_assigned = false;
+      break;
+    } else if (!tmp || tmp_lit == tmp) {
+      LOG ("constraint literal %d already satisfied", lit);
+      continue;
+    } else if (opts.constraintflip &&
+               citten_status (constraint_cat) == 10 &&
+               citten_flip_signed_literal (constraint_cat, lit)) {
+      stats.constraints_flipped++;
+    } else {
+      assert (!is_decision (lit));
+      // this requires that the trail satisfies the current citten
+      // model, otherwise 'analyze_failing_constraint' might generate a
+      // useless clause, leading to a potential infinite loop.
+      assert (tmp_lit == -tmp);
+      LOG ("constraint literal %d falsified", lit);
+      int failed = lit;
+      if (tmp_lit > 0)
+        failed = -failed;
+      analyze_failing_constraint (failed);
+      // citten might fix the conflict by changing other parts of the
+      // model so backtracking eagerly is not beneficial
+      /*
+      if (var (lit).level)
+        backtrack (var (lit).level - 1);
+        */
+      all_constraints_assigned = false;
+      PROFILE_SCOPE_EARLY_EXIT (constraintsdecide)
+      break;
+    }
+    idx++;
+  }
+  if (all_constraints_assigned) {
+    last_constraint_idx = constraint_vars.size ();
+    LOG ("added pseudo decision level(s) due to constraints");
+    new_trail_level (0);
+    notify_decision ();
+  }
+  return 0;
 }
 
 // Search for the next decision and assign it to the saved phase. Requires

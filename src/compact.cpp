@@ -198,7 +198,7 @@ void Internal::compact () {
   if (is_constraint) {
     // assert (false);
     assert (!external->constraints.empty ());
-    LOG ("temporarily reset internal constraint");
+    LOG ("temporarily resetting internal constraint");
     reset_constraint ();
   }
 
