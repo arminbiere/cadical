@@ -1161,7 +1161,7 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
   bool sucessfully_imported = false;
   assert (!private_steps);
   int res = decide_and_propagate_all_assumptions (propagated);
-  if (res) {
+  if (res || terminated_asynchronously ()) {
     failed = true;
     return res;
   }

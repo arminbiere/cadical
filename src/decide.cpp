@@ -418,6 +418,7 @@ void Internal::eager_constraint_units () {
 }
 
 int Internal::constraints_solve () {
+  assert (!termination_forced);
   int res = 0;
   stats.constraints_solved++;
   if (opts.constraintsort) {
@@ -481,6 +482,8 @@ int Internal::constraints_solve () {
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
+  if (terminated_asynchronously ())
+    return 0;
   if (!level)
     citten_restart (constraint_cat);
   int cat_res = citten_status (constraint_cat);

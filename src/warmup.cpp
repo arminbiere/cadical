@@ -246,6 +246,8 @@ int Internal::decide_and_propagate_all_assumptions (
       res = 20;
     else if (unsat_constraint)
       res = 20;
+    else if (terminated_asynchronously ())
+      return 0;
     else if (!propagate ()) {
       // let analyze run to get failed assumptions
       if (!unsat)

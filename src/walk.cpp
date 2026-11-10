@@ -888,7 +888,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
   std::vector<int> propagated;
   bool failed = false; // Inconsistent assumptions?
   int res = decide_and_propagate_all_assumptions (propagated);
-  if (res) {
+  if (res || terminated_asynchronously ()) {
     return res;
   }
 
