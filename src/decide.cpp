@@ -275,8 +275,8 @@ struct bigger_queue {
   bool operator() (int a, int b) {
     assert (a > 0), assert (abs (a) < internal->btab.size ());
     assert (b > 0), assert (abs (b) < internal->btab.size ());
-    const unsigned s = internal->btab[a];
-    const unsigned t = internal->btab[b];
+    const int64_t s = internal->btab[a];
+    const int64_t t = internal->btab[b];
     assert (s != t);
     return s > t;
   }
@@ -294,7 +294,7 @@ struct bigger_score {
     const double s = internal->stab[a];
     const double t = internal->stab[b];
     if (s == t)
-      return a > b;
+      return internal->externalize (a) < internal->externalize (b);
     return s > t;
   }
 };
@@ -481,6 +481,8 @@ int Internal::constraints_solve () {
 int Internal::decide_constraint () {
   assert (is_constraint_level (level));
   PROFILE_SCOPE (constraints);
+  if (!level)
+    citten_restart (constraint_cat);
   int cat_res = citten_status (constraint_cat);
   if (!cat_res) {
     cat_res = constraints_solve ();
