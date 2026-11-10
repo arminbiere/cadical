@@ -15,14 +15,6 @@ extern "C" {
 #include <unistd.h>
 }
 
-#ifndef _WIN32
-
-extern "C" {
-#include <sys/wait.h>
-}
-
-#endif
-
 #if defined(__APPLE__) || defined(__MACH__)
 
 extern "C" {
@@ -42,13 +34,13 @@ namespace CaDiCaL {
 
 // Private constructor.
 
-File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
+File::File (Internal *i, bool w, int c, FILE *f, const char *n)
     : internal (i),
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif
-      close_file (c), child_pid (p), file (f), _name (strdup (n)),
-      _lineno (1), _bytes (0) {
+      close_file (c), file (f), _name (strdup (n)), _lineno (1),
+      _bytes (0) {
   (void) w;
   assert (f), assert (n);
 }
@@ -225,11 +217,17 @@ void File::delete_str_vector (std::vector<char *> &argv) {
     delete[] str;
 }
 
-FILE *File::open_pipe (Internal *internal, const char *fmt,
-                       const char *path, const char *mode) {
-#ifdef QUIET
-  (void) internal;
-#endif
+FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
+                       const char *path) {
+  if (!File::exists (path)) {
+    LOG ("file '%s' does not exist", path);
+    return 0;
+  }
+  LOG ("file '%s' exists", path);
+  if (sig && !File::match (internal, path, sig))
+    return 0;
+  LOG ("file '%s' matches signature for '%s'", path, fmt);
+  MSG ("opening pipe to read '%s'", path);
   size_t prglen = 0;
   while (fmt[prglen] && fmt[prglen] != ' ')
     prglen++;
@@ -248,120 +246,19 @@ FILE *File::open_pipe (Internal *internal, const char *fmt,
   size_t cmd_size = strlen (fmt) + strlen (path);
   char *cmd = new char[cmd_size];
   snprintf (cmd, cmd_size, fmt, path);
-  FILE *res = popen (cmd, mode);
+  FILE *res = popen (cmd, "r");
   delete[] cmd;
   return res;
 }
 
-FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
-                       const char *path) {
-  if (!File::exists (path)) {
-    LOG ("file '%s' does not exist", path);
-    return 0;
-  }
-  LOG ("file '%s' exists", path);
-  if (sig && !File::match (internal, path, sig))
-    return 0;
-  LOG ("file '%s' matches signature for '%s'", path, fmt);
-  MSG ("opening pipe to read '%s'", path);
-  return open_pipe (internal, fmt, path, "r");
-}
-
-#ifndef _WIN32
-
-#if defined(__APPLE__) || defined(__MACH__)
-static std::mutex compressed_file_writing_mutex;
-#endif
-
-FILE *File::write_pipe (Internal *internal, const char *command,
-                        const char *path, int &child_pid) {
-  assert (command[0] && command[0] != ' ');
-  MSG ("writing through command '%s' to '%s'", command, path);
-#ifdef QUIET
-  (void) internal;
-#endif
-  std::vector<char *> args;
-  split_str (command, args);
-  assert (!args.empty ());
-  args.push_back (0);
-  char **argv = args.data ();
-  char *absolute_command_path = find_program (argv[0]);
-  int pipe_fds[2], out;
-  FILE *res = 0;
-#if defined(__APPLE__) || defined(__MACH__)
-  compressed_file_writing_mutex.lock ();
-#endif
-  if (!absolute_command_path)
-    MSG ("could not find '%s' in 'PATH' environment variable", argv[0]);
-  else if (::pipe (pipe_fds) < 0)
-    MSG ("could not generate pipe to '%s' command", command);
-  else if ((out = ::open (path, O_CREAT | O_TRUNC | O_WRONLY, 0644)) < 0)
-    MSG ("could not open '%s' for writing", path);
-  else if ((child_pid = ::fork ()) < 0) {
-    MSG ("could not fork process to execute '%s' command", command);
-    ::close (out);
-  } else if (child_pid) {
-    ::close (pipe_fds[0]);
-    res = ::fdopen (pipe_fds[1], "wb");
-  } else {
-
-    // Connect stdin and stdout in child
-
-    ::dup2 (pipe_fds[0], 0);
-    ::dup2 (out, 1);
-
-    // Make sure to close all non-required fds to not cause hangs.
-    // This is handled now by closefrom and remains for documentation
-    // purposes:
-    //
-    //   ::close (pipe_fds[0]);
-    //   ::close (pipe_fds[1]);
-    //   ::close (out);
-
-    // Surpress '7z' verbose output on 'stderr'.
-
-    if (command[0] == '7') {
-      ::close (2);
-    }
-
-    // Before the fork another thread could have created more fds.  These
-    // fds are cloned into the child process.  As this inhibits pipes to
-    // be closed by the parent process we have to close all of the
-    // erroneously cloned fds here.
-
-#ifndef NCLOSEFROM
-    ::closefrom (3);
-#else
-    // Simplistic replacement on Unix without 'closefrom'.
-    for (int fd = 3; fd != FD_SETSIZE; fd++)
-      ::close (fd);
-#endif
-    execv (absolute_command_path, argv);
-    _exit (1);
-  }
-  if (absolute_command_path)
-    delete[] absolute_command_path;
-  delete_str_vector (args);
-#ifdef QUIET
-  (void) internal;
-#endif
-#if defined(__APPLE__) || defined(__MACH__)
-  if (!res)
-    compressed_file_writing_mutex.unlock ();
-#endif
-  return res;
-}
-
-#endif
-
 /*------------------------------------------------------------------------*/
 
 File *File::read (Internal *internal, FILE *f, const char *n) {
-  return new File (internal, false, 0, 0, f, n);
+  return new File (internal, false, 0, f, n);
 }
 
 File *File::write (Internal *internal, FILE *f, const char *n) {
-  return new File (internal, true, 0, 0, f, n);
+  return new File (internal, true, 0, f, n);
 }
 
 File *File::read (Internal *internal, const char *path) {
@@ -396,36 +293,21 @@ File *File::read (Internal *internal, const char *path) {
   if (!file)
     return 0;
   DeferCloseFile<FILE> delete_file ((FILE *) file);
-  File *internal_file =
-      new File (internal, false, close_input, 0, file, path);
+  File *internal_file = new File (internal, false, close_input, file, path);
   delete_file.release ();
   return internal_file;
 }
 
 File *File::write (Internal *internal, const char *path) {
   FILE *file;
-  int close_output = 3, child_pid = 0;
-#ifndef _WIN32
-  if (has_suffix (path, ".xz"))
-    file = write_pipe (internal, "xz -c", path, child_pid);
-  else if (has_suffix (path, ".bz2"))
-    file = write_pipe (internal, "bzip2 -c", path, child_pid);
-  else if (has_suffix (path, ".gz"))
-    file = write_pipe (internal, "gzip -c", path, child_pid);
-  else if (has_suffix (path, ".7z"))
-    file = write_pipe (internal, "7z a -an -txz -si -so", path, child_pid);
-  else
-#endif
-    file = write_file (internal, path), close_output = 1;
-
+  int close_output = 1;
+  file = write_file (internal, path);
   if (!file)
     return 0;
   DeferCloseFile<FILE> delete_file ((FILE *) file);
-
   File *internal_file =
-      new File (internal, true, close_output, child_pid, file, path);
+      new File (internal, true, close_output, file, path);
   delete_file.release ();
-
   return internal_file;
 }
 
@@ -451,20 +333,10 @@ void File::close (bool print) {
       MSG ("closing input pipe to read '%s'", name ());
     pclose (file);
   }
-#ifndef _WIN32
-  if (close_file == 3) {
-    if (print)
-      MSG ("closing output pipe to write '%s'", name ());
-    fclose (file);
-    waitpid (child_pid, 0, 0);
-#if defined(__APPLE__) || defined(__MACH__)
-    compressed_file_writing_mutex.unlock ();
-#endif
-  }
-#endif
+
   file = 0; // mark as closed
 
-  // TODO what about error checking for 'fclose', 'pclose' or 'waitpid'?
+  // TODO what about error checking for 'fclose' or 'pclose'?
 
 #ifndef QUIET
   if (print) {

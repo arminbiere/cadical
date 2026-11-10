@@ -3,6 +3,13 @@ Version 3.1.0
 
 User Facing Changes:
 
+- We finally gave up on compressed compressed file writing as we were not able
+  to keep it working in a multi-threaded context in a portable way. Note, that
+  due to security issues we had to use a 'fork/exec' approach (for writing)
+  which is difficult to combine with multi-threading and signal handling.  On
+  MacOS it stopped earlier to work but now also on Ubuntu has issues and thus we
+  decided to remove that feature (and the corresponding test) completely.
+
 - Major rework of literal import, making it lazy everywhere. Unused variables
   are not created anymore (more information below).
 
