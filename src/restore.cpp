@@ -324,8 +324,13 @@ void External::restore () {
 
   witness = std::move (skipped_witness);
 
-  if (100 * fragmented_clause_data >
-      internal->opts.restoredefraglim * clause_data.size ()) {
+  if (internal->opts.restoreall) {
+    assert (witness_data.empty ());
+    clause_data.clear ();
+    shrink_vector (clause_data);
+    fragmented_clause_data = 0;
+  } else if (100 * fragmented_clause_data >
+             internal->opts.restoredefraglim * clause_data.size ()) {
     internal->stats.restore_defrags++;
     defragment_clause_data ();
   }
