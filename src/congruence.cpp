@@ -7843,8 +7843,8 @@ void Closure::extract_ite_gates_of_variable (int idx) {
   const int lit = idx;
   const int not_lit = -idx;
 
-  auto lit_watches = internal->occs (lit);
-  auto not_lit_watches = internal->occs (not_lit);
+  const auto &lit_watches = internal->occs (lit);
+  const auto &not_lit_watches = internal->occs (not_lit);
   const size_t size_lit_watches = lit_watches.size ();
   const size_t size_not_lit_watches = not_lit_watches.size ();
   if (size_lit_watches <= size_not_lit_watches) {
