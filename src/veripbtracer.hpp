@@ -51,7 +51,6 @@ class VeripbTracer : public FileTracer {
 #ifndef QUIET
   int64_t added, deleted;
 #endif
-  std::vector<int64_t> delete_ids;
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);

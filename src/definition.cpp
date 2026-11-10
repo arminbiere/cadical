@@ -12,7 +12,6 @@ struct definition_extractor {
   Internal *internal;
   vector<Clause *> clauses[2];
   int lit;
-  vector<vector<int>> implicants;
   int unit;
 };
 
