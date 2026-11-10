@@ -12,7 +12,7 @@
 // but assume API breaking changes when increasing the major version.
 
 #define CADICAL_MAJOR 3 // Major semantic version.
-#define CADICAL_MINOR 0 // Minor semantic version.
+#define CADICAL_MINOR 1 // Minor semantic version.
 #define CADICAL_PATCH 0 // Semantic patch version.
 
 namespace CaDiCaL {
