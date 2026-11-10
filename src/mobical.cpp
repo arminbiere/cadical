@@ -8389,7 +8389,9 @@ void Reader::parse () {
         else if (enforce)
 #endif
           error ("non-existing option name '%s'", first);
+#ifndef LOGGING
         mobical.warning ("non-existing option name '%s'", first);
+#endif
       }
       if (!second)
         error ("second argument to 'set' missing");
