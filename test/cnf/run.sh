@@ -52,14 +52,13 @@ then
 
   if [ ! -f $solutionchecker -o ../test/cnf/dimocheck.c -nt $solutionchecker ]
   then
-    cmd="cc -O -o $solutionchecker -I../build -I../test/cnf ../test/cnf/dimocheck.c ../build/config.h -lz"
-    cat<<EOF>../build/config.h
+    cmd="cc -O -o $solutionchecker -I../build -I../test/cnf ../test/cnf/dimocheck.c"
+cat<<EOF>../build/config.h
 #define VERSION "0.0.1 c986f99aec9185ced0f746e392434f4303c026c3"
 #define COMPILE "$cmd"
 EOF
-
     cecho "$cmd"
-    if $cmd 2>/dev/null
+    if $cmd # 2>/dev/null
     then
       msg "external solution checking with '$solutionchecker'"
     else
