@@ -45,6 +45,8 @@ User Facing Changes:
   larger than 32-bits. The options local search and preprocessing do not (by API
   contract).
 
+- The option `restoreflush` has been removed, as flushing root-level satisfied
+  clauses from the reconstruction stack is not generally correct.
 
 New and Improved Techniques:
 
@@ -73,12 +75,22 @@ New and Improved Techniques:
      operation like observe ()). This means that the behavior does not change
      anymore by calling resize with more variables than expected.
 
-   + Variable names do not have to kept anymore internally. There are 2 options
-     controlling the behavior: (i) `varindexorder` uses the order given by the
-     input with potentially a different name and (ii) `varkeepname` attempts to
-     keep the names given by the input (mostly useful for debugging). The order
-     of decision is controlled by `varprioritizefirst` (first imported variable
-     = first decision).
+   + Variable names do not have to be kept anymore internally. There are two
+     options controlling the behavior: (i) `varindexorder` uses the order given
+     by the input with potentially a different name and (ii) `varkeepname`
+     attempts to keep the names given by the input (mostly useful for
+     debugging). The order of decision is controlled by `varprioritizefirst`
+     (first imported variable = first decision).
+
+- Major rework of the reconstruction stack:
+  
+  + Improved performance of restoration and extension by separating clause data
+    from witness data.
+
+  + Multiple clauses can now share the same witness cube.
+
+  + Added the option `restoredefraglim` to control when clause data is 
+    defragmented.
 
 - Major improvements to mobical:
 
