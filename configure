@@ -15,33 +15,34 @@ rm -f configure.log
 # Common default options.
 
 all=no
-debug=no
-libs=""
-logging=no
 check=no
 checkmissed=no
 competition=no
-coverage=no
-flexible=yes
-profile=no
-memory_fuzzing=no
-dynamic=no
-frame_pointer=no
-terminator_fuzzing=no
 contracts=yes
+contrib=yes
+coverage=no
+deactivate_options=no
+debug=no
+dynamic=no
 exceptcontracts=no
+flexible=yes
+frame_pointer=no
+ipasir=yes
+libs=""
+logging=no
+m32=no
+memory_fuzzing=no
+metrics=yes
+options=""
+pedantic=no
+pic=no
+profile=no
+quiet=no
+shared=no
+symbols=no
+terminator_fuzzing=no
 tracing=yes
 unlocked=yes
-pedantic=no
-options=""
-quiet=no
-m32=no
-contrib=yes
-ipasir=yes
-shared=no
-pic=no
-deactivate_options=no
-metrics=yes
 
 #--------------------------------------------------------------------------#
 
@@ -95,13 +96,18 @@ usage: configure [ <option> ... ]
 where '<option>' is one of the following
 
 -h|--help          print this command line summary
--g|--debug         compile with debugging information
--c|--check         compile with assertion checking (default for '-g')
--l|--log[ging]     include logging code (but disabled by default)
--a|--all           short cut for all above, e.g., '-g -l' (thus also '-c')
+
 -q|--quiet         exclude message and profiling code (logging too)
 -p|--pedantic      add '--pedantic' and '-Werror' compilation flag
--s|--symbols       add '-ggdb3' (even for optimized compilation)
+
+-g|--debug         debugging build (implies '-c', '-s')
+-r|--release       release build (default)
+
+-c|--check         compile with assertion checking (default for '-g')
+-l|--log[ging]     include logging code (but disabled by default)
+-s|--symbols       produce and include symbols (default for '-g')
+
+-a|--all           short cut for '-c -l -s'
 
 --check-missed     compile with expensive assertion checking for missed
                    implications (needs '-c')
@@ -173,8 +179,11 @@ do
     -a|--all) all=yes;;
 
     -g|--debug) debug=yes;;
+    -r|--release) debug=no;;
+
     -c|--check) check=yes;;
     -l|--log|--logging) logging=yes;;
+    -s|--symbols) symbols=yes;;
 
     -l*) libs="$libs $1";;
 
@@ -212,7 +221,6 @@ do
     -m32) options="$options $1";m32=yes;;
     -fpic|-fPIC) options="$options $1"; pic=yes;;
     -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
-    -s|--symbols) options="$options -ggdb3";;
     -static*) options="$options $1";;
     -shared|--shared) shared=yes;;
 
@@ -248,11 +256,11 @@ fi
 if [ $all = yes ]
 then
   [ $check = yes ] && die "'-a' subsumes '-c'"
-  [ $debug = yes ] && die "'-a' subsumes '-g'"
   [ $logging = yes ] && die "'-a' subsumes '-l'"
+  [ $symbols = yes ] && die "'-a' subsumes '-s'"
   check=yes
-  debug=yes
   logging=yes
+  symbols=yes
 elif [ $debug = yes ]
 then
   [ $check = yes ] && die "'-g' subsumes '-c'"
@@ -384,6 +392,8 @@ fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $symbols = yes ] && CXXFLAGS="$CXXFLAGS -g"
+
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
