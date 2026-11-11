@@ -235,14 +235,32 @@ static malloc_t hook_malloc = nullptr;
 static realloc_t hook_realloc = nullptr;
 static free_t hook_free = nullptr;
 
+// Uncomment the following to check that hooks are working:
+#if 1
+#define PRINT_MOBICAL_MEMORY_STUBS_HIT
+#endif
+
 void *malloc (size_t size) {
+#ifdef PRINT_MOBICAL_MEMORY_STUBS_HIT
+  fprintf (stderr, "c HIT %d malloc(%zu)\n", !!hook_malloc, size),
+      fflush (stderr);
+#endif
   return hook_malloc ? (*hook_malloc) (size) : (*libc_malloc) (size);
 }
 void *realloc (void *ptr, size_t size) {
+#ifdef PRINT_MOBICAL_MEMORY_STUBS_HIT
+  fprintf (stderr, "c HIT %d realloc(%p, %zu)\n", !!hook_realloc, ptr,
+           size),
+      fflush (stderr);
+#endif
   return hook_realloc ? (*hook_realloc) (ptr, size)
                       : (*libc_realloc) (ptr, size);
 }
 void free (void *ptr) {
+#ifdef PRINT_MOBICAL_MEMORY_STUBS_HIT
+  fprintf (stderr, "c HIT %d free(%p)\n", !!hook_free, ptr),
+      fflush (stderr);
+#endif
   (hook_free) ? (*hook_free) (ptr) : (*libc_free) (ptr);
 }
 
@@ -344,7 +362,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0) {};
+  Mopt (const char *n) : name (n), value (0), fixed (0){};
 };
 
 class Mopts {
@@ -1829,13 +1847,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d) {};
+    Decisions (int l, int d) : lit (l), delay (d){};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d) {};
+    MockForce (int l, int d) : lit (l), delay (d){};
   };
 
   struct ExternalLemma {
@@ -4890,7 +4908,6 @@ public:
 #endif
 
 #ifdef MOBICAL_PRINT_TRACE
-
   static void print_trace (void **, size_t, ostream &, size_t);
 #endif
 
