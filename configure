@@ -108,10 +108,15 @@ where '<option>' is one of the following
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
---memory[-fuzzing] compile with '-rdynamic -fno-omit-frame-pointer' and
-                   '-DMOBICAL_MEMORY' to fuzz for bad memory allocation handling
---terminate[-fuzzing]   compile with '-rdynamic -fno-omit-frame-pointer' and
-                   '-DMOBICAL_TERMINATE' to fuzz for bad terminator handling
+
+--memory[-fuzzing] compile with '-DMOBICAL_MEMORY' to fuzz for bad memory
+		   allocation handling, in addition for precisely printing
+		   function call traces on failing test traces uses further
+		   '-rdynamic' (not on MacOS) and '-fno-omit-frame-pointer'
+
+--terminate[-fuzzing]   compile with '-DMOBICAL_TERMINATE' to fuzz for bad
+                        terminator handling and use -fno-omit-frame-pointer'
+			and and possibly '-rdynamic' as above
 
 --no-contracts     compile without API contract checking code
 --except-contracts API contract violation exception (instead of abort)
@@ -187,8 +192,16 @@ do
     --coverage) coverage=yes;;
     --profile) profile=yes;;
 
-    --memory|--memory-fuzzing) memory_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
-    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing) terminator_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
+    --memory|--memory-fuzzing) 
+      memory_fuzzing=yes
+      frame_pointer=yes
+      dynamic=yes
+      ;;
+    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing)
+      terminator_fuzzing=yes
+      dynamic=yes
+      frame_pointer=yes
+      ;;
 
     --competition) competition=yes;;
     --no-options) deactivate_options=yes;;
@@ -362,6 +375,13 @@ then
   metrics=no
 fi
 
+if [ "`uname`" = Darwin ]
+then
+  apple=yes
+else
+  apple=no
+fi
+
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
@@ -378,7 +398,7 @@ fi
 
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_MEMORY"
 [ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_TERMINATE"
-[ $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
+[ $apple = no -a $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
 [ $frame_pointer = yes ] && CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
 
 if [ $pedantic = yes ]
