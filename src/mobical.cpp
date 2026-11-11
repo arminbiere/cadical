@@ -236,7 +236,7 @@ static realloc_t hook_realloc = nullptr;
 static free_t hook_free = nullptr;
 
 // Uncomment the following to check that hooks are working:
-#if 1
+#if 0
 #define PRINT_MOBICAL_MEMORY_STUBS_HIT
 #endif
 
