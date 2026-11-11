@@ -143,7 +143,7 @@ public:
   // the failing constraints, constraint- and assumption clauses.
   // Arguments: conclusion_type, clause_ids
   //
-  virtual void conclude_unsat (ConclusionType,
+  virtual void conclude_unsat (CaDiCaL::ConclusionType,
                                const std::vector<int64_t> &) {}
 
   // Notify the observer that conclude sat was requested.
