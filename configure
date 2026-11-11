@@ -21,7 +21,7 @@ competition=no
 contracts=yes
 contrib=yes
 coverage=no
-deactivate_options=no
+noptions=no
 debug=no
 dynamic=no
 exceptcontracts=no
@@ -34,6 +34,7 @@ m32=no
 memory_fuzzing=no
 metrics=yes
 options=""
+optimize=unknown
 pedantic=no
 pic=no
 profile=no
@@ -213,7 +214,7 @@ do
       ;;
 
     --competition) competition=yes;;
-    --no-options) deactivate_options=yes;;
+    --no-options) noptions=yes;;
 
     --no-flexible) flexible=no;;
     --no-unlocked) unlocked=no;;
@@ -440,8 +441,8 @@ fi
 [ $shared = yes -a $pic = no ] && CFLAGS="$CFLAGS -fpic"
 
 [ $checkmissed = yes ] && CXXFLAGS="$CXXFLAGS -DCHECKMISSED"
-[ $deactivate_options = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
-[ $deactivate_options = yes ] && CFLAGS="$CXXFLAGS -DNOPTIONS"
+[ $noptions = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
+[ $noptions = yes ] && CFLAGS="$CXXFLAGS -DNOPTIONS"
 
 CXXFLAGS="$CXXFLAGS$options"
 CFLAGS="$CFLAGS$options"
