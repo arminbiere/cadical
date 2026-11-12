@@ -342,10 +342,10 @@ int Internal::decide_and_propagate_all_assumptions (
   assert (!private_steps);
   int res = 0;
   int last_assumption_level = assumptions.size ();
-  if (!last_assumption_level)
-    return res;
   if (constraint.size ())
     last_assumption_level++;
+  if (!last_assumption_level)
+    return res;
   while (!res) {
     if (unsat)
       res = 20;
