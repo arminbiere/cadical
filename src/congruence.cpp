@@ -411,7 +411,7 @@ void Closure::extract_binaries () {
   }
   lrat_chain.clear ();
 
-  offsetsize.clear ();
+  erase_vector (offsetsize);
 
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
@@ -3671,7 +3671,10 @@ Gate *Closure::find_xor_gate (const Gate *const g, Gate *except) {
   return find_gate_lits (begin (*g), end (*g), Gate_Type::XOr_Gate, except);
 }
 
-void Closure::reset_xor_gate_extraction () { internal->clear_occs (); }
+void Closure::reset_xor_gate_extraction () {
+ internal->clear_occs ();
+ glargecounts.clear (); // reused by ITEs
+}
 
 bool Closure::normalize_ite_lits_gate (Gate *g) {
   int *rhs = g->rhs;
@@ -7459,11 +7462,11 @@ void Closure::init_ite_gate_extraction (
 }
 
 void Closure::reset_ite_gate_extraction () {
-  condbin[0].clear ();
-  condbin[1].clear ();
-  condeq[0].clear ();
-  condeq[1].clear ();
-  glargecounts.clear ();
+  erase_vector (condbin[0]);
+  erase_vector (condbin[1]);
+  erase_vector (condeq[0]);
+  erase_vector (condeq[1]);
+  erase_vector (glargecounts);
   internal->clear_occs ();
 }
 
