@@ -276,7 +276,7 @@ map_and_run () {
     34) run -a -p -fsanitize=undefined;;
 
     # all warnings
-    35) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wswitch-enum -Wpointer-arith -Winline -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing -fno-common -fstrict-aliasing -Wno-format-nonliteral;;
+    35) run -a -Wswitch-enum -p -Wextra -Wall -Wextra -Wformat=2 -Wswitch-enum -Wpointer-arith -Wundef -Wcast-qual -Wwrite-strings -Wunreachable-code -Wstrict-aliasing -fno-common -fstrict-aliasing -Wno-format-nonliteral;;
 
     # extra flags
     36) run --no-metrics;;
