@@ -3,11 +3,18 @@ Version 3.1.0
 
 User Facing Changes:
 
+- Removed the `logsort` option (for sorting logging output) as it produced
+  issues in combination with memory fuzzing (`configure --memory ...`).
+
 - Build configuration change: `-a` and `--all` now imply `-l`, `-c`, and
-  `-s` but remain in optimizing build.  There is further an new `-r` resp.
-  `--release` option which is default (and the opposite of `-g` or `debug`).
-  The `-s` or `--symbols` option now only sets `-g` as compile-flag and
-  not the GNU specific `-ggdb3` anymore to include a symbol table.
+  `-s` but remain in `Release` build, i.e., the default optimizing build.
+  Before it changed the build to `Debug` build (actually as using `-g`).
+  There is further a new `-r` resp.  `--release` option which corresponds to
+  the default `Release` and thus is the opposite of `-g` or `--debug` which
+  yields a `Debug` build configuration.  The new `-s` or `--symbols` option
+  now only sets `-g` as compiler-flag not the GNU specific `-ggdb3` (supported
+  by LLVM too) anymore to include a symbol table.  That latter compiler option
+  can still be set explicitly (using also `-ggdb3` as configuration option).
 
 - We finally gave up on compressed compressed file writing as we were not able
   to keep it working in a multi-threaded context in a portable way. Note, that
