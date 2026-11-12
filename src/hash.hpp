@@ -139,7 +139,7 @@ private:
   Hash hasher;
 
 public:
-  hash () : hasher ({}){};
+  hash () : hasher ({}) {};
   template <class T> hash (T h) : hasher (h) {
     table.resize (64, std::make_pair<size_t, Key> (0, nullptr));
   }

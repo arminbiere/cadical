@@ -305,8 +305,7 @@ File *File::write (Internal *internal, const char *path) {
   if (!file)
     return 0;
   DeferCloseFile<FILE> delete_file ((FILE *) file);
-  File *internal_file =
-      new File (internal, true, close_output, file, path);
+  File *internal_file = new File (internal, true, close_output, file, path);
   delete_file.release ();
   return internal_file;
 }

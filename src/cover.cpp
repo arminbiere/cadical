@@ -413,8 +413,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           }
           last_id = ++clause_id;
           if (already_pushed)
-            external->push_clause_on_extension (weakened_id, witness, 
-                                                    weakened_clause);
+            external->push_clause_on_extension (weakened_id, witness,
+                                                weakened_clause);
           assert (other);
           witness = other;
           weakened_clause.clear ();
@@ -451,8 +451,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         lrat_chain.clear ();
       }
       clause.clear ();
-      external->push_clause_on_extension (weakened_id, witness, 
-                                              weakened_clause);
+      external->push_clause_on_extension (weakened_id, witness,
+                                          weakened_clause);
 
       mark_garbage (c);
     }

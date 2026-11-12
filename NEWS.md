@@ -3,33 +3,41 @@ Version 3.1.0
 
 User Facing Changes:
 
-- Build configuration change: `-a` and `--all` now imply `-l`, `-c`, and
-  `-s` but remain in optimizing build.  There is further an new `-r` resp.
-  `--release` option which is default (and the opposite of `-g` or `debug`).
-  The `-s` or `--symbols` option now only sets `-g` as compile-flag and
-  not the GNU specific `-ggdb3` anymore to include a symbol table.
+- Removed the `logsort` option (for sorting logging output) as it produced
+  issues in combination with memory fuzzing (`configure --memory ...`).
 
-- We finally gave up on compressed compressed file writing as we were not able
-  to keep it working in a multi-threaded context in a portable way. Note, that
-  due to security issues we had to use a 'fork/exec' approach (for writing)
-  which is difficult to combine with multi-threading and signal handling.  On
-  MacOS it stopped earlier to work but now also on Ubuntu has issues and thus we
+- Build configuration change: `-a` and `--all` now imply `-l`, `-c`, and
+  `-s` but remain in `Release` build, i.e., the default optimizing build.
+  Before it changed the build to `Debug` build (actually as using `-g`).
+  There is further a new `-r` resp.  `--release` option which corresponds to
+  the default `Release` and thus is the opposite of `-g` or `--debug` which
+  yields a `Debug` build configuration.  The new `-s` or `--symbols` option
+  now only sets `-g` as compiler-flag not the GNU specific `-ggdb3` (supported
+  by LLVM too) anymore to include a symbol table.  That latter compiler option
+  can still be set explicitly (using also `-ggdb3` as configuration option).
+
+- We finally gave up on compressed file writing as we were not able to keep it
+  working in a multi-threaded context in a portable way. Note, that due to
+  security issues we had to use a 'fork/exec' approach (for writing) which is
+  difficult to combine with multi-threading and signal handling.  On MacOS it
+  stopped earlier to work but now also we have issues on Ubuntu and thus we
   decided to remove that feature (and the corresponding test) completely.
 
-- Major rework of literal import, making it lazy everywhere. Unused variables
-  are not created anymore (more information below).
+- Major rework of the literal importing mechanism, making it lazy everywhere.
+  Unused variables are not created anymore (more information below).
 
-- For models, CaDiCaL now outputs only the literals that are present
-  in the problem. Use `modelalllits` to get all literals.
+- For models CaDiCaL now outputs only the literals that are present
+  in the problem. The `modelalllits` option allows to get all literals.
 
 - Walk and lucky are now fully compatible with assumptions
   (literals propagated by the assumptions cannot be flipped anymore).
 
-- Lucky will now run if you have assumptions. For many short calls, this can be
-  prohibitive. Use `--no-luckyassumptions`. To limit the effect, when lucky is
-  not effective, it will not be reused for the next `luckymininterval`
-  conflicts (and then still only at the beginning of the solve call). Set this
-  option to 0, if you want to make sure that lucky is executed in each.
+- Lucky will now run if you have assumptions. For frequent incremental short
+  calls, this can be prohibitive. Use `--no-luckyassumptions` in that case as
+  follows. To limit that effect, when lucky is not effective, it will not be
+  executed for the next `luckymininterval` conflicts (and then still only at the
+  beginning of the solve call). Set this option to 0, if you want to make sure
+  that lucky is executed in each.
 
 - Lucky is now also limited in its runtime (in number of ticks per clauses).
   Set `luckylimitpercls` to a higher value if needed. This limit is mostly
@@ -40,11 +48,11 @@ User Facing Changes:
   activation with `-L`), due to a ticks limit of 0. Only noticeable if you run
   the solver with `-L1`.
 
-- By default, all solver techniques support LRAT resolution checking (enabling
-  easy interpolation). Exceptions are `factor` which requires LRAT with
-  extended resolution (and therefore no interpolation) and `cover`,
-  `instantiate` and `vivifyinst` which all require less strict LRAT checking
-  where the antecedents subsume the learned clause.
+- By default, all solver techniques support LRUP resolution checking (enabling
+  for instance interpolation directly). Exceptions are `factor` which requires
+  LRAT with extended resolution (and therefore does not interpolation) and
+  `cover`, `instantiate` and `vivifyinst` which all require less strict LRAT
+  checking where the antecedents subsume the learned clause.
 
 - Option '-O' accepts negative argument to decrease the amount of inprocessing.
   Before only positive value were supported. Value '0' has no effect.

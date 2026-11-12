@@ -45,12 +45,13 @@ namespace CaDiCaL {
 //
 /*------------------------------------------------------------------------*/
 static constexpr uint32_t CLAUSE_SMALL = 1u << 31;
-static constexpr uint32_t EMBEDDED     = 1u << 30;
-static constexpr uint32_t ID_LONG      = 1u << 29;
-static constexpr uint32_t SIZE_MASK    = (1u << 29) - 1;
+static constexpr uint32_t EMBEDDED = 1u << 30;
+static constexpr uint32_t ID_LONG = 1u << 29;
+static constexpr uint32_t SIZE_MASK = (1u << 29) - 1;
 
-static inline void decode_size_field (const int size_field, bool &wit_embedded, 
-                               bool &id_long, unsigned &other_lits_size) {
+static inline void decode_size_field (const int size_field,
+                                      bool &wit_embedded, bool &id_long,
+                                      unsigned &other_lits_size) {
   assert (size_field);
 
   const uint32_t encoded = static_cast<uint32_t> (size_field);
@@ -61,7 +62,8 @@ static inline void decode_size_field (const int size_field, bool &wit_embedded,
   other_lits_size = clause_small ? (encoded & SIZE_MASK) : encoded;
 }
 
-static inline int64_t decode_id (vector<int>::const_iterator p, const bool id_long) {
+static inline int64_t decode_id (vector<int>::const_iterator p,
+                                 const bool id_long) {
   if (!id_long)
     return static_cast<uint32_t> (*(p + 1));
   const uint64_t upper = static_cast<uint32_t> (*(p + 1));
@@ -69,14 +71,13 @@ static inline int64_t decode_id (vector<int>::const_iterator p, const bool id_lo
   return static_cast<int64_t> ((upper << 32) | lower);
 }
 
-/*------------------------------------------------------------------------*/ 
+/*------------------------------------------------------------------------*/
 void External::restore_clause (vector<int>::const_iterator begin,
                                vector<int>::const_iterator end,
-                               const int64_t id,
-                               const int ewit, const int blit) {
-  LOG (begin, end, 
-    "restoring external clause[%" PRId64 "]", id);
-  
+                               const int64_t id, const int ewit,
+                               const int blit) {
+  LOG (begin, end, "restoring external clause[%" PRId64 "]", id);
+
   assert (eclause.empty ());
   assert (id);
 
@@ -120,8 +121,9 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
-bool External::restore_cube_stack (uint32_t idx, 
-  vector<bool> &skipped_witness, RestoreStats &clauses) {
+bool External::restore_cube_stack (uint32_t idx,
+                                   vector<bool> &skipped_witness,
+                                   RestoreStats &clauses) {
   auto q = clause_data.begin () + idx;
   bool restore_clauses = false;
 
@@ -145,22 +147,22 @@ bool External::restore_cube_stack (uint32_t idx,
     }
     return false;
   }
-  
+
   while (*q != 0) {
     clauses.total++;
-    bool wit_embedded, id_long; 
+    bool wit_embedded, id_long;
     unsigned other_lits_size;
     decode_size_field (*q, wit_embedded, id_long, other_lits_size);
     assert (!wit_embedded);
-    
+
     int64_t id = decode_id (q, id_long);
     LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
 
     auto begin = q + (id_long ? 3 : 2);
-    auto end = begin + other_lits_size;  
+    auto end = begin + other_lits_size;
     clauses.restored++;
     restore_clause (begin, end, id, 0, 0);
-    
+
     q += 1 + (id_long ? 2 : 1) + other_lits_size;
   }
   fragmented_clause_data += q - (clause_data.begin () + idx) + 1;
@@ -176,7 +178,7 @@ void External::defragment_clause_data () {
     WitnessEntry &entry = *p;
     const int blit = entry.blit;
     const uint64_t idx = entry.idx;
-    
+
     if (!blit) {
       assert (!entry.ewit); // ewit
       auto begin = clause_data.begin () + idx;
@@ -206,18 +208,17 @@ void External::defragment_clause_data () {
       // Move the complete shared stack.
       if (write != idx) {
         std::memmove (clause_data.data () + write,
-                      clause_data.data() + idx,
-                      stack_size * sizeof (int));
+                      clause_data.data () + idx, stack_size * sizeof (int));
       }
       write += stack_size;
       continue;
     }
     assert (entry.ewit);
-    
 
     bool wit_embedded, id_long;
     unsigned other_lits_size;
-    decode_size_field (clause_data[idx], wit_embedded, id_long, other_lits_size);
+    decode_size_field (clause_data[idx], wit_embedded, id_long,
+                       other_lits_size);
 
     const size_t record_size = 1 + other_lits_size + (id_long ? 2 : 1);
 
@@ -228,8 +229,7 @@ void External::defragment_clause_data () {
 
     // Move the record to its compacted position.
     if (write != idx) {
-      std::memmove (clause_data.data () + write, 
-                    clause_data.data () + idx,
+      std::memmove (clause_data.data () + write, clause_data.data () + idx,
                     record_size * sizeof (int));
     }
     write += record_size;
@@ -293,7 +293,7 @@ void External::restore () {
 
     // restore the corresponding clause
     if (internal->opts.restoreall || marked (tainted, -ewit)) {
-      
+
       bool wit_embedded, id_long;
       unsigned other_lits_size;
 
@@ -314,7 +314,7 @@ void External::restore () {
 
       continue;
     }
-    
+
     mark (skipped_witness, ewit);
     *write++ = entry;
   }
@@ -338,14 +338,12 @@ void External::restore () {
 #ifndef QUIET
   if (clauses.restored)
     PHASE ("restore", internal->stats.restorations,
-           "restored %" PRId64 " clauses %.0f%% out of %" PRId64
-           " clauses",
+           "restored %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
            clauses.restored, percent (clauses.restored, clauses.total),
            clauses.total);
   else
     PHASE ("restore", internal->stats.restorations,
-           "no clause restored out of %" PRId64 " clauses",
-           clauses.total);
+           "no clause restored out of %" PRId64 " clauses", clauses.total);
   {
     unsigned numtainted = 0;
     for (const auto &b : tainted)
@@ -360,6 +358,6 @@ void External::restore () {
 
   tainted.clear ();
   tainted.shrink_to_fit ();
-} 
+}
 
 } // namespace CaDiCaL

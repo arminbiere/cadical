@@ -3673,8 +3673,8 @@ Gate *Closure::find_xor_gate (const Gate *const g, Gate *except) {
 }
 
 void Closure::reset_xor_gate_extraction () {
- internal->clear_occs ();
- glargecounts.clear (); // reused by ITEs
+  internal->clear_occs ();
+  glargecounts.clear (); // reused by ITEs
 }
 
 bool Closure::normalize_ite_lits_gate (Gate *g) {
