@@ -12,37 +12,50 @@ rm -f configure.log
 
 #--------------------------------------------------------------------------#
 
-# Common default options.
+# kept in sync
+
+build=Release
+debug=no
+release=yes
+
+# implied/derived options (by default)
+
+check=unknown # set for 'debug'
+optimize=unknown # set for 'release'
+symbols=unknown # set for 'debug'
+
+# options explicitly set by user
 
 all=no
-debug=no
-libs=""
-logging=no
 check=no
 checkmissed=no
-closefrom=yes
 competition=no
-coverage=no
-flexible=yes
-profile=no
-memory_fuzzing=no
-dynamic=no
-frame_pointer=no
-terminator_fuzzing=no
 contracts=yes
+contrib=yes
+coverage=no
+noptions=no
+dynamic=no
 exceptcontracts=no
+flexible=yes
+frameptr=no
+ipasir=yes
+logging=no
+memfuzz=no
+metrics=yes
+pedantic=no
+pic=no
+profile=no
+quiet=no
+shared=no
+termfuzz=no
 tracing=yes
 unlocked=yes
-pedantic=no
-options=""
-quiet=no
 m32=no
-contrib=yes
-ipasir=yes
-shared=no
-pic=no
-deactivate_options=no
-metrics=yes
+
+# option lists
+
+libs=""
+options=""
 
 #--------------------------------------------------------------------------#
 
@@ -96,32 +109,43 @@ usage: configure [ <option> ... ]
 where '<option>' is one of the following
 
 -h|--help          print this command line summary
--g|--debug         compile with debugging information
--c|--check         compile with assertion checking (default for '-g')
--l|--log[ging]     include logging code (but disabled by default)
--a|--all           short cut for all above, e.g., '-g -l' (thus also '-c')
+
+-g|--debug         'Debug' build (implies '-c', '-s')
+-r|--release       'Release' build (default)
+
+--competition      configure for the competition
+                   ('--quiet', '--no-contracts', '--no-tracing', '--no-metrics')
+
+-c|--check         assertion checking (default for 'Debug' build)
+-s|--symbols       produce and include symbols (default for 'Debug' build)
+-o|--optimize      optimized compilation (default for 'Release' build)
+
+-l|--log[ging]     include logging code (disabled by default)
+-a|--all           short cut for '-c -l -s'
+
 -q|--quiet         exclude message and profiling code (logging too)
 -p|--pedantic      add '--pedantic' and '-Werror' compilation flag
--s|--symbols       add '-ggdb3' (even for optimized compilation)
 
 --check-missed     compile with expensive assertion checking for missed
                    implications (needs '-c')
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
---memory[-fuzzing] compile with '-rdynamic -fno-omit-frame-pointer' and
-                   '-DMOBICAL_MEMORY' to fuzz for bad memory allocation handling
---terminate[-fuzzing]   compile with '-rdynamic -fno-omit-frame-pointer' and
-                   '-DMOBICAL_TERMINATE' to fuzz for bad terminator handling
+
+--memory[-fuzzing] compile with '-DMOBICAL_MEMORY' to fuzz for bad memory
+		   allocation handling, in addition for precisely printing
+		   function call traces on failing test traces uses further
+		   '-rdynamic' (not on MacOS) and '-fno-omit-frame-pointer'
+
+--terminate[-fuzzing]   compile with '-DMOBICAL_TERMINATE' to fuzz for bad
+                        terminator handling and use -fno-omit-frame-pointer'
+			and and possibly '-rdynamic' as above
 
 --no-contracts     compile without API contract checking code
 --except-contracts API contract violation exception (instead of abort)
 --no-tracing       compile without API call tracing code
 --no-contrib       compile without contributed code
 --no-ipasir        compile without ipasir interface
-
---competition      configure for the competition
-                   ('--quiet', '--no-contracts', '--no-tracing', '--no-metrics')
 
 --no-options       hard-code options
 
@@ -152,7 +176,6 @@ will have the same effect as
 The following configuration options might be usefull during porting the
 code to a new platform and are usually not necessary to change.
 
---no-closefrom     use our own 'closefrom' replacement
 --no-flexible      do not use flexible array members
 --no-unlocked      force compilation without unlocked IO
 EOF
@@ -167,16 +190,19 @@ do
 
     -h|--help) usage;;
 
+    -g|--debug) debug=yes;build=Debug;;
+    -r|--release) debug=no;build=Release;;
+
     -a|--all) all=yes;;
-
-    -g|--debug) debug=yes;;
-    -c|--check) check=yes;;
-    -l|--log|--logging) logging=yes;;
-
-    -l*) libs="$libs $1";;
 
     -p|--pedantic) pedantic=yes;;
     -q|--quiet) quiet=yes;;
+
+    -c|--check) check=yes;;
+    -s|--symbols) symbols=yes;;
+    -l|--log|--logging) logging=yes;; # Keep before next case!
+
+    -l*) libs="$libs $1";; # Keep after the previous case!
 
     --no-contracts | --no-contract) contracts=no;;
     --except-contracts | --except-contract) exceptcontracts=yes;;
@@ -189,20 +215,27 @@ do
     --coverage) coverage=yes;;
     --profile) profile=yes;;
 
-    --memory|--memory-fuzzing) memory_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
-    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing) terminator_fuzzing=yes;dynamic=yes;frame_pointer=yes;;
+    --memory|--memory-fuzzing) 
+      memfuzz=yes
+      frameptr=yes
+      dynamic=yes
+      ;;
+    --terminate|--terminator|--terminator-fuzzing|--terminate-fuzzing)
+      termfuzz=yes
+      dynamic=yes
+      frameptr=yes
+      ;;
 
     --competition) competition=yes;;
-    --no-options) deactivate_options=yes;;
+    --no-options) noptions=yes;;
 
-    --no-closefrom) closefrom=no;;
     --no-flexible) flexible=no;;
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
     -fpic|-fPIC) options="$options $1"; pic=yes;;
-    -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
-    -s|--symbols) options="$options -ggdb3";;
+    -f*|-W*|-ggdb3) options="$options $1";;
+    -O|-O1|-O2|-O3) options="$options $1"; optimize=no;;
     -static*) options="$options $1";;
     -shared|--shared) shared=yes;;
 
@@ -238,30 +271,39 @@ fi
 if [ $all = yes ]
 then
   [ $check = yes ] && die "'-a' subsumes '-c'"
-  [ $debug = yes ] && die "'-a' subsumes '-g'"
   [ $logging = yes ] && die "'-a' subsumes '-l'"
+  [ $symbols = yes ] && die "'-a' subsumes '-s'"
   check=yes
-  debug=yes
   logging=yes
+  symbols=yes
 elif [ $debug = yes ]
 then
   [ $check = yes ] && die "'-g' subsumes '-c'"
+  [ $symbols = yes ] && die "'-g' subsumes '-s'"
   check=yes
+elif [ $release = yes ]
+then
+  [ $optimize = yes ] && die "default '-r' subsumes '-o'"
 fi
 
 if [ $checkmissed = yes ]
 then
-  [ $check = no ] && die "'--check-missed' requires assertion checking ('-c')"
+  [ $check = no ] && \
+    die "'--check-missed' requires assertion checking ('-c')"
 fi
 
 if [ $contracts = no ]
 then
-  [ $exceptcontracts = yes ] && die "'--except-contract' not compatible with '--no-contract'"
+  [ $exceptcontracts = yes ] && \
+    die "'--except-contract' not compatible with '--no-contract'"
 fi
+
 
 #--------------------------------------------------------------------------#
 
 # Generate and enter 'build' directory if not already in sub-directory.
+
+msg "'$build' build"
 
 build_in_default_build_sub_directory () {
   if [ -d build ]
@@ -331,15 +373,28 @@ fi
 [ x"$CFLAGS" = x ] || CFLAGS="$CFLAGS "
 
 case x"$CXX" in
-  x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra"; CFLAGS="${CFLAGS}-Wall -Wextra";;
-  *) CXXFLAGS="${CXXFLAGS}-W"; CFLAGS="${CFLAGS}-W";;
+  x*g++*|x*clang++*)
+    CXXFLAGS="${CXXFLAGS}-Wall -Wextra"
+    CFLAGS="${CFLAGS}-Wall -Wextra"
+    ;;
+  *)
+    CXXFLAGS="${CXXFLAGS}-W"
+    CFLAGS="${CFLAGS}-W"
+    ;;
 esac
 
-if [ $debug = yes ]
+[ $check = unknown ] && check=$debug
+[ $optimize = unknown ] && optimize=$release
+[ $symbols = unknown ] && symbols=$debug
+
+if [ $symbols = yes ]
 then
   CXXFLAGS="$CXXFLAGS -g"
   CFLAGS="$CFLAGS -g"
-else
+fi
+
+if [ $optimize = yes ]
+then
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3"; CFLAGS="$CFLAGS -O3";;
     *) CXXFLAGS="$CXXFLAGS -O"; CFLAGS="$CFLAGS -O";;
@@ -365,24 +420,21 @@ then
   metrics=no
 fi
 
-[ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
-[ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
-[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
+if [ "`uname`" = Darwin ]
+then
+  apple=yes
+else
+  apple=no
+fi
+
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
-[ $metrics = no ] && CXXFLAGS="$CXXFLAGS -DNMETRICS"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
 
-[ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
-[ $logging = yes ] && CFLAGS="$CFLAGS -DLOGGING"
-[ $quiet = yes ] && CFLAGS="$CFLAGS -DQUIET"
-[ $profile = yes ] && CFLAGS="$CFLAGS -pg"
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
-[ $metrics = no ] && CFLAGS="$CFLAGS -DNMETRICS"
+[ $profile = yes ] && CFLAGS="$CFLAGS -pg"
 
-[ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_MEMORY"
-[ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_TERMINATE"
-[ $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
-[ $frame_pointer = yes ] && CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+[ $apple = no -a $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
+[ $frameptr = yes ] && CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
 
 if [ $pedantic = yes ]
 then
@@ -399,6 +451,19 @@ then
   esac
 fi
 
+[ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
+[ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $metrics = no ] && CXXFLAGS="$CXXFLAGS -DNMETRICS"
+[ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
+
+[ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
+[ $logging = yes ] && CFLAGS="$CFLAGS -DLOGGING"
+[ $metrics = no ] && CFLAGS="$CFLAGS -DNMETRICS"
+[ $quiet = yes ] && CFLAGS="$CFLAGS -DQUIET"
+
+[ $memfuzz = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_MEMORY"
+[ $termfuzz = yes ] && CXXFLAGS="$CXXFLAGS -DMOBICAL_TERMINATE"
+
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
 [ $exceptcontracts = yes ] && CXXFLAGS="$CXXFLAGS -DEXCEPTIONS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
@@ -413,8 +478,8 @@ fi
 [ $shared = yes -a $pic = no ] && CFLAGS="$CFLAGS -fpic"
 
 [ $checkmissed = yes ] && CXXFLAGS="$CXXFLAGS -DCHECKMISSED"
-[ $deactivate_options = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
-[ $deactivate_options = yes ] && CFLAGS="$CXXFLAGS -DNOPTIONS"
+[ $noptions = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
+[ $noptions = yes ] && CFLAGS="$CXXFLAGS -DNOPTIONS"
 
 CXXFLAGS="$CXXFLAGS$options"
 CFLAGS="$CFLAGS$options"
@@ -586,44 +651,6 @@ else
 fi
 
 [ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
-
-#--------------------------------------------------------------------------#
-
-# We need 'closefrom' to avoid a race in reentrant multi-threaded writing of
-# compressed files.  This is due to copying filedescriptors during fork,
-# which is needed to support safe writing of compressed files through a pipe
-# and the help of an external compression utility (such as 'gzip').
-
-if [ $closefrom = yes ]
-then
-  feature=./configure-have-closefrom
-cat <<EOF > $feature.cpp
-extern "C" {
-#include <unistd.h>
-};
-int main () {
-  closefrom (0);
-  return 0;
-}
-EOF
-  if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
-  then
-    if $feature.exe
-    then
-      msg "'closefrom' seems to be working"
-    else
-      msg "'closefrom' does not seem to be working"
-      closefrom=no
-    fi
-  else
-    msg "can not use 'closefrom' (failed to compile '$feature.cpp')"
-    closefrom=no
-  fi
-else
-  msg "not using 'closefrom' (since '--no-closefrom' specified)"
-fi
-
-[ $closefrom = no ] && CXXFLAGS="$CXXFLAGS -DNCLOSEFROM"
 
 #--------------------------------------------------------------------------#
 # Preparing make goals (@GOALS@)

@@ -89,7 +89,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   LOG (subsumed, "subsumed to be deleted");
   LOG (subsuming, "subsuming to be (un)deleted");
   if (subsumed->redundant && subsuming->redundant &&
-      subsuming->glue < subsumed->glue) {
+      subsumed->glue < subsuming->glue) {
     promote_clause (subsuming, subsumed->glue);
   }
   if (subsumed->redundant) {

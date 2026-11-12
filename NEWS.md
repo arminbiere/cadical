@@ -3,6 +3,12 @@ Version 3.1.0
 
 User Facing Changes:
 
+- Build configuration change: `-a` and `--all` now imply `-l`, `-c`, and
+  `-s` but remain in optimizing build.  There is further an new `-r` resp.
+  `--release` option which is default (and the opposite of `-g` or `debug`).
+  The `-s` or `--symbols` option now only sets `-g` as compile-flag and
+  not the GNU specific `-ggdb3` anymore to include a symbol table.
+
 - We finally gave up on compressed compressed file writing as we were not able
   to keep it working in a multi-threaded context in a portable way. Note, that
   due to security issues we had to use a 'fork/exec' approach (for writing)

@@ -437,7 +437,11 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
       for (auto lit : cubes2[j])
         assume (lit);
       restore_clauses ();
-      int trivial_unsat = propagate ();
+      if (unsat) {
+        LOG ("global unsat");
+        break;
+      }
+      const bool trivial_unsat = propagate ();
       // preprocess_round(0); //uncomment maybe
 
       if (unsat) {
