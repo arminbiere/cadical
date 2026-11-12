@@ -786,11 +786,11 @@ long Internal::condition_round (long delta) {
       //
       vector<int> wits;
       for (const auto &lit : trail)
-          if (is_autarky_literal (lit))
-            wits.push_back (lit);
+        if (is_autarky_literal (lit))
+          wits.push_back (lit);
       if (proof)
         proof->weaken_minus (c);
-      
+
       external->create_cube_stack (wits);
       external->push_cube_clause (c);
       external->terminate_cube_stack ();

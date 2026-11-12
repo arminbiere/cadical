@@ -55,6 +55,7 @@ class File {
 
   static FILE *read_pipe (Internal *, const char *fmt, const int *sig,
                           const char *path);
+
 public:
   static char *find_program (const char *prg); // search in 'PATH'
   static bool exists (const char *path);       // file exists?

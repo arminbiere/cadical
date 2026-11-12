@@ -147,40 +147,40 @@ uint64_t maximum_resident_set_size () {
 
 #else
 
-  // This seems to work on Linux (man page says since Linux 2.6.32). For
-  // Apple, the unit of ru_maxrss changed over time (accross macOS version)
-  // and is not consistent between iOS and macOS. We follow the current
-  // macOS version (macOS 26).
-  uint64_t maximum_resident_set_size () {
-    struct rusage u;
-    if (getrusage (RUSAGE_SELF, &u))
-      return 0;
+// This seems to work on Linux (man page says since Linux 2.6.32). For
+// Apple, the unit of ru_maxrss changed over time (accross macOS version)
+// and is not consistent between iOS and macOS. We follow the current
+// macOS version (macOS 26).
+uint64_t maximum_resident_set_size () {
+  struct rusage u;
+  if (getrusage (RUSAGE_SELF, &u))
+    return 0;
 #ifndef __APPLE__
-    return ((uint64_t) u.ru_maxrss) << 10;
+  return ((uint64_t) u.ru_maxrss) << 10;
 #else
-    return ((uint64_t) u.ru_maxrss);
+  return ((uint64_t) u.ru_maxrss);
 #endif
-  }
+}
 
-  // Unfortunately 'getrusage' on Linux does not support current resident
-  // set size (the field 'ru_ixrss' is there but according to the man page
-  // 'unused'). Thus we fall back to use the '/proc' file system instead. So
-  // this is not portable at all and needs to be replaced on other systems
-  // The code would still compile though (assuming 'sysconf' and
-  // '_SC_PAGESIZE' are available).
+// Unfortunately 'getrusage' on Linux does not support current resident
+// set size (the field 'ru_ixrss' is there but according to the man page
+// 'unused'). Thus we fall back to use the '/proc' file system instead. So
+// this is not portable at all and needs to be replaced on other systems
+// The code would still compile though (assuming 'sysconf' and
+// '_SC_PAGESIZE' are available).
 
-  uint64_t current_resident_set_size () {
-    char path[64];
-    snprintf (path, sizeof path, "/proc/%" PRId64 "/statm",
-              (int64_t) getpid ());
-    FILE *file = fopen (path, "r");
-    if (!file)
-      return 0;
-    uint64_t dummy, rss;
-    int scanned = fscanf (file, "%" PRIu64 " %" PRIu64 "", &dummy, &rss);
-    fclose (file);
-    return scanned == 2 ? rss * sysconf (_SC_PAGESIZE) : 0;
-  }
+uint64_t current_resident_set_size () {
+  char path[64];
+  snprintf (path, sizeof path, "/proc/%" PRId64 "/statm",
+            (int64_t) getpid ());
+  FILE *file = fopen (path, "r");
+  if (!file)
+    return 0;
+  uint64_t dummy, rss;
+  int scanned = fscanf (file, "%" PRIu64 " %" PRIu64 "", &dummy, &rss);
+  fclose (file);
+  return scanned == 2 ? rss * sysconf (_SC_PAGESIZE) : 0;
+}
 
 #endif
 

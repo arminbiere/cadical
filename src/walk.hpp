@@ -54,7 +54,7 @@ struct ClauseOrBinary {
 #else
       uintptr_t clause_ptr : 63; // 63 bits for clause pointer
 #endif
-      ClausePtr () : binary (0), clause_ptr (0){};
+      ClausePtr () : binary (0), clause_ptr (0) {};
     } clause;
     struct TaggedBinary {
       bool binary : 1;
@@ -80,7 +80,7 @@ struct ClauseOrBinary {
 
       int lit (Internal *) const;
     } b; // Must also occupy 63 bits
-    clause_or_binary () : clause (){};
+    clause_or_binary () : clause () {};
   } tagged;
 
   ClauseOrBinary () : tagged () {}

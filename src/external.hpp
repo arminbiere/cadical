@@ -212,23 +212,25 @@ public:
   }
   /*----------------------------------------------------------------------*/
   void push_clause_on_extension (int iwit, Clause *);
-  void push_clause_on_extension (const int64_t id, int iwit, 
-                                       const vector<int> &c);
-  void push_binary_clause_on_extension (int64_t id, int iwit,
-                                              int other);
-  void push_external_clause_on_extension (const vector<int> &c, 
-                                            const vector<int> &w, int64_t id);
-  /* ------------------------------------------------------------------------ */
+  void push_clause_on_extension (const int64_t id, int iwit,
+                                 const vector<int> &c);
+  void push_binary_clause_on_extension (int64_t id, int iwit, int other);
+  void push_external_clause_on_extension (const vector<int> &c,
+                                          const vector<int> &w, int64_t id);
+  /* ------------------------------------------------------------------------
+   */
   void create_cube_stack (const vector<int> &iwit_cube);
   void push_cube_clause (Clause *c);
   void terminate_cube_stack ();
 
-  void create_cube_stack_and_push_external_clause ( const vector<int> &clause, 
-    const vector<int> &ewit_cube, int64_t id);
-  /* ------------------------------------------------------------------------ */
+  void create_cube_stack_and_push_external_clause (
+      const vector<int> &clause, const vector<int> &ewit_cube, int64_t id);
+  /* ------------------------------------------------------------------------
+   */
   void push_external_clause_and_witness_on_extension (
       const vector<int> &clause, const vector<int> &witness, int64_t id);
-  /* ------------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------------
+   */
   struct ExtendStats {
     int64_t extension_size, updated, flipped, extend_blocked, clauses_read;
   };
@@ -279,12 +281,11 @@ public:
 
   void defragment_clause_data ();
 
-  void restore_clause (vector<int>::const_iterator begin, 
-                       vector<int>::const_iterator end,
-                       const int64_t id,
+  void restore_clause (vector<int>::const_iterator begin,
+                       vector<int>::const_iterator end, const int64_t id,
                        const int ewit, const int blit);
-  
-  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses, 
+
+  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses,
                            RestoreStats &clauses);
 
   void restore ();
