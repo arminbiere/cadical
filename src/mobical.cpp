@@ -362,7 +362,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0){};
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
 };
 
 class Mopts {
@@ -1847,13 +1847,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d){};
+    Decisions (int l, int d) : lit (l), delay (d) {};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d){};
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {
@@ -5630,8 +5630,6 @@ void Trace::generate_options (Random &random, Size size) {
     // deterministic. Same with quiet options
     if (!strcmp (o.name, "log"))
       continue;
-    if (!strcmp (o.name, "logsort"))
-      continue;
     if (!strcmp (o.name, "logpointer"))
       continue;
     if (!strcmp (o.name, "verbose"))
@@ -5687,10 +5685,6 @@ void Trace::generate_options (Random &random, Size size) {
       Options::begin (), Options::end (),
       [] (const Option o) { return !strcmp (o.name, "log"); });
   const bool should_log = random.generate_bool ();
-  auto logsort_option = std::find_if (
-      Options::begin (), Options::end (),
-      [] (const Option o) { return !strcmp (o.name, "logsort"); });
-  const bool should_logsort = random.generate_bool ();
   auto logpointer_option = std::find_if (
       Options::begin (), Options::end (),
       [] (const Option o) { return !strcmp (o.name, "logpointer"); });
@@ -5707,11 +5701,9 @@ void Trace::generate_options (Random &random, Size size) {
 #ifdef LOGGING
   // sanity check
   assert (log_option != Options::end ());
-  assert (logsort_option != Options::end ());
   assert (logpointer_option != Options::end ());
 #else
   assert (log_option == Options::end ());
-  assert (logsort_option == Options::end ());
   assert (logpointer_option == Options::end ());
 #endif
 #ifndef QUIET
@@ -5726,11 +5718,6 @@ void Trace::generate_options (Random &random, Size size) {
       should_log) { // only if the option was found
 #ifdef LOGGING
     push_back (new SetCall (log_option->name, should_log));
-#endif
-  }
-  if (logsort_option != Options::end () && should_logsort) {
-#ifdef LOGGING
-    push_back (new SetCall (logsort_option->name, should_logsort));
 #endif
   }
   if (logpointer_option != Options::end () && should_logpointer) {

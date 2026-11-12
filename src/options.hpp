@@ -168,7 +168,6 @@ OPTION( instantiateonce,      1,  0,  1,0,0,1, "instantiate each clause once") \
 OPTION( lidrup,               0,  0,  1,0,0,1, "linear incremental proof format") \
 LOGOPT( log,                  0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logpointer,           0,  0,  1,0,0,0, "log pointer of clauses") \
-LOGOPT( logsort,              0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,                 0,  0,  1,0,0,1, "use LRAT proof format") \
 OPTION( lucky,                1,  0,  1,0,0,1, "lucky phases") \
 OPTION( luckyassumptions,     1,  0,  1,0,0,1, "lucky phases with assumptions") \
