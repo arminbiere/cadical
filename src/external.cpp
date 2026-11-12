@@ -497,7 +497,8 @@ void External::add_observed_var (int elit) {
   // internal add-observed-var had to backtrack to root-level already
   assert (!internal->level);
 
-  std::vector<int> assigned = {unit};
+  std::vector<int> assigned;
+  assigned.push_back (unit);
   propagator->notify_assignment (assigned);
 }
 
