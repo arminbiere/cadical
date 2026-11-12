@@ -241,7 +241,9 @@ int Internal::decide_and_propagate_all_assumptions (
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
   int res = 0;
-  while (!res && is_constraint_level (level)) {
+  if (assumptions.empty () && !constraint_cat)
+    return res;
+  while (!res) {
     if (unsat)
       res = 20;
     else if (unsat_constraint)
@@ -264,6 +266,8 @@ int Internal::decide_and_propagate_all_assumptions (
       }
       break;
     } else {
+      if (!is_constraint_level (level))
+        break;
       notify_assignments ();
       res = decide ();
     }
