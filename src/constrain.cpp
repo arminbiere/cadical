@@ -65,6 +65,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
     } else {
       tmp = val (*j);
       if (tmp < 0) {
+        assert (mini_chain.empty ());
         if (lrat) {
           mark (*j);
           analyzed.push_back (*j);
@@ -73,8 +74,12 @@ void Internal::constrain (int lit, int64_t ext_id) {
           // the external units are handled somewhere else
           if (!external->ext_units[eidx]) {
             lrat_chain.push_back (unit_id (-*j));
-          }
+            mini_chain.push_back (unit_id (-*j));
+          } else
+            mini_chain.push_back (external->ext_units[eidx]);
         }
+        proof->add_assumption_clause (++clause_id, *j, mini_chain, false);
+        mini_chain.clear ();
         derived_constraint = true;
         LOG ("removing falsified literal %d from constraint clause", *j);
       } else if (tmp > 0) {
@@ -225,11 +230,7 @@ void Internal::analyze_failing_constraint (int failed) {
 
   if (w.reason == external_reason) {
     w.reason = learn_external_reason_clause (-failed, 0, true);
-    if (!w.reason) {
-      // TODO: cover this
-      assert (!w.level);
-      w.level = 0;
-    }
+    assert (w.reason || !w.level);
   }
   // unit.
   if (!w.level) {
