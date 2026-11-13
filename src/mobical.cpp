@@ -6890,7 +6890,7 @@ void Mobical::add_statistics (Solver *solver) {
 
 void Mobical::print_stat (const char *name, int64_t primary, int64_t inc,
                           int64_t secondary, bool verbose) {
-  if (!primary && verbose)
+  if (!primary && !verbose)
     return;
   const int relative = percent (inc, secondary);
   const size_t offset1 =
