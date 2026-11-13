@@ -384,6 +384,26 @@ case x"$CXX" in
     ;;
 esac
 
+case x"$CXX" in
+  x*clang++*)
+    clang=yes
+    msg "assuming 'clang' used as compiler"
+    ;;
+  *) 
+    msg "assuming 'clang' NOT used as compiler"
+    clang=no
+    ;;
+esac
+
+if [ "`uname`" = Darwin ]
+then
+  msg "assuming compiling for 'MacOS'"
+  apple=yes
+else
+  msg "assuming NOT compiling for 'MacOS'"
+  apple=no
+fi
+
 [ $check = unknown ] && check=$debug
 [ $optimize = unknown ] && optimize=$release
 [ $symbols = unknown ] && symbols=$debug
@@ -421,12 +441,8 @@ then
   metrics=no
 fi
 
-if [ "`uname`" = Darwin ]
-then
-  apple=yes
-else
-  apple=no
-fi
+[ $dynamic = yes -a $apple = yes -o $clang = yes ] && dynamic=no
+
 
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg -DPROFILE_MODE"
@@ -434,7 +450,7 @@ fi
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 [ $profile = yes ] && CFLAGS="$CFLAGS -pg"
 
-[ $apple = no -a $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
+[ $dynamic = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic"
 [ $frameptr = yes ] && CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
 
 if [ $pedantic = yes ]
