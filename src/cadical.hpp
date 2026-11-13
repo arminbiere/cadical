@@ -880,8 +880,8 @@ public:
   // It returns '1' if the literal is implied by the formula, '-1' if its
   // negation is implied, or '0' if this is unclear at this point.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (VALID || SOLVING)
+  //   ensure (VALID || SOLVING)
   //
   int fixed (int lit) const;
 

@@ -1104,7 +1104,7 @@ bool Solver::constraint_failed () {
 
 int Solver::fixed (int lit) const {
   TRACE (fixed, "fixed", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   int res = external->fixed (lit);
   LOG_API_CALL_RETURNS ("fixed", lit, res);

@@ -1060,6 +1060,8 @@ class Mobical : public Handler {
   int64_t spurious = 0;
 
   void add_statistics (Solver *solver);
+  void print_stat (const char *name, int64_t primary, int64_t inc,
+                   int64_t secondary, bool verbose);
   void print_statistics ();
   void section (const char *);
 
@@ -6886,35 +6888,33 @@ void Mobical::add_statistics (Solver *solver) {
 #undef METRIC
 }
 
-#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY, VERBOSE) \
-  do { \
-    if (!PRIMARY && !VERBOSE) \
-      break; \
-    const int RELATIVE = percent (INC, SECONDARY); \
-    const size_t PNUMBER = std::to_string (PRIMARY).length (); \
-    const size_t OFFSET1 = 55 - strlen (NAME) - PNUMBER; \
-    const size_t SNUMBER = std::to_string (INC).length (); \
-    const size_t OFFSET2 = 10 - SNUMBER; \
-    const size_t RNUMBER = std::to_string (RELATIVE).length (); \
-    const size_t OFFSET3 = 4 - RNUMBER; \
-    prefix (); \
-    terminal.normal (); \
-    cerr << NAME << ":"; \
-    cerr << setfill (' ') << setw (OFFSET1) << " "; \
-    cerr << PRIMARY << " "; \
-    cerr << setfill (' ') << setw (OFFSET2) << " "; \
-    cerr << INC << " "; \
-    cerr << setfill (' ') << setw (OFFSET3) << " "; \
-    terminal.bold (); \
-    if (RELATIVE < 20) \
-      terminal.red (true); \
-    else if (RELATIVE > 80) \
-      terminal.green (true); \
-    else \
-      terminal.yellow (true); \
-    cerr << RELATIVE << " %" << std::endl; \
-    terminal.normal (); \
-  } while (0)
+void Mobical::print_stat (const char *name, int64_t primary, int64_t inc,
+                          int64_t secondary, bool verbose) {
+  if (!primary && verbose)
+    return;
+  const int relative = percent (inc, secondary);
+  const size_t offset1 =
+      55 - strlen (name) - std::to_string (primary).length ();
+  const size_t offset2 = 10 - std::to_string (inc).length ();
+  const size_t offset3 = 4 - std::to_string (relative).length ();
+  prefix ();
+  terminal.normal ();
+  cerr << name << ":";
+  cerr << setfill (' ') << setw (offset1) << " ";
+  cerr << primary << " ";
+  cerr << setfill (' ') << setw (offset2) << " ";
+  cerr << inc << " ";
+  cerr << setfill (' ') << setw (offset3) << " ";
+  terminal.bold ();
+  if (relative < 20)
+    terminal.red (true);
+  else if (relative > 80)
+    terminal.green (true);
+  else
+    terminal.yellow (true);
+  cerr << relative << " %" << std::endl;
+  terminal.normal ();
+}
 
 void Mobical::section (const char *title) {
   prefix ();
@@ -6946,12 +6946,12 @@ void Mobical::print_statistics () {
   if (summary) {
     section ("summary");
 #define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
-  PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
-                shared->executed, 1);
+  print_stat (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
+              shared->executed, 1);
 #ifndef NMETRICS
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
-  PRINT_STATER (#NAME, (int64_t) shared->stats_sum.NAME, \
-                (int64_t) shared->stats_count.NAME, shared->executed, 1);
+  print_stat (#NAME, (int64_t) shared->stats_sum.NAME, \
+              (int64_t) shared->stats_count.NAME, shared->executed, 1);
 #else
 #define METRIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL)
 #endif
@@ -6962,10 +6962,9 @@ void Mobical::print_statistics () {
 
     section ("calls");
     for (uint64_t i = INIT; i < INVALID_TYPE; i++) {
-      CallType type = (CallType) i;
-      PRINT_STATER (ct_to_str (type), shared->call_type_executed[i],
-                    shared->call_type_caught[i],
-                    shared->call_type_executed[i], verbose);
+      print_stat (ct_to_str ((CallType) i), shared->call_type_executed[i],
+                  shared->call_type_caught[i],
+                  shared->call_type_executed[i], verbose);
     }
 
     section ("total");
