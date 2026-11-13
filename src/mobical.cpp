@@ -6941,9 +6941,9 @@ void Mobical::print_call (const char *name, int64_t primary, int64_t inc,
   cerr << setfill (' ') << setw (offset1) << " ";
   cerr << primary << " ";
   cerr << setfill (' ') << setw (offset2) << " ";
-  if (per_trace < 0.1)
+  if (per_trace < 0.2)
     terminal.red (true);
-  else if (per_trace > 10)
+  else if (per_trace > 5)
     terminal.green (true);
   else
     terminal.yellow (true);
