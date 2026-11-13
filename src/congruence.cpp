@@ -7068,7 +7068,6 @@ void Closure::add_ite_matching_proof_chain (
     LRAT_ID id2 = 0;
     if (internal->lrat) {
       lrat_chain.push_back (h_neg_else_id);
-      COVER (!g_else_id);
       if (g_else_id)
         lrat_chain.push_back (g_else_id);
     }
@@ -7123,7 +7122,6 @@ void Closure::add_ite_matching_proof_chain (
     if (internal->lrat) {
       assert (h_neg_then_id);
       lrat_chain.push_back (h_neg_then_id);
-      COVER (!g_then_id);
       if (g_then_id)
         lrat_chain.push_back (g_then_id);
     }
