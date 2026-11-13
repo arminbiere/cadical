@@ -42,8 +42,7 @@
 //  bit 29: The clause ID fits into 32 bits.
 // This allows a more compact representation in the common case.
 //
-/* --------------------------------------------------------------------------
- */
+/*------------------------------------------------------------------------*/
 namespace CaDiCaL {
 
 static constexpr uint32_t CLAUSE_SMALL = 1u << 31;
@@ -287,8 +286,7 @@ void External::push_binary_clause_on_extension (int64_t id, int iwit,
   witness_data.push_back ({ewit, blit, idx});
 }
 
-/* --------------------------------------------------------------------------
- */
+/*------------------------------------------------------------------------*/
 // The procedure for creating a witness cube stack is as follows:
 // First, 'create_cube_stack' creates a cube stack for the given witness
 // cube. Then, one or more clauses are added by repeatedly calling
@@ -494,7 +492,7 @@ void External::push_external_clause_on_extension (const vector<int> &c,
 
     clause_data.push_back (elit);
   }
-  assert (blit);
+  assert (blit || size == 1);
 
   uint32_t updated_size = size - 1;
   if (embedded) {
@@ -662,14 +660,15 @@ void External::extend () {
     const int blit = entry.blit;
     const int ewit = entry.ewit;
 
-    // blit && ewit ==> regular clause entry
-    // !blit && ewit ==> witness cube reference
-    if (!blit) { // cube stack reference.
+    // ewit  ==> regular clause entry
+    // !ewit ==> witness cube reference
+    if (!ewit) { // cube stack reference.
+      assert (!blit);
       extend_cube_stack (idx, stats);
       continue;
     }
-    assert (ewit);
-    if (ival (blit) == blit || ival (ewit) == ewit) {
+    // blit can be zero if a non-frozen unit clause was pushed.
+    if ((blit && ival (blit) == blit) || ival (ewit) == ewit) {
       stats.extend_blocked++;
       continue;
     }
@@ -723,8 +722,7 @@ void External::extend () {
   LOG ("extended");
 }
 
-/* --------------------------------------------------------------------------
- */
+/* -----------------------------------------------------------------------*/
 bool External::traverse_cube_stack (WitnessIterator &it, uint32_t ss_idx) {
   vector<int> witness;
   auto q = clause_data.begin () + ss_idx;
@@ -781,11 +779,11 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     const int blit = entry.blit;
     const int ewit = entry.ewit;
 
-    if (!blit) {
+    if (!ewit) {
+      assert (!blit);
       traverse_cube_stack (it, idx);
       continue;
     }
-    assert (ewit);
 
     auto q = clause_data.begin () + idx;
 
@@ -798,7 +796,9 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     auto lit = q + (id_long ? 3 : 2);
 
     clause.clear ();
-    clause.push_back (blit);
+
+    if (blit)
+      clause.push_back (blit);
 
     auto end_of_lits = lit + other_lits_size;
 
@@ -833,12 +833,11 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
     const int blit = entry.blit;
     const int ewit = entry.ewit;
 
-    if (!blit) {
+    if (!ewit) {
+      assert (!blit);
       traverse_cube_stack (it, idx);
       continue;
     }
-
-    assert (ewit);
 
     auto q = clause_data.begin () + idx;
 
@@ -852,7 +851,9 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
     auto end_of_lits = lit + other_lits_size;
 
     clause.clear ();
-    clause.push_back (blit);
+
+    if (blit)
+      clause.push_back (blit);
 
     if (wit_embedded)
       clause.push_back (ewit);

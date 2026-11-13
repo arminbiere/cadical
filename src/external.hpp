@@ -217,8 +217,7 @@ public:
   void push_binary_clause_on_extension (int64_t id, int iwit, int other);
   void push_external_clause_on_extension (const vector<int> &c,
                                           const vector<int> &w, int64_t id);
-  /* ------------------------------------------------------------------------
-   */
+  /* ---------------------------------------------------------------------*/
   void create_cube_stack (const vector<int> &iwit_cube);
   void push_cube_clause (Clause *c);
   void terminate_cube_stack ();

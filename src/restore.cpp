@@ -176,11 +176,11 @@ void External::defragment_clause_data () {
 
   for (auto p = witness_data.begin (); p != witness_data.end (); ++p) {
     WitnessEntry &entry = *p;
-    const int blit = entry.blit;
+    const int ewit = entry.ewit;
     const uint64_t idx = entry.idx;
 
-    if (!blit) {
-      assert (!entry.ewit); // ewit
+    if (!ewit) {
+      assert (!entry.blit); // ewit
       auto begin = clause_data.begin () + idx;
       auto end = begin;
       // Skip the witness cube and its terminating zero.
@@ -213,7 +213,6 @@ void External::defragment_clause_data () {
       write += stack_size;
       continue;
     }
-    assert (entry.ewit);
 
     bool wit_embedded, id_long;
     unsigned other_lits_size;
@@ -280,15 +279,14 @@ void External::restore () {
     const int blit = entry.blit;
     const uint64_t idx = entry.idx;
 
-    if (!blit) {
-      assert (!ewit);
+    if (!ewit) {
+      assert (!blit);
       if (!restore_cube_stack (idx, skipped_witness, clauses)) {
         *write++ = entry;
       }
       continue;
     }
 
-    assert (ewit);
     clauses.total++;
 
     // restore the corresponding clause
