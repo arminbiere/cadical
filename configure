@@ -190,8 +190,8 @@ do
 
     -h|--help) usage;;
 
-    -g|--debug) debug=yes;build=Debug;;
-    -r|--release) debug=no;build=Release;;
+    -g|--debug) release=no;debug=yes;build=Debug;;
+    -r|--release) release=yes;debug=no;build=Release;;
 
     -a|--all) all=yes;;
 
@@ -236,6 +236,7 @@ do
     -fpic|-fPIC) options="$options $1"; pic=yes;;
     -f*|-W*|-ggdb3) options="$options $1";;
     -O|-O1|-O2|-O3) options="$options $1"; optimize=no;;
+    -o|--optimize) optimize=yes;;
     -static*) options="$options $1";;
     -shared|--shared) shared=yes;;
 
