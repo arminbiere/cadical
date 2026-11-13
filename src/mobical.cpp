@@ -6899,6 +6899,10 @@ void Mobical::print_stat (const char *name, int64_t primary, int64_t inc,
   const size_t offset3 = 4 - std::to_string (relative).length ();
   prefix ();
   terminal.normal ();
+  if (!inc && !primary)
+    terminal.red (true);
+  else if (inc == secondary)
+    terminal.green (true);
   cerr << name << ":";
   cerr << setfill (' ') << setw (offset1) << " ";
   cerr << primary << " ";
