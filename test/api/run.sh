@@ -84,6 +84,7 @@ run () {
     src=$tests/$1.cpp
     language=""
     COMPILE="$CXX $CXXFLAGS"
+    [ x"$1" = xterminator ] && COMPILE="$COMPILE -pthread"
   else
     die "can not find '$tests/$1.c' nor '$tests/$1.cpp'"
   fi
