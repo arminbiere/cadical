@@ -53,42 +53,49 @@ void Internal::constrain (int lit, int64_t ext_id) {
   // use analyzed for tracking units with lrat
   assert (analyzed.empty ());
   for (vector<int>::const_iterator j = i; j != end; j++) {
-    int tmp = marked (*j);
+    const auto other = *j;
+    int tmp = marked (other);
     if (tmp > 0) {
       derived_constraint = true;
-      LOG ("removing duplicated literal %d from constraint", *j);
+      LOG ("removing duplicated literal %d from constraint", other);
     } else if (tmp < 0) {
-      LOG ("tautological since both %d and %d occur in constraint", -*j,
-           *j);
+      LOG ("tautological since both %d and %d occur in constraint", -other,
+           lit);
       satisfied_constraint = true;
       break;
     } else {
-      tmp = val (*j);
+      tmp = val (other);
       if (tmp < 0) {
         assert (mini_chain.empty ());
+        assert (clause.empty ());
         if (lrat) {
-          mark (*j);
-          analyzed.push_back (*j);
-          int elit = externalize (*j);
+          mark (other);
+          analyzed.push_back (other);
+          int elit = externalize (other);
           unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
           // the external units are handled somewhere else
           if (!external->ext_units[eidx]) {
-            lrat_chain.push_back (unit_id (-*j));
-            mini_chain.push_back (unit_id (-*j));
+            lrat_chain.push_back (unit_id (-other));
+            mini_chain.push_back (unit_id (-other));
           } else
             mini_chain.push_back (external->ext_units[eidx]);
         }
-        proof->add_assumption_clause (++clause_id, *j, mini_chain, false);
-        mini_chain.clear ();
+        if (proof) {
+          clause.push_back (-other);
+          proof->add_assumption_clause (++clause_id, clause, mini_chain,
+                                        false);
+          mini_chain.clear ();
+          clause.clear ();
+        }
         derived_constraint = true;
-        LOG ("removing falsified literal %d from constraint clause", *j);
+        LOG ("removing falsified literal %d from constraint clause", other);
       } else if (tmp > 0) {
-        LOG ("satisfied constraint with literal %d", *j);
+        LOG ("satisfied constraint with literal %d", other);
         satisfied_constraint = true;
         break;
       } else {
-        *i++ = *j;
-        mark (*j);
+        *i++ = other;
+        mark (other);
       }
     }
   }
