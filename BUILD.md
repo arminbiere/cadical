@@ -55,6 +55,7 @@ build system based on GNU `make`, then this is easily doable as follows.
     mkdir build
     cd build
     for f in ../src/*.cpp; do g++ -O3 -DNDEBUG -DNBUILD -c $f; done
+    for f in ../src/*.c; do gcc -O3 -DNDEBUG -DNBUILD -c $f; done
     ar rc libcadical.a `ls *.o | grep -v ical.o`
     g++ -o cadical cadical.o -L. -lcadical
     g++ -o mobical mobical.o -L. -lcadical
@@ -71,7 +72,8 @@ of the library).
 And if you really do not care about compilation time nor caching and just
 want to build the solver once manually then the following also works.
 
-    g++ -O3 -DNDEBUG -DNBUILD -o cadical `ls *.cpp | grep -v mobical`
+    g++ -O3 -DNDEBUG -DNBUILD -o cadical \
+      `ls *.cpp | grep -v mobical` -x c *.c
 
 Further note that the `configure` script provides some feature checks and
 might generate additional compiler flags necessary for compilation.  You

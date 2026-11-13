@@ -258,12 +258,14 @@ int Internal::decide_and_propagate_all_assumptions (
         break;
     } else if (satisfied ()) {
       assert (!res);
-      if (external) {
+      /* TODO: satisfied branch was never tested due to wrong condition
+      if (external_prop) {
         LOG ("found satisfied assignment ignoring the external propagator, "
              "so probably not valid");
       } else {
         res = 10;
       }
+      */
       break;
     } else {
       if (!is_constraint_level (level))
