@@ -1107,7 +1107,7 @@ void External::copy_flags (External &other) const {
     const int this_ilit = internal_lit (eidx);
     if (!this_ilit)
       continue;
-    const int other_ilit = other.e2i[eidx];
+    const int other_ilit = other.internal_lit (eidx);
     if (!other_ilit)
       continue;
     if (!internal->active (this_ilit))

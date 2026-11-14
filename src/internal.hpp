@@ -1707,7 +1707,7 @@ struct Internal {
   }
   void melt (int lit) {
     int idx = vidx (lit);
-    if ((size_t) idx < frozentab.size ()) {
+    if ((size_t) idx >= frozentab.size ()) {
       LOG ("variable %d completely molten", idx);
       return;
     }
