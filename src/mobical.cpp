@@ -6669,8 +6669,8 @@ void Trace::generate_violating (Random &random) {
     break;
   }
   case (CallType::COPY): {
-    push_back (new CopyCall ());
-    break;
+    // push_back (new CopyCall ());
+    // break;
   }
   case (CallType::WRITE_EXTENSION): {
     push_back (new WriteExtensionCall ("/dev/null"));

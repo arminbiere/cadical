@@ -216,7 +216,9 @@ void External::push_clause_on_extension (const int64_t id, int iwit,
   assert (blit);
 
   // Finally we update the size fields accordingly.
-  uint32_t updated_size = size - 1; // Blocking literal is stored elsewhere.
+  uint32_t updated_size = size;
+  if (blit)
+    updated_size--; // Blocking literal is stored elsewhere.
   if (embedded) {
     updated_size--;
     updated_size |= EMBEDDED;
@@ -494,7 +496,9 @@ void External::push_external_clause_on_extension (const vector<int> &c,
   }
   assert (blit || size == 1);
 
-  uint32_t updated_size = size - 1;
+  uint32_t updated_size = size;
+  if (blit)
+    updated_size--;
   if (embedded) {
     updated_size--;
     updated_size |= EMBEDDED;
