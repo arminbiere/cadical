@@ -1896,10 +1896,9 @@ bool Internal::vivify () {
       const int64_t old = (int64_t) stats.vivify_strength_irr;
       const int64_t old_tried = (int64_t) stats.vivify_checks;
       vivify_round (vivifier, limit);
-      if ((int64_t) stats.vivify_checks - old_tried == 0 ||
-          (float) ((int64_t) stats.vivify_strength_irr - old) /
-                  (float) ((int64_t) stats.vivify_checks - old_tried) <
-              0.01) {
+      const int64_t vivify_tried = stats.vivify_checks - old_tried;
+      const int64_t vivified = stats.vivify_strength_irr - old;
+      if (!vivify_tried || relative (vivify_tried, vivified) < 0.01) {
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
       } else {
         delaying_vivify_irredundant.bumpreasons.reduce_delay ();
