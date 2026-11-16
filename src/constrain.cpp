@@ -247,7 +247,7 @@ void Internal::analyze_failing_constraint (int failed) {
       proof->add_assumption_clause (id, -failed, lrat_chain, false);
     lrat_chain.clear ();
 
-    citten_unit_with_id (constraint_cat, id, -failed);
+    citten_unit_with_id_ignore_prime (constraint_cat, id, -failed);
     return;
   }
 

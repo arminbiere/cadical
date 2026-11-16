@@ -412,7 +412,7 @@ void Internal::eager_constraint_units () {
       clause.clear ();
       lrat_chain.clear ();
     }
-    citten_unit_with_id (constraint_cat, id, lit);
+    citten_unit_with_id_ignore_prime (constraint_cat, id, lit);
   }
   constraint_fixed.clear ();
 }
