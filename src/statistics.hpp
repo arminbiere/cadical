@@ -403,15 +403,15 @@
   METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
   METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
   STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
-  METRIC (vivify_strength,           2, percent, "%", strengthened) \
+  STATISTIC (vivify_strength,           2, percent, "%", strengthened) \
   METRIC (vivify_strength_irr,       2, percent, "%", vivify_strength) \
   METRIC (vivify_strength_tier1,     2, percent, "%", vivify_strength) \
   METRIC (vivify_strength_tier2,     2, percent, "%", vivify_strength) \
   METRIC (vivify_strength_tier3,     2, percent, "%", vivify_strength) \
-  METRIC (vivify_subsumed,           2, percent, "%", subsumed) \
+  STATISTIC (vivify_subsumed,           2, percent, "%", subsumed) \
   METRIC (vivify_subsumed_irr,       2, percent, "%", vivify_subsumed) \
   METRIC (vivify_subsumed_red,       2, percent, "%", vivify_subsumed) \
-  METRIC (vivify_units,              2, percent, "%", vivify_checks) \
+  STATISTIC (vivify_units,              2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   METRIC (walk_broken,               2, relative, "per", walk_flips) \
   STATISTIC (walk_flips,             2, RELPROFW,"M", per second walk) \

@@ -1696,7 +1696,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
          " scheduled using %" PRIu64 " ticks",
          checked, percent (checked, scheduled), scheduled, vivifier.ticks);
 
-#ifndef NMETRICS
   subsumed = (int64_t) stats.vivify_subsumed - subsumed;
   strengthened = (int64_t) stats.vivify_strength - strengthened;
   units = (int64_t) stats.vivify_units - units;
@@ -1714,7 +1713,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
            "strengthened %" PRId64 " clauses %.02f%% of %" PRId64
            " checked",
            strengthened, percent (strengthened, checked), checked);
-#endif
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
