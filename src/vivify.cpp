@@ -1898,11 +1898,11 @@ bool Internal::vivify () {
       vivify_round (vivifier, limit);
       const int64_t vivify_tried = stats.vivify_checks - old_tried;
       const int64_t vivified = stats.vivify_strength_irr - old;
-      unsigned bumpvivifyirrdel = opts.bumpvivifyirrdel;
-      if (bumpvivifyirrdel == 1 &&
+      unsigned vivifyirredbumpdel = opts.vivifyirredbumpdel;
+      if (vivifyirredbumpdel == 1 &&
           relative (vivified, vivify_tried) < 0.01)
-	bumpvivifyirrdel = 0;
-      if (bumpvivifyirrdel)
+	vivifyirredbumpdel = 0;
+      if (vivifyirredbumpdel)
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
       else
         delaying_vivify_irredundant.bumpreasons.reduce_delay ();
