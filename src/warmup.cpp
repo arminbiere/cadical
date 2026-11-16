@@ -408,7 +408,7 @@ int Internal::warmup () {
   ++stats.walk_warmup;
   int res = 0;
 
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   const int64_t warmup_propagated = (int64_t) stats.walk_warmup_propagate;
   const int64_t decision = (int64_t) stats.walk_warmup_decision;
   const int64_t dummydecision = (int64_t) stats.walk_warmup_dummy;
@@ -454,7 +454,7 @@ int Internal::warmup () {
     LOG (lrat_chain, "during warmup with lrat chain:");
   }
   assert (res || num_assigned + stats.vars_unused == (size_t) max_var);
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   // constrains with empty levels break this
   // assert (res || stats.walk_warmup_propagate - warmup_propagated ==
   // (int64_t)num_assigned);
