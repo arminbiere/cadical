@@ -44,6 +44,7 @@ OPTION( bumpreason,           1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,      1,  1,  3,0,0,1, "bump reason depth") \
 OPTION( bumpreasonlimit,     10,  1,2e9,0,0,1, "bump reason limit") \
 OPTION( bumpreasonrate,     100,  1,2e9,0,0,1, "bump reason decision rate") \
+OPTION( bumpvivifyirrdel,     0,  0,  2,0,0,1, "bump delay (0=never,2=always)") \
 OPTION( check,                0,  0,  1,0,0,0, "enable internal checking") \
 OPTION( checkassumptions,     1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,      1,  0,  1,0,0,0, "check constraint satisfied") \
