@@ -1,4 +1,3 @@
-#include "vivify.hpp"
 #include "clause.hpp"
 #include "internal.hpp"
 #include "limit.hpp"
@@ -7,6 +6,7 @@
 #include "profile.hpp"
 #include "radix.hpp"
 #include "util.hpp"
+#include "vivify.hpp"
 #include "watch.hpp"
 
 #include <algorithm>
@@ -1898,11 +1898,10 @@ bool Internal::vivify () {
       vivify_round (vivifier, limit);
       const int64_t vivify_tried = stats.vivify_checks - old_tried;
       const int64_t vivified = stats.vivify_strength_irr - old;
-      if (relative (vivified, vivify_tried) < 0.01) {
+      if (relative (vivified, vivify_tried) < 0.01)
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
-      } else {
+      else
         delaying_vivify_irredundant.bumpreasons.reduce_delay ();
-      }
     } else {
       delaying_vivify_irredundant.bumpreasons.bump_delay ();
       LOG ("building the schedule already used our entire ticks budget for "
