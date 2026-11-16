@@ -66,7 +66,6 @@ void Internal::constrain (int lit, int64_t ext_id) {
     } else {
       tmp = val (other);
       if (tmp < 0) {
-        assert (mini_chain.empty ());
         assert (clause.empty ());
         if (lrat) {
           mark (other);
@@ -76,16 +75,7 @@ void Internal::constrain (int lit, int64_t ext_id) {
           // the external units are handled somewhere else
           if (!external->ext_units[eidx]) {
             lrat_chain.push_back (unit_id (-other));
-            mini_chain.push_back (unit_id (-other));
-          } else
-            mini_chain.push_back (external->ext_units[eidx]);
-        }
-        if (proof) {
-          clause.push_back (-other);
-          proof->add_assumption_clause (++clause_id, clause, mini_chain,
-                                        false);
-          mini_chain.clear ();
-          clause.clear ();
+          }
         }
         derived_constraint = true;
         LOG ("removing falsified literal %d from constraint clause", other);

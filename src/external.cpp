@@ -374,13 +374,37 @@ int64_t External::constrain (int elit) {
   } else if (!elit) {
     id = ++internal->clause_id;
     constraint_ids[id] = constraints.size ();
-    for (auto &lit : constraint_tmp)
+    bool satisfied = false;
+    for (auto &lit : constraint_tmp) {
       constraints.push_back (lit);
+      if (internal->proof && fixed (lit) > 0)
+        satisfied = true;
+    }
     if (internal->proof)
       internal->proof->add_constraint (id, constraint_tmp);
-    if (internal->lrat)
-      for (const auto &elit : constraint_tmp)
-        ext_flags[abs (elit)] = false;
+    for (const auto &constrained : constraint_tmp) {
+      if (internal->lrat)
+        ext_flags[abs (constrained)] = false;
+      if (internal->proof && !satisfied) {
+        assert (fixed (constrained) <= 0);
+        if (fixed (constrained) < 0) {
+          eclause.push_back (-constrained);
+          if (internal->lrat) {
+            const unsigned eidx =
+                (constrained > 0) + 2u * (unsigned) abs (constrained);
+            if (!ext_units[eidx])
+              internal->mini_chain.push_back (
+                  internal->unit_id (-internalize (constrained)));
+            else
+              internal->mini_chain.push_back (ext_units[eidx]);
+          }
+          internal->proof->add_assumption_clause (
+              ++internal->clause_id, eclause, internal->mini_chain, true);
+          internal->mini_chain.clear ();
+          eclause.clear ();
+        }
+      }
+    }
     constraint_tmp.clear ();
     // constraint_indeces[constraints.size ()] = id;
     constraints.push_back (0);
