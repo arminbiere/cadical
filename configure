@@ -147,6 +147,7 @@ where '<option>' is one of the following
 --no-contrib       compile without contributed code
 --no-ipasir        compile without ipasir interface
 
+--no-metrics       less statistics
 --no-options       hard-code options
 
 -f...              pass '-f<option>[=<val>]' options to the makefile
