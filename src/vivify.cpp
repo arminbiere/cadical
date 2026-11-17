@@ -1,3 +1,4 @@
+#include "vivify.hpp"
 #include "clause.hpp"
 #include "internal.hpp"
 #include "limit.hpp"
@@ -6,7 +7,6 @@
 #include "profile.hpp"
 #include "radix.hpp"
 #include "util.hpp"
-#include "vivify.hpp"
 #include "watch.hpp"
 
 #include <algorithm>
@@ -1901,7 +1901,7 @@ bool Internal::vivify () {
       unsigned vivifyirredbumpdel = opts.vivifyirredbumpdel;
       if (vivifyirredbumpdel == 1 &&
           relative (vivified, vivify_tried) < 0.01)
-	vivifyirredbumpdel = 0;
+        vivifyirredbumpdel = 0;
       if (vivifyirredbumpdel)
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
       else
