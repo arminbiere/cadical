@@ -484,7 +484,7 @@ int Internal::decide_constraint () {
   PROFILE_SCOPE (constraints);
   if (terminated_asynchronously ())
     return 0;
-  if (!level)
+  if (!level && opts.constraintrestart)
     citten_restart (constraint_cat);
   int cat_res = citten_status (constraint_cat);
   if (!cat_res) {
