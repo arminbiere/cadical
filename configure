@@ -673,10 +673,13 @@ fi
 
 [ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
 
+AR=ar
+
 if [ $time = yes ]
 then
   CXX="../scripts/time.sh $CXX"
   CC="../scripts/time.sh $CC"
+  AR="../scripts/time.sh $AR"
 fi
 
 #--------------------------------------------------------------------------#
@@ -721,6 +724,7 @@ sed \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s#@CC@#$CC#" \
 -e "s#@CFLAGS@#$CFLAGS#" \
+-e "s#@AR@#$AR#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \
