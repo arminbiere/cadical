@@ -48,6 +48,7 @@ profile=no
 quiet=no
 shared=no
 termfuzz=no
+time=no
 tracing=yes
 unlocked=yes
 m32=no
@@ -131,6 +132,7 @@ where '<option>' is one of the following
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
+--time             use the 'script.time.sh' script to print compilation time
 
 --memory[-fuzzing] compile with '-DMOBICAL_MEMORY' to fuzz for bad memory
 		   allocation handling, in addition for precisely printing
@@ -215,6 +217,7 @@ do
     --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
+    --time|--times|--timing) time=yes;;
 
     --memory|--memory-fuzzing) 
       memfuzz=yes
@@ -669,6 +672,12 @@ else
 fi
 
 [ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
+
+if [ $time = yes ]
+then
+  CXX="../scripts/time.sh $CXX"
+  CC="../scripts/time.sh $CC"
+fi
 
 #--------------------------------------------------------------------------#
 # Preparing make goals (@GOALS@)
