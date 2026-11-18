@@ -1,6 +1,9 @@
 Version 3.1.1
 -------------
 
+- Made two accidentally non-static 'citten' symbols static to finally fix
+  the clashing symbols issue when linking both to CaDiCaL and Kissat.
+
 -------------
 Version 3.1.0
 -------------
