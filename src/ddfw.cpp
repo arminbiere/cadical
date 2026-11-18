@@ -228,6 +228,7 @@ struct Walker_DDFW {
     LOG (c, "connecting clause on %d with already in occurrences %zu", lit,
          occs (lit).size ());
     occs (lit).push_back (DDFW_Tagged (counter_pos));
+    (void) c;
   }
   void connect_clause (Clause *c, position_type counter_pos) {
     assert (clause (counter_pos) == c);
