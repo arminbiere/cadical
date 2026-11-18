@@ -227,6 +227,15 @@ uint64_t hash_string (const char *str);
 
 /*------------------------------------------------------------------------*/
 
+static inline int64_t cache_lines (size_t bytes) {
+  return (bytes + 127) / 128;
+}
+static inline int64_t cache_lines (size_t n, size_t bytes) {
+  return cache_lines (n * bytes);
+}
+
+/*------------------------------------------------------------------------*/
+
 } // namespace CaDiCaL
 
 #endif

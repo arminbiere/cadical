@@ -763,10 +763,6 @@ struct Internal {
   void search_assume_decision (int decision);
   static Clause *decision_reason;
   void assign_unit (int lit);
-  int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
-  int64_t cache_lines (size_t n, size_t bytes) {
-    return cache_lines (n * bytes);
-  }
   bool propagate ();
 
 #ifdef PROFILE_MODE
