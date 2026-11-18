@@ -617,7 +617,7 @@ void Walker_DDFW::make_clauses_along_occurrences (int lit) {
        occs.size ());
   assert (internal->val (lit) > 0);
   size_t made = 0;
-  ticks += (1 + internal->cache_lines (occs.size (), sizeof (Clause *)));
+  ticks += (1 + cache_lines (occs.size (), sizeof (Clause *)));
 
   for (auto c : occs) {
 #if 0
@@ -657,7 +657,7 @@ void Walker_DDFW::break_clauses (int lit) {
   size_t broken = 0;
 #endif
   const Walker_DDFW::TOccs &ws = occs (lit);
-  ticks += (1 + internal->cache_lines (ws.size (), sizeof (Clause *)));
+  ticks += (1 + cache_lines (ws.size (), sizeof (Clause *)));
 
   LOG ("trying to break %zd clauses", ws.size ());
 
@@ -733,8 +733,7 @@ Walker_DDFW::satisfied_maximum_weight_neighbor (const DDFW_Counter &c) {
   double max_weight = 0;
   if (c.binary) {
     for (auto lit : {c.binary_clause.lit, c.binary_clause.other}) {
-      ticks += (1 + internal->cache_lines (occs (lit).size (),
-                                           sizeof (Clause *)));
+      ticks += (1 + cache_lines (occs (lit).size (), sizeof (Clause *)));
       for (auto c : occs (lit)) {
         assert (c.counter_pos < weight_clause_info.size ());
         const DDFW_Counter &neighbor = clause_info (c.counter_pos);
@@ -750,8 +749,7 @@ Walker_DDFW::satisfied_maximum_weight_neighbor (const DDFW_Counter &c) {
   } else {
     ++ticks;
     for (auto lit : *c.clause) {
-      ticks += (1 + internal->cache_lines (occs (lit).size (),
-                                           sizeof (Clause *)));
+      ticks += (1 + cache_lines (occs (lit).size (), sizeof (Clause *)));
       for (auto c : occs (lit)) {
         assert (c.counter_pos < weight_clause_info.size ());
         const DDFW_Counter &neighbor = clause_info (c.counter_pos);
@@ -818,8 +816,7 @@ void Walker_DDFW::transfer_weights () {
 #endif
 
   ++internal->stats.walk_flips_transfer;
-  ticks +=
-      (1 + internal->cache_lines (broken.size (), sizeof (DDFW_Tagged)));
+  ticks += (1 + cache_lines (broken.size (), sizeof (DDFW_Tagged)));
   for (auto c : broken) {
     assert (c.counter_pos < weight_clause_info.size ());
     DDFW_Counter &robber = clause_info (c.counter_pos);
@@ -1034,7 +1031,7 @@ std::pair<int, double> Walker_DDFW::find_weight_reducing_variable () {
       no_gain_literals.push_back (lit);
     }
   }
-  ticks += internal->cache_lines (vars_in_broken.size (), sizeof (int)) +
+  ticks += cache_lines (vars_in_broken.size (), sizeof (int)) +
            loop_iterations / 64;
   if (weight_reducing_var && internal->val (weight_reducing_var) > 0)
     weight_reducing_var = -weight_reducing_var;
