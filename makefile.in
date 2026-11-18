@@ -51,7 +51,7 @@ all: @GOALS@
 
 
 %.o: ../*/%.c ../src/*.h makefile
-	$(COMPILE_CCC) -x c -c $< -o $@
+	$(COMPILE_CCC) -x c -c $<
 
 
 %.o: ../*/%.cpp ../src/*.hpp makefile
