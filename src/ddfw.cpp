@@ -54,12 +54,13 @@ static constexpr position_type invalid_position = (-1);
 struct DDFW_Tagged {
   position_type counter_pos;
 #ifndef NDEBUG
-  Clause *c;
+  Clause *_c;
+  Clause * clause () const { return _c; }
 #endif
   explicit DDFW_Tagged () { assert (false); }
   explicit DDFW_Tagged (Clause *d, position_type p) : counter_pos (p) {
 #ifndef NDEBUG
-    c = d;
+    _c = d;
 #else
     (void) d;
 #endif
@@ -93,7 +94,7 @@ struct DDFW_Counter {
   // Only useful for debugging or logging to check that the binary clause is
   // correct.  We need to make sure that we do not use the size of this
   // structure to influence the solver heuristics through (through for
-  // instance counting ticks as for 'DDFW_Tagged').
+  // instance counting ticks as this is is necessary for 'DDFW_Tagged').
   Clause *always_clause;
 #endif
   inline void initialize_binary (Clause *d) {
@@ -395,10 +396,10 @@ struct Walker_DDFW {
     std::vector<size_t> count (internal->max_var + 1, 0);
     for (size_t i = 0; i < broken.size (); ++i) {
       const DDFW_Tagged t = broken[i];
-      assert (t.c == clause (t));
+      assert (t.clause() == clause (t));
       assert (t.counter_pos < weight_clause_info.size ());
-      assert (clause_info (t.counter_pos).always_clause == t.c);
-      for (auto lit : *t.c) {
+      assert (clause_info (t.counter_pos).always_clause == t.clause());
+      for (auto lit : *t.clause()) {
         assert (internal->val (lit) < 0);
         ++count[internal->vidx (lit)];
       }
@@ -421,11 +422,11 @@ struct Walker_DDFW {
 #ifndef NDEBUG
     for (size_t i = 0; i < broken.size (); ++i) {
       const DDFW_Tagged t = broken[i];
-      assert (t.c);
-      assert (t.c == clause (t));
+      assert (t.clause());
+      assert (t.clause() == clause (t));
       assert (t.counter_pos < weight_clause_info.size ());
-      assert (t.c == clause_info (t.counter_pos).always_clause);
-      for (auto lit : *t.c) {
+      assert (t.clause() == clause_info (t.counter_pos).always_clause);
+      for (auto lit : *t.clause()) {
         assert (internal->val (lit) < 0);
       }
     }
@@ -598,8 +599,8 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   if (old_count) {
     LOG (d.always_clause, "already made with counter %d at position %d",
          d.count, d.broken_pos);
-    assert (t.c == clause (t));
-    assert (d.always_clause == t.c);
+    assert (t.clause() == clause (t));
+    assert (d.always_clause == t.clause());
     assert (d.broken_pos == invalid_position);
     if (old_count == 1) {
       critical_sat_weight (old_critical) -= d.weight;
@@ -613,11 +614,11 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   ++ticks;
   auto last = broken.back ();
 #ifndef NDEBUG
-  assert (clause (t) == t.c);
-  assert (clause_info (t.counter_pos).always_clause == t.c);
+  assert (clause (t) == t.clause());
+  assert (clause_info (t.counter_pos).always_clause == t.clause());
   assert (last.counter_pos < weight_clause_info.size ());
-  assert (clause (last) == last.c);
-  assert (clause_info (last.counter_pos).always_clause == last.c);
+  assert (clause (last) == last.clause());
+  assert (clause_info (last.counter_pos).always_clause == last.clause());
 #endif
   position_type broken_pos = d.broken_pos;
   assert (broken_pos < broken.size ());
@@ -692,7 +693,7 @@ void Walker_DDFW::break_clauses (int lit) {
 #ifdef LOGGING
   size_t broken = 0;
 #endif
-  const Walker_DDFW::TOccs &ws = occs (lit);
+  const auto & ws = occs (lit);
   ticks += 1 + cache_lines (ws);
 
   LOG ("trying to break %zd clauses", ws.size ());
