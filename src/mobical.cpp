@@ -362,7 +362,7 @@ struct Mopt {
   bool fixed;
   int &val (Mopts *);
   bool &fix (Mopts *);
-  Mopt (const char *n) : name (n), value (0), fixed (0){};
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
 };
 
 class Mopts {
@@ -1851,13 +1851,13 @@ private:
   struct Decisions {
     int lit;
     size_t delay;
-    Decisions (int l, int d) : lit (l), delay (d){};
+    Decisions (int l, int d) : lit (l), delay (d) {};
   };
 
   struct MockForce {
     int lit;
     size_t delay;
-    MockForce (int l, int d) : lit (l), delay (d){};
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {
@@ -2214,7 +2214,7 @@ public:
         // assert (assigned--);
         // unobserve calls can lead to unobserved variables in
         // observed_trail
-        if (!s->observed (lit)) {
+        if (!s->external->observed (lit)) {
           assert (s->external->ival (abs (lit)) == lit);
           continue;
         }
