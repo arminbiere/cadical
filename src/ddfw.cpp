@@ -79,7 +79,7 @@ struct DDFW_Counter {
   unsigned critical_var; // critical literal if any
   bool binary : 1;
   uint32_t count : 31;      // number of true literals
-  position_type broken_pos; // pos in the broken clauses
+  position_type broken_pos; // position in the broken clauses
 #if defined(LOGGING) || !defined(NDEBUG)
   // Only useful for debugging or logging to check that the binary clause is
   // correct.  We need to make sure that we do not use the size of this
@@ -281,14 +281,14 @@ struct Walker_DDFW {
   // unsatisfied clauses (but does not make it worse either)
   void do_sideways_jump ();
   // Transfer the weights from the satisfied to the unsatisfied clauses to
-  // increase the focuse on the latter, the hard-to-satisfy clauses
+  // increase the focus on the latter, the hard-to-satisfy clauses
   void transfer_weights ();
   // returns the clause in the neighborhood with the maximum weight
   position_type satisfied_maximum_weight_neighbor (const DDFW_Counter &c);
   // returns any satisfied clause with weight >= w_0
   position_type random_satisfied_big_weight_clause (double w_0);
-  void update_unsat_weights (position_type pos, double);
-  void update_sat_weights (position_type pos, double);
+  void update_unsat_weights (position_type counter_pos, double);
+  void update_sat_weights (position_type counter_pos, double);
 
   void check_occs () const {
 #ifndef NDEBUG
