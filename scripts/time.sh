@@ -10,7 +10,7 @@ then
 elif [ x"`echo $*|grep -- -o`" = x ]
 then
   action=compiling
-  target=`echo "$*" | awk '{print $NF}'`
+  target=`echo "$*" | sed -e 's,.*/,,'`
 else
   action=linking
   target=`echo "$*" | sed -e 's,.* -o \([^ ]*\).*,\1,'`
