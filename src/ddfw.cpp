@@ -53,16 +53,22 @@ static constexpr position_type invalid_position = (-1);
 // This is the core structure representing positions in the array of values.
 struct DDFW_Tagged {
   position_type counter_pos;
+#if 0
 #ifndef NDEBUG
   Clause *_c;
   Clause * clause () const { return _c; }
 #endif
+#endif
   explicit DDFW_Tagged () { assert (false); }
   explicit DDFW_Tagged (Clause *d, position_type p) : counter_pos (p) {
+#if 0
 #ifndef NDEBUG
     _c = d;
 #else
     (void) d;
+#endif
+#else
+   (void) d;
 #endif
   }
 };
@@ -174,11 +180,6 @@ struct Walker_DDFW {
     return pos2clause[pos];
   }
   Clause *clause (DDFW_Tagged t) const { return clause (t.counter_pos); }
-#if 0
-  Clause *clause (DDFW_Counter c) const { 
-    return clause (c.broken_pos);
-  }
-#endif
 #endif
 
   // walk occurrences
@@ -374,10 +375,10 @@ struct Walker_DDFW {
     std::vector<size_t> count (internal->max_var + 1, 0);
     for (size_t i = 0; i < broken.size (); ++i) {
       const DDFW_Tagged t = broken[i];
-      assert (t.clause() == clause (t));
+      assert (clause(t) == clause (t));
       assert (t.counter_pos < weight_clause_info.size ());
-      assert (clause_info (t.counter_pos).always_clause == t.clause());
-      for (auto lit : *t.clause()) {
+      assert (clause_info (t.counter_pos).always_clause == clause(t));
+      for (auto lit : *clause(t)) {
         assert (internal->val (lit) < 0);
         ++count[internal->vidx (lit)];
       }
@@ -400,11 +401,11 @@ struct Walker_DDFW {
 #ifndef NDEBUG
     for (size_t i = 0; i < broken.size (); ++i) {
       const DDFW_Tagged t = broken[i];
-      assert (t.clause());
-      assert (t.clause() == clause (t));
+      assert (clause(t));
+      assert (clause(t) == clause (t));
       assert (t.counter_pos < weight_clause_info.size ());
-      assert (t.clause() == clause_info (t.counter_pos).always_clause);
-      for (auto lit : *t.clause()) {
+      assert (clause(t) == clause_info (t.counter_pos).always_clause);
+      for (auto lit : *clause(t)) {
         assert (internal->val (lit) < 0);
       }
     }
@@ -577,8 +578,8 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   if (old_count) {
     LOG (d.always_clause, "already made with counter %d at position %d",
          d.count, d.broken_pos);
-    assert (t.clause() == clause (t));
-    assert (d.always_clause == t.clause());
+    assert (clause(t) == clause (t));
+    assert (d.always_clause == clause(t));
     assert (d.broken_pos == invalid_position);
     if (old_count == 1) {
       critical_sat_weight (old_critical) -= d.weight;
@@ -592,11 +593,11 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   ++ticks;
   auto last = broken.back ();
 #ifndef NDEBUG
-  assert (clause (t) == t.clause());
-  assert (clause_info (t.counter_pos).always_clause == t.clause());
+  assert (clause (t) == clause(t));
+  assert (clause_info (t.counter_pos).always_clause == clause(t));
   assert (last.counter_pos < weight_clause_info.size ());
-  assert (clause (last) == last.clause());
-  assert (clause_info (last.counter_pos).always_clause == last.clause());
+  assert (clause (last) == clause(last));
+  assert (clause_info (last.counter_pos).always_clause == clause(last));
 #endif
   position_type broken_pos = d.broken_pos;
   assert (broken_pos < broken.size ());
