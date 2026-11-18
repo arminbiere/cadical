@@ -53,24 +53,8 @@ static constexpr position_type invalid_position = (-1);
 // This is the core structure representing positions in the array of values.
 struct DDFW_Tagged {
   position_type counter_pos;
-#if 0
-#ifndef NDEBUG
-  Clause *_c;
-  Clause * clause () const { return _c; }
-#endif
-#endif
   explicit DDFW_Tagged () { assert (false); }
-  explicit DDFW_Tagged (Clause *d, position_type p) : counter_pos (p) {
-#if 0
-#ifndef NDEBUG
-    _c = d;
-#else
-    (void) d;
-#endif
-#else
-   (void) d;
-#endif
-  }
+  explicit DDFW_Tagged (position_type p) : counter_pos (p) { }
 };
 
 struct DDFWCompactBinary {
@@ -243,7 +227,7 @@ struct Walker_DDFW {
     assert (clause_info (counter_pos).binary || clause_info (counter_pos).clause == c);
     LOG (c, "connecting clause on %d with already in occurrences %zu", lit,
          occs (lit).size ());
-    occs (lit).push_back (DDFW_Tagged (c, counter_pos));
+    occs (lit).push_back (DDFW_Tagged (counter_pos));
   }
   void connect_clause (Clause *c, position_type counter_pos) {
     assert (clause (counter_pos) == c);
@@ -1135,7 +1119,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
       LOG (c, "broken");
       assert (counter_pos < weight_clause_info.size ());
       clause_info (counter_pos).broken_pos = broken.size ();
-      broken.push_back (DDFW_Tagged (c, counter_pos));
+      broken.push_back (DDFW_Tagged (counter_pos));
       ++ticks;
       for (auto lit : *c) {
         critical_unsat_weight (lit) += cw.weight;
