@@ -120,28 +120,6 @@ struct DDFW_Counter {
         broken_pos (invalid_position) {
     initialize_binary (d);
   }
-#if 0
-  explicit DDFW_Counter (unsigned c, position_type p, unsigned crit,
-                         Clause *d, double w)
-      : clause (d), weight (w), critical_var (crit), count (c),
-        broken_pos (p) {
-    initialize_binary (d);
-  }
-  explicit DDFW_Counter (unsigned c, position_type p, Clause *d, double w)
-      : clause (d), weight (w), critical_var (0), count (c), pos (p) {
-    initialize_binary (d);
-  }
-  explicit DDFW_Counter (unsigned c, Clause *d, double w)
-      : clause (d), weight (w), critical_var (0), count (c),
-        pos (UINT32_MAX) {
-    initialize_binary (d);
-  }
-  explicit DDFW_Counter (unsigned c, Clause *d, double w, unsigned xor_lits)
-      : clause (d), weight (w), critical_var (xor_lits), count (c),
-        pos (UINT32_MAX) {
-    initialize_binary (d);
-  }
-#endif
   DDFW_Counter () = default;
   DDFW_Counter (const DDFW_Counter &d) = default;
   DDFW_Counter (DDFW_Counter &&d) = default;
