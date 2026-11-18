@@ -55,7 +55,7 @@ void Internal::factor_mode (bool redundant_only) {
 
   vector<Clause *> candidates;
   int64_t &ticks = stats.ticks_factor;
-  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  ticks += 1 + cache_lines (clauses);
 
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
@@ -100,7 +100,7 @@ void Internal::factor_mode (bool redundant_only) {
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
-    ticks += 1 + cache_lines (candidates.size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (candidates);
     candidates_before = candidates.size ();
     vector<unsigned> newlargecount;
     enlarge_zero (newlargecount, max_lit);
@@ -296,7 +296,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   // The two clauses should coincide except on one literal.
   const int64_t limit = factoring.limit;
   int64_t ticks = stats.ticks_factor;
-  ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
+  ticks += cache_lines (occs (first_factor));
   for (auto *c : occs (first_factor)) {
     ticks++;
     if (c->garbage)
@@ -310,7 +310,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
     }
-    ticks += cache_lines (occs (-first_factor).size (), sizeof (Clause *));
+    ticks += cache_lines (occs (-first_factor));
     for (auto *d : occs (-first_factor)) {
       ticks++;
       if (d->garbage)
@@ -378,7 +378,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   for (auto &third : thirds) {
     if (res->qlauses.size () < 2 * min_match_limit)
       break;
-    ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
+    ticks += cache_lines (res->qlauses);
     for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
       int pair = pairs[2 * idx + 1];
       if (pair != third && pair != -third)
@@ -542,7 +542,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
   assert (counted.empty ());
   assert (flauses.empty ());
   const int initial = factoring.initial;
-  int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
+  int64_t ticks = 1 + cache_lines (last_clauses);
   for (auto c : last_clauses) {
     assert (!c->swept);
     int min_lit = 0;
@@ -569,7 +569,7 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
       const int c_size = c->size;
       vector<int> &nounted = factoring.nounted;
       assert (nounted.empty ());
-      ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (occs (min_lit));
       for (auto d : occs (min_lit)) {
         if (c == d)
           continue;
@@ -682,7 +682,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
   vector<Clause *> &flauses = factoring.flauses;
   assert (flauses.empty ());
 
-  int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
+  int64_t ticks = 1 + cache_lines (last_clauses);
 
   size_t i = 0;
 
@@ -710,7 +710,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
     if (factors == 1) {
       assert (min_lit);
       const int c_size = c->size;
-      ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (occs (min_lit));
       for (auto d : occs (min_lit)) {
         if (c == d)
           continue;

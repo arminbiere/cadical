@@ -388,7 +388,7 @@ inline void Internal::probe_propagate2 () {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
     Watches &ws = watches (lit);
-    ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+    ticks += 1 + cache_lines (ws);
     for (const auto &w : ws) {
       if (!w.binary ())
         continue;
@@ -423,8 +423,7 @@ bool Internal::probe_propagate () {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
-      ticks +=
-          1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+      ticks += 1 + cache_lines (ws);
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
@@ -640,7 +639,7 @@ void Internal::generate_probes () {
   // lists for each literal.
   //
   init_noccs ();
-  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  ticks += 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     int a, b;
     ticks++;
@@ -700,7 +699,7 @@ void Internal::flush_probes () {
   int64_t &ticks = stats.ticks_probe;
 
   init_noccs ();
-  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  ticks += 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     int a, b;
     ticks++;

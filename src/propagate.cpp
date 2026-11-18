@@ -245,7 +245,7 @@ bool Internal::propagate () {
     const const_watch_iterator eow = ws.end ();
     watch_iterator j = ws.begin ();
     const_watch_iterator i = j;
-    ticks += 1 + cache_lines (ws.size (), sizeof *i);
+    ticks += 1 + cache_lines (ws);
 
     while (i != eow) {
 

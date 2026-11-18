@@ -117,7 +117,7 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
-  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
+  ticks += 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     ++ticks;
     if (terminated_asynchronously (100))
@@ -175,7 +175,7 @@ int Internal::trivially_true_satisfiable (int64_t &ticks) {
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
-  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
+  ticks += 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     ++ticks;
     if (terminated_asynchronously (100))

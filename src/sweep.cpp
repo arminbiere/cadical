@@ -152,7 +152,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     int lit = work[i++];
     LOG ("sweeping propagation of %d", lit);
     assert (val (lit) > 0);
-    ticks += 1 + cache_lines (occs (-lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (-lit));
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
       ticks++;
@@ -196,7 +196,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
       break;
 
     // not necessary but should help
-    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (lit));
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
       ticks++;
@@ -240,8 +240,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweeper.limit.ticks = 0;
   // initialize with the cost of building full occ list.
   sweeper.current_ticks = 2 * clauses.size ();
-  sweeper.current_ticks +=
-      2 + 2 * cache_lines (clauses.size (), sizeof (Clause *));
+  sweeper.current_ticks += 2 + 2 * cache_lines (clauses);
   assert (!citten);
   citten = citten_init ();
   citten_clear_track_log_terminate ();
@@ -1096,7 +1095,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
   uint64_t &ticks = sweeper.current_ticks;
   LOG ("now decr");
   {
-    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (lit));
     Occs &ns = occs (lit);
     auto const begin = ns.begin ();
     const auto end = ns.end ();
@@ -1643,7 +1642,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     LOG ("traversing and adding clauses of %d", idx);
     for (unsigned sign = 0; sign < 2; sign++) {
       const int lit = sign ? -idx : idx;
-      ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (occs (lit));
       Occs &ns = occs (lit);
       for (auto c : ns) {
         ticks++;

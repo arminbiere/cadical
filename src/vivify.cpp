@@ -202,8 +202,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       const int lit = -trail[propagated2++];
       LOG ("vivify propagating %d over binary clauses", -lit);
       const Watches &ws = watches (lit);
-      ticks +=
-          1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+      ticks += 1 + cache_lines (ws);
       for (const auto &w : ws) {
         if (!w.binary ())
           continue;
@@ -225,7 +224,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       Watches &ws = watches (lit);
       const auto eow = ws.end ();
       auto i = ws.begin ();
-      ticks += 1 + cache_lines (ws.size (), sizeof (*i));
+      ticks += 1 + cache_lines (ws);
       auto j = ws.begin ();
       while (i != eow) {
         const Watch w = *j++ = *i++;
@@ -379,7 +378,7 @@ struct vivify_flush_smaller {
 
 void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
                                             int64_t &ticks) {
-  ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
+  ticks += 1 + 3 * cache_lines (schedule);
   // we cannot use msort here, as we cannot calculate a score
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
   const auto end = schedule.end ();
@@ -1433,7 +1432,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     clear_watches ();
     for (auto &sched : vivifier.schedules) {
       // approximation for schedule
-      ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (sched);
       for (const auto &c : sched) {
         // Literals in scheduled clauses are sorted with their highest score
         // literals first (as explained above in the example at '@2').  This
@@ -1450,7 +1449,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
       flush_vivification_schedule (sched, ticks);
     }
     // approximation for schedule
-    //    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+    //    ticks += 1 + cache_lines (clauses);
     connect_watches (); // watch all relevant clauses
   }
   vivify_propagate (ticks);
