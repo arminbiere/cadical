@@ -730,10 +730,10 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
   {
 #ifdef LOGGING
     int64_t broken = 0;
+    const size_t ws_size = ws.size ();
 #endif
     Watches &ws = watches (neg_lit);
     // probably still in cache
-    const size_t ws_size = ws.size ();
     ticks += 1 + cache_lines (ws);
 
     LOG ("trying to break %zd watched clauses", ws_size);
