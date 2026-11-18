@@ -1,10 +1,12 @@
-test: usage trace api cnf icnf mbt contrib
+test: usage trace api cnf icnf kross mbt contrib
 api:
 	@api/run.sh
 cnf:
 	@cnf/run.sh
 icnf:
 	@icnf/run.sh
+kross:
+	@kross/run.sh
 mbt:
 	@mbt/run.sh
 trace:
@@ -13,4 +15,4 @@ usage:
 	@usage/run.sh
 contrib:
 	@contrib/run.sh
-.PHONY: test api cnf icnf mbt trace usage contrib
+.PHONY: test api cnf icnf kross mbt trace usage contrib
