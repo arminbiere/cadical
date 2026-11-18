@@ -230,8 +230,14 @@ uint64_t hash_string (const char *str);
 static inline int64_t cache_lines (size_t bytes) {
   return (bytes + 127) / 128;
 }
+
 static inline int64_t cache_lines (size_t n, size_t bytes) {
   return cache_lines (n * bytes);
+}
+
+template <class C>
+static inline int64_t cache_lines (const std::vector<C> &c) {
+  return cache_lines (c.size (), sizeof (C));
 }
 
 /*------------------------------------------------------------------------*/
