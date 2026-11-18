@@ -45,7 +45,10 @@ namespace CaDiCaL {
 //
 // We experimented with smaller values but did not a see a benefit (although
 // CaDiCaL is using 5 times as much memory as Tassat).
+
 using position_type = uint32_t;
+
+static constexpr position_type invalid_position = (-1);
 
 // This is the core structure representing positions in the array of values.
 struct DDFW_Tagged {
@@ -54,7 +57,7 @@ struct DDFW_Tagged {
   Clause *c;
 #endif
   explicit DDFW_Tagged () { assert (false); }
-  explicit DDFW_Tagged (Clause *d, position_type pos) : counter_pos (pos) {
+  explicit DDFW_Tagged (Clause *d, position_type p) : counter_pos (p) {
 #ifndef NDEBUG
     c = d;
 #else
@@ -75,6 +78,7 @@ struct DDFWCompactBinary {
 // time all the information are touched (it is only during weight transfer,
 // which is only a minor part of walk).
 //
+
 struct DDFW_Counter {
   union {
     Clause *clause; // pointer to the clause itself
@@ -86,8 +90,10 @@ struct DDFW_Counter {
   uint32_t count : 31;      // number of true literals
   position_type broken_pos; // pos in the broken clauses
 #if defined(LOGGING) || !defined(NDEBUG)
-  // only useful for debugging or logging to check that the binary clause is
-  // correct.
+  // Only useful for debugging or logging to check that the binary clause is
+  // correct.  We need to make sure that we do not use the size of this
+  // structure to influence the solver heuristics through (through for
+  // instance counting ticks as for 'DDFW_Tagged').
   Clause *always_clause;
 #endif
   inline void initialize_binary (Clause *d) {
@@ -107,13 +113,19 @@ struct DDFW_Counter {
                         always_clause->literals[1] == binary_clause.other));
 #endif
   }
+  explicit DDFW_Counter (unsigned c, unsigned crit,
+                         Clause *d, double w)
+      : clause (d), weight (w), critical_var (crit), count (c),
+        broken_pos (invalid_position) {
+    initialize_binary (d);
+  }
+#if 0
   explicit DDFW_Counter (unsigned c, position_type p, unsigned crit,
                          Clause *d, double w)
       : clause (d), weight (w), critical_var (crit), count (c),
         broken_pos (p) {
     initialize_binary (d);
   }
-#if 0
   explicit DDFW_Counter (unsigned c, position_type p, Clause *d, double w)
       : clause (d), weight (w), critical_var (0), count (c), pos (p) {
     initialize_binary (d);
@@ -141,7 +153,6 @@ struct DDFW_Counter {
 };
 
 struct Walker_DDFW {
-  static constexpr position_type invalid_position = (-1);
   Internal *internal;
 
   // for efficiency, storing the model each time an improvement is
@@ -184,9 +195,11 @@ struct Walker_DDFW {
     return pos2clause[pos];
   }
   Clause *clause (DDFW_Tagged t) const { return clause (t.counter_pos); }
+#if 0
   Clause *clause (DDFW_Counter c) const { 
     return clause (c.broken_pos);
   }
+#endif
 #endif
 
   // walk occurrences
@@ -231,36 +244,36 @@ struct Walker_DDFW {
     return noccs_vars_in_broken[internal->vidx (lit)];
   }
 
-  DDFW_Counter &clause_info (position_type pos) {
-    assert (pos < weight_clause_info.size ());
-    return weight_clause_info[pos];
+  DDFW_Counter &clause_info (position_type counter_pos) {
+    assert (counter_pos < weight_clause_info.size ());
+    return weight_clause_info[counter_pos];
   }
 
-  const DDFW_Counter &clause_info (position_type pos) const {
-    assert (pos < weight_clause_info.size ());
-    return weight_clause_info[pos];
+  const DDFW_Counter &clause_info (position_type counter_pos) const {
+    assert (counter_pos < weight_clause_info.size ());
+    return weight_clause_info[counter_pos];
   }
-  void connect_clause (int lit, Clause *c, position_type pos) {
-    assert (clause (pos) == c);
-    assert (pos < weight_clause_info.size ());
+  void connect_clause (int lit, Clause *c, position_type counter_pos) {
+    assert (clause (counter_pos) == c);
+    assert (counter_pos < weight_clause_info.size ());
 #ifdef LOGGING
-    assert (clause (pos) == c);
-    assert (clause_info (pos).always_clause == c);
+    assert (clause (counter_pos) == c);
+    assert (clause_info (counter_pos).always_clause == c);
 #endif
-    assert (clause_info (pos).binary || clause_info (pos).clause == c);
+    assert (clause_info (counter_pos).binary || clause_info (counter_pos).clause == c);
     LOG (c, "connecting clause on %d with already in occurrences %zu", lit,
          occs (lit).size ());
-    occs (lit).push_back (DDFW_Tagged (c, pos));
+    occs (lit).push_back (DDFW_Tagged (c, counter_pos));
   }
-  void connect_clause (Clause *c, position_type pos) {
-    assert (clause (pos) == c);
-    assert (pos < weight_clause_info.size ());
+  void connect_clause (Clause *c, position_type counter_pos) {
+    assert (clause (counter_pos) == c);
+    assert (counter_pos < weight_clause_info.size ());
 #ifdef LOGGING
-    assert (clause_info (pos).always_clause == c);
+    assert (clause_info (counter_pos).always_clause == c);
 #endif
-    assert (clause_info (pos).binary || clause_info (pos).clause == c);
+    assert (clause_info (counter_pos).binary || clause_info (counter_pos).clause == c);
     for (auto lit : *c)
-      connect_clause (lit, c, pos);
+      connect_clause (lit, c, counter_pos);
   }
 
   void add_uvar (int lit) {
@@ -327,7 +340,6 @@ struct Walker_DDFW {
     unsigned unsatisfied = 0;
     for (auto c : weight_clause_info) {
       unsigned count = 0;
-      assert (c.always_clause == clause (c));
       LOG (c.always_clause,
            "checking clause with counter %d at position %d and weight %f:",
            c.count, c.broken_pos, c.weight);
@@ -346,7 +358,7 @@ struct Walker_DDFW {
         ++unsatisfied;
       if (!satisfied) {
         assert (c.broken_pos < broken.size ());
-        assert (broken[c.broken_pos].c == c.always_clause);
+        assert (clause(broken[c.broken_pos]) == c.always_clause);
       }
       if (count == 1) {
         sat_weights[internal->vidx (xor_lit)] += c.weight;
@@ -583,10 +595,10 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   const unsigned old_critical = d.critical_var;
   d.critical_var ^= internal->vidx (lit);
   auto old_count = d.count++;
-  assert (clause (d) == d.always_clause);
   if (old_count) {
     LOG (d.always_clause, "already made with counter %d at position %d",
          d.count, d.broken_pos);
+    assert (t.c == clause (t));
     assert (d.always_clause == t.c);
     assert (d.broken_pos == invalid_position);
     if (old_count == 1) {
@@ -601,8 +613,10 @@ void Walker_DDFW::make_clause (DDFW_Tagged t, int lit) {
   ++ticks;
   auto last = broken.back ();
 #ifndef NDEBUG
+  assert (clause (t) == t.c);
   assert (clause_info (t.counter_pos).always_clause == t.c);
   assert (last.counter_pos < weight_clause_info.size ());
+  assert (clause (last) == last.c);
   assert (clause_info (last.counter_pos).always_clause == last.c);
 #endif
   position_type broken_pos = d.broken_pos;
@@ -689,7 +703,6 @@ void Walker_DDFW::break_clauses (int lit) {
     DDFW_Counter &d = clause_info (pos);
     const int old_critical = d.critical_var;
     d.critical_var ^= internal->vidx (lit);
-    assert (clause (d) == d.always_clause);
     LOG (d.always_clause, "trying to break");
     --d.count;
     // new critical
@@ -749,7 +762,6 @@ void Walker_DDFW::walk_ddfw_flip_lit (int lit) {
 // babywalk does not filter out here that the weights are <= 0.
 position_type
 Walker_DDFW::satisfied_maximum_weight_neighbor (const DDFW_Counter &c) {
-  assert (c.always_clause == clause (c));
   LOG (c.always_clause, "searching for maximum weight neighbor of");
   size_t max_clause = invalid_position;
   double max_weight = 0;
@@ -760,7 +772,6 @@ Walker_DDFW::satisfied_maximum_weight_neighbor (const DDFW_Counter &c) {
         assert (c.counter_pos < weight_clause_info.size ());
         const DDFW_Counter &neighbor = clause_info (c.counter_pos);
 #if defined(LOGGING)
-        assert (neighbor.always_clause == clause (neighbor));
         assert (neighbor.always_clause);
 #endif
         if (!neighbor.satisfied ())
@@ -777,7 +788,6 @@ Walker_DDFW::satisfied_maximum_weight_neighbor (const DDFW_Counter &c) {
         assert (c.counter_pos < weight_clause_info.size ());
         const DDFW_Counter &neighbor = clause_info (c.counter_pos);
 #if defined(LOGGING)
-        assert (neighbor.always_clause == clause (neighbor));
         assert (neighbor.always_clause);
 #endif
         if (!neighbor.satisfied ())
@@ -846,7 +856,6 @@ void Walker_DDFW::transfer_weights () {
     DDFW_Counter &robber = clause_info (c.counter_pos);
 #if defined(LOGGING)
     assert (c.counter_pos < pos2clause.size ());
-    assert (robber.always_clause == clause (robber));
     assert (robber.always_clause);
     LOG (robber.always_clause, "transferring weight to");
 #endif
@@ -913,7 +922,6 @@ void Walker_DDFW::transfer_weights () {
     robber.weight += weight_difference;
     robbed.weight -= weight_difference;
 #if defined(LOGGING)
-    assert (robber.always_clause == clause (robber));
     LOG (robbed.always_clause,
          "transfering weight (removing %.3f to get %.3f) from",
          weight_difference, robbed.weight);
@@ -1122,32 +1130,32 @@ bool Walker_DDFW::import_clauses (bool &failed) {
     }
 
     assert (satisfied <= (size_t) c->size);
-    position_type pos = weight_clause_info.size ();
-    if ((size_t) pos != weight_clause_info.size ()) {
+    position_type counter_pos = weight_clause_info.size ();
+    if ((size_t) counter_pos != weight_clause_info.size ()) {
       MSG ("walk cannot go over that many clauses");
       return false;
     }
-    DDFW_Counter cw = DDFW_Counter (satisfied, invalid_position, critical,
+    DDFW_Counter cw = DDFW_Counter (satisfied, critical,
                                     c, Walker_DDFW::base_weight);
-    LOG ("found %d clauses so far, it has %d satisfied literals", pos,
+    LOG ("found %d clauses so far, it has %d satisfied literals", counter_pos,
          satisfied);
     weight_clause_info.push_back (cw);
 #if defined(LOGGING) || !defined(NDEBUG)
     pos2clause.push_back (c);
 #endif
 #ifdef LOGGING
-    assert (weight_clause_info.size () == pos + 1);
-    assert (pos == watched + broken.size ());
-    assert (weight_clause_info[pos].count <= (size_t) c->size);
+    assert (weight_clause_info.size () == counter_pos + 1);
+    assert (counter_pos == watched + broken.size ());
+    assert (weight_clause_info[counter_pos].count <= (size_t) c->size);
 #endif
-    connect_clause (c, pos);
+    connect_clause (c, counter_pos);
 
     if (!satisfied) {
       assert (satisfiable); // at least one non-assumed variable ...
       LOG (c, "broken");
-      assert (pos < weight_clause_info.size ());
-      clause_info (pos).broken_pos = broken.size ();
-      broken.push_back (DDFW_Tagged (c, pos));
+      assert (counter_pos < weight_clause_info.size ());
+      clause_info (counter_pos).broken_pos = broken.size ();
+      broken.push_back (DDFW_Tagged (c, counter_pos));
       ++ticks;
       for (auto lit : *c) {
         critical_unsat_weight (lit) += cw.weight;
