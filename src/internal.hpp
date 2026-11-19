@@ -1413,6 +1413,7 @@ struct Internal {
   void probe_assign_decision (int lit);
   void probe_assign (int lit, int parent);
   void mark_duplicated_binary_clauses_as_garbage ();
+  void check_no_duplicate_binary ();
   int get_parent_reason_literal (int lit);
   void set_parent_reason_literal (int lit, int reason);
   void clean_probehbr_lrat ();
