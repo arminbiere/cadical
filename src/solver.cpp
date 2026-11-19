@@ -1262,12 +1262,14 @@ void Solver::disconnect_external_propagator () {
   REQUIRE (external->propagator,
            "can not disconnect propagator without a connected propagator");
   transition_to_steady_state ();
+  internal->external_prop = false; // to avoid notifications from here on
+  
   external->reset_observed_vars ();
 
   external->propagator = 0;
   external->trace_api_file = 0;
   internal->set_changed_val ();
-  internal->external_prop = false;
+  
   internal->external_prop_is_lazy = true;
   internal->notified = 0;
   LOG_API_CALL_END ("disconnect_external_propagator");
@@ -1287,6 +1289,18 @@ void Solver::add_observed_var (int idx) {
     transition_to_steady_state ();
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
+}
+
+void Solver::add_and_propagate_observed_var (int elit) {
+  //TODO: add api_observe_prop to statistics and trace
+  TRACE (observe, "observe", elit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_MOLTEN_LIT (elit);
+  // REQUIRE !val(elit) + REQUIRE_SOLVING_STATE + REQUIRE (in_explain_reason_cb)
+  REQUIRE (external->propagator,
+           "can not observe variables without a connected propagator");
+  external->add_and_propagate_observed_var(elit);
+  LOG_API_CALL_END ("observe", elit);
 }
 
 void Solver::remove_observed_var (int idx) {

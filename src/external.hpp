@@ -143,6 +143,7 @@ public:
   unordered_map<uint64_t, vector<int>> forgettable_original;
 
   void add_observed_var (int elit);
+  void add_and_propagate_observed_var (int elit);
   void remove_observed_var (int elit);
   void reset_observed_vars ();
 

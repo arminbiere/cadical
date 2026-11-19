@@ -115,6 +115,10 @@ void Internal::add_observed_var (int ilit) {
   activating_all_new_imported_literals ();
 }
 
+void Internal::add_and_propagate_observed_var (int ilit) {
+ assert(false); 
+}
+
 /*----------------------------------------------------------------------------*/
 //
 // Removing an observed variable should happen only once it is ensured
@@ -629,7 +633,8 @@ void Internal::add_external_clause (int propagated_elit,
   assert (!from_propagator);
   force_no_backtrack = no_backtrack;
   from_propagator = true;
-
+                              
+  bool lemma_lifting = true;
   int elit = 0;
 #ifndef NCONTRACTS
   bool propagated_lit_found = false;
@@ -673,14 +678,18 @@ void Internal::add_external_clause (int propagated_elit,
         "cb_add_reason_clause_lit", elit,
         "external reason clause must only contain falsified literals");
 
-    CB_REQUIRE (!propagated_elit || elit == propagated_elit ||
-                    external->current_val (propagated_elit) < 0 || !level ||
-                    var (external->internalize (elit)).trail <
-                        var (external->internalize (propagated_elit)).trail,
-                "cb_add_reason_clause_lit", elit,
-                "external reason clause must respect the trail order (%d "
-                "was assigned after %d)",
-                elit, propagated_elit);
+    if (lemma_lifting) {
+
+    } else {
+      CB_REQUIRE (!propagated_elit || elit == propagated_elit ||
+                      external->current_val (propagated_elit) < 0 || !level ||
+                      var (external->internalize (elit)).trail <
+                          var (external->internalize (propagated_elit)).trail,
+                  "cb_add_reason_clause_lit", elit,
+                  "external reason clause must respect the trail order (%d "
+                  "was assigned after %d)",
+                  elit, propagated_elit);
+    }
   }
   CB_REQUIRE (
       !propagated_elit || propagated_lit_found, "cb_add_reason_clause_lit",

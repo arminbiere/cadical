@@ -502,6 +502,36 @@ void External::add_observed_var (int elit) {
   propagator->notify_assignment (assigned);
 }
 
+void External::add_and_propagate_observed_var (int elit) {
+  assert (propagator);
+  assert (elit);
+  assert (elit != INT_MIN);
+
+  int eidx = abs (elit);
+ 
+  if (eidx >= (int64_t) is_observed.size ())
+    is_observed.resize (1 + (size_t) eidx, false);
+  assert (!is_observed[eidx]);
+    
+  reset_extended (); // tainting!
+
+  // internalize and in particular declares the variables
+  int ilit = internalize (elit);
+
+  LOG ("marking fresh %d as externally watched", eidx);
+
+  freeze (elit);
+  is_observed[eidx] = true;
+
+  // the variable supposed to be fresh, so guaranteed that no backtrack
+  // happens and it has no assigned value yet
+  int level_before = internal->level;
+  internal->add_observed_var (ilit);
+  assert(internal->level == level_before);
+  if (elit < 0) internal->search_assign_external(-ilit);
+  else  internal->search_assign_external(ilit);
+}
+
 void External::remove_observed_var (int elit) {
   assert (propagator); // REQ is in Solver::remove_observed_var
 

@@ -851,6 +851,7 @@ struct Internal {
   int ask_decision ();
   bool ask_external_clause ();
   void add_observed_var (int ilit);
+  void add_and_propagate_observed_var (int ilit);
   void remove_observed_var (int ilit);
   bool observed (int ilit) const;
   bool is_decision (int ilit);

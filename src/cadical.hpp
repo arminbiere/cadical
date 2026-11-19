@@ -427,6 +427,9 @@ public:
   //
   void add_observed_var (int var);
 
+  // TODO: Lemma Lifting prototype -- remove or explain later
+  void add_and_propagate_observed_var (int lit);
+
   // Removes the 'observed' flag from the given variable. A variable can be
   // set unobserved only when it is unassigned, in order to guarantee
   // that no yet unexplained external propagation involves it.
