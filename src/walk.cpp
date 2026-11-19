@@ -30,12 +30,7 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   // Check if literals fit in 31 bits each
   if (c->size == 2) {
     unsigned lit1 = internal->vlit (c->literals[0]);
-    const unsigned limit =
-#ifndef NDEBUG
-        1u << (internal->opts.walkbinarylimit);
-#else
-        (1u << 31);
-#endif
+    const unsigned limit = 1u << (internal->opts.walkbinarylimit);
     if (lit1 < limit) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
