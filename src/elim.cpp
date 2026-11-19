@@ -918,12 +918,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // option. However, this is not a useful option for users, hence we
   // made it debug only.
   //
-  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3)
-#ifndef NDEBUG
-                                + (opts.elimaggressiveGC ? 0 : 1 << 20);
-#else
-                                + (1 << 20);
-#endif
+  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) +
+                                (opts.elimaggressiveGC ? 0 : 1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
