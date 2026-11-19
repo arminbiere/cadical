@@ -408,7 +408,7 @@ public:
   // variables.
   //
   //   require (READY)
-  //   ensure (STEADY)
+  //   ensure (STEADY || CONFIGURING)
   //
   void connect_external_propagator (ExternalPropagator *propagator);
   void disconnect_external_propagator ();
