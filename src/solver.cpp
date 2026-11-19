@@ -1244,7 +1244,8 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
 
-  transition_to_steady_state ();
+  if (state () != CONFIGURING)
+    transition_to_steady_state ();
   external->propagator = propagator;
 #ifndef NTRACING
   external->trace_api_file = trace_api_file;
