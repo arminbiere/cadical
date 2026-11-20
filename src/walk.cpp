@@ -615,10 +615,14 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     // broken is in cache given how central it is... but not always (see the
     // ncc problems). Value was heuristically determined to give reasonnable
     // values.
-    ticks += 1 + cache_lines (broken_size, sizeof *i);
 #if defined(LOGGING) || !defined(NDEBUG)
     int64_t made = 0;
+    static_assert (sizeof (*i) == 16, "ClauseOrBinary ticks difference");
+#else
+    static_assert (sizeof (*i) == 8, "ClauseOrBinary ticks difference");
 #endif
+
+    ticks += 1 + cache_lines (broken_size, 8);
 
     while (i != broken_end) {
 
