@@ -8,15 +8,22 @@ namespace CaDiCaL {
 
 ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (
     Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother)
-    : first_literal (clit), other (cother) {
+    : first_literal (clit), other (cother)
+#if defined(LOGGING) || !defined(NDEBUG)
+      ,
+      d (c)
+#endif
+{
 #ifdef LOGGING
   assert (c->literals[0] == internal->u2i (clit) ||
           c->literals[1] == internal->u2i (clit));
   assert (c->literals[0] == cother || c->literals[1] == cother);
 #endif
 
+#if !defined(LOGGING) || defined(NDEBUG)
   (void) c;
   (void) internal;
+#endif
 }
 
 ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
@@ -27,6 +34,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     if (lit1 < limit) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
+#if defined(LOGGING) || !defined(NDEBUG)
+      tagged.b.d = c;
+#endif
       tagged.b.first_literal = lit1;
       tagged.b.other = c->literals[1];
       return;
@@ -36,6 +46,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     if (lit2 < limit) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
+#if defined(LOGGING) || !defined(NDEBUG)
+      tagged.b.d = c;
+#endif
       tagged.b.first_literal = lit2;
       tagged.b.other = c->literals[0];
       return;
@@ -46,8 +59,10 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
 #endif
   tagged.clause.clause_ptr = reinterpret_cast<uintptr_t> (c);
   tagged.b.binary = false;
+#if !defined(LOGGING) && defined(NDEBUG)
   static_assert (sizeof (ClauseOrBinary) == 8,
                  "ClauseOrBinary compression does not work");
+#endif
 }
 
 ClauseOrBinary::ClauseOrBinary (Clause *c) {
@@ -72,6 +87,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit,
   if (lit1 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
+#if defined(LOGGING) || !defined(NDEBUG)
+    tagged.b.d = c;
+#endif
     tagged.b.first_literal = lit1;
     tagged.b.other = other;
     return;
@@ -81,6 +99,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit,
   if (lit2 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
+#if defined(LOGGING) || !defined(NDEBUG)
+    tagged.b.d = c;
+#endif
     tagged.b.first_literal = lit2;
     tagged.b.other = lit;
     return;
@@ -594,7 +615,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     // broken is in cache given how central it is... but not always (see the
     // ncc problems). Value was heuristically determined to give reasonnable
     // values.
-    static_assert (sizeof (*i) == 8, "ClauseOrBinary ticks difference");
     ticks += 1 + cache_lines (broken_size, sizeof *i);
 #if defined(LOGGING) || !defined(NDEBUG)
     int64_t made = 0;
