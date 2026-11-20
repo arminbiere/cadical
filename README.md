@@ -45,7 +45,7 @@ tool paper from SAT'26 or our tool paper CaDiCaL 2.0 from CAV'24:
 <a href="https://www.dominikschreiber.de">Dominik Schreiber</a>,
 <a href="https://cca.informatik.uni-freiburg.de/biere/index.html#publications">Armin Biere</a>
 <br>
-<i>29th International Conference on Theory and Applications of Satisfiability Testing (SAT'26)</i>
+<i>Proc.&nbsp;29th Intl.&nbsp;Conf.&nbsp;on Theory and Applications of Satisfiability Testing (SAT'26)</i>
 <br>
 [ <a href="https://cca.informatik.uni-freiburg.de/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.pdf">paper</a>
 | <a href="https://cca.informatik.uni-freiburg.de/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.bib">bibtex</a>
