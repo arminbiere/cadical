@@ -105,7 +105,6 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 #ifndef QUIET
   double start = internal->time ();
 #endif
-
   bool found_inccnf_header = false;
   int ch = 0, declared = 0;
   uint64_t clauses = 0;
@@ -215,6 +214,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     MSG ("found %s'p cnf %d %" PRIu64 "'%s header", tout.green_code (),
          vars, clauses, tout.normal_code ());
 
+    // need to keep this after comment option parsing and before reserve_ids
+    solver->transition_to_steady_state ();
     if (vars) {
       assert (vars > 0);
       solver->resize (vars);
@@ -245,12 +246,12 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     MSG ("found %s'p inccnf'%s header", tout.green_code (),
          tout.normal_code ());
 
-  #if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
     // Cube & Conquer 'inccnf' format is not compatible with factor:
     internal->opts.factor = 0;
-  #else
+#else
     PER ("icnf not compatible with NOPTIONS");
-  #endif
+#endif
 
     strict = FORCED;
   } else
@@ -273,6 +274,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         break;
       continue;
     }
+    if (internal->terminated_asynchronously ())
+      return "parsing interrupted by signal";
     if (ch == 'a' && found_inccnf_header)
       break;
     const char *err = parse_lit (ch, lit, vars, strict);
@@ -332,6 +335,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
           break;
         continue;
       }
+      if (internal->terminated_asynchronously ())
+        return "parsing interrupted by signal";
       const char *err = parse_lit (ch, lit, vars, strict);
       if (err == cube_token)
         PER ("two 'a' in a row");
@@ -392,6 +397,8 @@ const char *Parser::parse_solution_non_profiled () {
   clear_n (external->solution, external->max_var + 1u);
   int ch;
   for (;;) {
+    if (internal->terminated_asynchronously ())
+      return "parsing solution interrupted by signal";
     ch = parse_char ();
     if (ch == EOF)
       PER ("missing 's' line");
@@ -459,17 +466,13 @@ const char *Parser::parse_solution_non_profiled () {
 
 const char *Parser::parse_dimacs (int &vars, int strict) {
   assert (strict == FORCED || strict == RELAXED || strict == STRICT);
-  START (parse);
-  const char *err = parse_dimacs_non_profiled (vars, strict);
-  STOP (parse);
-  return err;
+  PROFILE_SCOPE (parse);
+  return parse_dimacs_non_profiled (vars, strict);
 }
 
 const char *Parser::parse_solution () {
-  START (parse);
-  const char *err = parse_solution_non_profiled ();
-  STOP (parse);
-  return err;
+  PROFILE_SCOPE (parse);
+  return parse_solution_non_profiled ();
 }
 
 } // namespace CaDiCaL

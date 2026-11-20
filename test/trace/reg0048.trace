@@ -3,7 +3,6 @@ set check 1
 set cover 1
 set elimint 11
 set elimocclim 0
-set restoreflush 1
 set subsumemineff 0
 set subsumestr 0
 add 2

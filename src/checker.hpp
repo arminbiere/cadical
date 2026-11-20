@@ -32,7 +32,7 @@ struct CheckerClause {
   uint64_t hash;       // previously computed full 64-bit hash
   unsigned size;       // zero if this is a garbage clause
 #ifndef NFLEXIBLE
-  int literals[];  // otherwise 'literals' of length 'size'
+  int literals[]; // otherwise 'literals' of length 'size'
 #else
   int literals[2];
 #endif

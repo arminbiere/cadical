@@ -1,6 +1,5 @@
 init
 set cover 1
-set restoreflush 1
 set check 1
 set elimocclim 0
 set subsume 0

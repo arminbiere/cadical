@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "flags.hpp"
+#include "profile.hpp"
 
 namespace CaDiCaL {
 
@@ -44,8 +45,8 @@ Internal::Internal ()
   // fake binary clause is always kept non-redundant (and not-moved etc.)
   // due to the following 'memset'.  Only literals will be changed.
 
-  // In a previous version we used local automatic allocated 'Clause' on the
-  // stack, which became incompatible with several compilers (see the
+  // In a previous version we used local automatic allocated 'Clause' on
+  // the stack, which became incompatible with several compilers (see the
   // discussion on flexible array member in 'Clause.cpp').
 
   size_t bytes = Clause::bytes (2);
@@ -57,14 +58,6 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-  // If a memory exception ocurred a profile might still be active.
-#ifndef QUIET
-#define PROFILE(NAME, LEVEL) \
-  if (PROFILE_ACTIVE (NAME)) \
-    STOP (NAME);
-  PROFILES
-#undef PROFILE
-#endif
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
@@ -146,7 +139,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (stab, new_vsize);
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
-  if (external)
+  if (external->propagator)
     enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
@@ -221,8 +214,12 @@ void Internal::add_original_lit (int lit) {
       if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
-        // First integer is the presence-flag (even if the clause is empty)
-        external->forgettable_original[id] = {1};
+        // initialize the vector to the correct size directly
+        external->forgettable_original[id].reserve (
+            1 + external->eclause.size ());
+        // First integer is the presence-flag (even if the clause is
+        // empty)
+        external->forgettable_original[id].push_back (1);
 
         for (auto const &elit : external->eclause)
           external->forgettable_original[id].push_back (elit);
@@ -251,9 +248,9 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::reserve_ids (int number) {
+void Internal::reserve_ids (int64_t number) {
   // return;
-  LOG ("reserving %d ids", number);
+  LOG ("reserving %" PRId64 " ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
@@ -298,13 +295,11 @@ int Internal::cdcl_loop_with_inprocessing () {
 
   int res = 0;
 
-  START (search);
+  PROFILE_SCOPE_SEARCH (search, stable);
 
   if (stable) {
-    START (stable);
     report ('[');
   } else {
-    START (unstable);
     report ('{');
   }
 
@@ -316,7 +311,9 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate_wrapper ())
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
-      iterate ();                               // report learned unit
+      iterate ();                          // report learned unit
+    else if (terminated_asynchronously ()) // externally terminated
+      break;
     else if (!external_propagate () || unsat) { // external propagation
       if (unsat)
         continue;
@@ -353,14 +350,10 @@ int Internal::cdcl_loop_with_inprocessing () {
   }
 
   if (stable) {
-    STOP (stable);
     report (']');
   } else {
-    STOP (unstable);
     report ('}');
   }
-
-  STOP (search);
 
   return res;
 }
@@ -485,8 +478,6 @@ int Internal::propagate_assumptions () {
 
 void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
 
   size_t trail_limit = trail.size ();
   if (level > last_assumption_level)
@@ -772,7 +763,9 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return false;
   if (!max_var)
     return false;
-  START (preprocess);
+  if (terminated_asynchronously ())
+    return false;
+  PROFILE_SCOPE (preprocess);
   if (!triggered)
     report ('('), triggered = true;
   struct {
@@ -789,14 +782,12 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   int old_eliminated = stats.vars_all_elim;
-
   if (opts.inprobing)
     inprobe (false);
   if (opts.elim)
     elim (false);
   if (opts.condition)
     condition (false);
-
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
   assert (preprocessing);
@@ -805,7 +796,6 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          "finished round %d with %" PRId64 " variables and %" PRId64
          " clauses",
          round, after.vars, after.clauses);
-  STOP (preprocess);
   report ('P');
   if (unsat)
     return false;
@@ -824,11 +814,13 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     return;
   if (!max_var)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (!opts.preprocesslight)
     return;
   if (!always && stats.searches > 1)
     return;
-  START (preprocess);
+  PROFILE_SCOPE (preprocess);
 #ifndef QUIET
   struct {
     int64_t vars, clauses;
@@ -844,24 +836,16 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   PHASE ("preprocessing", stats.preprocessings,
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
-
   if (extract_gates (true))
     decompose ();
   binary_clauses_backbone ();
-
   if (sweep ())
     decompose ();
-
   mark_duplicated_binary_clauses_as_garbage ();
-
   factor ();
 
-  elimfast ();
-
-  // if (opts.fastelim)
-  //  elimfast ();
-  // if (opts.condition)
-  // condition (false);
+  if (opts.fastelim)
+    elimfast ();
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.clauses_now_irr;
@@ -871,7 +855,6 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   PHASE ("preprocessing", stats.preprocessings,
          "finished with %" PRId64 " variables and %" PRId64 " clauses",
          after.vars, after.clauses);
-  STOP (preprocess);
   report ('P');
 }
 
@@ -969,8 +952,11 @@ int Internal::local_search_round (int round) {
     return false;
   if (!max_var)
     return false;
+  if (terminated_asynchronously ())
+    return false;
 
-  START_OUTER_WALK ();
+  MODE_SCOPE_WALK (WALK);
+  PROFILE_SCOPE_WALK (walk);
   assert (!localsearching);
   localsearching = true;
 
@@ -984,17 +970,13 @@ int Internal::local_search_round (int round) {
     limit = LONG_MAX;
 
   int res;
-  if (opts.walkfullocc == 1)
-    res = walk_full_occs_round (limit, true);
-  else if (opts.walkfullocc == 2)
+  if (opts.walkalgo == 1)
     res = walk_ddfw_round (limit, true);
   else
     res = walk_round (limit, true);
 
   assert (localsearching);
   localsearching = false;
-  STOP_OUTER_WALK ();
-
   report ('L');
 
   return res;
@@ -1040,7 +1022,7 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   stats.searches++;
-  START (solve);
+  PROFILE_SCOPE (solve);
   activating_all_new_imported_literals ();
   if (proof)
     proof->solve_query ();
@@ -1076,13 +1058,25 @@ int Internal::solve (bool preprocess_only) {
     if (!res && !level)
       res = local_search ();
   }
-  if (!preprocess_only && !res && !level && opts.luckyearly)
-    res = lucky_phases ();
+  bool run_lucky =
+      (stats.conflicts >=
+       lim.lucky); // cannot be in lucky, because we run it twice
+  bool update_lucky_limits = !opts.luckylate; // update in the second
+  // run if there is any only run lucky late if some preprocessing was
+  // done, which corresponds to preprocesslight (only done during the
+  // first search), or if the user forced preprocessing, or there are
+  // full preprocessing round.
+  bool will_do_any_preprocessing =
+      ((opts.preprocesslight && stats.searches <= 1) || preprocess_only ||
+       lim.preprocessing);
+  if (!preprocess_only && !res && !level && opts.luckyearly && run_lucky)
+    res = lucky_phases (update_lucky_limits);
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level && opts.luckylate)
-      res = lucky_phases ();
+    if (!res && !level && will_do_any_preprocessing && opts.luckylate &&
+        run_lucky)
+      res = lucky_phases (true);
     if (!res && !level)
       res = local_search ();
     if (!res)
@@ -1096,7 +1090,6 @@ int Internal::solve (bool preprocess_only) {
   finalize (res);
   reset_solving ();
   report_solving (res);
-  STOP (solve);
   return res;
 }
 
@@ -1147,13 +1140,13 @@ void Internal::reset_solving () {
 
 int Internal::restore_clauses () {
   int res = 0;
-  if (opts.restoreall <= 1 && external->tainted.empty ()) {
+  if (!opts.restoreall && external->tainted.empty ()) {
     LOG ("no tainted literals and nothing to restore");
     report ('*');
   } else {
     report ('+');
     // remove_garbage_binaries ();
-    external->restore_clauses ();
+    external->restore ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
       LOG ("root level propagation after restore produces conflict");
@@ -1163,12 +1156,15 @@ int Internal::restore_clauses () {
   }
   return res;
 }
+CubesWithStatus Internal::solve_and_generate_cubes (int depth,
+                                                    int min_depth) {
 
-int Internal::lookahead () {
   assert (clause.empty ());
-  START (lookahead);
+  PROFILE_SCOPE (lookahead);
   assert (!lookingahead);
   lookingahead = true;
+  if (proof)
+    proof->solve_query ();
   activating_all_new_imported_literals ();
   if (external_prop) {
     if (level) {
@@ -1179,19 +1175,71 @@ int Internal::lookahead () {
     LOG ("external notifications are turned off during preprocessing.");
     private_steps = true;
   }
-  int tmp = already_solved ();
-  if (!tmp)
-    tmp = restore_clauses ();
-  int res = 0;
-  if (!tmp)
-    res = lookahead_probing ();
-  if (res == INT_MIN)
-    res = 0;
+
+  CubesWithStatus cubes;
+  int res = already_solved ();
+  if (res == 0)
+    res = restore_clauses ();
+  if (unsat)
+    res = 20;
+  if (res != 0)
+    res = solve (true);
+  cubes.status = res;
+  if (!res)
+    cubes = generate_cubes (depth, min_depth);
+  lookingahead = false;
+  res = cubes.status;
+  finalize (res);
   reset_solving ();
-  report_solving (tmp);
+  report_solving (res);
+  PROFILE_SCOPE_EARLY_EXIT (lookahead);
+  if (external_prop) {
+    private_steps = false;
+    LOG ("external notifications are turned back on.");
+    notify_assignments (); // In case fixed assignments were found.
+  }
+  return cubes;
+}
+
+int Internal::lookahead (int &lit) {
+  assert (clause.empty ());
+  PROFILE_SCOPE (lookahead);
+  assert (!lookingahead);
+  lookingahead = true;
+  if (proof)
+    proof->solve_query ();
+  activating_all_new_imported_literals ();
+  if (external_prop) {
+    if (level) {
+      // Combining lookahead with external propagator is limited
+      // Note that lookahead_probing (); would also force backtrack anyway
+      backtrack ();
+    }
+    LOG ("external notifications are turned off during preprocessing.");
+    private_steps = true;
+  }
+  int res = already_solved ();
+  if (!res)
+    res = restore_clauses ();
+  if (unsat) // restore_clauses only returns 20 if the propagation returns
+             // unsat
+    res = 20;
+  if (!res)
+    lit = lookahead_probing ();
+  else if (res == 20)
+    lit = INT_MIN;
+  if (lit == INT_MIN) {
+    assert (unsat || unsat_constraint);
+    res = 20;
+    lit = 0;
+  } else
+    assert (!unsat && !unsat_constraint);
+  finalize (res);
+  reset_solving ();
+  report_solving (res);
   assert (lookingahead);
   lookingahead = false;
-  STOP (lookahead);
+  PROFILE_SCOPE_EARLY_EXIT (lookahead);
   if (external_prop) {
     private_steps = false;
     LOG ("external notifications are turned back on.");
@@ -1237,8 +1285,8 @@ void Internal::finalize (int res) {
         continue;
       proof->finalize_unit (id, lit);
     }
-    // See the discussion in 'propagate' on why garbage binary clauses stick
-    // around.
+    // See the discussion in 'propagate' on why garbage binary clauses
+    // stick around.
     for (const auto &c : clauses)
       if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);
@@ -1356,12 +1404,13 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
 }
 
 void Internal::declare_variable (int ilit) {
-  reserve_vars (ilit);
-  assert ((size_t) ilit < vsize);
-  if (ilit >= max_var) {
-    stats.vars_unused += (ilit - max_var);
-    stats.vars_inactive += (ilit - max_var);
-    max_var = ilit;
+  int iidx = abs (ilit);
+  reserve_vars (iidx);
+  assert ((size_t) iidx < vsize);
+  if (iidx >= max_var) {
+    stats.vars_unused += (iidx - max_var);
+    stats.vars_inactive += (iidx - max_var);
+    max_var = iidx;
   }
   Flags &f = internal->flags (ilit);
   if (f.declared ())
@@ -1369,7 +1418,7 @@ void Internal::declare_variable (int ilit) {
 
   LOG ("declaring %s", LOGLIT (ilit));
   mark_declared (ilit);
-  imports.push_back (ilit);
+  imports.push_back (vidx (ilit));
 }
 
 // Now we come to the part where we import literals. We either import
@@ -1380,21 +1429,29 @@ void Internal::activating_all_new_imported_literals () {
   LOG (imports, "activating all new variables");
   if (imports.empty ())
     return;
-  if (opts.varindexorder)
+  int new_max_var = 0;
+  if (opts.varindexorder) {
+    // I experimented with MSORT, but this was slower on
+    // lru_10.sanitized (14 vs 16s)
     std::sort (begin (imports), end (imports), [&] (int l, int o) {
+      assert (l > 0 && o > 0);
       return i2e[vidx (l)] < i2e[vidx (o)];
     });
-  if (!opts.varprioritizefirst)
-    std::reverse (begin (imports), end (imports));
-  auto max_it =
-      std::max_element (imports.begin (), imports.end (),
-                        [] (int a, int b) { return abs (a) < abs (b); });
-  assert (max_it != imports.end ());
-  int new_max_var = vidx (*max_it);
+    new_max_var = imports.back ();
+  } else {
+    auto max_it =
+        std::max_element (imports.begin (), imports.end (),
+                          [] (int a, int b) { return (a) < (b); });
+    assert (max_it != imports.end ());
+    new_max_var = *max_it;
+  }
   enlarge (new_max_var);
 
-  for (auto lit : imports) {
-    int idx = vidx (lit);
+  if (!opts.varprioritizefirst)
+    std::reverse (begin (imports), end (imports));
+
+  for (auto idx : imports) {
+    assert (idx > 0);
     auto &f = flags (idx);
     // the user asked for it but did not put the literal in any
     // clause, we still should declare it (for future use by the user)

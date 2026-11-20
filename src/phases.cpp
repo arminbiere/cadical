@@ -3,17 +3,16 @@
 namespace CaDiCaL {
 
 void Internal::copy_phases (vector<signed char> &dst) {
-  START (copy);
+  PROFILE_SCOPE (copy);
   for (auto i : vars) {
     const signed char tmp = phases.saved[i];
     if (tmp)
       dst[i] = tmp;
   }
-  STOP (copy);
 }
 
 void Internal::save_assigned_phases (vector<signed char> &dst) {
-  START (copy);
+  PROFILE_SCOPE (copy);
   for (auto l : trail) {
     // discussion with Armin and Florian to only save value excluding
     // the ones that lead to the conflict to avoid the order of
@@ -21,14 +20,12 @@ void Internal::save_assigned_phases (vector<signed char> &dst) {
     if (var (l).level < level)
       dst[vidx (l)] = vals[vidx (l)];
   }
-  STOP (copy);
 }
 
 void Internal::clear_phases (vector<signed char> &dst) {
-  START (copy);
+  PROFILE_SCOPE (copy);
   for (auto i : vars)
     dst[i] = 0;
-  STOP (copy);
 }
 
 void Internal::phase (int lit) {

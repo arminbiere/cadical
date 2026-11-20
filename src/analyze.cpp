@@ -186,7 +186,7 @@ void Internal::bump_variables () {
 
   assert (opts.bump);
 
-  START (bump);
+  PROFILE_SCOPE (bump);
 
   if (!use_scores ()) {
 
@@ -205,15 +205,13 @@ void Internal::bump_variables () {
 
   if (use_scores ())
     bump_variable_score_inc ();
-
-  STOP (bump);
 }
 
 /*------------------------------------------------------------------------*/
 
 // We use the glue time stamp table 'gtab' for fast glue computation.
 
-int Internal::recompute_glue (Clause *c) {
+int Internal::recompute_glue (Clause *const c) {
   int res = 0;
   const int64_t stamp = ++stats.clause_recompute_glue;
   for (const auto &lit : *c) {
@@ -230,8 +228,15 @@ int Internal::recompute_glue (Clause *c) {
 
 // Clauses resolved since the last reduction are marked as 'used', their
 // glue is recomputed and they are promoted if the glue shrinks.  Note that
-// promotion from 'tier3' to 'tier2' will set 'used' to '2'.
-
+// promotion from 'tier3' to 'tier2' will set sets 'used' to 'max_used'.
+//
+// In order to limit the recomputations of the glue, we don't recompute the
+// glue if the clause is already tier1.  However, if we recompute the tier,
+// we still have to do it for the tier limit to be correct.  Since the tier
+// limit is slowly moving down, we actually use the limit
+// `(tier_limit + 1) / 2` (glues are >= 1, so this is the upper-half
+// midpoint) which skips enough recomputation but should allow the solver to
+// get find the proper tier-1 limit.
 inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
   c->used = max_used;
@@ -239,9 +244,16 @@ inline void Internal::bump_clause (Clause *c) {
     return;
   if (!c->redundant)
     return;
-  int new_glue = recompute_glue (c);
-  if (new_glue < c->glue)
-    promote_clause (c, new_glue);
+  const int tier_limit = min (tier1[true], tier1[false]);
+  const bool recompute =
+      opts.recomputetier > 1 ||
+      (opts.recomputetier == 1 && c->glue > (tier_limit + 1) / 2) ||
+      (!opts.recomputetier && c->glue > tier_limit);
+  if (recompute) {
+    int new_glue = recompute_glue (c);
+    if (new_glue < c->glue)
+      promote_clause (c, new_glue);
+  }
 
   const size_t glue =
       std::min ((size_t) c->glue, stats.used[stable].size () - 1);
@@ -249,7 +261,6 @@ inline void Internal::bump_clause (Clause *c) {
   ++stats.bump_used[stable];
 }
 
-void Internal::bump_clause2 (Clause *c) { bump_clause (c); }
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the
@@ -603,7 +614,7 @@ inline int Internal::find_conflict_level (int &forced) {
     }
   }
 
-  LOG ("%d literals on actual conflict level %d", count, res);
+  LOG (conflict, "%d literals on actual conflict level %d", count, res);
 
   const int size = conflict->size;
   int *lits = conflict->literals;
@@ -613,7 +624,7 @@ inline int Internal::find_conflict_level (int &forced) {
   for (int i = 0; i < 2; i++) {
 
     const int lit = lits[i];
-
+    assert (val (lit) < 0);
     int highest_position = i;
     int highest_literal = lit;
     int highest_level = var (highest_literal).level;
@@ -972,7 +983,7 @@ void Internal::fix_trail_levels () {
   }
   LOG ("fixing all trail levels before backtracking");
   const size_t trix = control[out_of_order_level].trail;
-  assert (trix < trail.size ());
+  assert (trix <= trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
     const int lit = trail[i];
     Clause *reason = var (lit).reason;
@@ -994,12 +1005,18 @@ void Internal::fix_trail_levels () {
            var (lit).level, res);
 
     var (lit).level = res;
-    if (lrat && !res) {
-      auto tmp = std::move (lrat_chain);
-      lrat_chain.clear ();
-      build_chain_for_units (lit, reason, false);
-      learn_unit_clause (lit);
-      lrat_chain = std::move (tmp);
+    if (!res) {
+      if (lrat) {
+        auto tmp = std::move (lrat_chain);
+        lrat_chain.clear ();
+        build_chain_for_units (lit, reason, false);
+        learn_unit_clause (lit);
+        lrat_chain = std::move (tmp);
+      } else {
+        learn_unit_clause (lit);
+      }
+      mark_garbage (reason);
+      var (lit).reason = nullptr;
     }
   }
   out_of_order_level = -1;
@@ -1017,7 +1034,7 @@ void Internal::fix_trail_levels () {
 
 void Internal::analyze () {
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   assert (conflict);
   assert (lrat_chain.empty ());
@@ -1081,7 +1098,6 @@ void Internal::analyze () {
     conflict = 0;
     if (!opts.chrono)
       did_external_prop = true;
-    STOP (analyze);
     return;
   }
 
@@ -1103,7 +1119,6 @@ void Internal::analyze () {
     learn_empty_clause ();
     if (external->learner)
       external->export_learned_empty_clause ();
-    STOP (analyze);
     return;
   }
 
@@ -1173,7 +1188,6 @@ void Internal::analyze () {
         clause.clear ();
         break;
       }
-      assert (conflict_size >= 2);
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // here both clauses are part of the CNF, so one subsumes the other
@@ -1203,7 +1217,6 @@ void Internal::analyze () {
         clear_analyzed_literals ();
         clear_analyzed_levels ();
         clause.clear ();
-        STOP (analyze);
         return;
       }
 
@@ -1273,7 +1286,29 @@ void Internal::analyze () {
   // Update glue and learned (1st UIP literals) statistics.
   //
   int size = (int) clause.size ();
-  const int glue = (int) levels.size () - 1;
+  int glue = (int) levels.size () - 1;
+
+  size_t last_assumption_level = assumptions.size () + !!constraint.size ();
+  if (last_assumption_level > 0 && opts.glueassumptions < 2 && size > 1) {
+    assert (glue > 0);
+
+    int old_glue = glue;
+
+    for (auto &l : levels) {
+      if (l > 0 && (size_t) l <= last_assumption_level)
+        glue--;
+    }
+
+    if (old_glue >
+        glue) { // if had assumption levels counted in original glue
+      if (opts.glueassumptions) // add back one for all assumptions if
+                                // needed
+        glue++;
+
+      if (glue < 1) // ensure positive glue
+        glue = 1;
+    }
+  }
   LOG (clause, "1st UIP size %d and glue %d clause", size, glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
@@ -1364,8 +1399,7 @@ void Internal::analyze () {
   conflict = 0;
 
   lrat_chain.clear ();
-  STOP (analyze);
-
+  PROFILE_SCOPE_EARLY_EXIT (analyze);
   if (driving_clause && opts.eagersubsume)
     eagerly_subsume_recently_learned_clauses (driving_clause);
 
@@ -1455,7 +1489,6 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
     conflict = 0;
     clear_unit_analyzed_literals ();
     lrat_chain.clear ();
-    STOP (analyze);
   }
   return exiting;
 }

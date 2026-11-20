@@ -7,8 +7,8 @@
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>
-#include <sys/time.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #if __GNUC__ > 4 || defined(__llvm__)
 static const int n = 8;
@@ -26,12 +26,12 @@ static int ph (int p, int h) {
 //
 static int formula (void *solver) {
   int max = 0;
-  int *clause = (int*) malloc ((n)*sizeof(int));
+  int *clause = (int *) malloc ((n) * sizeof (int));
   for (int h = 0; h < n; h++) {
     for (int p1 = 0; p1 < n + 1; p1++) {
       for (int p2 = p1 + 1; p2 < n + 1; p2++) {
-        clause[0] = -ph(p1, h);
-        clause[1] = -ph(p2, h);
+        clause[0] = -ph (p1, h);
+        clause[1] = -ph (p2, h);
         ipasir2_add (solver, clause, 2, 0, 0);
         if (max < ph (p1, h))
           max = ph (p1, h);
@@ -44,11 +44,11 @@ static int formula (void *solver) {
   int i = 0;
   for (int p = 0; p < n + 1; p++) {
     for (int h = 0; h < n; h++) {
-      clause[i++] = ph(p,h);
+      clause[i++] = ph (p, h);
     }
     ipasir2_add (solver, clause, i, 0, 0);
-    printf("adding clause of length %d\n", i);
-    i=0;
+    printf ("adding clause of length %d\n", i);
+    i = 0;
   }
   free (clause);
   return max;
@@ -63,13 +63,14 @@ struct learner {
   unsigned aborted;
 };
 
-static void learn (void *ptr, int32_t const *clause, int32_t len, void* proofmeta) {
+static void learn (void *ptr, int32_t const *clause, int32_t len,
+                   void *proofmeta) {
   learner *learner = ptr;
   int max = learner->max_var;
   for (const int *p = clause; p != clause + len; p++) {
     if (*p > max || -*p > max) {
       learner->aborted++;
-      fprintf(stderr, "out of bound literal %d", *p);
+      fprintf (stderr, "out of bound literal %d", *p);
       return;
     }
   }

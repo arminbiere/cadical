@@ -12,7 +12,7 @@
 // but assume API breaking changes when increasing the major version.
 
 #define CADICAL_MAJOR 3 // Major semantic version.
-#define CADICAL_MINOR 0 // Minor semantic version.
+#define CADICAL_MINOR 1 // Minor semantic version.
 #define CADICAL_PATCH 0 // Semantic patch version.
 
 namespace CaDiCaL {
@@ -120,10 +120,10 @@ enum Status {
 //                    set / trace
 //  CONFIGURING --------------------------> CONFIGURING
 //
-//               add (non zero literal)
-//        VALID --------------------------> ADDING
+//               add / constrain (non zero literal)
+//        VALID --------------------------> ADDING[_CONSTRAINT]
 //
-//               add (zero literal)
+//               add /constrain (zero literal)
 //        VALID --------------------------> STEADY
 //
 //               assume (non zero literal)
@@ -192,20 +192,21 @@ enum Status {
 // States are represented by a bit-set in order to combine them.
 
 enum State {
-  INITIALIZING = 1,   // during initialization (invalid)
-  CONFIGURING = 2,    // configure options (with 'set')
-  STEADY = 4,         // ready to call 'solve'
-  ADDING = 8,         // adding clause literals (zero missing)
-  SOLVING = 16,       // while solving (within 'solve')
-  SATISFIED = 32,     // satisfiable allows 'val'
-  UNSATISFIED = 64,   // unsatisfiable allows 'failed'
-  DELETING = 128,     // during and after deletion (invalid)
-  INCONCLUSIVE = 256, // unknown allows 'implied'
+  INITIALIZING = 1,       // during initialization (invalid)
+  CONFIGURING = 2,        // configure options (with 'set')
+  STEADY = 4,             // ready to call 'solve'
+  ADDING = 8,             // adding clause literals (zero missing)
+  ADDING_CONSTRAINT = 16, // adding constraint literals (zero missing)
+  SOLVING = 32,           // while solving (within 'solve')
+  SATISFIED = 64,         // satisfiable allows 'val'
+  UNSATISFIED = 128,      // unsatisfiable allows 'failed'
+  DELETING = 256,         // during and after deletion (invalid)
+  INCONCLUSIVE = 512,     // unknown allows 'implied'
 
   // These combined states are used to check contracts.
 
   READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED | INCONCLUSIVE,
-  VALID = READY | ADDING,
+  VALID = READY | ADDING | ADDING_CONSTRAINT,
   INVALID = INITIALIZING | DELETING
 };
 
@@ -285,7 +286,7 @@ public:
   // returning from 'simplify' and 'lookahead.
   //
   //   require (READY)
-  //   ensure (STEADY )
+  //   ensure (STEADY)
   //
   void assume (int lit);
 
@@ -374,7 +375,7 @@ public:
   // the first one is implicitly disconnected.
   //
   //   require (VALID)
-  //   ensure (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   void connect_terminator (Terminator *terminator);
   void disconnect_terminator ();
@@ -406,8 +407,8 @@ public:
   // Disconnection of the external propagator resets all the observed
   // variables.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (READY)
+  //   ensure (STEADY)
   //
   void connect_external_propagator (ExternalPropagator *propagator);
   void disconnect_external_propagator ();
@@ -421,8 +422,8 @@ public:
   // An observed variable is allowed to be a fresh variable and it can be
   // added also during solving.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void add_observed_var (int var);
 
@@ -430,16 +431,16 @@ public:
   // set unobserved only when it is unassigned, in order to guarantee
   // that no yet unexplained external propagation involves it.
   //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void remove_observed_var (int var);
 
   // Removes all the 'observed' flags from the variables. Disconnecting the
   // propagator invokes this step as well.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (VALID || SOLVING)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT || SOLVING)
   //
   void reset_observed_vars ();
 
@@ -452,13 +453,6 @@ public:
   //
   bool is_decision (int lit);
 
-  // Get the current value of an observed literal.
-  //
-  //   require (VALID_OR_SOLVING)
-  //   ensure (VALID_OR_SOLVING)
-  //
-  signed char current_value (int lit);
-
   // Force solve to backtrack to certain decision level. Can be called only
   // during 'cb_decide' and 'cb_check_final_model' of a connected External
   // Propagator. Invoking in any other time will trigger a runtime error.
@@ -469,6 +463,13 @@ public:
   //   ensure (SOLVING)
   //
   void force_backtrack (int new_level);
+
+  // Get the current value of an observed literal.
+  //
+  //   require (VALID_OR_SOLVING)
+  //   ensure (VALID_OR_SOLVING)
+  //
+  // signed char current_value (int lit);
 
   // Force solve to unassign a certain literal by (repeated) backtracking.
   // Has the same contracts as 'force_backtrack' and can only be called
@@ -493,9 +494,11 @@ public:
   //
   // Add valid literal to the constraint clause or zero to terminate it.
   //
-  //   require (VALID)                     // recall 'VALID = READY |
-  //   ADDING' if (lit) ensure (ADDING)            // and thus VALID but not
-  //   READY if (!lit) && !adding_clause ensure (STEADY ) // and thus READY
+  //   require (VALID)  // recall 'VALID = READY | ADDING_CONSTRAINT'
+  //   if (lit) ensure (ADDING_CONSTRAINT)
+  //     and thus VALID but not READY
+  //   if (!lit) && !adding_clause ensure (STEADY)
+  //     and thus READY
   //
   void constrain (int lit);
 
@@ -572,7 +575,7 @@ public:
   // the function is not able to determine satisfiability also zero is
   // returned but the state remains steady.
   //
-  //   require (READY)
+  //   require (READY & !SATISFIED & !UNSATISFIED)
   //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
@@ -653,8 +656,8 @@ public:
   // might need to reallocate tables, it destroys a satisfying assignment
   // and has the same state transition and conditions as 'assume' etc.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
@@ -670,13 +673,14 @@ public:
   // variable name of the consecutive range of newly delcared variables.
   // It has the same state transition and conditions as 'resize' above.
   //
-  //   require (READY)
-  //   ensure (STEADY)
+  //   require (VALID)
+  //   ensure (STEADY || ADDING || ADDING_CONSTRAINT)
   //
   // or
   //
   //   require (SOLVING)
   //   ensure (SOLVING)
+  //
   int declare_more_variables (int number_of_additional_new_vars);
 
   // Returns the next fresh variable that was not used internally.
@@ -708,6 +712,9 @@ public:
   //   ensure (VALID)
   //
   void trace_api_calls (FILE *file);
+  // same, but the file is owned by the library and is closed during
+  // deletion
+  void trace_api_calls (const char *name);
 #endif
 
   //------------------------------------------------------------------------
@@ -807,7 +814,7 @@ public:
   //   require (READY)
   //   ensure (READY)
   //
-  bool limit (const char *arg, int val);
+  bool limit (const char *arg, int64_t val);
   bool is_valid_limit (const char *arg);
 
   // The number of currently active variables and clauses can be queried by
@@ -841,10 +848,12 @@ public:
   int simplify (int rounds = 3);
 
   //------------------------------------------------------------------------
-  // Force termination of 'solve' asynchronously.
+  // Force termination of 'solve' asynchronously (e.g. via a signal
+  // handler).
   //
   //  require (SOLVING | READY)
-  //  ensure (INCONCLUSIVE )     // actually not immediately (synchronously)
+  //  // not immediately (synchronously)
+  //  ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   //
   void terminate ();
 
@@ -879,6 +888,10 @@ public:
   //   ensure (VALID)
   //
   bool frozen (int lit) const;
+  //
+  //   require (READY)
+  //   ensure (STEADY)
+  //
   void freeze (int lit);
   void melt (int lit); // Also needs 'require (frozen (lit))'.
 
@@ -888,8 +901,8 @@ public:
   // It returns '1' if the literal is implied by the formula, '-1' if its
   // negation is implied, or '0' if this is unclear at this point.
   //
-  //   require (VALID)
-  //   ensure (VALID)
+  //   require (VALID || SOLVING)
+  //   ensure (VALID || SOLVING)
   //
   int fixed (int lit) const;
 
@@ -913,6 +926,9 @@ public:
   double get_vmtf_score (int lit);
 
   // Force the default decision phase of a variable to a certain value.
+  //
+  //   require (READY || SOLVING)
+  //   ensure (STEADY || SOLVING)
   //
   void phase (int lit);
   void unphase (int lit);
@@ -1035,6 +1051,7 @@ public:
   //   ensure (VALID)
   //
   bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_constraint (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
 
@@ -1051,7 +1068,7 @@ public:
   //
   // Returns zero if successful and otherwise an error message.
   //
-  //   require (VALID)
+  //   require (CONFIGURING)
   //   ensure (VALID)
   //
   const char *read_dimacs (FILE *file, const char *name, int &vars,
@@ -1171,6 +1188,8 @@ private:
   void trace_api_call (const char *, int, int) const;
   void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
+  void trace_api_call_large (const char *, int64_t) const;
+  void trace_api_call_large (const char *, const char *, int64_t) const;
 #endif
 
   void transition_to_steady_state ();
@@ -1269,13 +1288,15 @@ private:
   //
   ExternalPropagator *get_propagator ();
   bool observed (int lit);
+  bool is_witness (int lit);
 
-  friend struct LemmaCall;
-  friend struct DecideCall;
-  friend struct MockForceCall;
-  friend struct PropagateLemmaCall;
-  friend struct DisconnectCall;
+  friend struct Call;
+  friend struct ReadSolutionCall;
+  friend struct ObservedCall;
+  friend struct IsWitnessCall;
   friend class MockPropagator;
+  friend class ReplayPropagator;
+  friend struct ExtendMap;
 };
 
 /*========================================================================*/

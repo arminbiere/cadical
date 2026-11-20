@@ -3,9 +3,11 @@
 #include <climits>
 #include <cstring>
 
+namespace CaDiCaL {
+
 void Reap::init () {
   for (auto &bucket : buckets)
-    bucket = {0};
+    bucket.push_back (0);
   assert (!num_elements);
   assert (!last_deleted);
   min_bucket = 32;
@@ -125,3 +127,5 @@ void Reap::clear () {
   min_bucket = 32;
   max_bucket = 0;
 }
+
+} // namespace CaDiCaL

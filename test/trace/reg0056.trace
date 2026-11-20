@@ -82,7 +82,6 @@
 82 set restartmarginfocused 0
 83 set restartreusetrail 0
 84 set restoreall 0
-85 set restoreflush 0
 86 set varprioritizefirst 0
 87 set score 0
 88 set scorefactor 500

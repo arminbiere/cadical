@@ -20,8 +20,6 @@ class FratTracer : public FileTracer {
   int64_t finalized, original;
 #endif
 
-  std::vector<int64_t> delete_ids;
-
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (int64_t id, bool = false);

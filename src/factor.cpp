@@ -60,6 +60,8 @@ void Internal::factor_mode (bool redundant_only) {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
+    if (terminated_asynchronously ())
+      return;
     if (c->garbage)
       continue;
     if (redundant_only && !c->redundant)
@@ -93,6 +95,8 @@ void Internal::factor_mode (bool redundant_only) {
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
   for (unsigned round = 1; !opts.factorxor && round <= rounds; round++) {
+    if (terminated_asynchronously ())
+      return;
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
@@ -126,9 +130,12 @@ void Internal::factor_mode (bool redundant_only) {
   }
 
   // finally push remaining clause on the occurrence stack
-  for (const auto &c : candidates)
+  for (const auto &c : candidates) {
+    if (terminated_asynchronously ())
+      return;
     for (const auto &lit : *c)
       occs (lit).push_back (c);
+  }
 
   PHASE ("factor", stats.factorings,
          "initialized %zd clauses using %" PRId64 " ticks",
@@ -274,7 +281,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
-  DeferDeletePtr<Quotient> delete_res(res);
+  DeferDeletePtr<Quotient> delete_res (res);
   // these are set to 0 for sanity (but not used).
   res->next = 0;
   res->prev = 0;
@@ -297,6 +304,8 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     if (c->size < 3)
       continue;
     if (ticks > limit)
+      break;
+    if (terminated_asynchronously ())
       break;
     for (auto &lit : *c) {
       markfact (lit, NOUNTED);
@@ -483,7 +492,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   *reduction_ptr = matches - 4;
   assert (!factoring.quotients.xorites);
   factoring.quotients.xorites = res;
-  delete_res.release();
+  delete_res.release ();
   return res;
 }
 
@@ -1405,7 +1414,7 @@ bool Internal::run_factorization (int64_t limit) {
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
     const unsigned ufirst = factoring.schedule.pop_front ();
-    VERBOSE (3, "next factor candidate %d", ufirst);
+    LOG ("next factor candidate %d", ufirst);
     const int first = u2i (ufirst);
     const int first_idx = vidx (first);
     if (!active (first_idx))
@@ -1418,7 +1427,8 @@ bool Internal::run_factorization (int64_t limit) {
       VERBOSE (2, "factorization ticks limit hit");
       break;
     }
-    if (terminated_asynchronously ())
+    if (terminated_asynchronously ()) // TODO: somehow a ticks update is
+                                      // missed with this
       break;
     Flags &f = flags (first_idx);
     const unsigned bit = 1u << (first < 0);
@@ -1550,7 +1560,8 @@ bool Internal::factor () {
 
   mark_duplicated_binary_clauses_as_garbage ();
 
-  START_SIMPLIFIER (factor, FACTOR);
+  MODE_SCOPE_SIMPLIFY (FACTOR);
+  PROFILE_SCOPE_SIMPLIFY (factor);
   stats.factorings++;
 
   struct {
@@ -1570,13 +1581,13 @@ bool Internal::factor () {
   // TODO: redundant mode sometimes?
   factor_mode (!is_preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
+
   reset_factor_mode ();
 
   propagated = 0;
   if (!unsat && !propagate ()) {
     learn_empty_clause ();
   }
-
   after.ticks = stats.ticks_factor;
   delta.ticks = after.ticks - before.ticks;
 #ifndef QUIET
@@ -1596,7 +1607,6 @@ bool Internal::factor () {
 
   if (completed)
     last.factor.marked = stats.mark_factor;
-  STOP_SIMPLIFIER (factor, FACTOR);
   return true;
 }
 

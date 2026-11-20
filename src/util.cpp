@@ -1,10 +1,11 @@
 #include "internal.hpp"
+#include <cstdint>
 
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool parse_int_str (const char *val_str, int &val) {
+bool parse_int_str (const char *val_str, int &val, bool cut_to_fit) {
   if (!strcmp (val_str, "true"))
     val = 1;
   else if (!strcmp (val_str, "false"))
@@ -53,15 +54,87 @@ bool parse_int_str (const char *val_str, int &val) {
 
     if (sign < 0) {
       val64 = -val64;
+      if (val64 < INT_MIN) {
+        if (!cut_to_fit)
+          return false;
+        val64 = INT_MIN;
+      }
+    } else {
+      if (val64 > INT_MAX) {
+        if (!cut_to_fit)
+          return false;
+        val64 = INT_MAX;
+      }
+    }
+
+    assert (INT_MIN <= val64);
+    assert (val64 <= INT_MAX);
+
+    val = val64;
+  }
+  return true;
+}
+
+bool parse_int64_str (const char *val_str, int64_t &val) {
+  if (!strcmp (val_str, "true"))
+    val = 1;
+  else if (!strcmp (val_str, "false"))
+    val = 0;
+  else {
+    const char *p = val_str;
+    int sign;
+
+    if (*p == '-')
+      sign = -1, p++;
+    else
+      sign = 1;
+
+    int ch;
+    if (!isdigit ((ch = *p++)))
+      return false;
+
+    const int64_t bound = INT64_MAX;
+    int64_t mantissa = ch - '0';
+
+    while (isdigit (ch = *p++)) {
+      if (bound / 10 < mantissa)
+        mantissa = bound;
+      else
+        mantissa *= 10;
+      const int digit = ch - '0';
+      if (bound - digit < mantissa)
+        mantissa = bound;
+      else
+        mantissa += digit;
+    }
+
+    int exponent = 0;
+    if (ch == 'e') {
+      while (isdigit ((ch = *p++)))
+        exponent = exponent ? 10 : ch - '0';
+      if (ch)
+        return false;
+    } else if (ch)
+      return false;
+
+    assert (exponent <= 10);
+    int64_t val64 = mantissa;
+    for (int i = 0; i < exponent; i++)
+      val64 *= 10;
+
+    if (sign < 0) {
+      val64 = -val64;
+      /*
       if (val64 < INT_MIN)
         val64 = INT_MIN;
     } else {
       if (val64 > INT_MAX)
         val64 = INT_MAX;
+        */
     }
 
-    assert (INT_MIN <= val64);
-    assert (val64 <= INT_MAX);
+    assert (INT64_MIN <= val64);
+    assert (val64 <= INT64_MAX);
 
     val = val64;
   }

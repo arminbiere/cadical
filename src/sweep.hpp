@@ -12,7 +12,7 @@ struct Internal;
 struct sweep_proof_clause {
   unsigned sweep_id; // index for sweeper.clauses
   int64_t cad_id;    // cadical id
-  unsigned kit_id;   // kitten id
+  unsigned kit_id;   // citten id
   bool learned;
   std::vector<int> literals;
   std::vector<unsigned> chain; // lrat
@@ -44,8 +44,6 @@ struct Sweeper {
   unsigned save;
   std::vector<int> vars;
   std::vector<Clause *> clauses;
-  std::vector<sweep_blocked_clause> blocked_clauses;
-  std::vector<int> blockable;
   std::vector<int> clause;
   std::vector<int> propagate;
   std::vector<int> backbone;

@@ -45,7 +45,8 @@ void External::check_solution_on_learned_unit_clause (int unit) {
   // names might not match, but the sign does (at least currently).
   if (sign (sol (internal->externalize (unit))) == sign (unit))
     return;
-  FATAL ("learned unit internal %d / external %d contradicts solution", unit, internal->externalize (unit));
+  FATAL ("learned unit internal %d / external %d contradicts solution",
+         unit, internal->externalize (unit));
 }
 
 } // namespace CaDiCaL

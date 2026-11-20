@@ -107,7 +107,7 @@ extern "C" {
 
 // c headers
 extern "C" {
-#include "kitten.h"
+#include "citten.h"
 }
 /*------------------------------------------------------------------------*/
 
@@ -118,7 +118,6 @@ using namespace std;
 struct Coveror;
 struct External;
 struct Walker_DDFW;
-struct WalkerFO;
 struct Walker;
 class Tracer;
 class FileTracer;
@@ -243,7 +242,6 @@ struct Internal {
   vector<int64_t> btab;         // enqueue time stamps for queue
   vector<int64_t> gtab;         // time stamp table to recompute glue
   vector<Occs> otab;            // table of occurrences for all literals
-  vector<Occs> rtab;            // table of redundant occurrences
   vector<int> ptab;             // table for caching probing attempts
   vector<uint64_t> ntab;        // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
@@ -291,7 +289,7 @@ struct Internal {
   vector<int>
       imports; // impported literals (ordered by order of appearance)
 
-  kitten *citten;
+  struct citten *citten;
 
   size_t num_assigned; // check for satisfied
 
@@ -367,7 +365,7 @@ struct Internal {
   void finish_added_clause_with_id (int64_t id, bool restore = false);
 
   // Reserve ids for original clauses to produce lrat
-  void reserve_ids (int number);
+  void reserve_ids (int64_t number);
 
   // Enlarge tables.
   //
@@ -715,8 +713,9 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
+  Clause *new_clause (bool red, int glue = 0, int64_t new_id = 0);
   void promote_clause (Clause *, int new_glue);
+  void undelete_clause (Clause *);
   void promote_clause_glue_only (Clause *, int new_glue);
   void make_irredundant (Clause *);
   size_t shrink_clause (Clause *, int new_size);
@@ -812,7 +811,6 @@ struct Internal {
   void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
-  void bump_clause2 (Clause *);
   void clear_unit_analyzed_literals ();
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
@@ -921,8 +919,8 @@ struct Internal {
   void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
   void lucky_assume_decision (int);
-  int trivially_false_satisfiable ();
-  int trivially_true_satisfiable ();
+  int trivially_false_satisfiable (int64_t &);
+  int trivially_true_satisfiable (int64_t &);
   template <class Iterator>
   int lucky_fixed_test (Iterator begin, Iterator end, signed char pol,
                         std::string str);
@@ -938,10 +936,7 @@ struct Internal {
 
   bool search_limits_hit ();
 
-  void terminate () {
-    LOG ("forcing asynchronous termination");
-    termination_forced = true;
-  }
+  void terminate () { termination_forced = true; }
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then removing
@@ -1263,7 +1258,7 @@ struct Internal {
   void find_gate_clauses (Eliminator &, int pivot);
   void unmark_gate_clauses (Eliminator &);
 
-  // mine definitions for kitten in 'definition.cpp'
+  // mine definitions for citten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
   void init_citten ();
@@ -1274,9 +1269,11 @@ struct Internal {
   //
   bool ineliminating ();
   double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+  void
+  mark_redundant_clauses_with_eliminated_variables_as_garbage (int64_t &);
   void unmark_binary_literals (Eliminator &);
-  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
+  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *,
+                        bool propagate, bool keep_chain);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
   bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
@@ -1301,8 +1298,9 @@ struct Internal {
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
-  void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
-  bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
+  void sweep_check_counts (int except = 0);
+  void sweep_set_citten_ticks_limit (Sweeper &sweeper);
+  bool citten_ticks_limit_hit (Sweeper &sweeper, const char *when);
   void init_sweeper (Sweeper &sweeper);
   void release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);
@@ -1452,12 +1450,6 @@ struct Internal {
   int walk_round (int64_t limit, bool prev);
   void walk ();
 
-  int walk_full_occs_round (int64_t limit, bool prev);
-  void walk_full_occs ();
-  void walk_full_occs_save_minimum (WalkerFO &);
-  void make_clauses_along_occurrences (WalkerFO &walker, int lit);
-  void make_clauses_along_unsatisfied (WalkerFO &walker, int lit);
-
   int walk_ddfw_round (int64_t limit, bool prev);
   void walk_ddfw ();
   void walk_ddfw_save_minimum (Walker_DDFW &);
@@ -1576,9 +1568,9 @@ struct Internal {
 
   // Internal functions to enable explicit search limits.
   //
-  void limit_terminate (int);
-  void limit_decisions (int);     // Force decision limit.
-  void limit_conflicts (int);     // Force conflict limit.
+  void limit_terminate (int64_t);
+  void limit_decisions (int64_t); // Force decision limit.
+  void limit_conflicts (int64_t); // Force conflict limit.
   void limit_preprocessing (int); // Enable 'n' preprocessing rounds.
   void limit_local_search (int);  // Enable 'n' local search rounds.
   void limit_ticks (int64_t);     // Force ticks limit.
@@ -1586,7 +1578,7 @@ struct Internal {
   // External versions can access limits by 'name'.
   //
   static bool is_valid_limit (const char *name);
-  bool limit (const char *name, int); // 'true' if 'name' valid
+  bool limit (const char *name, int64_t); // 'true' if 'name' valid
 
   // Set all the CDCL search limits and increments for scheduling
   // inprocessing, restarts, clause database reductions, etc.
@@ -1622,15 +1614,16 @@ struct Internal {
   int preprocess (bool always);
   int local_search_round (int round);
   int local_search ();
-  int lucky_phases ();
+  int lucky_phases (bool update_limit);
   int cdcl_loop_with_inprocessing ();
   void reset_solving ();
   int solve (bool preprocess_only = false);
   void finalize (int);
 
   //
-  int lookahead ();
+  int lookahead (int &);
   CubesWithStatus generate_cubes (int, int);
+  CubesWithStatus solve_and_generate_cubes (int, int);
   int most_occurring_literal ();
   int lookahead_probing ();
   int lookahead_next_probe ();
@@ -1644,8 +1637,8 @@ struct Internal {
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').
   //
-  void start_profiling (Profile &p, double);
-  void stop_profiling (Profile &p, double);
+  void start_profiling (Profile &p, double, int64_t);
+  void stop_profiling (Profile &p, double, int64_t);
 
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();
@@ -1726,7 +1719,7 @@ struct Internal {
   }
   void melt (int lit) {
     int idx = vidx (lit);
-    if ((size_t) idx < frozentab.size ()) {
+    if ((size_t) idx >= frozentab.size ()) {
       LOG ("variable %d completely molten", idx);
       return;
     }
@@ -1933,12 +1926,14 @@ inline int External::fixed (int elit) const {
 // data race issue (it also has been declared 'volatile').
 
 inline bool Internal::terminated_asynchronously (int factor) {
-  // First way of asynchronous termination is through 'terminate' which sets
-  // the 'termination_forced' flag directly.  The second way is through a
-  // call back to a 'terminator' if it is non-zero, which however is costly.
+  // First way of asynchronous termination is through 'terminate' or
+  // 'catch_signal' which sets the 'termination_forced' flag directly.
+  // The second way is through a call back to a 'terminator' if it is
+  // non-zero, which however is costly.
   //
   if (termination_forced) {
     LOG ("termination asynchronously forced");
+    VERBOSE (2, "termination forced");
     return true;
   }
 

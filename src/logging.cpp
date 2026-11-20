@@ -54,21 +54,15 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
       printf (" glue %d redundant", c->glue);
     else
       printf (" irredundant");
-    printf (" size %d clause[%" PRId64 "]", c->size, c->id);
+    if (c->moved)
+      printf (" size %d clause[%" PRId64 "]", c->size, c->copy->id);
+    else
+      printf (" size %d clause[%" PRId64 "]", c->size, c->id);
     if (c->moved)
       printf (" ... (moved)");
     else {
-      if (internal->opts.logsort) {
-        vector<int> s;
-        for (const auto &lit : *c)
-          s.push_back (lit);
-        sort (s.begin (), s.end (), clause_lit_less_than ());
-        for (const auto &lit : s)
-          printf (" %d", lit);
-      } else {
-        for (const auto &lit : *c) {
-          printf (" %s", loglit (internal, lit).c_str ());
-        }
+      for (const auto &lit : *c) {
+        printf (" %s", loglit (internal, lit).c_str ());
       }
     }
   } else if (internal->level)
@@ -113,17 +107,8 @@ void Logger::log (Internal *internal, const vector<int> &c, const char *fmt,
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
-  if (internal->opts.logsort) {
-    vector<int> s;
-    for (const auto &lit : c)
-      s.push_back (lit);
-    sort (s.begin (), s.end (), clause_lit_less_than ());
-    for (const auto &lit : s)
-      printf (" %d", lit);
-  } else {
-    for (const auto &lit : c)
-      printf (" %d", lit);
-  }
+  for (const auto &lit : c)
+    printf (" %d", lit);
   fputc ('\n', stdout);
   tout.normal ();
   fflush (stdout);
@@ -141,17 +126,8 @@ void Logger::log (Internal *internal,
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
-  if (internal->opts.logsort) {
-    vector<int> s;
-    for (auto p = begin; p != end; p++)
-      s.push_back (*p);
-    sort (s.begin (), s.end (), clause_lit_less_than ());
-    for (const auto &lit : s)
-      printf (" %d", lit);
-  } else {
-    for (auto p = begin; p != end; p++)
-      printf (" %d", *p);
-  }
+  for (auto p = begin; p != end; p++)
+    printf (" %d", *p);
   fputc ('\n', stdout);
   tout.normal ();
   fflush (stdout);

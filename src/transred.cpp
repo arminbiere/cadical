@@ -15,14 +15,14 @@ void Internal::transred () {
     return;
   if (terminated_asynchronously ())
     return;
-  if (!stats.clauses_now_red &&
-      !stats.clauses_now_irr)
+  if (!stats.clauses_now_red && !stats.clauses_now_irr)
     return;
 
   assert (opts.transred);
   assert (!level);
 
-  START_SIMPLIFIER (transred, TRANSRED);
+  MODE_SCOPE_SIMPLIFY (TRANSRED);
+  PROFILE_SCOPE_SIMPLIFY (transred);
   stats.transitive_rounds++;
 
   // Transitive reduction can not be run to completion for larger formulas
@@ -248,7 +248,6 @@ void Internal::transred () {
          "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
          removed, units);
 
-  STOP_SIMPLIFIER (transred, TRANSRED);
   report ('t', !opts.reportall && !(removed + units));
 }
 

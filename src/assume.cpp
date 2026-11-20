@@ -24,7 +24,8 @@ void Internal::assume (int lit) {
 }
 
 // for LRAT we actually need to implement recursive DFS
-// for non-lrat use BFS. TODO: maybe derecursify to avoid stack overflow
+// for non-lrat use BFS. The DFS uses an explicit stack, since implication
+// chains can be long enough to overflow the call stack.
 //
 bool Internal::assume_analyze_literal (int lit) {
   assert (lit);
@@ -88,7 +89,7 @@ bool Internal::assume_analyze_reason (int lit, Clause *reason,
 
 void Internal::failing () {
 
-  START (analyze);
+  PROFILE_SCOPE (analyze);
 
   LOG ("analyzing failing assumptions");
 
@@ -208,7 +209,7 @@ void Internal::failing () {
         conclusion.push_back (clause_id);
         lrat_chain.clear ();
       }
-      goto DONE;
+      return;
     }
 
     // Second case (2).
@@ -224,7 +225,7 @@ void Internal::failing () {
         proof->add_assumption_clause (++clause_id, clash, lrat_chain);
         conclusion.push_back (clause_id);
       }
-      goto DONE;
+      return;
     }
 
     // Fall through to third case (3).
@@ -267,7 +268,7 @@ void Internal::failing () {
     vector<int> sum_constraints;
     vector<int> econstraints;
     for (auto &elit : external->constraint) {
-      int lit = external->e2i[abs (elit)];
+      int lit = external->e2i.find_or_default (abs (elit), 0);
       if (elit < 0)
         lit = -lit;
       if (!lit)
@@ -455,10 +456,6 @@ void Internal::failing () {
     lrat_chain.clear ();
     clause.clear ();
   }
-
-DONE:
-
-  STOP (analyze);
 }
 
 bool Internal::failed (int lit) {
@@ -555,7 +552,13 @@ void Internal::conclude_unsat () {
 }
 
 void Internal::reset_concluded () {
-  if (proof)
+  // this is preemptive fix: if you reset the constrain without
+  // resetting the assumptions, you should not reset the assumptions in
+  // the proofs.  This is not possible anymore since reset_constrain
+  // () is not part part of the API anymore, but this was possible in
+  // 3.0.1. Therefore, for defensive programming, we decided to
+  // implement the code just in case we ever readd the call.
+  if (proof && external->assumptions.empty ())
     proof->reset_assumptions ();
   if (concluded) {
     LOG ("reset concluded");

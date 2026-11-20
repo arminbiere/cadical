@@ -273,7 +273,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_extension_stack (c, lit);
+    external->push_clause_on_extension (lit, c);
     stats.blocked_pure_clauses++;
     mark_garbage (c);
 #ifdef LOGGING
@@ -409,7 +409,7 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_extension_stack (c, lit);
+    external->push_clause_on_extension (lit, c);
     blocker.reschedule.push_back (c);
     mark_garbage (c);
     j--;
@@ -625,7 +625,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
     if (proof) {
       proof->weaken_minus (c);
     }
-    external->push_clause_on_extension_stack (c, lit);
+    external->push_clause_on_extension (lit, c);
     blocker.reschedule.push_back (c);
     mark_garbage (c);
   }
@@ -745,6 +745,23 @@ bool Internal::block () {
   if (terminated_asynchronously ())
     return false;
 
+  // Our current algorithm for producing the necessary clauses on the
+  // reconstruction stack for extending the witness requires a blocked
+  // literal addition step which (empirically) conflicts with flushing
+  // during restoring clauses (similar to cover).
+  // Example:
+  // on the reconstruction stack: (-3) 4 -1 -3 (1) 2 1 4 (-2) 5 -2
+  // current formula 3 -4, -3 6, 2 -5, -2 7, -3 4 2
+  // add incrementally -4, 3 (taints 3) and solve
+  // restore 4 -1 -3  (taints -1)
+  // restore 2 1 4 (skipped with '--restoreflush' due to fixed 2)
+  // reconstruction stack after restore: (-2) 5 -2
+  // solve returns satisfiable
+  // not extended model -1, 2, 3, -4, -5, 6, 7
+  // extend flips 2 due to unsatisfied 5 -2
+  // extended model -1, -2, 3, -4, -5, 6, 7 conflicts with
+  // (not restored) flushed clause 2 1 4
+
   if (propagated < trail.size ()) {
     LOG ("need to propagate %zd units first", trail.size () - propagated);
     init_watches ();
@@ -760,8 +777,8 @@ bool Internal::block () {
       return false;
   }
 
-  START_SIMPLIFIER (block, BLOCK);
-
+  MODE_SCOPE_SIMPLIFY (BLOCK);
+  PROFILE_SCOPE_SIMPLIFY (block);
   stats.blockings++;
 
   LOG ("block-%" PRId64 "", stats.blockings);
@@ -803,9 +820,10 @@ bool Internal::block () {
 
   pured = stats.blocked_pure_clauses - pured;
   purelits = stats.blocked_pure_literals - purelits;
+  int64_t ticks = 0; // currently not counted here
 
   if (pured)
-    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    mark_redundant_clauses_with_eliminated_variables_as_garbage (ticks);
 
   if (purelits)
     PHASE ("block", stats.blockings,
@@ -815,8 +833,6 @@ bool Internal::block () {
     PHASE ("block", stats.blockings, "no pure literals found");
 
   report ('b', !opts.reportall && !blocked);
-
-  STOP_SIMPLIFIER (block, BLOCK);
 
   return blocked;
 }

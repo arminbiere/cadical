@@ -6,17 +6,14 @@ namespace CaDiCaL {
 
 bool Internal::propagate_stable () {
   assert (stable);
-  START (propstable);
-  bool res = propagate ();
-  STOP (propstable);
-  return res;
+  PROFILE_SCOPE (propstable);
+  return propagate ();
 }
 
 void Internal::analyze_stable () {
   assert (stable);
-  START (analyzestable);
+  PROFILE_SCOPE (analyzestable);
   analyze ();
-  STOP (analyzestable);
 }
 
 int Internal::decide_stable () {

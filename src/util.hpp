@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "hashmap.hpp"
+
 namespace CaDiCaL {
 
 using namespace std;
@@ -37,7 +39,8 @@ bool has_prefix (const char *str, const char *prefix);
 // The function returns true if parsing is successful and then also sets
 // the second argument to the parsed value.
 
-bool parse_int_str (const char *str, int &);
+bool parse_int_str (const char *str, int &, bool cut_to_fit = false);
+bool parse_int64_str (const char *str, int64_t &);
 
 /*------------------------------------------------------------------------*/
 
@@ -94,14 +97,12 @@ template <class T> void erase_vector (std::vector<T> &v) {
 }
 
 // The standard 'Effective STL' way (though not guaranteed) to shrink the
-// capacity of a vector to its size thus kind of releasing all the internal
-// excess memory not needed at the moment any more.
+// capacity of a vector to its size thus kind of hoping to release all the
+// internal excess memory not needed at the moment any more.  We had earlier
+// the classical solution using 'swap' which might not be the best way.
 
 template <class T> void shrink_vector (std::vector<T> &v) {
-  if (v.capacity () > v.size ()) {
-    std::vector<T> (v).swap (v);
-  }
-  assert (v.capacity () == v.size ()); // not guaranteed though
+  v.shrink_to_fit ();
 }
 
 template <class T>
@@ -141,6 +142,18 @@ static K find_or_default (const std::unordered_map<K, E> &map, K key,
     return default_el;
   return it->second;
 }
+
+template <class Key, class Element, class FirstHash, class SecondHash,
+          class Tumb, class KeyEqual>
+static Key find_or_default (
+    const hashmap<Key, Element, FirstHash, SecondHash, Tumb, KeyEqual> &map,
+    Key key, Element default_el) {
+  auto it = map.find (key);
+  if (it.first == Tumb () ().first)
+    return default_el;
+  return it.second;
+}
+
 // Clean-up class for bad_alloc error safety.
 
 template <typename T> struct DeferDeleteArray {
@@ -150,6 +163,21 @@ template <typename T> struct DeferDeleteArray {
   void release () { data = nullptr; }
   void free () {
     delete[] data;
+    data = nullptr;
+  }
+};
+
+template <typename T> struct DeferCloseFile {
+  T *data;
+  DeferCloseFile (T *t) : data (t) {}
+  ~DeferCloseFile () {
+    if (data)
+      fclose (data);
+  }
+  void release () { data = nullptr; }
+  void free () {
+    if (data)
+      fclose (data);
     data = nullptr;
   }
 };
@@ -165,15 +193,14 @@ template <typename T> struct DeferDeletePtr {
   }
 };
 
-template <typename T, typename F = void (*)(T*&)>
-struct DeferDeleteFunc {
+template <typename T, typename F = void (*) (T *&)> struct DeferDeleteFunc {
   T *data;
   F func;
-  DeferDeleteFunc (T *t, F f) : data (t), func(f) {}
-  ~DeferDeleteFunc () { (*func)(data); }
+  DeferDeleteFunc (T *t, F f) : data (t), func (f) {}
+  ~DeferDeleteFunc () { (*func) (data); }
   void release () { data = nullptr; }
   void free () {
-    (*func)(data);
+    (*func) (data);
     data = nullptr;
   }
 };

@@ -14,7 +14,7 @@ namespace CaDiCaL {
 inline void Internal::warmup_assign (int lit, Clause *reason) {
 
   assert (level); // no need to learn unit clauses here
-  require_mode (SEARCH);
+  MODE_REQUIRE (SEARCH);
 
   const int idx = vidx (lit);
   assert (reason != external_reason);
@@ -64,7 +64,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
   assert (!unsat);
 
-  START (propagate);
+  PROFILE_SCOPE (propagate);
   assert (!ignore);
 
   int64_t before = propagated;
@@ -206,12 +206,11 @@ void Internal::warmup_propagate_beyond_conflict () {
   assert (propagated == trail.size ());
 
   stats.walk_warmup_propagate += (trail.size () - before);
-  STOP (propagate);
 }
 
 int Internal::warmup_decide_assumptions () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
@@ -224,6 +223,7 @@ int Internal::warmup_decide_assumptions () {
       LOG ("assumption %d already satisfied", lit);
       new_trail_level (0);
       LOG ("added pseudo decision level");
+      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
@@ -318,13 +318,12 @@ int Internal::warmup_decide_assumptions () {
   }
   if (res)
     marked_failed = false;
-  STOP (decide);
   return res;
 }
 
 void Internal::warmup_decide () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   assert ((size_t) level >= assumptions.size ());
   assert (!constraint.size () || (size_t) level > assumptions.size ());
   const bool target = (stable || opts.target == 2);
@@ -335,18 +334,18 @@ void Internal::warmup_decide () {
   int decision = decide_phase (idx, target);
   new_trail_level (decision);
   warmup_assign (decision, decision_reason);
-  STOP (decide);
 }
 
-int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_literals) {
+int Internal::decide_and_propagate_all_assumptions (
+    std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
   int res = 0;
   int last_assumption_level = assumptions.size ();
-  if (!last_assumption_level)
-    return res;
   if (constraint.size ())
     last_assumption_level++;
+  if (!last_assumption_level)
+    return res;
   while (!res) {
     if (unsat)
       res = 20;
@@ -357,14 +356,17 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
       if (!unsat)
         analyze ();
       else
-       break;
+        break;
     } else if (satisfied ()) {
       assert (!res);
-      if (external) {
-        LOG ("found satisfied assignment ignoring the external propagator, so probably not valid");
+      /* TODO: satisfied branch was never tested due to wrong condition
+      if (external_prop) {
+        LOG ("found satisfied assignment ignoring the external propagator, "
+             "so probably not valid");
       } else {
         res = 10;
       }
+      */
       break;
     } else {
       if (level >= last_assumption_level)
@@ -377,12 +379,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
   if (unsat || unsat_constraint)
     res = 20;
 
-
-  set_literals.reserve(trail.size ());
-  for (auto lit: trail)
-    set_literals.push_back(lit);
+  set_literals.reserve (trail.size ());
+  for (auto lit : trail)
+    set_literals.push_back (lit);
   if (!res) {
-    // we need to repropagate now due to out-of-order units and renotify them
+    // we need to repropagate now due to out-of-order units and renotify
+    // them
     backtrack ();
     if (propagated < trail.size () && !propagate ()) {
       LOG ("empty clause after root level propagation");
@@ -401,15 +403,15 @@ int Internal::warmup () {
   assert (!level);
   if (!opts.warmup)
     return 0;
-  require_mode (WALK);
-  START (warmup);
+  MODE_REQUIRE (WALK);
+  PROFILE_SCOPE (warmup);
   ++stats.walk_warmup;
   int res = 0;
 
-#ifndef QUIET
-  const int64_t warmup_propagated = stats.walk_warmup_propagate;
-  const int64_t decision = stats.walk_warmup_decision;
-  const int64_t dummydecision = stats.walk_warmup_dummy;
+#if !defined(QUIET) && !defined(NMETRICS)
+  const int64_t warmup_propagated = (int64_t) stats.walk_warmup_propagate;
+  const int64_t decision = (int64_t) stats.walk_warmup_decision;
+  const int64_t dummydecision = (int64_t) stats.walk_warmup_dummy;
 #endif
   LOG ("starting warmup");
 
@@ -434,8 +436,11 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (level == 0);
-
+  const bool no_backtrack_notification =
+      (level ==
+       0); // if no assumptions or only already satisfied ones, don't notify
+  LOG ("no_backtrack_notification = %d, notified_level= %d",
+       no_backtrack_notification, notified_level);
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
   assert (!private_steps);
@@ -449,16 +454,16 @@ int Internal::warmup () {
     LOG (lrat_chain, "during warmup with lrat chain:");
   }
   assert (res || num_assigned + stats.vars_unused == (size_t) max_var);
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   // constrains with empty levels break this
   // assert (res || stats.walk_warmup_propagate - warmup_propagated ==
   // (int64_t)num_assigned);
   VERBOSE (3,
            "warming-up needed %" PRIu64 " propagations including %" PRIu64
            " decisions (with %" PRIu64 " dummy ones)",
-           stats.walk_warmup_propagate - warmup_propagated,
-           stats.walk_warmup_decision - decision,
-           stats.walk_warmup_dummy - dummydecision);
+           (int64_t) stats.walk_warmup_propagate - warmup_propagated,
+           (int64_t) stats.walk_warmup_decision - decision,
+           (int64_t) stats.walk_warmup_dummy - dummydecision);
 #endif
 
   // now we backtrack, notifying only if there was something to
@@ -467,8 +472,6 @@ int Internal::warmup () {
   if (!res)
     backtrack_without_updating_phases ();
   private_steps = false;
-  STOP (warmup);
-  require_mode (WALK);
   return res;
 }
 

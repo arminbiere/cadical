@@ -35,7 +35,8 @@ LidrupTracer::LidrupTracer (Internal *i, File *f, bool b)
 
 void LidrupTracer::connect_internal (Internal *i) {
   internal = i;
-  file->connect_internal (internal);
+  if (file)
+    file->connect_internal (internal);
   LOG ("LIDRUP TRACER connected to internal");
 }
 

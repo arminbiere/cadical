@@ -28,10 +28,7 @@ bool Internal::stabilizing () {
              (!stable && stats.ticks_search_unstable <= lim.stabilize))
     return stable;
   report (stable ? ']' : '}');
-  if (stable)
-    STOP (stable);
-  else
-    STOP (unstable);
+  PROFILE_SCOPE_SEARCH_STABILIZE ();
 
   assert (last.stabilize.ticks >= 0);
   assert (last.stabilize.conflicts >= 0 &&
@@ -83,10 +80,6 @@ bool Internal::stabilizing () {
 
   swap_averages ();
   report (stable ? '[' : '{');
-  if (stable)
-    START (stable);
-  else
-    START (unstable);
   return stable;
 }
 
@@ -166,7 +159,7 @@ int Internal::reuse_trail () {
 }
 
 void Internal::restart () {
-  START (restart);
+  PROFILE_SCOPE (restart);
   stats.restart++;
   stats.restart_levels += level;
   if (stable)
@@ -178,7 +171,6 @@ void Internal::restart () {
   LOG ("new restart limit at %" PRId64 " conflicts", lim.restart);
 
   report ('R', 2);
-  STOP (restart);
 }
 
 } // namespace CaDiCaL

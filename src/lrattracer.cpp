@@ -19,7 +19,8 @@ LratTracer::LratTracer (Internal *i, File *f, bool b)
 
 void LratTracer::connect_internal (Internal *i) {
   internal = i;
-  file->connect_internal (internal);
+  if (file)
+    file->connect_internal (internal);
   LOG ("LRAT TRACER connected to internal");
 }
 

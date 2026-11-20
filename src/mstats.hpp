@@ -7,7 +7,7 @@
 \
   STATISTIC (allocated_current, 2, PCNT_RESIDENT_SET, "%", "resident set") \
   STATISTIC (clause_restored, 1, PER_SEARCH, "", "per solved") \
-  STATISTIC (kitten_flip, 1, NO_SECONDARY, 0, 0)
+  STATISTIC (citten_flip, 1, NO_SECONDARY, 0, 0)
 
 // clang-format on
 

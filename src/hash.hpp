@@ -21,7 +21,8 @@ namespace CaDiCaL {
 //
 // The hash table is mostly intended to contain pointers, hence it uses 0x01
 // as tumb.
-template <class Key, class Hash, class KeyEqual = std::equal_to<Key>,
+template <class Key, class Hash, class KeyIsGarbage,
+          class KeyEqual = std::equal_to<Key>,
           class KeyEqualTmpDuplicates = std::equal_to<Key>>
 class hash {
 public:
@@ -138,7 +139,7 @@ private:
   Hash hasher;
 
 public:
-  hash () : hasher ({}) {};
+  hash () : hasher ({}){};
   template <class T> hash (T h) : hasher (h) {
     table.resize (64, std::make_pair<size_t, Key> (0, nullptr));
   }
@@ -172,6 +173,7 @@ public:
   }
 
   iterator find (Key el, Key except) {
+    assert (!KeyIsGarbage () (el));
     const size_t hash_val = hasher (el);
     const size_t start_pos = reduce_hash (hash_val);
     size_t pos = start_pos;
@@ -189,6 +191,8 @@ public:
         ;
       else if (g.second == except)
         ;
+      else if (KeyIsGarbage () (g.second))
+        table[pos] = tumb;
       else if (KeyEqual () (g.second, el)) {
         res = g.second;
         MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);
@@ -212,6 +216,7 @@ public:
   }
 
   iterator find (Key el) {
+    assert (!KeyIsGarbage () (el));
     const size_t hash_val = hasher (el);
     const size_t start_pos = reduce_hash (hash_val);
     size_t pos = start_pos;
@@ -227,6 +232,8 @@ public:
         ;
       else if (g.first != hash_val)
         ;
+      else if (KeyIsGarbage () (g.second))
+        table[pos] = tumb;
       else if (KeyEqual () (g.second, el)) {
         res = g.second;
         MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);

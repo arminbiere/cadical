@@ -784,14 +784,18 @@ long Internal::condition_round (long delta) {
       // TODO find a way to shrink the autarky part or some other way to
       // avoid pushing too many literals on the extension stack.
       //
-      external->push_zero_on_extension_stack ();
+      vector<int> wits;
       for (const auto &lit : trail)
         if (is_autarky_literal (lit))
-          external->push_witness_literal_on_extension_stack (lit);
+          wits.push_back (lit);
       if (proof)
         proof->weaken_minus (c);
-      external->push_clause_on_extension_stack (c);
 
+      external->create_cube_stack (wits);
+      external->push_cube_clause (c);
+      external->terminate_cube_stack ();
+
+      wits.clear ();
       mark_garbage (c);
 
       stats.conditioned_assign += remain.assigned;
@@ -896,10 +900,13 @@ void Internal::condition (bool update_limits) {
 
   if (unsat)
     return;
+  if (terminated_asynchronously ())
+    return;
   if (!stats.clauses_now_irr)
     return;
 
-  START_SIMPLIFIER (condition, CONDITION);
+  MODE_SCOPE_SIMPLIFY (CONDITION);
+  PROFILE_SCOPE_SIMPLIFY (condition);
   stats.conditionings++;
 
   // Propagation limit to avoid too much work in 'condition'.  We mark
@@ -922,8 +929,6 @@ void Internal::condition (bool update_limits) {
          stats.conflicts, limit);
 
   long blocked = condition_round (limit);
-
-  STOP_SIMPLIFIER (condition, CONDITION);
   report ('g', !blocked);
 
   if (!update_limits)

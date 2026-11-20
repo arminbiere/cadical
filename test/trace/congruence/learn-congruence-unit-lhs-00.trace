@@ -43,7 +43,6 @@
 42 add 1
 43 add -5
 44 add 0
-45 propagate 0
 46 assume -1
 47 phase -1
 48 phase 2

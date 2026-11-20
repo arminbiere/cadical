@@ -59,7 +59,7 @@ u  vivified tier1 clauses
 v  vivified tier2 clauses
 w  vivified tier3 clauses
 x  vivified irredundant clauses
-=  sweeping to find equivalences using Kitten
+=  sweeping to find equivalences using Citten
 f  factor (BVA)
 
 The order of the list follows the occurrences of 'report' in the source
@@ -117,9 +117,13 @@ Report::Report (const char *h, int precision, int min, double value)
 // prefix 'i'.  To add another statistics column, add a corresponding line
 // here.  If you want to report something else add 'report (..)' functions.
 
-#define TIME opts.reportsolve ? solve_time () : time ()
+#define TIME \
+  (opts.reportsystem ? (opts.reportsolve ? solve_time () : time ()) : 0)
 
-#define MB (current_resident_set_size () / (double) (1l << 20))
+#define MB \
+  (opts.reportsystem \
+       ? (current_resident_set_size () / (double) (1l << 20)) \
+       : 0)
 
 #define REMAINING (percent (active (), stats.variables_original))
 
@@ -232,7 +236,7 @@ void Internal::report (char type, int verbose) {
     print_prefix ();
     fputc ('\n', stdout);
     delete[] line;
-    lim.report = 19;
+    lim.report = opts.reportheader;
   } else
     lim.report--;
   print_prefix ();

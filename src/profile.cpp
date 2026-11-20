@@ -1,8 +1,10 @@
-#ifndef QUIET
 
+#include "profile.hpp"
 #include "internal.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
+#ifndef QUIET
 
 // Initialize all profile counters with constant name and profiling level.
 
@@ -14,19 +16,24 @@ Profiles::Profiles (Internal *s)
 {
 }
 
-void Internal::start_profiling (Profile &profile, double s) {
+void Internal::start_profiling (Profile &profile, double s,
+                                int64_t s_ticks) {
   LOG ("START PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (!profile.active);
   profile.started = s;
+  profile.started_ticks = s_ticks;
   profile.active = true;
 }
 
-void Internal::stop_profiling (Profile &profile, double s) {
+void Internal::stop_profiling (Profile &profile, double s,
+                               int64_t s_ticks) {
   LOG ("STOP PROFILE[%s]", profile.name);
   assert (profile.level <= opts.profile);
   assert (profile.active);
+  assert (profile.started_ticks <= s_ticks);
   profile.value += s - profile.started;
+  profile.search_ticks += s_ticks - profile.started_ticks;
   profile.active = false;
 }
 
@@ -58,7 +65,8 @@ void Internal::print_profile () {
   double now = update_profiles ();
   const char *time_type = opts.realtime ? "real" : "process";
   SECTION ("run-time profiling");
-  PRT ("%s time taken by individual solving procedures", time_type);
+  PRT ("%s time and ticks taken by individual solving procedures",
+       time_type);
   PRT ("(percentage relative to %s time for solving)", time_type);
   LINE ();
   const size_t size = sizeof profiles / sizeof (Profile);
@@ -87,23 +95,91 @@ void Internal::print_profile () {
   // not the heap, which should be the case.
 
   double solve = profiles.solve.value;
+  uint64_t solve_ticks = profiles.solve.search_ticks;
+
+  MSG ("%11s %8s %8s %12s %7s", "ticks", "percent", "rate", "real",
+       "solve");
+  LINE ();
 
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
-    MSG ("%12.2f %7.2f%% %s", profs[i]->value,
-         percent (profs[i]->value, solve), profs[i]->name);
+    MSG ("    %1.1e %7.2f%%  %1.1e %12.2f %7.2f%% %-20s",
+         (double) profs[i]->search_ticks,
+         percent (profs[i]->search_ticks, solve_ticks),
+         relative (profs[i]->search_ticks, profs[i]->value),
+         profs[i]->value, percent (profs[i]->value, solve), profs[i]->name);
   }
 
-  MSG ("  =================================");
-  MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
+  MSG ("  "
+       "==================================================================="
+       "=");
+  MSG ("    %1.1e %7.2f%%  %1.1e %12.2f %7.2f%% %-20s",
+       (double) solve_ticks, 100.0, relative (solve_ticks, solve), solve,
+       percent (solve, now), "solve");
 
   LINE ();
   PRT ("last line shows %s time for solving", time_type);
   PRT ("(percentage relative to total %s time)", time_type);
 }
 
-} // namespace CaDiCaL
+/*------------------------------------------------------------------------*/
+void ResumeProfile::start_profiling (Internal *internal) {
+  internal->start_profiling (profile, internal->time (),
+                             internal->stats.ticks);
+}
+void ResumeProfile::stop_profiling (Internal *internal) {
+  internal->stop_profiling (profile, internal->time (),
+                            internal->stats.ticks);
+}
+void PauseProfile::start_profiling (Internal *internal) {
+  internal->start_profiling (profile, internal->time (),
+                             internal->stats.ticks);
+}
+void PauseProfile::stop_profiling (Internal *internal) {
+  internal->stop_profiling (profile, internal->time (),
+                            internal->stats.ticks);
+}
 
 #endif // ifndef QUIET
+
+ModeResumeContext::ModeResumeContext (Internal *internal, int mode)
+    : internal (internal), mode (mode), entered (false) {
+  enterContext ();
+}
+
+ModeResumeContext::~ModeResumeContext () { leaveContext (); }
+
+void ModeResumeContext::enterContext () {
+  entered = !internal->in_mode (static_cast<Internal::Mode> (mode));
+  if (entered)
+    internal->set_mode (static_cast<Internal::Mode> (mode));
+}
+
+void ModeResumeContext::leaveContext () {
+  if (entered)
+    internal->reset_mode (static_cast<Internal::Mode> (mode));
+  entered = false;
+}
+
+ModePauseContext::ModePauseContext (Internal *internal, int mode)
+    : internal (internal), mode (mode), entered (false) {
+  enterContext ();
+}
+
+ModePauseContext::~ModePauseContext () { leaveContext (); }
+
+void ModePauseContext::enterContext () {
+  entered = internal->in_mode (static_cast<Internal::Mode> (mode));
+  if (entered)
+    internal->reset_mode (static_cast<Internal::Mode> (mode));
+}
+
+void ModePauseContext::leaveContext () {
+  if (entered)
+    internal->set_mode (static_cast<Internal::Mode> (mode));
+  entered = false;
+}
+
+} // namespace CaDiCaL

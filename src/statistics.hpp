@@ -7,59 +7,80 @@
 //      length 21,  (Always/!0/verbose/never), (relative/percent/MACRO)
 #ifndef NTRACING
 #define CADICAL_API_STATISTICS \
-  STATISTIC (api_init,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_reset,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_vars,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_var,           3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_vars,          3, NOTHING, 0, 0) \
-  STATISTIC (api_resize,                3, NOTHING, 0, 0) \
-  STATISTIC (api_set,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_limit,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_configure,             3, NOTHING, 0, 0) \
-  STATISTIC (api_add,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_constrain,             3, NOTHING, 0, 0) \
-  STATISTIC (api_assume,                3, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead,             3, NOTHING, 0, 0) \
-  STATISTIC (api_lookahead_cubes,       3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_assumptions,     3, NOTHING, 0, 0) \
-  STATISTIC (api_propagate_assumptions, 3, NOTHING, 0, 0) \
-  STATISTIC (api_implied,               3, NOTHING, 0, 0) \
-  STATISTIC (api_propagate_conflicts,   3, NOTHING, 0, 0) \
-  STATISTIC (api_get_cores,             3, NOTHING, 0, 0) \
-  STATISTIC (api_solve,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_simplify,              3, NOTHING, 0, 0) \
-  STATISTIC (api_flip,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_flippable,             3, NOTHING, 0, 0) \
-  STATISTIC (api_failed,                3, NOTHING, 0, 0) \
-  STATISTIC (api_constraint_failed,     3, NOTHING, 0, 0) \
-  STATISTIC (api_fixed,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_phase,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_unphase,               3, NOTHING, 0, 0) \
-  STATISTIC (api_get_vsids_score,       3, NOTHING, 0, 0) \
-  STATISTIC (api_get_vmtf_score,        3, NOTHING, 0, 0) \
-  STATISTIC (api_active,                3, NOTHING, 0, 0) \
-  STATISTIC (api_redundant,             3, NOTHING, 0, 0) \
-  STATISTIC (api_irredundant,           3, NOTHING, 0, 0) \
-  STATISTIC (api_freeze,                3, NOTHING, 0, 0) \
-  STATISTIC (api_melt,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_frozen,                3, NOTHING, 0, 0) \
-  STATISTIC (api_trace_proof,           3, NOTHING, 0, 0) \
-  STATISTIC (api_flush_proof_trace,     3, NOTHING, 0, 0) \
-  STATISTIC (api_close_proof_trace,     3, NOTHING, 0, 0) \
-  STATISTIC (api_conclude,              3, NOTHING, 0, 0) \
-  STATISTIC (api_stats,                 3, NOTHING, 0, 0) \
-  STATISTIC (api_resources,             3, NOTHING, 0, 0) \
-  STATISTIC (api_dump,                  3, NOTHING, 0, 0) \
-  STATISTIC (api_observed,              3, NOTHING, 0, 0) \
-  STATISTIC (api_is_decision,           3, NOTHING, 0, 0) \
-  STATISTIC (api_connect,               3, NOTHING, 0, 0) \
-  STATISTIC (api_disconnect,            3, NOTHING, 0, 0) \
-  STATISTIC (api_observe,               3, NOTHING, 0, 0) \
-  STATISTIC (api_unobserve,             3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_observed,        3, NOTHING, 0, 0) \
-  STATISTIC (api_current_value,         3, NOTHING, 0, 0) \
-  STATISTIC (api_force_backtrack,       3, NOTHING, 0, 0) \
-  STATISTIC (api_force_unassign,        3, NOTHING, 0, 0) 
+  STATISTIC (api_init,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_reset,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_vars,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_val,                                  4, NOTHING, 0, 0) \
+  STATISTIC (api_declare_var,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_declare_vars,                         4, NOTHING, 0, 0) \
+  STATISTIC (api_resize,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_set,                                  4, NOTHING, 0, 0) \
+  STATISTIC (api_set_long_option,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_optimize,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_limit,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_configure,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_add,                                  4, NOTHING, 0, 0) \
+  STATISTIC (api_constrain,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_assume,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_lookahead,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_generate_cubes,                       4, NOTHING, 0, 0) \
+  STATISTIC (api_reset_assumptions,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_propagate_assumptions,                4, NOTHING, 0, 0) \
+  STATISTIC (api_implied,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_get_cores,             4, NOTHING, 0, 0) \
+  STATISTIC (api_get_vsids_score,       4, NOTHING, 0, 0) \
+  STATISTIC (api_get_vmtf_score,        4, NOTHING, 0, 0) \
+  STATISTIC (api_propagate_conflicts,   4, NOTHING, 0, 0) \
+  STATISTIC (api_solve,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_simplify,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_flip,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_flippable,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_failed,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_constraint_failed,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_fixed,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_phase,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_unphase,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_active,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_redundant,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_irredundant,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_freeze,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_melt,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_frozen,                               4, NOTHING, 0, 0) \
+  STATISTIC (api_trace_proof,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_flush_proof_trace,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_close_proof_trace,                    4, NOTHING, 0, 0) \
+  STATISTIC (api_conclude,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_stats,                                4, NOTHING, 0, 0) \
+  STATISTIC (api_resources,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_dump,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_observed,                             4, NOTHING, 0, 0) \
+  STATISTIC (api_is_decision,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_propagator,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_propagator,                4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_proof_tracer,                 4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_proof_tracer,              4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_fixed_listener,               4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_fixed_listener,            4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_learner,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_learner,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_connect_terminator,                   4, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect_terminator,                4, NOTHING, 0, 0) \
+  STATISTIC (api_observe,                              4, NOTHING, 0, 0) \
+  STATISTIC (api_unobserve,                            4, NOTHING, 0, 0) \
+  STATISTIC (api_reset_observed,                       4, NOTHING, 0, 0) \
+  STATISTIC (api_force_backtrack,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_is_witness,                           4, NOTHING, 0, 0) \
+  STATISTIC (api_force_unassign,                       4, NOTHING, 0, 0) \
+  STATISTIC (api_read_dimacs,                          4, NOTHING, 0, 0) \
+  STATISTIC (api_read_solution,                        4, NOTHING, 0, 0) \
+  STATISTIC (api_write_dimacs,                         4, NOTHING, 0, 0) \
+  STATISTIC (api_write_extension,                      4, NOTHING, 0, 0) \
+  STATISTIC (api_copy,                                 4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_clauses,                     4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_constraint,                  4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_witness_forward,             4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_witness_backward,            4, NOTHING, 0, 0) \
+
 
 #else
 #define CADICAL_API_STATISTICS
@@ -79,9 +100,10 @@
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
   STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
-  STATISTIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
-  STATISTIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
-  STATISTIC (clause_recompute_glue,  2, relative, "per", clauses_redundant) \
+  METRIC (clause_promoted_tier1,     2, relative, "per", clause_improved_glue) \
+  METRIC (clause_promoted_tier2,     2, relative, "per", clause_improved_glue) \
+  /* cannot be a metric due do stamping! */\
+  STATISTIC (clause_recompute_glue,      2, relative, "per", clauses_redundant) \
   STATISTIC (clauses,                0, NOTHING, 0, 0) \
   STATISTIC (clauses_irredundant,    2, percent, "%",  clauses) \
   STATISTIC (clauses_now_irr,        3, NOTHING, 0, 0) \
@@ -108,23 +130,23 @@
   STATISTIC (congruence_ands,        2, relative, "per", congruent) \
   STATISTIC (congruence_dummy_ands,  2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_gates,       2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_gates_and,   2, percent, "%", congruence_gates) \
-  STATISTIC (congruence_gates_ite,   2, percent, "%", congruence_gates) \
-  STATISTIC (congruence_gates_xor,   2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_and,      2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_ite,      2, percent, "%", congruence_gates) \
+  METRIC (congruence_gates_xor,      2, percent, "%", congruence_gates) \
   STATISTIC (congruence_ites,        2, relative, "per", congruent) \
   STATISTIC (congruence_rounds,      1, INTERVAL, "", interval) \
-  STATISTIC (congruence_rw_ands,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_rw_ites,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_rw_xors,     2, relative, "per", congruence_gates) \
-  STATISTIC (congruence_simp_ands,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simp_ites,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simplified,  2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_simp_xors,   2, relative, "per", congruence_rounds) \
+  METRIC (congruence_rw_ands,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_rw_ites,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_rw_xors,        2, relative, "per", congruence_gates) \
+  METRIC (congruence_simp_ands,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simp_ites,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simplified,     2, relative, "per", congruence_rounds) \
+  METRIC (congruence_simp_xors,      2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_subsumed,    2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_trite,       2, relative, "per", congruence_rounds) \
+  METRIC (congruence_trite,          2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_unary,       2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_unary_and,   2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_unary_ite,   2, relative, "per", congruence_rounds) \
+  METRIC (congruence_unary_and,      2, relative, "per", congruence_rounds) \
+  METRIC (congruence_unary_ite,      2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_units,       2, relative, "per", congruent) \
   STATISTIC (congruence_xors,        2, relative, "per", congruent) \
   STATISTIC (congruent,              1, relative, "per", congruence_rounds) \
@@ -172,8 +194,12 @@
   STATISTIC (eliminate_tried_res,    2, relative, "per", eliminate_tried) \
   STATISTIC (eliminate_xor,          2, percent, "%", eliminate_gates) \
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
+  STATISTIC (extensions,             1, percent, "%", searches) \
   STATISTIC (extended,               1, relative, "per", weakened) \
-  STATISTIC (extensions,             1, relative, "per", searches) \
+  STATISTIC (extend_clause_blocked,  2, relative, "per", weakened) \
+  STATISTIC (extend_clause_read,     2, relative, "per", weakened) \
+  STATISTIC (exttointchecked,        3, relative, "per", searches) \
+  STATISTIC (exttointswitched,       3, relative, "per", exttointchecked) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
   STATISTIC (factor_added_literals,  2, relative, "per", factored) \
   STATISTIC (factored,               1, percent, "%", vars) \
@@ -234,7 +260,7 @@
   STATISTIC (probed,                 1, percent, "%", vars) \
   STATISTIC (probe_failed_literals,  1, relative, "per", probed) \
   STATISTIC (probingrounds,          2, INTERVAL, "", interval) \
-  STATISTIC (propagations,           0, SECONDS, "per", second) \
+  STATISTIC (propagations,           0, MSECONDS, "M", per second) \
   STATISTIC (propagations_backbone,  2, percent, "%", propagations) \
   STATISTIC (propagations_cover,     2, percent, "%", propagations) \
   STATISTIC (propagations_inst,      2, percent, "%", propagations) \
@@ -258,6 +284,7 @@
   STATISTIC (restorations,           1, relative, "per", searches) \
   STATISTIC (restored_clauses,       1, relative, "per", restorations) \
   STATISTIC (restored_literals,      2, relative, "per", restored_clauses) \
+  STATISTIC (restore_defrags,        2, percent, "%", restorations) \
   STATISTIC (reused,                 1, relative, "per", restart) \
   STATISTIC (reused_levels,          2, relative, "per", reused) \
   STATISTIC (reused_stable,          2, relative, "per", reused) \
@@ -309,8 +336,10 @@
   STATISTIC (ternary_htrs_binary,    2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_htrs_ternary,   2, percent, "%", ternary_htrs) \
   STATISTIC (ternary_resolutions,    2, relative, "per", ternary) \
-  STATISTIC (ticks,                  0, SECONDS, "per", second) \
+  STATISTIC (ticks,                  0, MSECONDS, "M", per second) \
   STATISTIC (ticks_backbone,         2, percent, "%", ticks) \
+  STATISTIC (ticks_elim,             2, percent, "%", ticks) \
+  STATISTIC (ticks_fastelim,         2, percent, "%", ticks) \
   STATISTIC (ticks_factor,           2, percent, "%", ticks) \
   STATISTIC (ticks_probe,            2, percent, "%", ticks) \
   STATISTIC (ticks_search_stable,    2, percent, "%", ticks) \
@@ -319,33 +348,33 @@
   STATISTIC (ticks_ternary,          2, percent, "%", ticks) \
   STATISTIC (ticks_vivify,           2, percent, "%", ticks) \
   STATISTIC (ticks_walk,             2, percent, "%", ticks) \
-  STATISTIC (ticks_walk_break,       2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip,        2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip_broke,  2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_flip_wl,     2, percent, "%", ticks_walk) \
-  STATISTIC (ticks_walk_pick,        2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_break,          2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip,           2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip_broke,     2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_flip_wl,        2, percent, "%", ticks_walk) \
+  METRIC (ticks_walk_pick,           2, percent, "%", ticks_walk) \
   STATISTIC (transitive_clauses,     1, percent, "%", subsumed) \
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
   STATISTIC (up_cb,                  2, relative, "per", searches) \
-  STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
-  STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
-  STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
-  STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
-  STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
-  STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
-  STATISTIC (up_learn,               1, percent, "%", clauses) \
-  STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
-  STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
-  STATISTIC (up_learn_empty,         2, percent, "%", up_learn) \
-  STATISTIC (up_learn_lazy_elevate,  2, percent, "%", up_learn) \
-  STATISTIC (up_learn_out_of_order,  2, percent, "%", up_learn) \
-  STATISTIC (up_learn_propagating,   2, percent, "%", up_learn) \
-  STATISTIC (up_learn_satisfied,     2, percent, "%", up_learn) \
-  STATISTIC (up_learn_unit,          2, percent, "%", up_learn) \
+  STATISTIC (up_cb_add,              2, percent, "%", up_cb) \
+  STATISTIC (up_cb_check_model,      2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decide,           2, percent, "%", up_cb) \
+  STATISTIC (up_cb_decided,          2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_decide_force_bt,  2, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_prop,             2, percent, "%", up_cb) \
+  METRIC (up_cb_prop_assign,         2, percent, "%", up_cb_prop) \
+  METRIC (up_cb_prop_clash,          2, percent, "%", up_cb_prop) \
+  METRIC (up_cb_prop_explain,        2, percent, "%", up_cb_prop) \
+  STATISTIC (up_learn,               2, percent, "%", clauses) \
+  METRIC (up_learn_conflict,         2, percent, "%", up_learn) \
+  METRIC (up_learn_elevating,        2, percent, "%", up_learn) \
+  METRIC (up_learn_empty,            2, percent, "%", up_learn) \
+  METRIC (up_learn_lazy_elevate,     2, percent, "%", up_learn) \
+  METRIC (up_learn_out_of_order,     2, percent, "%", up_learn) \
+  METRIC (up_learn_propagating,      2, percent, "%", up_learn) \
+  METRIC (up_learn_satisfied,        2, percent, "%", up_learn) \
+  METRIC (up_learn_unit,             2, percent, "%", up_learn) \
   STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \
@@ -366,40 +395,41 @@
   STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
   STATISTIC (vivified,               1, percent, "%", clauses) \
-  STATISTIC (vivified_irr,           2, percent, "%", vivified) \
-  STATISTIC (vivified_tier1,         2, percent, "%", vivified) \
-  STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
-  STATISTIC (vivified_tier3,         2, percent, "%", vivified) \
+  METRIC (vivified_irr,              2, percent, "%", vivified) \
+  METRIC (vivified_tier1,            2, percent, "%", vivified) \
+  METRIC (vivified_tier2,            2, percent, "%", vivified) \
+  METRIC (vivified_tier3,            2, percent, "%", vivified) \
   STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
-  STATISTIC (vivify_decisions,       2, relative, "per", vivify_checks) \
-  STATISTIC (vivify_demote,          2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_flushed,         2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_implied,         2, percent, "%", vivify_checks) \
-  STATISTIC (vivify_instantiated,    2, percent, "%", vivify_checks) \
-  STATISTIC (vivify_reused,          2, percent, "%", vivify_decisions) \
+  METRIC (vivify_decisions,          2, relative, "per", vivify_checks) \
+  METRIC (vivify_demote,             2, percent, "%", vivify_strength) \
+  METRIC (vivify_flushed,            2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_implied,            2, percent, "%", vivify_checks) \
+  METRIC (vivify_instantiated,       2, percent, "%", vivify_checks) \
+  METRIC (vivify_reused,             2, percent, "%", vivify_decisions) \
   STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
   STATISTIC (vivify_strength,        2, percent, "%", strengthened) \
   STATISTIC (vivify_strength_irr,    2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier1,  2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier2,  2, percent, "%", vivify_strength) \
-  STATISTIC (vivify_strength_tier3,  2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier1,     2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier2,     2, percent, "%", vivify_strength) \
+  METRIC (vivify_strength_tier3,     2, percent, "%", vivify_strength) \
   STATISTIC (vivify_subsumed,        2, percent, "%", subsumed) \
-  STATISTIC (vivify_subsumed_irr,    2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_subsumed_irr,       2, percent, "%", vivify_subsumed) \
+  METRIC (vivify_subsumed_red,       2, percent, "%", vivify_subsumed) \
   STATISTIC (vivify_units,           2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
-  STATISTIC (walk_broken,            2, relative, "per", walk_flips) \
-  STATISTIC (walk_flips,             2, relative, "per", walk) \
-  STATISTIC (walk_flips_reducing,    2, percent, "%", walk_flips) \
-  STATISTIC (walk_flips_sideways,    2, percent, "%", walk_flips) \
-  STATISTIC (walk_flips_transfer,    2, percent, "%", walk_flips) \
+  METRIC (walk_broken,               2, relative, "per", walk_flips) \
+  STATISTIC (walk_flips,             2, RELPROFW,"M", per second walk) \
+  METRIC (walk_flips_reducing,       2, percent, "%", walk_flips) \
+  METRIC (walk_flips_sideways,       2, percent, "%", walk_flips) \
+  METRIC (walk_flips_transfer,       2, percent, "%", walk_flips) \
   STATISTIC (walk_improved,          2, relative, "per", walk) \
   STATISTIC (walk_warmup,            2, percent, "%", walk) \
-  STATISTIC (walk_warmup_conflicts,  2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_decision,   2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_dummy,      2, relative, "per", walk_warmup) \
-  STATISTIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_conflicts,     2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_decision,      2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_dummy,         2, relative, "per", walk_warmup) \
+  METRIC (walk_warmup_propagate,     2, relative, "per", walk_warmup) \
   STATISTIC (weakened,               1, percent, "%", clauses) \
+  STATISTIC (weakened_cube_cls,      2, percent, "%", weakened) \
   STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 
 // clang-format on

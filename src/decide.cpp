@@ -253,7 +253,7 @@ bool Internal::better_decision (int lit, int other) {
 
 int Internal::decide () {
   assert (!satisfied ());
-  START (decide);
+  PROFILE_SCOPE (decide);
   // during interaction with the user propagator, new variables can be added
   // (for example by observed).
   if (!imports.empty ())
@@ -369,9 +369,7 @@ int Internal::decide () {
         ((size_t) level == assumptions.size () && constraint.size ())) {
       // Forced backtrack below pseudo decision levels.
       // So one of the two branches above will handle it.
-      STOP (decide);
-      return decide (); // STARTS and STOPS profiling
-      // START (decide);
+      return decide ();
     }
     stats.decisions++;
     if (!decision) {
@@ -384,7 +382,6 @@ int Internal::decide () {
   }
   if (res)
     marked_failed = false;
-  STOP (decide);
   check_var_stats ();
   return res;
 }

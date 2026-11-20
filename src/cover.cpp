@@ -62,7 +62,7 @@ inline void Internal::cover_push_extension (int lit, Coveror &coveror) {
 // Successful covered literal addition (CLA) step.
 
 inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (level == 1);
   cover_push_extension (lit, coveror);
   for (const auto &other : coveror.intersection) {
@@ -80,7 +80,7 @@ inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
 
 inline void Internal::asymmetric_literal_addition (int lit,
                                                    Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (level == 1);
   LOG ("initial asymmetric literal addition %d", lit);
   assert (!vals[lit]), assert (!vals[-lit]);
@@ -99,7 +99,7 @@ inline void Internal::asymmetric_literal_addition (int lit,
 
 bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
                                            Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   stats.propagations_cover++;
   stats.propagations++;
   assert (val (lit) < 0);
@@ -180,7 +180,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
 // function returns 'true' if the extended clause is blocked on 'lit.'
 
 bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
 
   assert (val (lit) < 0);
   if (frozen (lit)) {
@@ -324,7 +324,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
 
 bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
-  require_mode (COVER);
+  MODE_REQUIRE (COVER);
   assert (!c->garbage);
 
   LOG (c, "trying covered clauses elimination on");
@@ -383,6 +383,9 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       LOG (c, "covered tautological");
       assert (clause.empty ());
       LOG (coveror.extend, "extension = ");
+      std::vector<int> weakened_clause;
+      int witness = 0;
+      int64_t weakened_id = 0;
       for (const auto &other : coveror.extend) {
         if (!prev) {
           // are we finishing a clause?
@@ -396,7 +399,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
                 --j;
                 LOG ("adding lit %d not needed for ATA", lit);
                 clause.push_back (lit);
-                external->push_clause_literal_on_extension_stack (lit);
+                weakened_clause.push_back (lit);
               }
             }
           }
@@ -409,16 +412,19 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             lrat_chain.clear ();
           }
           last_id = ++clause_id;
-          external->push_zero_on_extension_stack ();
-          external->push_witness_literal_on_extension_stack (other);
-          external->push_zero_on_extension_stack ();
-          external->push_id_on_extension_stack (last_id);
-          external->push_zero_on_extension_stack ();
+          if (already_pushed)
+            external->push_clause_on_extension (weakened_id, witness,
+                                                weakened_clause);
+          assert (other);
+          witness = other;
+          weakened_clause.clear ();
+          weakened_id = last_id;
+
           clause.clear ();
           already_pushed = true;
         }
         if (other) {
-          external->push_clause_literal_on_extension_stack (other);
+          weakened_clause.push_back (other);
           clause.push_back (other);
           LOG (clause, "current clause is");
         }
@@ -435,7 +441,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             --j;
             LOG ("adding lit %d not needed for ATA", lit);
             clause.push_back (lit);
-            external->push_clause_literal_on_extension_stack (lit);
+            weakened_clause.push_back (lit);
           }
         }
         if (lrat)
@@ -445,6 +451,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         lrat_chain.clear ();
       }
       clause.clear ();
+      external->push_clause_on_extension (weakened_id, witness,
+                                          weakened_clause);
 
       mark_garbage (c);
     }
@@ -595,8 +603,8 @@ int64_t Internal::cover_round () {
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.coverings,
          "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
-         scheduled, percent (scheduled, stats.clauses_now_irr),
-         untried, percent (untried, scheduled));
+         scheduled, percent (scheduled, stats.clauses_now_irr), untried,
+         percent (untried, scheduled));
 #endif
 
   // Heuristically it should be beneficial to intersect with smaller clauses
@@ -665,11 +673,11 @@ bool Internal::cover () {
   // infrequent (one out of half billion mobical test cases) but as the two
   // regression traces show, does happen. Thus we disable the combination.
   //
-  if (opts.restoreflush)
-    return false;
+  // if (opts.restoreflush)
+  //   return false;
 
-  START_SIMPLIFIER (cover, COVER);
-
+  MODE_SCOPE_SIMPLIFY (COVER);
+  PROFILE_SCOPE_SIMPLIFY (cover);
   stats.coverings++;
 
   // During variable elimination unit clauses can be generated which need to
@@ -695,10 +703,7 @@ bool Internal::cover () {
   assert (unsat || propagated == trail.size ());
 
   int64_t covered = cover_round ();
-
-  STOP_SIMPLIFIER (cover, COVER);
   report ('K', !opts.reportall && !covered);
-
   return covered;
 }
 

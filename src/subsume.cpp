@@ -157,7 +157,6 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
-  // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
   if (c->size == 2)
@@ -197,7 +196,6 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
   */
-  // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
   if (c->size == 2)
@@ -371,11 +369,11 @@ bool Internal::subsume_round () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (!stats.clauses_now_red &&
-      !stats.clauses_now_irr)
+  if (!stats.clauses_now_red && !stats.clauses_now_irr)
     return false;
 
-  START_SIMPLIFIER (subsume, SUBSUME);
+  MODE_SCOPE_SIMPLIFY (SUBSUME);
+  PROFILE_SCOPE_SIMPLIFY (subsume);
   stats.subsume_rounds++;
 
   int64_t check_limit;
@@ -412,7 +410,8 @@ bool Internal::subsume_round () {
   int64_t left_over_from_last_subsumption_round = 0;
 
   for (auto c : clauses) {
-
+    if (terminated_asynchronously ())
+      break;
     if (c->garbage)
       continue;
     if (c->size > opts.subsumeclslim)
@@ -465,8 +464,7 @@ bool Internal::subsume_round () {
 
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
-  int64_t total =
-      stats.clauses_now_irr + stats.clauses_now_red;
+  int64_t total = stats.clauses_now_irr + stats.clauses_now_red;
   PHASE ("subsume-round", stats.subsume_rounds,
          "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
          scheduled, percent (scheduled, total), total);
@@ -629,8 +627,6 @@ bool Internal::subsume_round () {
 
   report ('s', !opts.reportall && !(subsumed + strengthened));
 
-  STOP_SIMPLIFIER (subsume, SUBSUME);
-
   return old_marked_candidate_variables_for_elimination < stats.mark_elim;
 }
 
@@ -638,8 +634,7 @@ bool Internal::subsume_round () {
 
 void Internal::subsume () {
 
-  if (!stats.clauses_now_red &&
-      !stats.clauses_now_irr)
+  if (!stats.clauses_now_red && !stats.clauses_now_irr)
     return;
 
   if (unsat)

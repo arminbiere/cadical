@@ -1,0 +1,62 @@
+# seed: 14169847622469744853
+# status: exited with error or assertion thrown (1 / SIGABRT)
+0 init
+1 set check 1
+2 set ternary 0
+3 add 3
+4 add -4
+5 add 2
+6 add 0
+7 add -2
+8 add -4
+9 add 1
+10 add 0
+11 add -3
+12 add 4
+13 add -1
+14 add 0
+15 add 1
+16 add 4
+17 add 3
+18 add 0
+19 add -1
+20 add 4
+21 add -2
+22 add 0
+23 add 4
+24 add 2
+25 add -3
+26 add 0
+27 add -5
+28 add -3
+29 add 4
+30 add 0
+31 add -4
+32 add -3
+33 add -5
+34 add 0
+35 add 5
+36 add 3
+37 add -4
+38 add 0
+39 add 3
+40 add 4
+41 add 5
+42 add 0
+43 add -3
+44 add -4
+45 add 2
+46 add 0
+47 add -4
+48 add -3
+49 add -2
+50 add 0
+51 add 2
+52 add 4
+53 add 3
+54 add 0
+55 add 3
+56 add -2
+57 add -4
+58 add 0
+59 simplify 7 0

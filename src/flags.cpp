@@ -9,7 +9,9 @@ void Internal::mark_declared (int lit) {
   f.status = Flags::DECLARED;
   ++stats.vars_declared;
   --stats.vars_unused;
-  LOG ("declaring new %d (max_var: %d, unused: %" PRId64 ", active: %" PRId64 ")", lit, max_var, stats.vars_unused, stats.vars_active);
+  LOG ("declaring new %d (max_var: %d, unused: %" PRId64
+       ", active: %" PRId64 ")",
+       lit, max_var, stats.vars_unused, stats.vars_active);
 }
 
 void Internal::mark_fixed (int lit) {
