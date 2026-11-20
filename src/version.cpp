@@ -33,15 +33,27 @@
 // The copyright of the code is here.
 
 static const char *COPYRIGHT = "Copyright (c) 2016-2026";
+
 static const char *AUTHORS =
     "Armin Biere, Mathias Fleury, Nils Froleyks, Katalin Fazekas, "
     "Florian Pollitt, Tobias Faller, Emil Landbeck";
-static const char *AUTHORS1 =
-    "Armin Biere, Mathias Fleury, Nils Froleyks, Katalin Fazekas";
-static const char *AUTHORS2 =
-    "Florian Pollitt, Tobias Faller, Emil Landbeck";
+
 static const char *AFFILIATIONS =
     "JKU Linz, University of Freiburg, TU Wien";
+
+// We had to split authors into multiple lines in order to stay reasonably
+// below a 80 column characters per line.  This is currently only used for
+// printing the banner during regular start-up of the solver.  For other
+// usages (through the API or during printing copyright information alone)
+// we keep the authors in one line and use the 'AUTHORS' above.  As soon we
+// need three lines we will need to add 'AUTHORS3' and 'authors3' and update
+// the multi-line printing accordingly.
+
+static const char *AUTHORS1 =
+    "Armin Biere, Mathias Fleury, Nils Froleyks, Katalin Fazekas";
+
+static const char *AUTHORS2 =
+    "Florian Pollitt, Tobias Faller, Emil Landbeck";
 
 /*------------------------------------------------------------------------*/
 
