@@ -686,7 +686,9 @@ int App::main (int argc, char **argv) {
                      tout.normal_code ());
     solver->message ("%s%s%s", tout.bright_magenta_code (), copyright (),
                      tout.normal_code ());
-    solver->message ("%s%s%s", tout.bright_magenta_code (), authors (),
+    solver->message ("%s%s%s", tout.bright_magenta_code (), authors1 (),
+                     tout.normal_code ());
+    solver->message ("%s%s%s", tout.bright_magenta_code (), authors2 (),
                      tout.normal_code ());
     solver->message ("%s%s%s", tout.bright_magenta_code (), affiliations (),
                      tout.normal_code ());
