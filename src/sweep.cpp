@@ -806,6 +806,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
   do {
     round++;
     flipped = 0;
+    bool refine = false;
     auto begin = sweeper.backbone.begin (), q = begin, p = q;
     const auto end = sweeper.backbone.end ();
     bool limit_hit = false;
@@ -837,6 +838,8 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
       break;
     if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
+    if (refine)
+      sweep_refine (sweeper);
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
        total_flipped, round);
