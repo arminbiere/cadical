@@ -31,8 +31,28 @@ if you want to contribute.
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
 See `cadical -h` for more options.
 
-If you want to cite CaDiCaL please use as reference our CaDiCaL 2.0 tool
-paper which appeared at CAV'24:
+If you want to cite CaDiCaL please use as reference our CaDiCaL 3.0
+tool paper from SAT'26 or our tool paper CaDiCaL 2.0 from CAV'24:
+
+<p>
+<a href="/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.pdf" >CaDiCaL 3.0</a>
+<br>
+<a href="/pollittf/index.html">Florian Pollitt</a>,
+<a href="/fleury/index.html">Mathias Fleury</a>,
+<a href="https://kfazekas.github.io">Katalin Fazekas</a>,
+<a href="https://froleyks.de/">Nils Froleyks</a>,
+<a href="/schidler/index.html">André Schidler</a>,
+<a href="https://www.dominikschreiber.de">Dominik Schreiber</a>,
+<a href="/biere/index.html#publications">Armin Biere</a>,
+<br>
+<i>29th International Conference on Theory and Applications of Satisfiability Testing (SAT'26).</i>
+<br>
+[ <a href="/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.pdf">paper</a>
+| <a href="/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.bib">bibtex</a>
+| <a href="https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.SAT.2026.28">doi</a> 
+| <a href="https://github.com/arminbiere/cadical">github</a>
+]
+</p>
 
 <p>
 <a
