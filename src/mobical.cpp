@@ -642,7 +642,6 @@ enum CallType : uint64_t {
   CALL_TYPE_CASE (LOOKAHEAD                  , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (CUBING                     , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (PROPAGATE                  , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
-  CALL_TYPE_CASE (PROPAGATE_CONFLICTS        , 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (CONCLUDE                   , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (VAL                        , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (FLIP                       , 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
@@ -651,6 +650,7 @@ enum CallType : uint64_t {
   CALL_TYPE_CASE (FIXED                      , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
   CALL_TYPE_CASE (IMPLIED                    , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (GET_CORES                  , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
+  CALL_TYPE_CASE (PROPAGATE_CONFLICTS        , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (FREEZE                     , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0) \
   CALL_TYPE_CASE (FROZEN                     , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
   CALL_TYPE_CASE (MELT                       , 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
@@ -6502,6 +6502,10 @@ void Trace::generate_violating (Random &random) {
     push_back (new PropagateAssumptionsCall ());
     break;
   }
+  case (CallType::PROPAGATE_CONFLICTS): {
+    push_back (new PropagateConflictsCall ());
+    break;
+  }
   case (CallType::VAL): {
     // TODO: what max size makes sense?
     const int size = random.pick_int (0, SMALL);
@@ -6534,6 +6538,12 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::IMPLIED): {
     push_back (new ImpliedCall ());
+    break;
+  }
+  case (CallType::GET_CORES): {
+    // TODO: what max size makes sense?
+    const int size = random.pick_int (0, SMALL);
+    push_back (new GetCoresCall (size));
     break;
   }
   case (CallType::FREEZE): {
@@ -9555,6 +9565,8 @@ void Reader::parse () {
     case CallType::FLIP:
     case CallType::FLIPPABLE:
     case CallType::FAILED:
+    case CallType::GET_CORES:
+    case CallType::PROPAGATE_CONFLICTS:
     case CallType::CONCLUDE:
       if (enforce && !solved &&
           (state == CallState::CONFIG || state == CallState::BEFORE))
