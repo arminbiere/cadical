@@ -373,6 +373,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       stats.cover_asymmetric++;
       stats.cover_total++;
       LOG (c, "asymmetric tautological");
+      mark_garbage (c);
     } else {
       stats.cover_blocked++;
       stats.cover_total++;
