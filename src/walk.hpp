@@ -54,7 +54,7 @@ struct ClauseOrBinary {
 #else
       uintptr_t clause_ptr : 63; // 63 bits for clause pointer
 #endif
-      ClausePtr () : binary (0), clause_ptr (0){};
+      ClausePtr () : binary (0), clause_ptr (0) {};
     } clause;
     struct TaggedBinary {
       bool binary : 1;
@@ -63,24 +63,13 @@ struct ClauseOrBinary {
       unsigned first_literal : 31;
       int other : 32;
 
-#if defined(LOGGING) || !defined(NDEBUG)
-      CaDiCaL::Clause *d;
-#endif
-      TaggedBinary ()
-          : first_literal (0), other (0)
-#if defined(LOGGING) || !defined(NDEBUG)
-            ,
-            d (nullptr)
-#endif
-      {
-        assert (false);
-      };
+      TaggedBinary () : first_literal (0), other (0) { assert (false); };
       TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit,
                     int cother);
 
       int lit (Internal *) const;
     } b; // Must also occupy 63 bits
-    clause_or_binary () : clause (){};
+    clause_or_binary () : clause () {};
   } tagged;
 
   ClauseOrBinary () : tagged () {}
@@ -117,11 +106,9 @@ struct ClauseOrBinary {
 };
 
 // Ensure ClauseOrBinary occupies exactly 8 bytes in release builds
-#if !defined(LOGGING) && defined(NDEBUG)
 static_assert (
     sizeof (ClauseOrBinary) == 8,
     "ClauseOrBinary must occupy exactly 8 bytes in release builds");
-#endif
 } // namespace CaDiCaL
 
 #endif
