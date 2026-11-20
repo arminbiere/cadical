@@ -621,7 +621,10 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #else
     static_assert (sizeof (*i) == 8, "ClauseOrBinary ticks difference");
 #endif
-
+    // The following leads to different behavior with release and debug
+    // build due to sizeof *i which is 8 in relase and 16 in debug builds
+    // (as is shown by the static_assert above).
+    // ticks += 1 + cache_lines (broken_size, sizeof *i);
     ticks += 1 + cache_lines (broken_size, 8);
 
     while (i != broken_end) {
