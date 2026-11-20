@@ -43,14 +43,14 @@ tool paper from SAT'26 or our tool paper CaDiCaL 2.0 from CAV'24:
 <a href="https://froleyks.de/">Nils Froleyks</a>,
 <a href="/schidler/index.html">André Schidler</a>,
 <a href="https://www.dominikschreiber.de">Dominik Schreiber</a>,
-<a href="/biere/index.html#publications">Armin Biere</a>,
+<a href="/biere/index.html#publications">Armin Biere</a>
 <br>
-<i>29th International Conference on Theory and Applications of Satisfiability Testing (SAT'26).</i>
+<i>29th International Conference on Theory and Applications of Satisfiability Testing (SAT'26)</i>
 <br>
 [ <a href="/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.pdf">paper</a>
 | <a href="/papers/PollittFleuryFazekasFroleyksSchidlerSchreiberBiere-SAT26.bib">bibtex</a>
-| <a href="https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.SAT.2026.28">doi</a> 
 | <a href="https://github.com/arminbiere/cadical">github</a>
+| <a href="https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.SAT.2026.28">doi</a> 
 ]
 </p>
 
