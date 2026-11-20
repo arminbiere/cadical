@@ -15,7 +15,6 @@
   STATISTIC (api_declare_vars,                         4, NOTHING, 0, 0) \
   STATISTIC (api_resize,                               4, NOTHING, 0, 0) \
   STATISTIC (api_set,                                  4, NOTHING, 0, 0) \
-  STATISTIC (api_set_long_option,                      4, NOTHING, 0, 0) \
   STATISTIC (api_optimize,                             4, NOTHING, 0, 0) \
   STATISTIC (api_limit,                                4, NOTHING, 0, 0) \
   STATISTIC (api_configure,                            4, NOTHING, 0, 0) \
@@ -67,7 +66,6 @@
   STATISTIC (api_force_backtrack,                      4, NOTHING, 0, 0) \
   STATISTIC (api_is_witness,                           4, NOTHING, 0, 0) \
   STATISTIC (api_force_unassign,                       4, NOTHING, 0, 0) \
-  STATISTIC (api_read_dimacs,                          4, NOTHING, 0, 0) \
   STATISTIC (api_read_solution,                        4, NOTHING, 0, 0) \
   STATISTIC (api_write_dimacs,                         4, NOTHING, 0, 0) \
   STATISTIC (api_write_extension,                      4, NOTHING, 0, 0) \
