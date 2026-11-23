@@ -105,7 +105,7 @@ public:
   /* ------------------------------------------------------------------------ */
   struct FirstLast {
     uint64_t first;
-    uint64_t last;
+    //uint64_t last;
   };
   vector<FirstLast> witness_occs;
   void set_first_occ (int ewit, uint64_t idx);
