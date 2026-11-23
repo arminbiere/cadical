@@ -808,13 +808,14 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     flipped = 0;
     auto begin = sweeper.backbone.begin (), q = begin, p = q;
     const auto end = sweeper.backbone.end ();
-    bool limit_hit = false;
     while (p != end) {
       const int lit = *p++;
       stats.sweep_bb_flip++;
-      if (limit_hit || terminated_asynchronously ()) {
+      if (terminated_asynchronously ())
         break;
-      } else if (sweep_flip (lit)) {
+      else if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
+        break;
+      else if (sweep_flip (lit)) {
         LOG ("flipping backbone candidate %d succeeded", lit);
 #ifdef LOGGING
         total_flipped++;
@@ -831,8 +832,6 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     sweeper.backbone.resize (q - sweeper.backbone.begin ());
     LOG ("flipped %u backbone candidates in round %u", flipped, round);
 
-    if (limit_hit)
-      break;
     if (terminated_asynchronously ())
       break;
     if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
