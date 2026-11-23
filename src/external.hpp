@@ -109,7 +109,7 @@ public:
   };
   vector<FirstLast> witness_occs;
   void set_first_occ (int ewit, uint64_t idx);
-  void set_last_occ (int ewit, uint64_t idx);
+  //void set_last_occ (int ewit, uint64_t idx);
   /* ------------------------------------------------------------------------ */
   vector<WitnessEntry> witness_data;
 
@@ -292,7 +292,7 @@ public:
                        vector<int>::const_iterator end, const int64_t id,
                        const int ewit, const int blit);
 
-  bool restore_cube_stack (uint32_t ss_idx, vector<bool> &skipped_witnesses,
+  bool restore_cube_stack (uint32_t ss_idx, uint64_t widx,
                            RestoreStats &clauses);
 
   void restore ();
