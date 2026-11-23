@@ -219,6 +219,8 @@ int External::internalize (int elit, bool extension) {
       assert (!checkfrozen);
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
+      if (!in_restore)
+        tainted_lits.push_back (elit);
     }
   } else
     ilit = 0;

@@ -101,6 +101,7 @@ public:
     int ewit;
     int blit;
     uint64_t idx;
+    uint64_t next = UINT64_MAX;
   };
   /* ------------------------------------------------------------------------ */
   struct FirstLast {
@@ -108,8 +109,17 @@ public:
     uint64_t last;
   };
   vector<FirstLast> witness_occs;
+  vector<int> tainted_lits;
+  bool in_restore = false;
   void set_first_occ (int ewit, uint64_t idx);
-  //void set_last_occ (int ewit, uint64_t idx);
+  void set_last_occ (int ewit, uint64_t idx);
+  void connect_to_last (int ewit, uint64_t this_idx);
+  void restore_clause_heap (vector<int>::const_iterator begin,
+                               vector<int>::const_iterator end,
+                               const int64_t id, const int ewit,
+                               const int blit, const uint64_t this_idx,
+            priority_queue<uint64_t, vector<uint64_t>, greater<uint64_t>> &heap);
+  void restore_with_heap ();
   /* ------------------------------------------------------------------------ */
   vector<WitnessEntry> witness_data;
 

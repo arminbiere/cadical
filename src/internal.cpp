@@ -1099,7 +1099,8 @@ int Internal::restore_clauses () {
   } else {
     report ('+');
     // remove_garbage_binaries ();
-    external->restore ();
+    //external->restore ();
+    external->restore_with_heap ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
       LOG ("root level propagation after restore produces conflict");

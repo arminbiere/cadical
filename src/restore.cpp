@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include <queue>
+#include <utility>
 
 namespace CaDiCaL {
 
@@ -122,6 +124,68 @@ void External::restore_clause (vector<int>::const_iterator begin,
   internal->stats.restored_clauses++;
 }
 
+void External::restore_clause_heap (vector<int>::const_iterator begin,
+                               vector<int>::const_iterator end,
+                               const int64_t id, const int ewit,
+                               const int blit, const uint64_t this_idx,
+            priority_queue<uint64_t, vector<uint64_t>, greater<uint64_t>> &heap) {
+    LOG (begin, end, "restoring external clause[%" PRId64 "]", id);
+
+  assert (eclause.empty ());
+  assert (id);
+
+  auto restore_lit = [this, this_idx, &heap] (int elit) {
+    eclause.push_back (elit);
+    // not yet scheduled. Find first entry that has idx > this_idx and schedule it.
+    if (!marked (tainted, elit) && (marked (witness, -elit))) {
+      const unsigned uwit = elit2ulit (-elit);
+      uint64_t other_idx = witness_occs[uwit].first;
+      const uint64_t other_last = witness_occs[uwit].last;
+      // fast path: if last occurrence idx is smaller than this idx nothing will be restored.
+      if (other_last > this_idx) {
+        while (other_idx <= this_idx)
+          other_idx = witness_data[other_idx].next;
+        assert (other_idx != UINT64_MAX);
+        heap.push (other_idx);
+      }
+    }
+    if (internal->proof && internal->lrat) {
+      unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+      assert ((size_t) eidx < ext_units.size ());
+      const int64_t unit_id = ext_units[eidx];
+      bool added = ext_flags[abs (elit)];
+      if (unit_id && !added) {
+        ext_flags[abs (elit)] = true;
+        internal->lrat_chain.push_back (unit_id);
+      }
+    }
+
+    const int ilit = internalize (elit);
+    internal->add_original_lit (ilit);
+    internal->stats.restored_literals++;
+  };
+
+  for (auto p = begin; p != end; p++) {
+    restore_lit (*p);
+  }
+  if (blit) {
+    LOG ("adding blocking literal (external %d) back to the clause", blit);
+    restore_lit (blit);
+  }
+  if (ewit) {
+    LOG ("adding witness (external %d) back to the clause", ewit);
+    restore_lit (ewit);
+  }
+  if (internal->proof && internal->lrat) {
+    for (const auto &elit : eclause) {
+      ext_flags[abs (elit)] = false;
+    }
+  }
+  internal->finish_added_clause_with_id (id, true);
+  eclause.clear ();
+  internal->stats.restored_clauses++;
+}
+
 bool External::restore_cube_stack (uint32_t idx, uint64_t widx, RestoreStats &clauses) {
   auto q = clause_data.begin () + idx;
   auto cube_begin = q;
@@ -194,7 +258,8 @@ void External::defragment_extension_data () {
     }
 
     const uint64_t idx = entry.idx;
-
+    // TODO: add the next logic for the cube case. For now disabled
+    assert (ewit || blit);
     if (!ewit && !blit) {
       auto begin = clause_data.begin () + idx;
       auto end = begin;
@@ -252,15 +317,15 @@ void External::defragment_extension_data () {
     clause_write += record_size;
 
     // Rebuild first/last occurrences.
-    //set_last_occ (ewit, witness_write);
-
+    entry.next = UINT64_MAX; // Reset next for this entry. May be the last.
     if (!marked (first_set, ewit)) {
       LOG ("updating first of ewit %d to %zu", ewit, witness_write);
       set_first_occ (ewit, witness_write);
       mark (first_set, ewit);
+    } else {
+      connect_to_last (ewit, witness_write);
     }
-
-    // Move the witness entry.
+    set_last_occ (ewit, witness_write);  
     witness_data[witness_write++] = entry;
   }
 
@@ -422,6 +487,131 @@ void External::restore () {
 
   tainted.clear ();
   tainted.shrink_to_fit ();
+}
+
+void External::restore_with_heap () {
+  // TODO: for now without restoreall, we may need to do it differently for this.
+  assert (!internal->opts.restoreall);
+  assert (internal->opts.restoreall || !tainted.empty ());
+
+  PROFILE_SCOPE (restore);
+  in_restore = true;
+  internal->stats.restorations++;
+
+  RestoreStats clauses = {};
+
+  if (internal->opts.restoreall && tainted.empty ())
+    PHASE ("restore", internal->stats.restorations,
+           "forced to restore all clauses");
+
+#ifndef QUIET
+  {
+    unsigned numtainted = 0;
+    for (const auto b : tainted)
+      if (b)
+        numtainted++;
+
+    PHASE ("restore", internal->stats.restorations,
+           "starting with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
+  }
+#endif
+
+  priority_queue<uint64_t, vector<uint64_t>, greater<uint64_t>> heap;
+
+  for (const int elit : tainted_lits) {
+    const unsigned uwit = elit2ulit (-elit);
+    const uint64_t first = witness_occs[uwit].first;
+    assert (marked (witness, -elit));
+    assert (first != UINT64_MAX);
+    LOG ("scheduling ewit %d with priority %llu", elit, first);
+    heap.push (first);
+  }
+  tainted_lits.clear ();
+  tainted_lits.shrink_to_fit ();
+
+  while (!heap.empty ()) {
+    uint64_t this_idx = heap.top ();
+    heap.pop ();
+    
+    do {
+      WitnessEntry &entry = witness_data[this_idx];  
+      const int ewit = entry.ewit;
+      const int blit = entry.blit;
+      const uint64_t idx = entry.idx;
+      const uint64_t next = entry.next;
+      if (ewit) {
+        // Restore current entry. This also schedules newly tainted literals negations.
+        auto p = clause_data.begin () + idx;
+        bool wit_embedded, id_long;
+        unsigned other_lits_size;
+
+        decode_size_field (*p, wit_embedded, id_long, other_lits_size);
+        assert (wit_embedded);
+
+        const int64_t id = decode_id (p, id_long);
+        LOG ("id computed: %" PRId64 "(%s)", id, id_long ? "long" : "short");
+
+        auto begin = p + (id_long ? 3 : 2);
+        auto end_of_lits = begin + other_lits_size;
+
+        clauses.restored++;
+        restore_clause_heap (begin, end_of_lits, id, ewit, blit, this_idx, heap);
+        fragmented_clause_data += 1 + other_lits_size + (id_long ? 2 : 1);
+
+        // mark this entry stale.
+        entry.ewit = 0;
+        entry.blit = 1;
+
+        const unsigned uwit = elit2ulit (ewit);
+        if (this_idx == witness_occs[uwit].first)
+          unmark (witness, ewit);
+      }
+      
+      if (next == UINT64_MAX) // done restoring all entries with the given witness
+        break;
+
+      if (heap.empty () || next < heap.top ()) { // continue while next has highest priority
+        this_idx = next;
+        continue;
+      }
+
+      heap.push (next); // schedule next by pushing to heap since it does not have highest priority.
+      break;
+
+    } while (true);
+  }
+
+  if (100 * fragmented_clause_data >
+             internal->opts.restoredefraglim * clause_data.size ()) {
+    internal->stats.restore_defrags++;
+    defragment_extension_data ();
+  }
+
+  #ifndef QUIET
+  if (clauses.restored)
+    PHASE ("restore", internal->stats.restorations,
+           "restored %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
+           clauses.restored, percent (clauses.restored, clauses.total),
+           clauses.total);
+  else
+    PHASE ("restore", internal->stats.restorations,
+           "no clause restored out of %" PRId64 " clauses", clauses.total);
+  {
+    unsigned numtainted = 0;
+    for (const auto &b : tainted)
+      if (b)
+        numtainted++;
+
+    PHASE ("restore", internal->stats.restorations,
+           "finishing with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
+  }
+#endif
+
+  tainted.clear ();
+  tainted.shrink_to_fit ();
+  in_restore = false;
 }
 
 } // namespace CaDiCaL

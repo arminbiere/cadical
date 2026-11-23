@@ -83,7 +83,7 @@ void External::set_first_occ (int ewit, uint64_t idx) {
     witness_occs.resize (uwit + 1);
   witness_occs[uwit].first = idx;
 }
-/*
+
 void External::set_last_occ (int ewit, uint64_t idx) {
   assert (ewit);
   assert (idx < witness_data.size ());
@@ -92,7 +92,19 @@ void External::set_last_occ (int ewit, uint64_t idx) {
     witness_occs.resize (uwit + 1);
   witness_occs[uwit].last = idx;
 }
-*/
+
+void External::connect_to_last (const int ewit, const uint64_t this_idx) {
+  assert (ewit);
+  assert (this_idx < witness_data.size ());
+  const unsigned uwit = elit2ulit (ewit);
+  const uint64_t other_idx = witness_occs[uwit].last;
+  LOG ("connecting new entry for ewit %d at idx %llu to last at idx %llu", 
+      ewit, this_idx, other_idx);
+  assert (other_idx < this_idx);
+  assert (witness_data[other_idx].next == UINT64_MAX);
+  witness_data[other_idx].next = this_idx;
+}
+
 void External::push_clause_on_extension (int iwit, Clause *c) {
   assert (iwit);
   LOG (c, "pushing on witness data");
@@ -167,13 +179,15 @@ void External::push_clause_on_extension (int iwit, Clause *c) {
   LOG ("pushing witness %d and blocking literal %d (external)", ewit, blit);
   witness_data.push_back ({ewit, blit, idx});
 
+  const uint64_t widx = witness_data.size () - 1;
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
-    uint64_t widx = witness_data.size () - 1;
     set_first_occ (ewit, widx);
-    //set_last_occ  (ewit, widx);
+  } else {
+    connect_to_last (ewit, widx);
   }
+  set_last_occ  (ewit, widx);
 }
 
 void External::push_clause_on_extension (const int64_t id, int iwit,
@@ -256,13 +270,15 @@ void External::push_clause_on_extension (const int64_t id, int iwit,
   LOG ("pushing witness %d and blocking literal %d (external)", ewit, blit);
   witness_data.push_back ({ewit, blit, idx});
 
+  const uint64_t widx = witness_data.size () - 1;
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
-    uint64_t widx = witness_data.size () - 1;
     set_first_occ (ewit, widx);
-    //set_last_occ  (ewit, widx);
+  } else {
+    connect_to_last (ewit, widx);
   }
+  set_last_occ  (ewit, widx);
 }
 
 void External::push_binary_clause_on_extension (int64_t id, int iwit,
@@ -307,13 +323,15 @@ void External::push_binary_clause_on_extension (int64_t id, int iwit,
   LOG ("pushing witness %d and blocking literal %d (external)", ewit, blit);
   witness_data.push_back ({ewit, blit, idx});
 
+  const uint64_t widx = witness_data.size () - 1;
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
-    uint64_t widx = witness_data.size () - 1;
     set_first_occ (ewit, widx);
-    //set_last_occ  (ewit, widx);
+  } else {
+    connect_to_last (ewit, widx);
   }
+  set_last_occ  (ewit, widx);
 }
 
 /*------------------------------------------------------------------------*/
@@ -323,6 +341,8 @@ void External::push_binary_clause_on_extension (int64_t id, int iwit,
 // 'push_cube_clause'. Once all clauses have been added, the cube stack is
 // terminated by calling 'terminate_cube_stack'.
 
+// TODO: This connects correctly but here we need to also store next somehow
+// Probably we store next for each cube literal clause_data. 
 void External::create_cube_stack (const vector<int> &iwit_cube) {
   LOG (iwit_cube, "pushing to clause_data cube ");
 
@@ -336,13 +356,15 @@ void External::create_cube_stack (const vector<int> &iwit_cube) {
 
     clause_data.push_back (ewit);
 
+    const uint64_t widx = witness_data.size () - 1;
     if (!marked (witness, ewit)) {
+      LOG ("marking as witness %d (external)", ewit);
       mark (witness, ewit);
-      LOG ("set witness ewit %d to %d", ewit, marked (witness, ewit));
-      uint64_t widx = witness_data.size () - 1;
       set_first_occ (ewit, widx);
-      // set_last_occ
+    } else {
+      connect_to_last (ewit, widx);
     }
+    set_last_occ  (ewit, widx);
   }
   clause_data.push_back (0); // End of witness cube.
 }
@@ -399,6 +421,8 @@ void External::create_cube_stack_and_push_external_clause (
   // first push the witness cube
   const uint64_t cube_idx = clause_data.size ();
   witness_data.push_back ({0, 0, cube_idx});
+  const uint64_t widx = witness_data.size () - 1;
+
   for (const auto &elit : ewit_cube) {
     assert (elit != INT_MIN && elit);
     assert (abs (elit) <= max_var);
@@ -411,12 +435,16 @@ void External::create_cube_stack_and_push_external_clause (
     }
     assert (ilit && ilit != INT_MIN);
     clause_data.push_back (elit);
+  
     if (!marked (witness, elit)) {
-      mark (witness, elit);  
-      uint64_t widx = witness_data.size () - 1;
+      LOG ("marking as witness %d (external)", elit);
+      mark (witness, elit);
       set_first_occ (elit, widx);
-      // set_last_occ
+    } else {
+      connect_to_last (elit, widx);
     }
+    set_last_occ  (elit, widx);
+
   }
   clause_data.push_back (0);
 
@@ -552,13 +580,15 @@ void External::push_external_clause_on_extension (const vector<int> &c,
   LOG ("pushing witness %d and blocking literal %d (external)", ewit, blit);
   witness_data.push_back ({ewit, blit, idx});
 
+  const uint64_t widx = witness_data.size () - 1;
   if (!marked (witness, ewit)) {
     LOG ("marking as witness %d (external)", ewit);
     mark (witness, ewit);
-    uint64_t widx = witness_data.size () - 1;
     set_first_occ (ewit, widx);
-    //set_last_occ  (ewit, widx);
+  } else {
+    connect_to_last (ewit, widx);
   }
+  set_last_occ  (ewit, widx);
 }
 
 /*------------------------------------------------------------------------*/
