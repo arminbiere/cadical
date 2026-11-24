@@ -1827,6 +1827,18 @@ bool Solver::force_unassign (int lit) {
 }
 
 /*------------------------------------------------------------------------*/
+bool Solver::traverse_model (ModelIterator &it) const {
+  TRACE (traverse_model, "traverse_model");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == SATISFIED,
+           "can only traverse model in satisfied state");
+  if (!external->extended)
+    external->extend ();
+  external->conclude_sat ();
+  bool res = external->traverse_model (it);
+  LOG_API_CALL_RETURNS ("traverse_model", res);
+  return res;
+}
 
 bool Solver::traverse_clauses (ClauseIterator &it) const {
   TRACE (traverse_clauses, "traverse_clauses");

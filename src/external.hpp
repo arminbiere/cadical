@@ -56,6 +56,7 @@ struct Internal;
 class Learner;
 class Terminator;
 class WitnessIterator;
+class ModelIterator;
 
 #include "exttoint.hpp"
 
@@ -84,6 +85,7 @@ public:
       ext_units; // External units. Needed to compute LRAT for eclause
   vector<bool> ext_flags; // to avoid duplicate units
   vector<int> eclause;    // External version of original input clause.
+  vector<int> model;
   // The extension stack for reconstructing complete satisfying assignments
   // (models) of the original external formula is kept in this external
   // solver object. It keeps track of blocked clauses and clauses containing
@@ -405,6 +407,7 @@ public:
       val = !val;
     return val ? elit : -elit;
   }
+  int check_model (int elit) const;
 
   signed char current_val (int elit);
 
@@ -455,6 +458,7 @@ public:
   // Traversal functions for the witness stack and units.  The explanation
   // in 'external.cpp' for why we have to distinguish these cases.
 
+  bool traverse_model (ModelIterator &);
   bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
   bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
   bool traverse_cube_stack (WitnessIterator &it, uint32_t ss_idx);

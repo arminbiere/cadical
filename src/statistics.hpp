@@ -72,6 +72,7 @@
   STATISTIC (api_copy,                                 4, NOTHING, 0, 0) \
   STATISTIC (api_traverse_clauses,                     4, NOTHING, 0, 0) \
   STATISTIC (api_traverse_constraint,                  4, NOTHING, 0, 0) \
+  STATISTIC (api_traverse_model,                       4, NOTHING, 0, 0) \
   STATISTIC (api_traverse_witness_forward,             4, NOTHING, 0, 0) \
   STATISTIC (api_traverse_witness_backward,            4, NOTHING, 0, 0) \
 

@@ -3,6 +3,7 @@
 #include "message.hpp"
 #include "util.hpp"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -999,6 +1000,82 @@ void External::check_failing () {
   else
     VERBOSE (1, "checked that %zd failing assumptions form a core",
              assumptions.size ());
+}
+
+bool External::traverse_model (ModelIterator &it) {
+  const bool checking = internal->opts.check && internal->opts.checkwitness;
+  bool res = true;
+  if (internal->opts.modelalllits) {
+    for (auto elit = 1; elit <= max_var; ++elit) {
+      if (ervars[elit])
+        continue;
+      int tmp = ival (elit) < 0 ? -elit : elit;
+      if (checking)
+        model.push_back (tmp);
+      if (!it.literal (tmp)) {
+        res = false;
+        break;
+      }
+      if (internal->terminated_asynchronously ()) {
+        res = false;
+        break;
+      }
+    }
+  } else if (e2i.use_hash_map) {
+    for (auto eilit : e2i.h_e2i) {
+      const int elit = eilit.first;
+      if (!elit) // the hash-table can contain stall entries
+        continue;
+      assert (elit);
+      if (ervars[elit])
+        continue;
+      int tmp = ival (elit) < 0 ? -elit : elit;
+      if (checking)
+        model.push_back (tmp);
+      if (!it.literal (tmp)) {
+        res = false;
+        break;
+      }
+      if (internal->terminated_asynchronously ()) {
+        res = false;
+        break;
+      }
+    }
+  } else {
+    for (size_t i = 1; i < e2i.vec_e2i.table.size (); ++i) {
+      auto eilit = std::pair<int, int> (i, e2i[i]);
+      const int elit = eilit.first;
+      assert (elit);
+      if (ervars[elit])
+        continue;
+      int tmp = ival (elit) < 0 ? -elit : elit;
+      if (checking)
+        model.push_back (tmp);
+      if (!it.literal (tmp)) {
+        res = false;
+        break;
+      }
+      if (internal->terminated_asynchronously ()) {
+        res = false;
+        break;
+      }
+    }
+  }
+  if (checking) {
+    if (res) {
+      check_assignment (&External::check_model);
+    }
+    model.clear ();
+  }
+  return res;
+}
+
+int External::check_model (int elit) const {
+  if (std::find (model.begin (), model.end (), elit) != model.end ())
+    return elit;
+  if (std::find (model.begin (), model.end (), -elit) != model.end ())
+    return -elit;
+  return 0;
 }
 
 /*------------------------------------------------------------------------*/
