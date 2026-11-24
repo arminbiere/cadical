@@ -153,6 +153,8 @@ void Internal::block_schedule (Blocker &blocker) {
 
     if (c->garbage)
       continue;
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->redundant)
       continue;
     if (c->size <= opts.blockmaxclslim)

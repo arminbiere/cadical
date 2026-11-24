@@ -419,7 +419,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           witness = other;
           weakened_clause.clear ();
           weakened_id = last_id;
-
           clause.clear ();
           already_pushed = true;
         }
@@ -453,7 +452,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       clause.clear ();
       external->push_clause_on_extension (weakened_id, witness,
                                           weakened_clause);
-
       mark_garbage (c);
     }
   }

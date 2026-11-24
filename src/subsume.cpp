@@ -505,7 +505,9 @@ bool Internal::subsume_round () {
     //
     if (c->size > 2 && c->subsume) {
       c->subsume = false;
+      check_last_irredundant();
       const int tmp = try_to_subsume_clause (c, shrunken);
+      check_last_irredundant();
       if (tmp > 0) {
         subsumed++;
         continue;
@@ -655,7 +657,9 @@ void Internal::subsume () {
 
   if (opts.subsume) {
     reset_watches ();
+    check_last_irredundant();
     subsume_round ();
+    check_last_irredundant();
     init_watches ();
     connect_watches ();
     if (!unsat && !propagate ()) {
@@ -664,7 +668,9 @@ void Internal::subsume () {
     }
   }
 
+  check_last_irredundant();
   transred ();
+  check_last_irredundant();
   if (external_prop) {
     assert (!level);
     private_steps = false;

@@ -84,6 +84,9 @@
 
 #define CADICAL_STATISTICS \
   CADICAL_API_STATISTICS \
+  STATISTIC (autarkies,              2, INTERVAL, "",    interval) \
+  STATISTIC (autarkies_eliminated,   2, relative, "per", autarkies_successful) \
+  STATISTIC (autarkies_successful,   2, relative, "per", autarkies) \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
   STATISTIC (backbone_probes,        2, relative, "per", vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \

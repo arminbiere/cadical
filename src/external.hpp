@@ -152,6 +152,8 @@ public:
   void force_backtrack (int new_level);
   bool force_unassign (int elit);
 
+  std::vector<int> tmp_witness;
+
   //----------------------------------------------------------------------//
 
   signed char *solution; // Given solution checking for debugging.

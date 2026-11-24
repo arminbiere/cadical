@@ -324,6 +324,8 @@ int Internal::elimfast_round (bool &completed,
   for (const auto &c : clauses) {
     if (terminated_asynchronously ())
       break;
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->garbage || c->redundant)
       continue;
     bool satisfied = false, falsified = false;
@@ -386,12 +388,15 @@ int Internal::elimfast_round (bool &completed,
   //
   for (const auto &c : clauses) {
     if (terminated_asynchronously ())
+    break;
+    if (last_irredundant && c > last_irredundant)
       break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
   }
+
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif

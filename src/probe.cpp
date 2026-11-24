@@ -940,12 +940,12 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   //
   {
     mark_duplicated_binary_clauses_as_garbage ();
+    check_last_irredundant();
     decompose ();
     if (ternary ())
       decompose (); // If we derived a binary clause
     if (probe ())
       decompose ();
-
     if (extract_gates (preprocessing))
       decompose ();
     binary_clauses_backbone ();
@@ -957,6 +957,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     binary_clauses_backbone ();
     mark_duplicated_binary_clauses_as_garbage ();
     factor (); // resets watches, partial occurrence list
+    check_last_irredundant();
   }
 
   if (external_prop) {

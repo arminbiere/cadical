@@ -28,7 +28,7 @@ Internal::Internal ()
       probe_reason (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
       randomized_deciding (false), citten (nullptr), num_assigned (0),
-      proof (0), opts (this),
+      proof (0), opts (this), last_irredundant(nullptr),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -347,6 +347,7 @@ int Internal::cdcl_loop_with_inprocessing () {
       condition (); // globally blocked clauses
     else
       res = decide (); // next decision
+    check_last_irredundant();
   }
 
   if (stable) {
@@ -1335,6 +1336,8 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
   for (const auto &c : clauses) {
     if (c->garbage)
       continue;
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->redundant)
       continue;
     bool satisfied = false;
@@ -1452,4 +1455,42 @@ void Internal::activating_all_new_imported_literals () {
   check_queue ();
 #endif
 }
+  void Internal::check_last_irredundant () {
+#ifndef NDEBUG
+    if (!arenaing()) {
+      assert (!last_irredundant);
+      return;
+    }
+    if (!last_irredundant)
+      return;
+    for (auto c : clauses) {
+      if (c->garbage)
+        continue;
+      if (c->redundant)
+        continue;
+      assert (arena.contains(c));
+      assert (c <= last_irredundant);
+    }
+#endif
+  }
+
+  void Internal::update_last_irredundant (Clause *c) {
+    if (c->redundant)
+      return;
+    // Kissat does not need this case, because all clauses are in the arena. In
+    // CaDiCaL, this is not the case, so we actually only update the
+    // last_irredundant during garbage collection.
+    if (!last_irredundant)
+      return;
+    if (!arena.contains(c)) {
+      last_irredundant = nullptr;
+      return;
+    }
+    if (c > last_irredundant) {
+      LOG ("changing last irredundant clause from %" PRId64 "to %" PRId64, (intptr_t) last_irredundant, (intptr_t) c);
+      last_irredundant = c;
+    }
+
+
+  }
 } // namespace CaDiCaL

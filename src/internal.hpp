@@ -157,6 +157,7 @@ struct Internal {
     VIVIFY = (1 << 16),
     WALK = (1 << 17),
     BACKBONE = (1 << 18),
+    AUTARKY = (1 << 19),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -302,7 +303,7 @@ struct Internal {
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
 
-  Delay delaying_vivify_irredundant;
+  Delay delaying_vivify_irredundant, delay_autarky;
   Delay delaying_sweep;
 
   Proof *proof; // abstraction layer between solver and tracers
@@ -314,6 +315,7 @@ struct Internal {
 
   Options opts; // run-time options
   Stats stats;  // statistics
+  Clause *last_irredundant;
 #ifndef QUIET
   Profiles profiles;         // time profiles for various functions
   bool force_phase_messages; // force 'phase (...)' messages
@@ -1523,6 +1525,18 @@ struct Internal {
   void phase (int lit);
   void unphase (int lit);
 
+  // autarky detection
+  int determine_autarky (std::vector<signed char> &, std::vector<int> &);
+  unsigned autarky_propagate_clause (Clause *c,
+                                     std::vector<signed char> &autarky_val,
+                                     std::vector<int> &work);
+  unsigned autarky_propagate_binary (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work, int lit2);
+  unsigned autarky_propagate_unassigned (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit);
+  unsigned autarky_propagate_unassigned_binary (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit);
+  unsigned autarky_propagate (std::vector<signed char> &autarky_val, std::vector<int> &work);
+  void autarky_apply (const std::vector<signed char> &, const std::vector<int>&);
+  bool autarky (char c);
+
   // Globally blocked clause elimination.
   //
   bool is_autarky_literal (int lit) const;
@@ -1631,6 +1645,9 @@ struct Internal {
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();
 #endif
+
+  void check_last_irredundant ();
+  void update_last_irredundant (Clause *);
 
   // Get the value of an internal literal: -1=false, 0=unassigned, 1=true.
   // We use a redundant table for both negative and positive literals.  This

@@ -122,6 +122,8 @@ int Internal::trivially_false_satisfiable (int64_t &ticks) {
     ++ticks;
     if (terminated_asynchronously (100))
       return unlucky (-1);
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->garbage)
       continue;
     if (c->redundant)
@@ -180,6 +182,8 @@ int Internal::trivially_true_satisfiable (int64_t &ticks) {
     ++ticks;
     if (terminated_asynchronously (100))
       return unlucky (-1);
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->garbage)
       continue;
     if (c->redundant)

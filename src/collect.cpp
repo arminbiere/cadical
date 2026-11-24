@@ -360,13 +360,19 @@ void Internal::copy_non_garbage_clauses () {
   // Prepare 'to' space of size 'moved_bytes'.
   //
   arena.prepare (moved_bytes);
+  last_irredundant = nullptr;
 
   // Keep clauses in arena in the same order.
   //
   if (opts.arenacompact)
-    for (const auto &c : clauses)
-      if (!c->collect () && arena.contains (c))
-        copy_clause (c);
+    for (const auto &c : clauses) {
+      if (last_irredundant && c > last_irredundant)
+        break;
+      if (!c->redundant && !c->collect ()) {
+        assert (!c->moved);
+        copy_clause (c), update_last_irredundant(c->copy);
+      }
+    }
 
   if (opts.arenatype == 1 || !watching ()) {
 
@@ -385,7 +391,7 @@ void Internal::copy_non_garbage_clauses () {
 
     for (const auto &c : clauses)
       if (!c->moved && !c->collect ())
-        copy_clause (c);
+        copy_clause (c), update_last_irredundant(c->copy);
 
   } else if (opts.arenatype == 2) {
 
@@ -398,7 +404,7 @@ void Internal::copy_non_garbage_clauses () {
       for (auto idx : vars)
         for (const auto &w : watches (sign * likely_phase (idx)))
           if (!w.clause->moved && !w.clause->collect ())
-            copy_clause (w.clause);
+            copy_clause (w.clause), update_last_irredundant(w.clause->copy);
 
   } else {
 
@@ -414,7 +420,7 @@ void Internal::copy_non_garbage_clauses () {
       for (int idx = queue.last; idx; idx = link (idx).prev)
         for (const auto &w : watches (sign * likely_phase (idx)))
           if (!w.clause->moved && !w.clause->collect ())
-            copy_clause (w.clause);
+            copy_clause (w.clause), update_last_irredundant(w.clause->copy);
   }
 
   // Do not forget to move clauses which are not watched, which happened in
@@ -422,7 +428,7 @@ void Internal::copy_non_garbage_clauses () {
   //
   for (const auto &c : clauses)
     if (!c->collect () && !c->moved)
-      copy_clause (c);
+      copy_clause (c), update_last_irredundant(c->copy);
 
   flush_all_occs_and_watches ();
   update_reason_references ();
@@ -448,6 +454,7 @@ void Internal::copy_non_garbage_clauses () {
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
   arena.swap ();
+  check_last_irredundant ();
 
   PHASE ("collect", stats.collections,
          "collected %zd bytes %.0f%% of %zd garbage clauses",

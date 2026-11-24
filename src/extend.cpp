@@ -299,6 +299,7 @@ void External::create_cube_stack (const vector<int> &iwit_cube) {
   LOG (iwit_cube, "pushing to clause_data cube ");
 
   const uint64_t idx = clause_data.size ();
+  assert (!iwit_cube.empty ());
 
   for (const auto &iwit : iwit_cube) {
     const int ewit = internal->externalize (iwit);
@@ -519,8 +520,8 @@ void External::push_external_clause_on_extension (const vector<int> &c,
   LOG ("pushing witness %d and blocking literal %d (external)", ewit, blit);
   witness_data.push_back ({ewit, blit, idx});
 }
-
 /*------------------------------------------------------------------------*/
+
 // the calls to init are used in the copy test, should never trigger during
 // actual solver runtime.
 void External::push_external_clause_and_witness_on_extension (

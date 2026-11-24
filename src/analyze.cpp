@@ -934,6 +934,7 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
     return;
   }
   make_irredundant (subsuming);
+  update_last_irredundant (subsuming);
 }
 
 /*------------------------------------------------------------------------*/

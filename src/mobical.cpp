@@ -5535,6 +5535,9 @@ bool Trace::ignore_option (const char *name, int max_var) {
     return true;
   if (!strcmp (name, "terminateint"))
     return true;
+  if (!strcmp (name, "autarkynonincr"))
+    return true;
+  return false;
 
   // There are options which should be kept at their default value
   // unless the formula is really small.  Otherwise the solver
@@ -6737,6 +6740,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
   else
     calls = mobical.force.phases;
 
+  if (calls == 1 && random.pick_double(0, 100) < 10) {
+    push_back (new SetCall ("autarkynonincr", 1));
+  }
   int minvars, maxvars = 0;
 
   for (int call = 0; call < calls; call++) {

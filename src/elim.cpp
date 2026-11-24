@@ -550,6 +550,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   LOG ("need %" PRId64 " <= %" PRId64 " non-tautological resolvents",
        resolvents, bound);
 
+  check_last_irredundant();
   return true;
 }
 
@@ -562,6 +563,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
   const bool substitute = !eliminator.gates.empty ();
   const bool resolve_gates = eliminator.definition_unit;
   stats.eliminated++;
+  check_last_irredundant();
   if (substitute) {
     LOG ("substituting pivot %d by resolving with %zd gate clauses", pivot,
          eliminator.gates.size ());
@@ -606,6 +608,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
     if (c->garbage)
       continue;
     for (auto &d : ns) {
+      check_last_irredundant();
       if (unsat)
         break;
       if (d->garbage)
@@ -705,6 +708,8 @@ void Internal::mark_eliminated_clauses_as_garbage (
 // Try to eliminate 'pivot' by bounded variable elimination.
 void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
                                           bool &deleted_binary_clause) {
+  check_last_irredundant();
+
   if (!active (pivot))
     return;
   assert (!frozen (pivot));
@@ -747,7 +752,9 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
     find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
+    check_last_irredundant();
     if (elim_resolvents_are_bounded (eliminator, pivot)) {
+      check_last_irredundant();
       LOG ("number of resolvents on %d are bounded", pivot);
       elim_add_resolvents (eliminator, pivot);
       if (!unsat)
@@ -758,6 +765,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
     } else {
       LOG ("too many resolvents on %d so not eliminated", pivot);
     }
+    check_last_irredundant();
   }
 
   unmark_gate_clauses (eliminator);
@@ -838,6 +846,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->garbage || c->redundant)
       continue;
     bool satisfied = false, falsified = false;
@@ -900,11 +910,14 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   for (const auto &c : clauses) {
     if (terminated_asynchronously ())
       break;
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
   }
+
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
@@ -947,6 +960,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
     mark_redundant_clauses_with_eliminated_variables_as_garbage (
         eliminator.ticks);
     garbage_collection ();
+    check_last_irredundant();
   }
 
   // If the schedule is empty all variables have been tried (even
