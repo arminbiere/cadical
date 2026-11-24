@@ -180,7 +180,7 @@ OPTION( luckyrounds,         10,  1,100,0,0,1, "maximum number of lucky round") 
 OPTION( minimize,             1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,      1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( minimizeticks,        1,  0,  1,0,0,1, "increment ticks in minimization") \
-OPTION( modelalllits,         0,  0,  1,0,0,1, "print all literals (including unsed) in the model") \
+OPTION( modelalllits,         1,  1,  1,0,0,1, "print all literals (including unsed) in the model") \
 OPTION( otfs,                 1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,                1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocessinit,     2e6,  0,2e9,2,0,1, "initial preprocessing base limit" ) \

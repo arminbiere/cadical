@@ -590,6 +590,7 @@ enum CallType : uint64_t {
 
   TRAVERSE_CLAUSES,
   TRAVERSE_CONSTRAINT,
+  TRAVERSE_MODEL,
   TRAVERSE_WITNESSES_BACKWARD,
   TRAVERSE_WITNESSES_FORWARD,
 
@@ -602,7 +603,7 @@ enum CallType : uint64_t {
   INVALID_TYPE, // keep this last
 };
 
-// NOT_BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, PROCESS
+// BASIC, LIT, MOCK, REPLAY, OBSERVE, AFTER, PROCESS
 // BEFORE, MATCHING, CONFIG, EXTENDMAP, CLAUSAL, ALWAYS, INIT
 // clang-format off
 #define ALL_CALL_TYPE_CASES \
@@ -670,6 +671,7 @@ enum CallType : uint64_t {
   CALL_TYPE_CASE (CLOSEPROOFTRACE            , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (TRAVERSE_CLAUSES           , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
   CALL_TYPE_CASE (TRAVERSE_CONSTRAINT        , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
+  CALL_TYPE_CASE (TRAVERSE_MODEL             , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0) \
   CALL_TYPE_CASE (TRAVERSE_WITNESSES_BACKWARD, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
   CALL_TYPE_CASE (TRAVERSE_WITNESSES_FORWARD , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
   CALL_TYPE_CASE (READ_DIMACS                , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0) \
@@ -4610,6 +4612,48 @@ struct TraverseConstraintCall : public Call {
   const char *keyword () { return "traverse_constraint"; }
 };
 
+class MockModelIterator : public ModelIterator {
+public:
+  ~MockModelIterator () {}
+  bool literal (const int &) { return true; };
+};
+
+struct TraverseModelCall : public Call {
+  TraverseModelCall () : Call (TRAVERSE_MODEL) {}
+  void execute (Solver *&s, ExtendMap *&extendmap, bool delay = false) {
+    Call::execute (s, extendmap, delay);
+    if (delay) {
+      ReplayPropagator *rp =
+          static_cast<ReplayPropagator *> (get_propagator (s));
+      assert (rp);
+      rp->push_action (this);
+    } else {
+      MockModelIterator m;
+#ifdef EXCEPTIONS
+      if (catching ()) {
+        try {
+          s->traverse_model (m);
+        } catch (std::runtime_error &) {
+          caught ();
+        }
+      } else {
+#endif
+        if (!catching ())
+          res = s->traverse_model (m);
+        else if (s->state () == SATISFIED)
+          res = s->traverse_model (m);
+        else
+          caught ();
+      }
+#ifdef EXCEPTIONS
+    }
+#endif
+  }
+  void print (ostream &o) { o << keyword (); }
+  Call *copy () { return new TraverseModelCall (); }
+  const char *keyword () { return "traverse_model"; }
+};
+
 class MockWitnessIterator : public WitnessIterator {
 public:
   ~MockWitnessIterator () {}
@@ -6085,6 +6129,8 @@ void Trace::generate_values (Random &random, int vars) {
     int lit = random.generate_bool () ? -idx : idx;
     push_back (random, new ValCall (lit, true));
   }
+  if (random.generate_double () < 0.1)
+    push_back (random, new TraverseModelCall ());
 }
 
 void Trace::generate_flipped (Random &random, int vars) {
@@ -6631,6 +6677,10 @@ void Trace::generate_violating (Random &random) {
   }
   case (CallType::TRAVERSE_CONSTRAINT): {
     push_back (new TraverseConstraintCall ());
+    break;
+  }
+  case (CallType::TRAVERSE_MODEL): {
+    push_back (new TraverseModelCall ());
     break;
   }
   case (CallType::TRAVERSE_WITNESSES_BACKWARD): {
@@ -9224,6 +9274,10 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'traverse_constraint'", first);
       c = new TraverseConstraintCall ();
+    } else if (!strcmp (keyword, "traverse_model")) {
+      if (first)
+        error ("additional argument '%s' to 'traverse_model'", first);
+      c = new TraverseModelCall ();
     } else if (!strcmp (keyword, "traverse_witnesses_forward")) {
       if (first)
         error ("additional argument '%s' to "
@@ -9438,6 +9492,7 @@ void Reader::parse () {
       new_state = CallState::ALWAYS;
       break;
 
+    case CallType::TRAVERSE_MODEL:
     case CallType::VAL:
     case CallType::FLIP:
     case CallType::FLIPPABLE:
