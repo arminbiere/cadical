@@ -1022,9 +1022,8 @@ bool External::traverse_model (ModelIterator &it) {
     if (ervars[elit]) {
       continue;
     }
-    if (!all_lits && !internal_lit (elit) && !fixed (elit) &&
-        !marked (witness, elit) && !marked (witness, -elit) &&
-        !frozen (elit)) {
+    if (!all_lits && !internal_lit (elit) && !marked (witness, elit) &&
+        !marked (witness, -elit)) {
       LOG ("not printing %d (neither fixed nor witness)", elit);
       continue;
     }
