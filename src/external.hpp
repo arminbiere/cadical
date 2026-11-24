@@ -476,8 +476,9 @@ public:
 
   // Check solver behaves as expected during testing and debugging.
 
-  void check_assumptions_satisfied ();
-  void check_constraint_satisfied ();
+  void check_assumptions_satisfied (int (External::*assignment) (int)
+                                        const);
+  void check_constraint_satisfied (int (External::*assignment) (int) const);
   void check_failing ();
 
   void check_solution_on_learned_clause ();
