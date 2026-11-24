@@ -504,7 +504,7 @@ void Walker_DDFW::save_walker_trail (bool keep) {
     return;
   }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
   for (auto v : internal->vars) {
     if (internal->active (v))
       assert (best_values[v] == internal->phases.saved[v]);
@@ -941,7 +941,9 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
 
   walker.minimum = broken;
 
-#ifndef NDEBUG
+  // setting phases.saved changes behavior of the solver,
+  // which we want to avoid
+#if 0 // ndef NDEBUG
   for (auto i : vars) {
     const signed char tmp = vals[i];
     if (tmp)
@@ -955,7 +957,7 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
       const signed char tmp = vals[i];
       if (tmp) {
         walker.best_values[i] = tmp;
-#ifndef NDEBUG
+#if 0 //  ndef NDEBUG
         assert (tmp == phases.saved[i]);
 #endif
       }
