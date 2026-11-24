@@ -221,6 +221,8 @@ int External::internalize (int elit, bool extension) {
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
+    if (!marked (added, elit))
+      mark (added, elit);
   } else
     ilit = 0;
   return ilit;
@@ -1022,9 +1024,9 @@ bool External::traverse_model (ModelIterator &it) {
     if (ervars[elit]) {
       continue;
     }
-    if (!all_lits && !internal_lit (elit) && !marked (witness, elit) &&
-        !marked (witness, -elit)) {
-      LOG ("not printing %d (neither fixed nor witness)", elit);
+    if (!all_lits && !internal_lit (elit) && !marked (added, elit) &&
+        !marked (added, -elit)) {
+      LOG ("not printing %d (never added)", elit);
       continue;
     }
     int tmp = ival (elit) < 0 ? -elit : elit;

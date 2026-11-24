@@ -109,6 +109,7 @@ public:
 
   vector<bool> witness; // Non-emptyness flag for witness stacks
   vector<bool> tainted; // Literal tainted in adding literals.
+  vector<bool> added;   // added literal.
 
   vector<bool> ervars; // Variables added through Extended Resolution.
 
