@@ -212,7 +212,7 @@ OPTION( reluctantint,      1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,   1048576,  0,2e9,0,0,1, "maximum reluctant doubling period") \
 OPTION( rephase,              1,  0,  2,0,0,1, "enable resetting phase (0=no,1=always,2=stable-only)") \
 OPTION( rephaseint,         1e3,  1,2e9,0,0,1, "rephase interval") \
-OPTION( report,   reportdefault,  0,  1,0,0,1, "enable reporting") \
+OPTION( report,   reportdefault,  0,  2,0,0,1, "enable reporting (2=inccnf)") \
 OPTION( reportall,            0,  0,  1,0,0,1, "report even if not successful") \
 OPTION( reportheader,        19,  1,2e9,0,0,1, "print report explanation header") \
 OPTION( reportsolve,          0,  0,  1,0,0,1, "use solving not process time") \
