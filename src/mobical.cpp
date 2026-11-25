@@ -7731,7 +7731,8 @@ bool Trace::shrink_clauses (int expected) {
       break;
     r = l + 1;
     const uint64_t same = c->type;
-    while ((c = calls[--l])->type == same && c->arg)
+    while (l && (((c = calls[--l])->type == same && c->arg) ||
+                 c->always_type ()))
       ;
     segments.push_back (Segment (++l, r));
   }
