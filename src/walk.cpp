@@ -223,7 +223,8 @@ void Walker::populate_table (double size) {
   const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
 
   double next = 1;
-  for (epsilon = next; next; next = epsilon * base)
+  for (epsilon = next; next > std::numeric_limits<double>::min ();
+       next = epsilon * base)
     table.push_back (epsilon = next);
 
   PHASE ("walk", internal->stats.walk,
