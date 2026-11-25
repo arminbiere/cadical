@@ -248,7 +248,7 @@ void Internal::transred () {
          "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
          removed, units);
 
-  report ('t', !opts.reportall && !(removed + units));
+  report ('t', !(removed + units));
 }
 
 } // namespace CaDiCaL

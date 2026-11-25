@@ -870,7 +870,7 @@ bool Internal::probe () {
     PHASE ("probe-round", stats.probingrounds,
            "found %" PRId64 " hyper binary resolvents", hbrs);
 
-  report ('p', !opts.reportall && !(unsat + failed + hbrs));
+  report ('p', !(unsat + failed + hbrs));
 
   return !unsat && failed;
 }

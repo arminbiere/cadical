@@ -463,7 +463,7 @@ int Internal::elimfast_round (bool &completed,
 #endif
 
   const int units = stats.vars_all_fixed - old_fixed;
-  report ('e', !opts.reportall && !(eliminated + units));
+  report ('e', !(eliminated + units));
   return eliminated; // non-zero if successful
 }
 

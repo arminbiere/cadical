@@ -758,7 +758,7 @@ bool Internal::decompose_round () {
 
   bool success =
       unsat || (substituted > 0 && (new_unit || new_binary_clause));
-  report ('d', !opts.reportall && !success);
+  report ('d', !success);
   if (success)
     new_binary_since_dedup = true;
 

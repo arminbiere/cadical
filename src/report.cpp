@@ -31,6 +31,7 @@ d  decomposed binary implication graph and substituted equivalent literals
 2  removed duplicated binary clauses
 e  bounded variable elimination round
 ^  variable elimination bound increased
+<  compacted solver state
 I  variable instantiation
 [  start of stable search phase
 ]  end of stable search phase
@@ -186,11 +187,18 @@ static const int num_reports = // as compile time constant
 void Internal::report (char type, int verbose) {
   if (!opts.report)
     return;
+  if (opts.quiet)
+    return;
+  // This alternative is slightly slower
+  // const bool logging = opts.get ("log");
+  const bool logging =
 #ifdef LOGGING
-  if (!opts.log)
+      opts.log;
+#else
+      0;
 #endif
-    if (opts.quiet || (verbose > opts.verbose))
-      return;
+  if (!opts.reportall && verbose > opts.verbose && !logging)
+    return;
   if (!reported) {
     assert (!lim.report);
     reported = true;

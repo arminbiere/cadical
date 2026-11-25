@@ -8039,7 +8039,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     learn_empty_clause ();
   }
 
-  report ('c', !opts.reportall && !(stats.congruent - old_merged));
+  report ('c', !(stats.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {

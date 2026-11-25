@@ -171,7 +171,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   }
   assert (new_binary_since_dedup || !(subsumed + units));
   new_binary_since_dedup = false;
-  report ('2', !opts.reportall && !(subsumed + units));
+  report ('2', !(subsumed + units));
 }
 
 /*------------------------------------------------------------------------*/
@@ -323,6 +323,6 @@ void Internal::deduplicate_all_clauses () {
   stats.deduplicate_init += subsumed;
   check_clause_stats ();
   connect_watches ();
-  report ('d', !opts.reportall && !subsumed);
+  report ('d', !subsumed);
 }
 } // namespace CaDiCaL

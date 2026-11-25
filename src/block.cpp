@@ -832,7 +832,7 @@ bool Internal::block () {
   else
     PHASE ("block", stats.blockings, "no pure literals found");
 
-  report ('b', !opts.reportall && !blocked);
+  report ('b', !blocked);
 
   return blocked;
 }

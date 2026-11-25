@@ -704,7 +704,7 @@ bool Internal::cover () {
   assert (unsat || propagated == trail.size ());
 
   int64_t covered = cover_round ();
-  report ('K', !opts.reportall && !covered);
+  report ('K', !covered);
   return covered;
 }
 

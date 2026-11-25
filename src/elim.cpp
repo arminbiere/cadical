@@ -989,7 +989,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
   last.elim.subsumephases = stats.subsume_phases;
   const int units = stats.vars_all_fixed - old_fixed;
-  report ('e', !opts.reportall && !(eliminated + units));
+  report ('e', !(eliminated + units));
   MODE_SCOPE_EARLY_EXIT (ELIM);
   PROFILE_SCOPE_EARLY_EXIT (elim);
 
