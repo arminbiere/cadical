@@ -202,8 +202,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       const int lit = -trail[propagated2++];
       LOG ("vivify propagating %d over binary clauses", -lit);
       const Watches &ws = watches (lit);
-      ticks +=
-          1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+      ticks += 1 + cache_lines (ws);
       for (const auto &w : ws) {
         if (!w.binary ())
           continue;
@@ -225,7 +224,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       Watches &ws = watches (lit);
       const auto eow = ws.end ();
       auto i = ws.begin ();
-      ticks += 1 + cache_lines (ws.size (), sizeof (*i));
+      ticks += 1 + cache_lines (ws);
       auto j = ws.begin ();
       while (i != eow) {
         const Watch w = *j++ = *i++;
@@ -379,7 +378,7 @@ struct vivify_flush_smaller {
 
 void Internal::flush_vivification_schedule (std::vector<Clause *> &schedule,
                                             int64_t &ticks) {
-  ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
+  ticks += 1 + 3 * cache_lines (schedule);
   // we cannot use msort here, as we cannot calculate a score
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
   const auto end = schedule.end ();
@@ -1433,7 +1432,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     clear_watches ();
     for (auto &sched : vivifier.schedules) {
       // approximation for schedule
-      ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (sched);
       for (const auto &c : sched) {
         // Literals in scheduled clauses are sorted with their highest score
         // literals first (as explained above in the example at '@2').  This
@@ -1450,7 +1449,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
       flush_vivification_schedule (sched, ticks);
     }
     // approximation for schedule
-    //    ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+    //    ticks += 1 + cache_lines (clauses);
     connect_watches (); // watch all relevant clauses
   }
   vivify_propagate (ticks);
@@ -1696,7 +1695,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
          " scheduled using %" PRIu64 " ticks",
          checked, percent (checked, scheduled), scheduled, vivifier.ticks);
 
-#ifndef NMETRICS
   subsumed = (int64_t) stats.vivify_subsumed - subsumed;
   strengthened = (int64_t) stats.vivify_strength - strengthened;
   units = (int64_t) stats.vivify_units - units;
@@ -1714,7 +1712,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
            "strengthened %" PRId64 " clauses %.02f%% of %" PRId64
            " checked",
            strengthened, percent (strengthened, checked), checked);
-#endif
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
@@ -1898,14 +1895,16 @@ bool Internal::vivify () {
       const int64_t old = (int64_t) stats.vivify_strength_irr;
       const int64_t old_tried = (int64_t) stats.vivify_checks;
       vivify_round (vivifier, limit);
-      if ((int64_t) stats.vivify_checks - old_tried == 0 ||
-          (float) ((int64_t) stats.vivify_strength_irr - old) /
-                  (float) ((int64_t) stats.vivify_checks - old_tried) <
-              0.01) {
+      const int64_t vivify_tried = stats.vivify_checks - old_tried;
+      const int64_t vivified = stats.vivify_strength_irr - old;
+      unsigned vivifyirredbumpdel = opts.vivifyirredbumpdel;
+      if (vivifyirredbumpdel == 1 &&
+          relative (vivified, vivify_tried) < 0.01)
+        vivifyirredbumpdel = 0;
+      if (vivifyirredbumpdel)
         delaying_vivify_irredundant.bumpreasons.bump_delay ();
-      } else {
+      else
         delaying_vivify_irredundant.bumpreasons.reduce_delay ();
-      }
     } else {
       delaying_vivify_irredundant.bumpreasons.bump_delay ();
       LOG ("building the schedule already used our entire ticks budget for "

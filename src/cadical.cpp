@@ -2,6 +2,7 @@
 
 // Do include 'internal.hpp' but try to minimize internal dependencies.
 
+#include "cadical.hpp"
 #include "internal.hpp"
 #include "signal.hpp" // Separate, only need for apps.
 
@@ -261,74 +262,38 @@ void App::print_usage (bool all) {
 /*------------------------------------------------------------------------*/
 
 // Pretty print competition format witness with 'v' lines.
+class ModelPrinter : public ModelIterator {
+  FILE *file;
+  int c, tmp;
+  char str[32];
+
+  void print () {
+    if (!c)
+      fputc ('v', file), c = 1;
+    snprintf (str, sizeof str, " %d", tmp);
+    int l = strlen (str);
+    if (c + l > 78)
+      fputs ("\nv", file), c = 1;
+    fputs (str, file);
+    c += l;
+  }
+
+public:
+  ModelPrinter (FILE *f) : file (f), c (0), tmp (0) {}
+  ~ModelPrinter () {
+    if (c)
+      fputs (" 0\n", file);
+  }
+  bool literal (const int &literal) {
+    tmp = literal;
+    print ();
+    return true;
+  };
+};
 
 void App::print_witness (FILE *file) {
-  int c = 0, tmp = 0;
-  if (solver->internal->opts.modelalllits) {
-    for (auto elit = 1; elit <= solver->external->max_var; ++elit) {
-      if (!c)
-        fputc ('v', file), c = 1;
-      if (solver->external->ervars[elit])
-        tmp = elit;
-      else
-        tmp = solver->val (elit) < 0 ? -elit : elit;
-      if (signal_value)
-        break;
-      char str[32];
-      snprintf (str, sizeof str, " %d", tmp);
-      int l = strlen (str);
-      if (c + l > 78)
-        fputs ("\nv", file), c = 1;
-      fputs (str, file);
-      c += l;
-    }
-  } else {
-    if (solver->external->e2i.use_hash_map) {
-      for (auto eilit : solver->external->e2i.h_e2i) {
-        const int elit = eilit.first;
-        if (!c)
-          fputc ('v', file), c = 1;
-        if (!elit) // the hash-table can contain stall entries
-          continue;
-        assert (elit);
-        if (solver->external->ervars[elit])
-          continue;
-        else
-          tmp = solver->val (elit) < 0 ? -elit : elit;
-        solver->internal->terminated_asynchronously ();
-        char str[32];
-        snprintf (str, sizeof str, " %d", tmp);
-        int l = strlen (str);
-        if (c + l > 78)
-          fputs ("\nv", file), c = 1;
-        fputs (str, file);
-        c += l;
-      }
-    } else {
-      for (size_t i = 1; i < solver->external->e2i.vec_e2i.table.size ();
-           ++i) {
-        auto eilit = std::pair<int, int> (i, solver->external->e2i[i]);
-        const int elit = eilit.first;
-        if (!c)
-          fputc ('v', file), c = 1;
-        assert (elit);
-        if (solver->external->ervars[elit])
-          continue;
-        else
-          tmp = solver->val (elit) < 0 ? -elit : elit;
-        solver->internal->terminated_asynchronously ();
-        char str[32];
-        snprintf (str, sizeof str, " %d", tmp);
-        int l = strlen (str);
-        if (c + l > 78)
-          fputs ("\nv", file), c = 1;
-        fputs (str, file);
-        c += l;
-      }
-    }
-  }
-  if (c)
-    fputs (" 0\n", file);
+  ModelPrinter it = ModelPrinter (file);
+  solver->traverse_model (it);
 }
 
 /*------------------------------------------------------------------------*/
@@ -686,7 +651,9 @@ int App::main (int argc, char **argv) {
                      tout.normal_code ());
     solver->message ("%s%s%s", tout.bright_magenta_code (), copyright (),
                      tout.normal_code ());
-    solver->message ("%s%s%s", tout.bright_magenta_code (), authors (),
+    solver->message ("%s%s%s", tout.bright_magenta_code (), authors1 (),
+                     tout.normal_code ());
+    solver->message ("%s%s%s", tout.bright_magenta_code (), authors2 (),
                      tout.normal_code ());
     solver->message ("%s%s%s", tout.bright_magenta_code (), affiliations (),
                      tout.normal_code ());

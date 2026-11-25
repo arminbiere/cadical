@@ -152,7 +152,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     int lit = work[i++];
     LOG ("sweeping propagation of %d", lit);
     assert (val (lit) > 0);
-    ticks += 1 + cache_lines (occs (-lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (-lit));
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
       ticks++;
@@ -196,7 +196,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
       break;
 
     // not necessary but should help
-    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (lit));
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
       ticks++;
@@ -240,8 +240,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweeper.limit.ticks = 0;
   // initialize with the cost of building full occ list.
   sweeper.current_ticks = 2 * clauses.size ();
-  sweeper.current_ticks +=
-      2 + 2 * cache_lines (clauses.size (), sizeof (Clause *));
+  sweeper.current_ticks += 2 + 2 * cache_lines (clauses);
   assert (!citten);
   citten = citten_init ();
   citten_clear_track_log_terminate ();
@@ -807,16 +806,16 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
   do {
     round++;
     flipped = 0;
-    bool refine = false;
     auto begin = sweeper.backbone.begin (), q = begin, p = q;
     const auto end = sweeper.backbone.end ();
-    bool limit_hit = false;
     while (p != end) {
       const int lit = *p++;
       stats.sweep_bb_flip++;
-      if (limit_hit || terminated_asynchronously ()) {
+      if (terminated_asynchronously ())
         break;
-      } else if (sweep_flip (lit)) {
+      else if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
+        break;
+      else if (sweep_flip (lit)) {
         LOG ("flipping backbone candidate %d succeeded", lit);
 #ifdef LOGGING
         total_flipped++;
@@ -833,14 +832,10 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     sweeper.backbone.resize (q - sweeper.backbone.begin ());
     LOG ("flipped %u backbone candidates in round %u", flipped, round);
 
-    if (limit_hit)
-      break;
     if (terminated_asynchronously ())
       break;
     if (citten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
-    if (refine)
-      sweep_refine (sweeper);
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
        total_flipped, round);
@@ -1096,7 +1091,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
   uint64_t &ticks = sweeper.current_ticks;
   LOG ("now decr");
   {
-    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (occs (lit));
     Occs &ns = occs (lit);
     auto const begin = ns.begin ();
     const auto end = ns.end ();
@@ -1643,7 +1638,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     LOG ("traversing and adding clauses of %d", idx);
     for (unsigned sign = 0; sign < 2; sign++) {
       const int lit = sign ? -idx : idx;
-      ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
+      ticks += 1 + cache_lines (occs (lit));
       Occs &ns = occs (lit);
       for (auto c : ns) {
         ticks++;

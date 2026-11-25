@@ -65,8 +65,8 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
   // loose assumption: stays in cache
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 
   int64_t pos = ps.size ();
   int64_t neg = ns.size ();
@@ -157,8 +157,8 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 
 #ifdef LOGGING
   int64_t resolvents = 0;
@@ -251,8 +251,8 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
   Occs &ns = occs (-pivot);
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
   // loose approximation of ticks for sorting
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 
   if (!unsat && !val (pivot)) {
     if (product <= bound ||
@@ -463,7 +463,7 @@ int Internal::elimfast_round (bool &completed,
 #endif
 
   const int units = stats.vars_all_fixed - old_fixed;
-  report ('e', !opts.reportall && !(eliminated + units));
+  report ('e', !(eliminated + units));
   return eliminated; // non-zero if successful
 }
 

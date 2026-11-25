@@ -901,7 +901,7 @@ static unsigned export_literal (citten *citten, unsigned ilit) {
   return elit;
 }
 
-unsigned new_learned_klause (citten *citten) {
+static unsigned new_learned_klause (citten *citten) {
   unsigned res = new_reference (citten);
   unsigneds *klauses = &citten->klauses;
   const size_t size = SIZE_STACK (citten->klause);
@@ -1189,7 +1189,7 @@ static void reset_implicant (citten *citten) {
   CLEAR_STACK (citten->klause_decision_control);
 }
 
-void completely_backtrack_to_root_level (citten *citten) {
+static void completely_backtrack_to_root_level (citten *citten) {
   check_queue (citten);
   LOG ("completely backtracking to level 0");
   value *values = citten->values;

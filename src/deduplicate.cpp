@@ -25,10 +25,10 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
     return;
   if (terminated_asynchronously ())
     return;
-#ifndef NDEBUG
-  if (!new_binary_since_dedup)
+  if (!new_binary_since_dedup) {
+    check_no_duplicate_binary ();
     return;
-#endif
+  }
 
   MODE_SCOPE_SIMPLIFY (DEDUP);
   PROFILE_SCOPE_SIMPLIFY (deduplicate);
@@ -171,9 +171,41 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   }
   assert (new_binary_since_dedup || !(subsumed + units));
   new_binary_since_dedup = false;
-  report ('2', !opts.reportall && !(subsumed + units));
+  report ('2', !(subsumed + units));
 }
 
+/*------------------------------------------------------------------------*/
+
+// We have a flag 'new_binary_since_dedup'. In order to check that we
+// have correctly marked it, we check that there are no duplicate
+// binary clauses. It is not a perfect check but good enough for debugging.
+void Internal::check_no_duplicate_binary () {
+#ifndef NDEBUG
+  for (auto idx : lits) {
+    if (unsat)
+      break;
+    if (!active (idx))
+      continue;
+    for (auto &w : watches (idx)) {
+      if (!w.binary ())
+        continue;
+      if (w.clause->garbage)
+        continue;
+      int blit = w.blit;
+      assert (!marked (blit));
+      mark (blit);
+    }
+    for (auto &w : watches (idx)) {
+      if (!w.binary ())
+        continue;
+      if (w.clause->garbage)
+        continue;
+      int blit = w.blit;
+      unmark (blit);
+    }
+  }
+#endif
+}
 /*------------------------------------------------------------------------*/
 
 // See the comment for vivifyflush.
@@ -291,6 +323,6 @@ void Internal::deduplicate_all_clauses () {
   stats.deduplicate_init += subsumed;
   check_clause_stats ();
   connect_watches ();
-  report ('d', !opts.reportall && !subsumed);
+  report ('d', !subsumed);
 }
 } // namespace CaDiCaL

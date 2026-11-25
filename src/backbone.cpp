@@ -35,8 +35,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
       const int lit = -trail[propagated2++];
       LOG ("backbone propagating %d over binary clauses", -lit);
       Watches &ws = watches (lit);
-      ticks +=
-          1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+      ticks += 1 + cache_lines (ws);
       for (const auto &w : ws) {
         if (!w.binary ())
           continue;
@@ -58,7 +57,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
       Watches &ws = watches (lit);
       const const_watch_iterator eow = ws.end ();
       const_watch_iterator i = ws.begin ();
-      ticks += 1 + cache_lines (ws.size (), sizeof (*i));
+      ticks += 1 + cache_lines (ws);
       watch_iterator j = ws.begin ();
       while (i != eow) {
         const Watch w = *j++ = *i++;
@@ -145,7 +144,7 @@ inline void Internal::backbone_propagate2 (int64_t &ticks) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
     Watches &ws = watches (lit);
-    ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+    ticks += 1 + cache_lines (ws);
     for (const auto &w : ws) {
       if (!w.binary ())
         break;
@@ -359,8 +358,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   ++stats.backbone_rounds;
 
   LOG (candidates, "candidates: ");
-  ticks += 1 + cache_lines (candidates.size (),
-                            sizeof (std::vector<int>::iterator *));
+  ticks += 1 + cache_lines (candidates);
   while (p != end) {
     assert (p < end);
     assert (q <= p);

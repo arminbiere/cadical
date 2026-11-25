@@ -155,7 +155,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
     LOG ("elimination propagation of %d", lit);
     assert (val (lit) > 0);
     const Occs &ns = occs (-lit);
-    eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+    eliminator.ticks += 1 + cache_lines (ns);
     for (const auto &c : ns) {
       if (c->garbage)
         continue;
@@ -196,7 +196,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
     if (unsat)
       break;
     const Occs &ps = occs (lit);
-    eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+    eliminator.ticks += 1 + cache_lines (ps);
     for (const auto &c : ps) {
       if (c->garbage)
         continue;
@@ -503,8 +503,8 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   int64_t resolvents = 0; // Non-tautological resolvents.
 
   // loose assumption: stays in cache
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 
   for (const auto &c : ps) {
     ++eliminator.ticks;
@@ -594,8 +594,8 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 #ifdef LOGGING
   int64_t resolvents = 0;
 #endif
@@ -647,7 +647,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
   int64_t pushed = 0;
 #endif
   Occs &ps = occs (pivot);
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
   for (const auto &c : ps) {
     ++eliminator.ticks;
     if (c->garbage)
@@ -671,7 +671,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
   Occs &ns = occs (-pivot);
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ns);
   for (const auto &d : ns) {
     ++eliminator.ticks;
     if (d->garbage)
@@ -740,8 +740,8 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
   // loose approximation of ticks for sorting
-  eliminator.ticks += 1 + cache_lines (ps.size (), sizeof (ps.begin ()));
-  eliminator.ticks += 1 + cache_lines (ns.size (), sizeof (ns.begin ()));
+  eliminator.ticks += 1 + cache_lines (ps);
+  eliminator.ticks += 1 + cache_lines (ns);
 
   if (pos)
     find_gate_clauses (eliminator, pivot);
@@ -768,7 +768,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
 
 void Internal::mark_redundant_clauses_with_eliminated_variables_as_garbage (
     int64_t &ticks) {
-  ticks += 1 + cache_lines (clauses.size (), sizeof (clauses.begin ()));
+  ticks += 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     ++ticks;
     if (c->garbage || !c->redundant)
@@ -918,12 +918,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // option. However, this is not a useful option for users, hence we
   // made it debug only.
   //
-  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3)
-#ifndef NDEBUG
-                                + (opts.elimaggressiveGC ? 0 : 1 << 20);
-#else
-                                + (1 << 20);
-#endif
+  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) +
+                                (opts.elimaggressiveGC ? 0 : 1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
@@ -993,7 +989,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
   last.elim.subsumephases = stats.subsume_phases;
   const int units = stats.vars_all_fixed - old_fixed;
-  report ('e', !opts.reportall && !(eliminated + units));
+  report ('e', !(eliminated + units));
   MODE_SCOPE_EARLY_EXIT (ELIM);
   PROFILE_SCOPE_EARLY_EXIT (elim);
 

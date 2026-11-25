@@ -299,6 +299,7 @@ OPTION( vivifyeffort,        50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,          1,  0,  1,1,0,1, "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,           0,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyirred,          1,  0,  1,0,0,1, "vivification of irredundant clauses") \
+OPTION( vivifyirredbumpdel,   1,  0,  2,0,0,1, "bump delay (0=never,2=always)") \
 OPTION( vivifyirredeff,       3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,           0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyretry,          0,  0,  5,0,0,1, "re-vivify clause if vivify was successful") \

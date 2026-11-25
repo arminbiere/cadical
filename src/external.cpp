@@ -3,6 +3,7 @@
 #include "message.hpp"
 #include "util.hpp"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -226,6 +227,8 @@ int External::internalize (int elit, bool extension) {
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
+    if (!marked (added, elit))
+      mark (added, elit);
   } else
     ilit = 0;
   return ilit;
@@ -720,9 +723,9 @@ void External::check_satisfiable () {
   if (internal->opts.checkwitness)
     check_assignment (&External::ival);
   if (internal->opts.checkassumptions && !assumptions.empty ())
-    check_assumptions_satisfied ();
+    check_assumptions_satisfied (&External::ival);
   if (internal->opts.checkconstraint && !constraints.empty ())
-    check_constraint_satisfied ();
+    check_constraint_satisfied (&External::ival);
 }
 
 // Internal checker if 'solve' claims formula to be unsatisfiable.
@@ -884,15 +887,18 @@ void External::check_assignment (int (External::*a) (int) const) {
   // First check all assigned and consistent.
   //
   for (auto idx : vars) {
-    if (!(this->*a) (idx))
+    // we do this check only on literals in the formula.
+    if (internal->opts.modelalllits && !ervars[idx] && !(this->*a) (idx))
       FATAL ("unassigned variable: %d", idx);
     int value_idx = (this->*a) (idx);
     int value_neg_idx = (this->*a) (-idx);
     if (value_idx == idx)
       assert (value_neg_idx == idx);
-    else {
-      assert (value_idx == -idx);
+    else if (value_idx == -idx) {
       assert (value_neg_idx == -idx);
+    } else {
+      assert (!value_idx);
+      assert (!value_neg_idx);
     }
     if (value_idx != value_neg_idx)
       FATAL ("inconsistently assigned literals %d and %d", idx, -idx);
@@ -924,6 +930,8 @@ void External::check_assignment (int (External::*a) (int) const) {
 #endif
     } else if (!satisfied && (this->*a) (lit) == lit)
       satisfied = true;
+    if (lit && !(this->*a) (lit))
+      FATAL ("unassigned literal: %d", lit);
   }
 
   bool presence_flag;
@@ -952,6 +960,8 @@ void External::check_assignment (int (External::*a) (int) const) {
         continue;
       }
 
+      if (lit && !(this->*a) (lit))
+        FATAL ("unassigned literal: %d", lit);
       if ((this->*a) (lit) == lit) {
         satisfied = true;
         break;
@@ -979,10 +989,13 @@ void External::check_assignment (int (External::*a) (int) const) {
 
 /*------------------------------------------------------------------------*/
 
-void External::check_assumptions_satisfied () {
+void External::check_assumptions_satisfied (int (External::*a) (int)
+                                                const) {
   for (const auto &lit : assumptions) {
+    if (!(this->*a) (lit))
+      FATAL ("unassigned variable: %d", lit);
     // Not 'signed char' !!!!
-    const int tmp = ival (lit);
+    const int tmp = (this->*a) (lit);
     if (tmp != lit)
       FATAL ("assumption %d falsified", lit);
     if (!tmp)
@@ -992,7 +1005,7 @@ void External::check_assumptions_satisfied () {
            assumptions.size ());
 }
 
-void External::check_constraint_satisfied () {
+void External::check_constraint_satisfied (int (External::*a) (int) const) {
   size_t idx = 1;
   bool success = false;
   for (const auto lit : constraints) {
@@ -1003,7 +1016,9 @@ void External::check_constraint_satisfied () {
       success = 0;
       idx++;
     }
-    if (ival (lit) == lit && !success) {
+    if (!(this->*a) (lit))
+      FATAL ("unassigned variable: %d", lit);
+    if ((this->*a) (lit) == lit && !success) {
       success = true;
       VERBOSE (2, "checked that constraint %zd is satisfied", idx);
     }
@@ -1073,6 +1088,53 @@ void External::check_failing () {
   else
     VERBOSE (1, "checked that %zd failing assumptions form a core",
              assumptions.size ());
+}
+
+bool External::traverse_model (ModelIterator &it) {
+  const bool checking = internal->opts.check;
+  const bool all_lits = internal->opts.modelalllits;
+  bool res = true;
+  for (auto elit = 1; elit <= max_var; ++elit) {
+    if (ervars[elit]) {
+      continue;
+    }
+    if (!all_lits && !internal_lit (elit) && !marked (added, elit) &&
+        !marked (added, -elit)) {
+      LOG ("not printing %d (never added)", elit);
+      continue;
+    }
+    int tmp = ival (elit) < 0 ? -elit : elit;
+    if (checking)
+      model.push_back (tmp);
+    if (!it.literal (tmp)) {
+      res = false;
+      break;
+    }
+    if (internal->terminated_asynchronously ()) {
+      res = false;
+      break;
+    }
+  }
+  if (checking) {
+    if (res) {
+      if (internal->opts.checkwitness)
+        check_assignment (&External::check_model);
+      if (internal->opts.checkassumptions && !assumptions.empty ())
+        check_assumptions_satisfied (&External::ival);
+      if (internal->opts.checkconstraint && !constraints.empty ())
+        check_constraint_satisfied (&External::ival);
+    }
+    model.clear ();
+  }
+  return res;
+}
+
+int External::check_model (int elit) const {
+  if (std::find (model.begin (), model.end (), elit) != model.end ())
+    return elit;
+  if (std::find (model.begin (), model.end (), -elit) != model.end ())
+    return -elit;
+  return 0;
 }
 
 /*------------------------------------------------------------------------*/

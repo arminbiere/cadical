@@ -48,6 +48,7 @@ profile=no
 quiet=no
 shared=no
 termfuzz=no
+time=no
 tracing=yes
 unlocked=yes
 m32=no
@@ -131,6 +132,7 @@ where '<option>' is one of the following
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
+--time             use the 'script.time.sh' script to print compilation time
 
 --memory[-fuzzing] compile with '-DMOBICAL_MEMORY' to fuzz for bad memory
 		   allocation handling, in addition for precisely printing
@@ -147,6 +149,7 @@ where '<option>' is one of the following
 --no-contrib       compile without contributed code
 --no-ipasir        compile without ipasir interface
 
+--no-metrics       less statistics
 --no-options       hard-code options
 
 -f...              pass '-f<option>[=<val>]' options to the makefile
@@ -214,6 +217,7 @@ do
     --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
+    --time|--times|--timing) time=yes;;
 
     --memory|--memory-fuzzing) 
       memfuzz=yes
@@ -669,6 +673,15 @@ fi
 
 [ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
 
+AR=ar
+
+if [ $time = yes ]
+then
+  CXX="../scripts/time.sh $CXX"
+  CC="../scripts/time.sh $CC"
+  AR="../scripts/time.sh $AR"
+fi
+
 #--------------------------------------------------------------------------#
 # Preparing make goals (@GOALS@)
 
@@ -711,6 +724,7 @@ sed \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s#@CC@#$CC#" \
 -e "s#@CFLAGS@#$CFLAGS#" \
+-e "s#@AR@#$AR#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \

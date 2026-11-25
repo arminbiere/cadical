@@ -177,8 +177,6 @@ void Internal::restart () {
 
   lim.restart = stats.conflicts + opts.restartint;
   LOG ("new restart limit at %" PRId64 " conflicts", lim.restart);
-
-  report ('R', 2);
 }
 
 } // namespace CaDiCaL

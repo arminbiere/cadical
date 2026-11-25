@@ -1272,7 +1272,8 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   REQUIRE (!external->propagator,
            "can not connect more than one propagator");
 
-  transition_to_steady_state ();
+  if (state () != CONFIGURING)
+    transition_to_steady_state ();
   external->propagator = propagator;
 #ifndef NTRACING
   external->trace_api_file = trace_api_file;
@@ -1854,6 +1855,18 @@ bool Solver::force_unassign (int lit) {
 }
 
 /*------------------------------------------------------------------------*/
+bool Solver::traverse_model (ModelIterator &it) const {
+  TRACE (traverse_model, "traverse_model");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == SATISFIED,
+           "can only traverse model in satisfied state");
+  if (!external->extended)
+    external->extend ();
+  external->conclude_sat ();
+  bool res = external->traverse_model (it);
+  LOG_API_CALL_RETURNS ("traverse_model", res);
+  return res;
+}
 
 bool Solver::traverse_clauses (ClauseIterator &it) const {
   TRACE (traverse_clauses, "traverse_clauses");

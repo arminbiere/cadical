@@ -775,10 +775,6 @@ struct Internal {
   void search_assume_decision (int decision);
   static Clause *decision_reason;
   void assign_unit (int lit);
-  int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
-  int64_t cache_lines (size_t n, size_t bytes) {
-    return cache_lines (n * bytes);
-  }
   bool propagate ();
 
 #ifdef PROFILE_MODE
@@ -1430,6 +1426,7 @@ struct Internal {
   void probe_assign_decision (int lit);
   void probe_assign (int lit, int parent);
   void mark_duplicated_binary_clauses_as_garbage ();
+  void check_no_duplicate_binary ();
   int get_parent_reason_literal (int lit);
   void set_parent_reason_literal (int lit, int reason);
   void clean_probehbr_lrat ();

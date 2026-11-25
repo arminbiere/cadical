@@ -2,6 +2,7 @@
 #define _stats_hpp_INCLUDED
 
 #include "statistics.hpp"
+#include "terminal.hpp"
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
@@ -50,7 +51,10 @@ struct Metric {
   Metric &operator= (int64_t) { return *this; }
   int64_t operator- (int64_t) { return 0; }
   int64_t operator+ (int64_t) { return 0; }
-  explicit operator int64_t () const { return 0; }
+  explicit operator int64_t () const {
+    COVER (true);
+    return 0;
+  }
   explicit operator bool () const {
     assert (false);
     return 0;

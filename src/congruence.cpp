@@ -3425,7 +3425,7 @@ void Closure::extract_and_gates () {
 
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   const int64_t gates_before =
       (int64_t) internal->stats.congruence_gates_and;
 #endif
@@ -3447,11 +3447,13 @@ void Closure::extract_and_gates () {
     assert (lrat_chain.empty ());
   }
 
+#if !defined(QUIET) && !defined(NMETRICS)
   VERBOSE (2,
            "[congruence-%" PRId64 "] "
            "found %" PRIu64 " AND gates",
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_and - gates_before);
+#endif
   reset_and_gate_extraction ();
 }
 
@@ -4402,7 +4404,7 @@ void Closure::extract_xor_gates () {
   if (internal->terminated_asynchronously ())
     return;
   PROFILE_SCOPE (extractxors);
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   const int64_t gates_before =
       (int64_t) internal->stats.congruence_gates_xor;
 #endif
@@ -4420,9 +4422,11 @@ void Closure::extract_xor_gates () {
       continue;
     extract_xor_gates_with_base_clause (c);
   }
+#if !defined(QUIET) && !defined(NMETRICS)
   VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR gates",
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_xor - gates_before);
+#endif
   reset_xor_gate_extraction ();
 }
 
@@ -7866,7 +7870,7 @@ void Closure::extract_ite_gates () {
     return;
   PROFILE_SCOPE (extractites);
   std::vector<ClauseSize> candidates;
-#ifndef QUIET
+#if !defined(QUIET) && !defined(NMETRICS)
   const int64_t gates_before =
       (int64_t) internal->stats.congruence_gates_ite;
 #endif
@@ -7880,9 +7884,11 @@ void Closure::extract_ite_gates () {
     }
   }
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
+#if !defined(QUIET) && !defined(NMETRICS)
   VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " ITE clauses",
            internal->stats.congruence_rounds,
            internal->stats.congruence_gates_ite - gates_before);
+#endif
   reset_ite_gate_extraction ();
 }
 
@@ -8034,7 +8040,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     learn_empty_clause ();
   }
 
-  report ('c', !opts.reportall && !(stats.congruent - old_merged));
+  report ('c', !(stats.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {

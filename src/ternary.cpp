@@ -151,7 +151,7 @@ bool Internal::hyper_ternary_resolve (Clause *c, int pivot, Clause *d) {
 
 void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
   LOG ("starting hyper ternary resolutions on pivot %d", pivot);
-  steps -= 1 + cache_lines (occs (pivot).size (), sizeof (Clause *));
+  steps -= 1 + cache_lines (occs (pivot));
   for (const auto &c : occs (pivot)) {
     if (steps < 0)
       break;
@@ -173,7 +173,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       }
     if (assigned)
       continue;
-    steps -= 1 + cache_lines (occs (-pivot).size (), sizeof (Clause *));
+    steps -= 1 + cache_lines (occs (-pivot));
     for (const auto &d : occs (-pivot)) {
       if (htrs < 0)
         break;
@@ -275,7 +275,7 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
 
   init_occs ();
 
-  steps_limit -= 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  steps_limit -= 1 + cache_lines (clauses);
   for (const auto &c : clauses) {
     steps_limit--;
     if (c->garbage)
@@ -428,7 +428,7 @@ bool Internal::ternary () {
     PHASE ("ternary", stats.ternary,
            "derived %d ternary and %d binary resolvents", delta_htrs3,
            delta_htrs2);
-    report ('3', !opts.reportall && !(delta_htrs2 + delta_htrs2));
+    report ('3', !(delta_htrs2 + delta_htrs2));
     if (delta_htrs2)
       resolved_binary_clause = true;
     if (!delta_htrs3)

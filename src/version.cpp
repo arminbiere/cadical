@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "3.1.0-rc3"
+#define VERSION "3.1.1-dev"
 #endif // VERSION
 #endif // NBUILD
 
@@ -33,10 +33,27 @@
 // The copyright of the code is here.
 
 static const char *COPYRIGHT = "Copyright (c) 2016-2026";
+
 static const char *AUTHORS =
-    "A. Biere, M. Fleury, N. Froleyks, K. Fazekas, F. Pollitt, T. Faller";
+    "Armin Biere, Mathias Fleury, Nils Froleyks, Katalin Fazekas, "
+    "Florian Pollitt, Tobias Faller, Emil Landbeck";
+
 static const char *AFFILIATIONS =
     "JKU Linz, University of Freiburg, TU Wien";
+
+// We had to split authors into multiple lines in order to stay reasonably
+// below a 80 column characters per line.  This is currently only used for
+// printing the banner during regular start-up of the solver.  For other
+// usages (through the API or during printing copyright information alone)
+// we keep the authors in one line and use the 'AUTHORS' above.  As soon we
+// need three lines we will need to add 'AUTHORS3' and 'authors3' and update
+// the multi-line printing accordingly.
+
+static const char *AUTHORS1 =
+    "Armin Biere, Mathias Fleury, Nils Froleyks, Katalin Fazekas";
+
+static const char *AUTHORS2 =
+    "Florian Pollitt, Tobias Faller, Emil Landbeck";
 
 /*------------------------------------------------------------------------*/
 
@@ -97,6 +114,8 @@ namespace CaDiCaL {
 const char *version () { return VERSION; }
 const char *copyright () { return COPYRIGHT; }
 const char *authors () { return AUTHORS; }
+const char *authors1() { return AUTHORS1; }
+const char *authors2() { return AUTHORS2; }
 const char *affiliations () { return AFFILIATIONS; }
 const char *signature () { return "cadical-" VERSION SHORTIDSTR; }
 const char *identifier () { return IDENTIFIER; }

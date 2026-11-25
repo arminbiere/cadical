@@ -228,6 +228,7 @@ class FixedAssignmentListener;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
+class ModelIterator;
 class ExternalPropagator;
 class Tracer;
 struct InternalTracer;
@@ -408,7 +409,7 @@ public:
   // variables.
   //
   //   require (READY)
-  //   ensure (STEADY)
+  //   ensure (STEADY || CONFIGURING)
   //
   void connect_external_propagator (ExternalPropagator *propagator);
   void disconnect_external_propagator ();
@@ -1021,6 +1022,7 @@ public:
   bool traverse_constraint (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
+  bool traverse_model (ModelIterator &) const;
 
   //------------------------------------------------------------------------
   // Files with explicit path argument support compressed input and output
@@ -1445,6 +1447,16 @@ class ClauseIterator {
 public:
   virtual ~ClauseIterator () {}
   virtual bool clause (const std::vector<int> &) = 0;
+};
+
+// Allows to traverse the current model (in SATISFIED state)
+//
+// If 'literal' returns 'false' traversal aborts early.
+
+class ModelIterator {
+public:
+  virtual ~ModelIterator () {}
+  virtual bool literal (const int &) = 0;
 };
 
 /*------------------------------------------------------------------------*/

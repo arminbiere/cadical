@@ -1,3 +1,14 @@
+Version 3.1.1
+-------------
+
+- Made ticks counting for 'DDFW' consistent (by removing debugging state
+  from 'DDFW_Tagged' and mapping positions to clauses in the debugging
+  build instead of embedding clauses in the tags).
+
+- Made two accidentally non-static 'citten' symbols static to finally fix
+  the clashing symbols issue when linking both to CaDiCaL and Kissat.
+
+-------------
 Version 3.1.0
 -------------
 

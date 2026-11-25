@@ -30,12 +30,7 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   // Check if literals fit in 31 bits each
   if (c->size == 2) {
     unsigned lit1 = internal->vlit (c->literals[0]);
-    const unsigned limit =
-#ifndef NDEBUG
-        1u << (internal->opts.walkbinarylimit);
-#else
-        (1u << 31);
-#endif
+    const unsigned limit = 1u << (internal->opts.walkbinarylimit);
     if (lit1 < limit) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
@@ -228,7 +223,8 @@ void Walker::populate_table (double size) {
   const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
 
   double next = 1;
-  for (epsilon = next; next; next = epsilon * base)
+  for (epsilon = next; next > std::numeric_limits<double>::min ();
+       next = epsilon * base)
     table.push_back (epsilon = next);
 
   PHASE ("walk", internal->stats.walk,
@@ -392,7 +388,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
   int64_t local_ticks = oldticks;
 
   unsigned res = 0; // The computed break-count of 'lit'.
-  local_ticks += (1 + cache_lines (watches (lit).size (), sizeof (Watch)));
+  local_ticks += 1 + cache_lines (watches (lit));
 
   for (auto &w : watches (lit)) {
     assert (w.blit != lit);
@@ -620,10 +616,17 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     // broken is in cache given how central it is... but not always (see the
     // ncc problems). Value was heuristically determined to give reasonnable
     // values.
-    ticks += 1 + cache_lines (broken_size, sizeof (*i));
 #if defined(LOGGING) || !defined(NDEBUG)
     int64_t made = 0;
+    static_assert (sizeof (*i) == 16, "ClauseOrBinary ticks difference");
+#else
+    static_assert (sizeof (*i) == 8, "ClauseOrBinary ticks difference");
 #endif
+    // The following leads to different behavior with release and debug
+    // build due to sizeof *i which is 8 in relase and 16 in debug builds
+    // (as is shown by the static_assert above).
+    // ticks += 1 + cache_lines (broken_size, sizeof *i);
+    ticks += 1 + cache_lines (broken_size, 8);
 
     while (i != broken_end) {
 
@@ -730,11 +733,11 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
   {
 #ifdef LOGGING
     int64_t broken = 0;
+    const size_t ws_size = ws.size ();
 #endif
     Watches &ws = watches (neg_lit);
     // probably still in cache
-    const size_t ws_size = ws.size ();
-    ticks += 1 + cache_lines (ws_size, sizeof (Watch));
+    ticks += 1 + cache_lines (ws);
 
     LOG ("trying to break %zd watched clauses", ws_size);
 

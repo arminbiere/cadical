@@ -625,7 +625,7 @@ bool Internal::subsume_round () {
     mark_added (c);
   erase_vector (shrunken);
 
-  report ('s', !opts.reportall && !(subsumed + strengthened));
+  report ('s', !(subsumed + strengthened));
 
   return old_marked_candidate_variables_for_elimination < stats.mark_elim;
 }

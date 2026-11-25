@@ -13,6 +13,9 @@ CXXFLAGS=@CXXFLAGS@
 CC=@CC@
 CFLAGS=@CFLAGS@
 
+AR=@AR@
+ARFLAGS=rc
+
 LIBS=@LIBS@
 CONTRIB=@CONTRIB@
 IPASIR=@IPASIR@
@@ -51,7 +54,7 @@ all: @GOALS@
 
 
 %.o: ../*/%.c ../src/*.h makefile
-	$(COMPILE_CCC) -x c -c $< -o $@
+	$(COMPILE_CCC) -x c -c $<
 
 
 %.o: ../*/%.cpp ../src/*.hpp makefile
@@ -72,7 +75,7 @@ mobical: mobical.o libcadical.a makefile $(LIBS)
 	$(COMPILE_CPP) -o $@ $< -L. libcadical.a
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
-	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
+	$(AR) $(ARFLAGS) $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
 
 libcadical.so: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS) makefile
 	$(COMPILE_CPP) -shared -o $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS)

@@ -184,8 +184,8 @@ void Internal::reserve_vars (int new_min_vsize) {
   while (new_vsize <= (size_t) new_min_vsize)
     new_vsize *= 2;
 
-  LOG ("reserving %d new internal variables, reserved so far: %d",
-       (int) new_vsize - max_var, max_var);
+  LOG ("reserving %zd new internal variables, reserved so far: %d",
+       new_vsize - max_var, max_var);
 
   if (lrat || frat)
     enlarge_zero (unit_clause_idx, 2 * new_vsize);
