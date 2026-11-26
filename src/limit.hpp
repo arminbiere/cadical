@@ -10,7 +10,8 @@ struct Internal;
 
 struct Limit {
 
-  bool initialized;
+  bool initialized;               // search limits initialized
+  bool preprocessing_initialized; // preprocessing limits initialized
 
   int64_t conflicts;     // conflict limit if non-negative
   int64_t decisions;     // decision limit if non-negative
