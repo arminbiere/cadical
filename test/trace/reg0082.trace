@@ -1,0 +1,26 @@
+# Performance bug: calling 'propagate_assumptions' before the first
+# 'solve' set 'lim.initialized' without initalizing 'lim.elim', 'lim.inprobe',
+# 'lim.compact', 'lim.condition'.
+# Fixed by a separate 'lim.preprocessing_initialized' flag.  Expected
+# 'stats': 1 conflict and no 'inprobingphases' (as without 'propagate').
+0 init
+1 add -4
+2 add -3
+3 add 1
+4 add 0
+5 add 2
+6 add -5
+7 add 0
+8 add -1
+9 add 5
+10 add 0
+11 add -5
+12 add -2
+13 add 0
+14 add 1
+15 add 3
+16 add 5
+17 add 0
+18 propagate_assumptions 0
+19 solve 10
+20 stats

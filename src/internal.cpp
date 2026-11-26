@@ -455,7 +455,7 @@ void Internal::init_report_limits () {
 
 void Internal::init_preprocessing_limits () {
 
-  const bool incremental = lim.initialized;
+  const bool incremental = lim.preprocessing_initialized;
   if (incremental)
     LOG ("reinitializing preprocessing limits incrementally");
   else
@@ -532,6 +532,7 @@ void Internal::init_preprocessing_limits () {
 #ifndef LOGGING
   (void) mode;
 #endif
+  lim.preprocessing_initialized = true;
 }
 
 void Internal::init_search_limits () {
