@@ -786,6 +786,10 @@ struct Shared {
 #endif
 };
 
+static bool using_extend_map (CaDiCaL::Solver *s) {
+  return s->get ("factorcheck") == 2 || s->get ("factor");
+}
+
 struct ExtendMap {
   // do we need to declare variable before using them?
   bool factor_check = true;
@@ -795,6 +799,7 @@ struct ExtendMap {
   // either return the external literal from CaDiCaL, create one if
   // `declare_new_var` is one, or return any literal.
   int map_arg (Solver *s, int arg, bool declare_new_var = true) {
+    assert (using_extend_map (s));
     const int abs_arg = abs (arg);
     const int sign = arg > 0 ? 1 : -1;
     const int map_size = map.size ();
@@ -840,6 +845,7 @@ struct ExtendMap {
   // `declare_more_variable`. It is the only place in this class where we
   // use our internal knowledge of the API.
   void extend_map_by (Solver *&s, int diff) {
+    assert (using_extend_map (s));
     assert (diff >= 0);
     if (map.empty ())
       map.push_back (0); // 0 is always mapped to 0
@@ -1443,25 +1449,25 @@ struct Call {
 
   // extend the size of `extendmap` by `arg` new variables.
   virtual void extend_map_by (Solver *&s, ExtendMap *&extendmap, int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_by (s, arg);
   }
 
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extend_map_to (s, extendmap, arg);
   }
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap, int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_to (arg);
     (void) s;
   }
 
   virtual int map_arg (Solver *&s, ExtendMap *&extendmap,
                        bool declare_new_var = true) {
-    if (mobical.donot.extend_map)
+    if (mobical.donot.extend_map || !using_extend_map (s))
       return arg;
     if (!lit_type ())
       return arg;
@@ -1949,12 +1955,12 @@ private:
   }
 
   void extend_map (int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_to (arg);
   }
 
   int map_arg (int arg, bool declare_new_var = true) {
-    if (mobical.donot.extend_map)
+    if (mobical.donot.extend_map || !using_extend_map (s))
       return arg;
     return extendmap->map_arg (s, arg, declare_new_var);
   }
@@ -2927,7 +2933,7 @@ struct DeclareMoreVariablesCall : public Call {
           s->declare_more_variables (arg);
       // check that our mapping from trace literals to external literals
       // matches the `declare_more_variables` result.
-      assert (!arg || mobical.donot.extend_map ||
+      assert (!arg || mobical.donot.extend_map || !using_extend_map (s) ||
               extendmap->map.back () == i);
 #endif
     }
@@ -2974,7 +2980,8 @@ struct DeclareOneMoreVariableCall : public Call {
       int i =
 #endif
           s->declare_one_more_variable ();
-      assert (mobical.donot.extend_map || extendmap->map.back () == i);
+      assert (mobical.donot.extend_map || !using_extend_map (s) ||
+              extendmap->map.back () == i);
 #endif
     }
   }

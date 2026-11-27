@@ -818,7 +818,8 @@ int Internal::preprocess (bool always) {
     return res;
   bool preprecessing_triggered = false;
 
-  if (opts.deduplicateallinit && !stats.deduplicate_rounds)
+  if (opts.deduplicateallinit && opts.deduplicate &&
+      !stats.deduplicate_rounds)
     deduplicate_all_clauses ();
   preprocess_quickly (always, preprecessing_triggered);
   for (int i = 0; i < lim.preprocessing; i++)
