@@ -135,24 +135,24 @@ static const char *USAGE =
 "Prefixes 'always' and 'never' are shortcuts for '<r>' = 1000\n"
 "and '<r>' = 0 respectively. The last bracket is the default.\n"
 "\n"
-"  --[always-,never-]generate-options[]<r> [900]\n"
-"  --[always-,never-]generate-resize[]<r> [10]\n"
-"  --[always-,never-]generate-declare_one_more_variable[]<r> [10]\n"
-"  --[always-,never-]generate-declare_more_variables[]<r> [10]\n"
-"  --[always-,never-]generate-constraint[]<r> [50]\n"
-"  --[always-,never-]generate-assume[]<r> [850]\n"
-"  --[always-,never-]generate-values[]<r> [900]\n"
-"  --[always-,never-]generate-flipped[]<r> [500]\n"
-"  --[always-,never-]generate-frozen[]<r> [500]\n"
-"  --[always-,never-]generate-failed[]<r> [950]\n"
-"  --[always-,never-]generate-phase[]<r> [950]\n"
-"  --[always-,never-]generate-conclude[]<r> [50]\n"
-"  --[always-,never-]generate-freeze[]<r> [500]\n"
-"  --[always-,never-]generate-melt[]<r> [950]\n"
-"  --[always-,never-]generate-propagator[]<r> [100]\n"
-"  --[always-,never-]generate-forces[]<r> [900]\n"
-"  --[always-,never-]generate-implied[]<r> [500]\n"
-"  --[always-,never-]generate-violate[]<r> [950]\n"
+"  --[always-,never-]generate-options[ ]<r> [900]\n"
+"  --[always-,never-]generate-resize[ ]<r> [10]\n"
+"  --[always-,never-]generate-declare_one_more_variable[ ]<r> [10]\n"
+"  --[always-,never-]generate-declare_more_variables[ ]<r> [10]\n"
+"  --[always-,never-]generate-constraint[ ]<r> [50]\n"
+"  --[always-,never-]generate-assume[ ]<r> [850]\n"
+"  --[always-,never-]generate-values[ ]<r> [900]\n"
+"  --[always-,never-]generate-flipped[ ]<r> [500]\n"
+"  --[always-,never-]generate-frozen[ ]<r> [500]\n"
+"  --[always-,never-]generate-failed[ ]<r> [950]\n"
+"  --[always-,never-]generate-phase[ ]<r> [950]\n"
+"  --[always-,never-]generate-conclude[ ]<r> [50]\n"
+"  --[always-,never-]generate-freeze[ ]<r> [500]\n"
+"  --[always-,never-]generate-melt[ ]<r> [950]\n"
+"  --[always-,never-]generate-propagator[ ]<r> [100]\n"
+"  --[always-,never-]generate-forces[ ]<r> [900]\n"
+"  --[always-,never-]generate-implied[ ]<r> [500]\n"
+"  --[always-,never-]generate-violate[ ]<r> [950]\n"
 "\n"
 "The standard mode of using the model based tester is to start it in\n"
 "random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
@@ -786,6 +786,10 @@ struct Shared {
 #endif
 };
 
+static bool using_extend_map (CaDiCaL::Solver *s) {
+  return s->get ("factorcheck") == 2 || s->get ("factor");
+}
+
 struct ExtendMap {
   // do we need to declare variable before using them?
   bool factor_check = true;
@@ -795,6 +799,7 @@ struct ExtendMap {
   // either return the external literal from CaDiCaL, create one if
   // `declare_new_var` is one, or return any literal.
   int map_arg (Solver *s, int arg, bool declare_new_var = true) {
+    assert (using_extend_map (s));
     const int abs_arg = abs (arg);
     const int sign = arg > 0 ? 1 : -1;
     const int map_size = map.size ();
@@ -840,6 +845,7 @@ struct ExtendMap {
   // `declare_more_variable`. It is the only place in this class where we
   // use our internal knowledge of the API.
   void extend_map_by (Solver *&s, int diff) {
+    assert (using_extend_map (s));
     assert (diff >= 0);
     if (map.empty ())
       map.push_back (0); // 0 is always mapped to 0
@@ -1443,25 +1449,25 @@ struct Call {
 
   // extend the size of `extendmap` by `arg` new variables.
   virtual void extend_map_by (Solver *&s, ExtendMap *&extendmap, int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_by (s, arg);
   }
 
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extend_map_to (s, extendmap, arg);
   }
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap *&extendmap, int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_to (arg);
     (void) s;
   }
 
   virtual int map_arg (Solver *&s, ExtendMap *&extendmap,
                        bool declare_new_var = true) {
-    if (mobical.donot.extend_map)
+    if (mobical.donot.extend_map || !using_extend_map (s))
       return arg;
     if (!lit_type ())
       return arg;
@@ -1949,12 +1955,12 @@ private:
   }
 
   void extend_map (int arg) {
-    if (!mobical.donot.extend_map)
+    if (!mobical.donot.extend_map && using_extend_map (s))
       extendmap->extend_map_to (arg);
   }
 
   int map_arg (int arg, bool declare_new_var = true) {
-    if (mobical.donot.extend_map)
+    if (mobical.donot.extend_map || !using_extend_map (s))
       return arg;
     return extendmap->map_arg (s, arg, declare_new_var);
   }
@@ -2927,7 +2933,7 @@ struct DeclareMoreVariablesCall : public Call {
           s->declare_more_variables (arg);
       // check that our mapping from trace literals to external literals
       // matches the `declare_more_variables` result.
-      assert (!arg || mobical.donot.extend_map ||
+      assert (!arg || mobical.donot.extend_map || !using_extend_map (s) ||
               extendmap->map.back () == i);
 #endif
     }
@@ -2974,7 +2980,8 @@ struct DeclareOneMoreVariableCall : public Call {
       int i =
 #endif
           s->declare_one_more_variable ();
-      assert (mobical.donot.extend_map || extendmap->map.back () == i);
+      assert (mobical.donot.extend_map || !using_extend_map (s) ||
+              extendmap->map.back () == i);
 #endif
     }
   }
@@ -7738,7 +7745,8 @@ bool Trace::shrink_clauses (int expected) {
       break;
     r = l + 1;
     const uint64_t same = c->type;
-    while ((c = calls[--l])->type == same && c->arg)
+    while (l && (((c = calls[--l])->type == same && c->arg) ||
+                 c->always_type ()))
       ;
     segments.push_back (Segment (++l, r));
   }
