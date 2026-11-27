@@ -269,8 +269,9 @@ bool Internal::is_constraint_level (size_t level) {
 struct bigger_queue {
 
   Internal *internal;
+  bool reverse;
 
-  bigger_queue (Internal *i) : internal (i) {}
+  bigger_queue (Internal *i, bool r) : internal (i), reverse (r) {}
 
   bool operator() (int a, int b) {
     assert (a > 0), assert (abs (a) < internal->btab.size ());
@@ -278,6 +279,8 @@ struct bigger_queue {
     const int64_t s = internal->btab[a];
     const int64_t t = internal->btab[b];
     assert (s != t);
+    if (reverse)
+      return s < t;
     return s > t;
   }
 };
@@ -285,16 +288,24 @@ struct bigger_queue {
 struct bigger_score {
 
   Internal *internal;
+  bool reverse;
 
-  bigger_score (Internal *i) : internal (i) {}
+  bigger_score (Internal *i, bool r) : internal (i), reverse (r) {}
 
   bool operator() (int a, int b) {
     assert (a > 0), assert (abs (a) < internal->stab.size ());
     assert (b > 0), assert (abs (b) < internal->stab.size ());
     const double s = internal->stab[a];
     const double t = internal->stab[b];
-    if (s == t)
-      return internal->externalize (a) < internal->externalize (b);
+    if (s == t) {
+      const int ea = internal->externalize (a);
+      const int eb = internal->externalize (b);
+      if (reverse)
+        return ea > eb;
+      return ea < eb;
+    }
+    if (reverse)
+      return s < t;
     return s > t;
   }
 };
@@ -427,11 +438,11 @@ int Internal::constraints_solve () {
     if (use_scores ()) {
       LOG ("sorting constraint variables based on scores");
       sort (constraint_vars.begin (), constraint_vars.end (),
-            bigger_score (this));
+            bigger_score (this, opts.constraintsort == 2));
     } else {
       LOG ("sorting constraint variables based on queue idx");
       sort (constraint_vars.begin (), constraint_vars.end (),
-            bigger_queue (this));
+            bigger_queue (this, opts.constraintsort == 2));
     }
     PROFILE_SCOPE_EARLY_EXIT (constraintssort)
     last_constraint_idx = 0;

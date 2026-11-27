@@ -1015,7 +1015,9 @@ void External::check_constraint_satisfied (int (External::*a) (int) const) {
         FATAL ("constraint %zd not satisfied", idx);
       success = 0;
       idx++;
+      continue;
     }
+    assert (lit);
     if (!(this->*a) (lit))
       FATAL ("unassigned variable: %d", lit);
     if ((this->*a) (lit) == lit && !success) {
