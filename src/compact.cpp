@@ -598,7 +598,7 @@ void Internal::compact () {
   PHASE ("compact", stats.compacts,
          "new compact limit %" PRId64 " after %" PRId64 " conflicts",
          lim.compact, delta);
-  report ('<', 1);
+  report ('<', 0);
 }
 
 } // namespace CaDiCaL
